@@ -13,7 +13,7 @@ OUT=abin.dev
 FCC=gfortran
 CC=gcc
 
-rm *.o ../BUILD/$OUT
+rm *.o $OUT
 
 $FCC $FFLAGS  -c modules.f90  nosehoover.f90 stage.f90 estimators.f90  nab.F90 gle.F90 analyze_ext_distp.f90 potentials.f90 velverlet.f90 surfacehop.f90 force_mm.f90 minimizer.f90 random.f force_bound.f90  respa_shake.f90 force_guillot.f90 shake.f90 abin.f90 respa.f90 analysis.f90 init.F90 force_clas.f90 force_quantum.f90 density.f90 ran1.f vinit.f shift.f90 ekin.f90 force_abin.f90
 
@@ -22,7 +22,7 @@ $CC -c $CFLAGS -INAB/include nabinit_pme.c NAB/sff_my_pme.c NAB/memutil.c NAB/pr
 #$FCC $FFLAGS -c nab.F90
 fi
 
-$FCC $FFLAGS  *.o NAB/libnab.a  NAB/arpack.a  NAB/blas.a -lfftw3 -lm -lstdc++ -o BUILD/$OUT
+$FCC $FFLAGS  *.o NAB/libnab.a  NAB/arpack.a  NAB/blas.a -lfftw3 -lm -lstdc++ -o $OUT
 
 rm *.o 
 
