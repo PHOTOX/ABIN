@@ -1,0 +1,9 @@
+
+Corrected segfault when npartmaxx.gt.nwalkmax in routine FXtoFQ
+
+Correct integration of NHC,using Suzuki-Yoshida and RESPA scheme,
+the conserved value is now really conserved
+
+forces,energies and NACM are now calculated at zero step....i.e. now we start correctly
+
+

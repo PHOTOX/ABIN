@@ -1,0 +1,22 @@
+QMMM --- otestovat, udelat glycin + 10A vod 
+OTESTOVAT SHAKE
+
+EWALD jak je to s 1-4 interakcemi?,parametr scee
+NORMAL MODES, shake , PIGLET
+ELASTIC BAG
+
+
+u PBC simulace se mirne lisi sily mme a mme2...nevime proc
+
+--------------FOR TESTING------------------------
+globalni termostat
+spojit ams_init a nhc_init...inicializovat hybnosti
+podivat se v gdb,zda jsme omezili pocatecni oscilace
+
+pro pripadne PME je potreba modifikovat nbond_box!
+funkce mme by nemela mit erfc
+a co mme2? jak ted delame hessian?
+
+http://archive.ambermd.org/201007/0619.html
+amber11/AmberTools/test/nab/Run.ips
+

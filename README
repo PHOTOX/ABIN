@@ -1,0 +1,12 @@
+protocol for argon:
+put to large  equillibrated cluster, cut to 20 argons
+minimize with qm atoms frozen
+thermalize on low temperature with wm atoms frozen..
+
+and go
+
+extrahovat mme2 z sff.c
+
+
+converting GLE-C matrix downloaded from http://gle4md.berlios.de/compose.php?page=matrix from eV to hartrees:
+awk 'BEGIN{a=27.2114;OFMT="%.12e"}{print $1/a,$2/a,$3/a,$4/a,$5/a,$6/a,$7/a}' o > GLE-C

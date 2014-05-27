@@ -1,0 +1,5 @@
+momentalne pouzivame soubory s pme privlasstkem
+
+pro paralelni mme funkci..
+
+v eff_my_pme.c radek 3888 ve funkcimme34, smazat static u definice grad a alokovat pokazde...
