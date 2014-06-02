@@ -255,9 +255,9 @@
               nwrite=ncalc
       endif
 
-      if(ipimd.eq.1.and.inose.ne.1)then
-       write(*,*)'You have to use Nose-Hoove thermostat with PIMD!(inose=1)'
-  !     error=1
+      if(ipimd.eq.1.and.inose.ne.1.and.inose.ne.2)then
+       write(*,*)'You have to use Nosé-Hoover or quantum thermostat with PIMD!(inose=1 or 2)'
+       error=1
       endif
       if(ipimd.lt.0.or.ipimd.gt.3)then
        write(*,*)'ipimd has to be 0,1,2 or 3.'

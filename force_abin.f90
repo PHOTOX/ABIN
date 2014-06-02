@@ -13,7 +13,7 @@
       character*100 :: chsystem
       character*20 :: chgeom,chforce,chhess,fgeom
       logical :: file_exists
-      integer :: ist1,ist2
+      integer :: ist1,ist2,iost
 !$    integer :: omp_get_max_threads,OMP_get_thread_num
 
 !$    nthreads=omp_get_max_threads()
@@ -28,11 +28,11 @@
 !!$   ithread=OMP_get_thread_num()
 !$    if(nthreads.eq.1)then
        write(chgeom,'(A8)')'geom.dat'
-       write(chforce,'(A10)')'forces.dat'
+       write(chforce,'(A10)')'engrad.dat'
        write(chhess,'(A11)')'hessian.dat'
 !$    else
 !$     write(chgeom,'(A,I3.3)')'geom.dat.',iw
-!$     write(chforce,'(A,I3.3)')'forces.dat.',iw
+!$     write(chforce,'(A,I3.3)')'engrad.dat.',iw
 !$     write(chhess,'(A,I3.3)')'hessian.dat.',iw
 !$    endif
 
@@ -64,18 +64,18 @@
 
 
 !-----------------------
-!--- HERE we decide which program we use to obtain forces and energies
+!--- HERE we decide which program we use to obtain gradients and energies
      select case (pot)
       case ('g09')
-              write(chsystem,*)'./G09/r.g09',pid   !*ithread
+              write(chsystem,*)'./G09/r.g09 '
       case ('tera')
-              write(chsystem,*)'./TERA/r.tera'
+              write(chsystem,*)'./TERA/r.tera '
       case ('orca')
-              write(chsystem,*)'./ORCA/r.orca'
+              write(chsystem,*)'./ORCA/r.orca '
       case ('molpro')
-              write(chsystem,*)'./MOLPRO/r.molpro ',pid   !*ithread
+              write(chsystem,*)'./MOLPRO/r.molpro '
       case ('turbo')
-              write(chsystem,*)'./TURBO/r.turbo',pid
+              write(chsystem,*)'./TURBO/r.turbo '
       case ('nab')
               write(chsystem,*)'./NAB/r.nab '
       case ('gamess')
@@ -88,6 +88,9 @@
               stop 1
      end SELECT
 
+     !TODO: always pass time step for the bash script
+!   write(chsystem,*)chsystem,it
+
    if(nthreads.gt.1)then
     write(chsystem,'(A30,A1,I3.3)')chsystem,'.',iw
    endif
@@ -97,7 +100,7 @@
    endif
      
 
-     call system(chsystem)
+   call system(chsystem)
 
    if(nthreads.eq.1)then
 
@@ -114,9 +117,15 @@
      
      open(unit=20+iw,file=chforce,status='old',ACTION='READ')
 
-!-------READING ENERGY from forces.dat
+!-------READING ENERGY from engrad.dat
      if(ipimd.ne.2)then
-      read(20+iw,*)temp1
+      read(20+iw,*,IOSTAT=iost)temp1
+      if(iost.ne.0)then
+              write(*,*)'Fatal problem with reading energy from engrad.dat'
+              write(*,*)'This usually means, that the ab initio program failed. See the appropriate output files.'
+              write(*,*)'Exiting...'
+              stop 1
+      endif
 !$OMP ATOMIC
       eclas=eclas+temp1
      else
@@ -128,15 +137,19 @@
      endif
 
 
-!----READING FORCES from forces.dat
+!----READING energy gradients from engrad.dat
      do iat=1,natqm
-      read(20+iw,*)fx(iat,iw),fy(iat,iw),fz(iat,iw)
-!  In most cases, we actually produce energy gradients         
-      if(pot.ne.'orca')then
+      read(20+iw,*,IOSTAT=iost)fx(iat,iw),fy(iat,iw),fz(iat,iw)
+      if(iost.ne.0)then
+              write(*,*)'Fatal problem with reading gradients from engrad.dat'
+              write(*,*)'This usually means, that the ab initio program failed. See the appropriate output files.'
+              write(*,*)'Exiting...'
+              stop 1
+      endif
+!---Conversion to forces        
        fx(iat,iw)=-fx(iat,iw)
        fy(iat,iw)=-fy(iat,iw)
        fz(iat,iw)=-fz(iat,iw)
-      endif
      enddo
 
 !----READING of HESSIAN     
@@ -176,7 +189,7 @@
 !$     if(nthreads.gt.1)then
 !$OMP DO PRIVATE(temp1,chforce,chhess)
 !$     do iw=1,nwalk
-!$     write(chforce,'(A,I3.3)')'forces.dat.',iw
+!$     write(chforce,'(A,I3.3)')'engrad.dat.',iw
 !$     write(chhess,'(A,I3.3)')'hessian.dat.',iw
 
 !----make sure that the file exist     
@@ -189,20 +202,18 @@
 !$     end do
 !$     
 !$     open(unit=20+iw,file=chforce,status='old',ACTION='READ')
-!-------READING ENERGY from forces.dat
+!-------READING ENERGY from engrad.dat
 !$     read(20+iw,*)temp1
 !$OMP ATOMIC
 !$     eclas=eclas+temp1
 !$
-!----READING FORCES from forces.dat
+!----READING GRADIENTS from engrad.dat
 !$     do iat=1,natqm
 !$      read(20+iw,*)fx(iat,iw),fy(iat,iw),fz(iat,iw)
 !  In most cases, we actually produce energy gradients         
-!$      if(pot.ne.'orca')then
 !$       fx(iat,iw)=-fx(iat,iw)
 !$       fy(iat,iw)=-fy(iat,iw)
 !$       fz(iat,iw)=-fz(iat,iw)
-!$      endif
 !$     enddo
 !$
 !----READING of HESSIAN     

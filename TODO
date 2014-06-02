@@ -1,5 +1,6 @@
+todo: ADD GNU licence
+todo: MPI version, initially at least for terachem
 todo: unit conversions - look at amber/terachem
-todo: hlaska pri neprecteni forces.dat "error reading forces.dat, please check the convergence of the ab-initio calculation. Exiting..."
 todo: automaticke smazani checkpointfilu pri zacatku simulaci....i pri restartu?(asi ano) ... mozna pres slozku SCRATCH,spolecnou pro vsechny programy?
 todo: nakonci odstranit ify v nosehoover.f90 lines, 28-29
 todo: prjit vsechna TODO v kodu
@@ -21,7 +22,6 @@ zkontrolovat omezeni pro molpro12 na cpmscf na jeden multi
 init.F90, zakazat pimd bez stagingu a opravit hlasku o NH, line 255
 ! pridat nejakou hlasku kdyz chybi GLE-A nebo GLE-C
 init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
-nakonec zakazat pousteni pokud existuje restart.xyz
 
 ###----UTILS
 analyze_movie
@@ -34,6 +34,8 @@ awk '{}' $1
 
 
 ####FOR LATER VERSIONS ####################################
+NAB - compile my own libnab.a library and pass al argumets through it
+NAB - use new NAB version from AmberTools14
 QMMM --- otestovat, udelat glycin + 10A vod 
 OTESTOVAT SHAKE
 

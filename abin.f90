@@ -34,7 +34,7 @@
 
 
       call date_and_time(VALUES=values1)
-      call system('rm -f forces.dat nacm.dat hessian.dat geom.dat')
+      call system('rm -f engrad.dat nacm.dat hessian.dat geom.dat')
 
 
 !!   INPUT AND INITIALIZATION SECTION      
