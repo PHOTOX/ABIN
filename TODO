@@ -1,3 +1,39 @@
+todo: unit conversions - look at amber/terachem
+todo: hlaska pri neprecteni forces.dat "error reading forces.dat, please check the convergence of the ab-initio calculation. Exiting..."
+todo: automaticke smazani checkpointfilu pri zacatku simulaci....i pri restartu?(asi ano) ... mozna pres slozku SCRATCH,spolecnou pro vsechny programy?
+todo: nakonci odstranit ify v nosehoover.f90 lines, 28-29
+todo: prjit vsechna TODO v kodu
+todo: na konci pridat kontrolu pritomnosti restart.xyz
+TODO: pri minimalizaci (ipimd=3) nedelat pocatecni rychlosti
+TODO: predavat cas ab initio skriptum pres force_abin, upravit hodne rutin, respastep,velretstep atp.
+zkontrolovat format vypisovani movie a geom.dat v abin.dev
+
+TODO: convert all atom names strings to UPPPER CASE, must also change the comparisons in mass_init
+see this:http://stackoverflow.com/questions/10759375/how-can-i-write-a-to-upper-or-to-lower-function-in-f90
+
+udelat poradny r.molpro pro SH, predelat scratch,at pid neni treba
+vyjit z PETR-ICD/TRIMER/CASSCF-NUMER/ ale dat analyticke sily
+
+aktualizovat vstup pro MOLPRO, je rozdil mezi a11-11 a as67-1
+zkontrolovat omezeni pro molpro12 na cpmscf na jeden multi
+
+
+init.F90, zakazat pimd bez stagingu a opravit hlasku o NH, line 255
+! pridat nejakou hlasku kdyz chybi GLE-A nebo GLE-C
+init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
+nakonec zakazat pousteni pokud existuje restart.xyz
+
+###----UTILS
+analyze_movie
+cut_abin.....see slavicek@a11-11:~/CFConWATER/MD-TD  dodelat
+xyz reordering
+OOO....OHHH...H
+awk 'BEGIN{i=1;j=1}{if($1=="H"){H1[i]=$0;getline;H2[i]=$0;i++}if($1=="O") {O[j]=$0;j++}}END{for(k=1;k<j;k++) {print O[k];print H1[k];print H2[k]}}' snap2005.xyz > o
+HOHHOH....
+awk '{}' $1
+
+
+####FOR LATER VERSIONS ####################################
 QMMM --- otestovat, udelat glycin + 10A vod 
 OTESTOVAT SHAKE
 
