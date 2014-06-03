@@ -1,3 +1,5 @@
+//Interface to the ewald function from MACSIMUS package,
+//released under GNU GPL licence and kindly modified by author Jiri Kolafa.
 typedef double real;
 #include "EWALD/include.h"
 #include "EWALD/vector3d.h"
