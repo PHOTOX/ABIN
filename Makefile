@@ -1,28 +1,33 @@
-#!/bin/bash
-#setting variables needed for icc
-export LANG=C
-export LC_ALL=C 
-
-NAB=true #true or false
-#FFLAGS=" -O0 -ffpe-trap=invalid,zero,overflow -g -static"   #DEBUG
-#FFLAGS="-fopenmp -O2 -pg"
+#FFLAGS="-fopenmp -O2 -pg" #PARALLEL VERSION
 #CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
-FFLAGS="  -g  "  # -ffpe-trap=invalid,zero,overflow -g  "  #-O2 -ip -ipo " #-fno-underscoring -fopenmp"
-CFLAGS=" -g " #-Wno-unused-result " 
-OUT=abin.dev
-FCC=gfortran
-CC=gcc
+FFLAGS =  -g #-O0 -ffpe-trap=invalid,zero,overflow -g static "  #-O2 -ip -ipo " #-fno-underscoring -fopenmp"
+CFLAGS =  -g -INAB/include #-Wno-unused-result " 
+OUT = abin.dev
+FC = gfortran
+CC = gcc
+LD = -lfftw3 -lm -lstdc++
 
-rm *.o $OUT
 
-$FCC $FFLAGS  -c modules.f90  nosehoover.f90 stage.f90 estimators.f90  nab.F90 gle.F90 analyze_ext_distp.f90 potentials.f90 velverlet.f90 surfacehop.f90 force_mm.f90 minimizer.f90 random.f force_bound.f90  respa_shake.f90 force_guillot.f90 shake.f90 abin.f90 respa.f90 analysis.f90 init.F90 force_clas.f90 force_quantum.f90 density.f90 ran1.f vinit.f shift.f90 ekin.f90 force_abin.f90
+F_OBJS = modules.o nosehoover.o stage.o estimators.o nab.o gle.o analyze_ext_distp.o potentials.o \
+velverlet.o surfacehop.o force_mm.o minimizer.o random.f force_bound.o respa_shake.o force_guillot.o \
+shake.o abin.o respa.o analysis.o init.o force_clas.o force_quantum.o density.o ran1.o vinit.o \
+shift.o ekin.o force_abin.o
 
-if [ "$NAB" = "true" ] ;then
-$CC -c $CFLAGS -INAB/include nabinit_pme.c NAB/sff_my_pme.c NAB/memutil.c NAB/prm.c NAB/nblist_pme.c NAB/binpos.c  EWALD/ewaldf.c 
-#$FCC $FFLAGS -c nab.F90
-fi
+C_OBJS = nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o  EWALD/ewaldf.o
 
-$FCC $FFLAGS  *.o NAB/libnab.a  NAB/arpack.a  NAB/blas.a -lfftw3 -lm -lstdc++ -o $OUT
+LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a
 
-rm *.o 
+abin.dev : ${C_OBJS} ${F_OBJS} ${LIBS}
+	${FC} ${FFLAGS}  ${C_OBJS} ${F_OBJS} ${LIBS} ${LD} -o $@
+
+clean :
+	/bin/rm *.o *.mod NAB/*.o
+
+.SUFFIXES: .F90 .f90
+
+.F90.o:
+	$(FC) $(FFLAGS) -c $<
+
+.f90.o:
+	$(FC) $(FFLAGS) -c $<
 

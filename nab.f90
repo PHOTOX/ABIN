@@ -1,5 +1,3 @@
-#define NAB
-
       module mod_nab
       use mod_array_size
       real*8 boxx,boxy,boxz
@@ -134,7 +132,6 @@
        pom=pom+3
       enddo
 
-#ifdef NAB
       if(ihess.eq.1.and.modulo(it,ncalc).eq.0)then
 !!$OMP CRITICAL (neco)
        energy=mme2(xyz,grad,h,dummy1,dummy2,idum1,idum2,idum3,idum4,idum5,idum6,idum7,idum8,iter,dummy3)
@@ -213,12 +210,8 @@
 
       endif
 !----END-OF-QMMM-----------------------       
-#else
-     write(*,*)'Abin was not compiled with NAB.Exiting....'
-     stop 1
-#endif
 
-!converze energie 
+!convert energies to au units
       en_ewald=en_ewald/autoKK ! K to a.u.
 !      write(*,*)'en_ewald:',en_ewald
       energy=energy/autokcal

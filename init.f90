@@ -1,8 +1,5 @@
 !--Input and Initialization                         by Daniel Hollas,9.2.2012
-!---comment following line, if you don't want/have nab routines from AmberTools
-!package 
-#define NAB
-
+!-- some comment
       subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
       use mod_array_size
       use mod_general
@@ -80,12 +77,6 @@
 !$    call OMP_set_num_threads(nproc)
 !$    nthreads=omp_get_max_threads()
 !$    write(*,*)nthreads
-#ifndef NAB
-      if(qmmmtype.eq."nab".or.pot.eq.'nab')then
-              write(*,*)'Abin was not compiled with nab.Exiting....'
-              stop 1
-      endif
-#endif
 
 !     resetting number of walkers to 1 in case of classical simulation      
       if(ipimd.eq.0)then
@@ -823,7 +814,6 @@
        endif
       endif
 
-#ifdef NAB
       if (pot.eq."nab".or.qmmmtype.eq."nab")then
        if (alpha_pme.lt.0) alpha_pme = pi/cutoff
        if (kappa_pme.lt.0) kappa_pme = alpha_pme
@@ -849,7 +839,6 @@
         boxz2=0.5d0*boxz
        endif
       endif
-#endif
 
 
 !--------END OF INITIALIZATION-------------------
