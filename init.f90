@@ -187,6 +187,10 @@
        write(*,*)'integ must be "euler" or "rk4".'
        error=1
       endif
+      if(deltae.lt.0)then
+       write(*,*)'Parameter deltae must be non-negative number.'
+       error=1
+      endif
 !      if(irandom.le.9999)then
 !              write(*,*)'Error in getting irandom from input.Possibly too short&
 !              or too long'
