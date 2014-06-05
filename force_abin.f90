@@ -10,8 +10,8 @@
       real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
       real*8  :: eclas,temp1
       integer :: iat,iw,iat1,iat2,itest,nthreads=1 !,ithread
-      character*100 :: chsystem
-      character*20 :: chgeom,chforce,chhess,fgeom
+      character(len=100) :: chsystem
+      character(len=20) :: chgeom,chforce,chhess,fgeom
       logical :: file_exists
       integer :: ist1,ist2,iost
 !$    integer :: omp_get_max_threads,OMP_get_thread_num
@@ -80,6 +80,8 @@
               write(chsystem,*)'./NAB/r.nab '
       case ('gamess')
               write(chsystem,*)'./GAMESS/r.gamess '
+      case ('qchem')
+              write(chsystem,*)'./QCHEM/r.qchem '
       case ('dyn')
               write(chsystem,*)'./DYN/r.dyn '
       case DEFAULT
@@ -88,9 +90,11 @@
               stop 1
      end SELECT
 
-     !TODO: always pass time step for the bash script
+!TODO: always pass time step for the bash script
 !   write(chsystem,*)chsystem,it
 
+!TODO: for OpenMPI, add the index of the walker
+!do not use different script as implied here
    if(nthreads.gt.1)then
     write(chsystem,'(A30,A1,I3.3)')chsystem,'.',iw
    endif
