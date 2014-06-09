@@ -23,7 +23,8 @@
       integer :: irnd(nwalkmax),scaleveloc=1,readNHC
       integer :: iw,iat,inh,natom1,ifirst,itrj,ist1,ist2,imol,shiftdihed=1
       integer :: error=0,getpid,nproc=1,iknow=0,ipom,ipom2=0,is
-      character*2 :: shit
+      character(len=2) :: shit
+      character(len=10) :: chaccess
       LOGICAL :: file_exists
       real*8  :: wnw=5.0e-5,dum,pom=0.0d0,ekin_mom=0.0d0,temp_mom=0.0d0,scal
 !$    integer :: nthreads,omp_get_max_threads
@@ -56,7 +57,7 @@
       xmin=0.5
       xmax=3.5
 
-      open(150,file="input.in", status='OLD', delim='APOSTROPHE') !here ifort has some troubles
+      open(150,file="input.in", status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
       read(150,general)
       if(irest.eq.1)then
        readnhc=1   !readnhc has precedence before initNHC
@@ -410,23 +411,23 @@
       INQUIRE(FILE="movie.xyz", EXIST=file_exists)
       if(file_exists)then
        if(irest.eq.0)then
-        write(*,*)'File "movie.xyz" exists.Please (re)move it or set irest=1.Exiting...'
+        write(*,*)'File "movie.xyz" exists.Please (re)move it or set irest=1.'
         error=1
        else
-        write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended...'
+        write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
        endif
       endif
 
       INQUIRE(FILE="restart.xyz", EXIST=file_exists)
       if(file_exists)then
        if(irest.eq.0)then
-        write(*,*)'File "restart.xyz" exists.Please (re)move it or set irest=1.Exiting...'
-!        error=1
+        write(*,*)'File "restart.xyz" exists. Please (re)move it or set irest=1.'
+        error=1
        endif
       else
        if(irest.eq.1)then
-         write(*,*)'File restart.xyz not found. Exiting...'
-         stop 1
+         write(*,*)'File restart.xyz not found.' 
+         error=1
        endif 
       endif
 
@@ -437,7 +438,7 @@
 !--END OF ERROR CHECKING
 
 !------------READING GEOMETRY
-      open(111,file='mini.dat') 
+      open(111,file='mini.dat',status = "old", action = "read") 
       read(111,*)natom1
       if(natom1.ne.natom)then
         write(*,*)'No. of atoms in input.in and in mini.dat do not match.'
@@ -525,7 +526,7 @@
      if(irest.eq.1)then
       write(*,*)'irest=1,Reading geometry,velocities and NHC momenta from restart.xyz'
 
-      open(111,file='restart.xyz')
+      open(111,file='restart.xyz',status = "OLD", action = "READ")
       read(111,*)it
       it=it+1
       read(111,*)
@@ -626,88 +627,74 @@
 
 !----------------INITIALIZATION-----------------------
 
-!!!!!!!!!!!!!!!!!!!!! Here we ensure, that previous files are deleted
-      if(irest.eq.0)then
-       open(10,file='movie_mini.xyz')
-       close(10,status='delete')
-       open(10,file='restart.xyz')
-       close(10)
-       open(1,file='energies.dat')
-       write(1,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
-       if (nwritev.gt.0)then
-        open(13,file='vel.dat')
-        close(13,status='delete')
-        open(13,file='vel.dat')
-       endif
-       if(ipimd.eq.1.or.icv.eq.1)then
-        open(7,file='est_energy.dat')
-        write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
-       endif
-       if(ipimd.eq.1.or.ipimd.eq.0)then
-        open(2,file='temper.dat')
-        write(2,*)'#        Time[fs] Temperature           Temp-Average'
-       endif
-       if(ipimd.eq.2)then
-        open(3,file='pop.dat')
-        write(3,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
-        open(4,file='prob.dat')
-        write(4,*)'#    Time[fs] CurrentState   Probabilities'
-        open(8,file='PES.dat')
-        write(8,*)'#    Time[fs] Potential energies'
-       endif
+!--Here we ensure, that previous files are deleted----
+if(irest.eq.0)then
+  open(10,file='movie_mini.xyz')
+  close(10,status='delete')
+  open(10,file='restart.xyz')
+  close(10)
+  chaccess='SEQUENTIAL'
+  if (nwritev.gt.0)then
+    open(13,file='vel.dat')
+    close(13,status='delete')
+  endif
+else
+  chaccess='APPEND'
+endif
 
-       if(isbc.eq.1)then
-        open(11,file='r.dat')
-        write(11,*)'#Radius    density'
-       endif
+if (nwritev.gt.0)then
+   open(13,file='vel.dat',access=chaccess,action='write')
+endif
 
-       if(icv.eq.1)then
-        open(122,file='cv.dat')
-        write(122,*)'#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
-        close(122)
-        if(ihess.eq.1)then
-         open(123,file='cv_dcv.dat')
-         write(123,*)'#         Time[fs]  Cv-DCV   Cv-DCV'
-         close(123)
-        endif
-       endif
+open(1,file='energies.dat',access=chaccess,action='write')
+write(1,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+if(ipimd.eq.1.or.icv.eq.1)then
+  open(7,file='est_energy.dat',access=chaccess,action='write')
+  write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
+endif
 
-       else
-        open(1,file='energies.dat',access='append')
-        write(1,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
-        if(ipimd.eq.1.or.icv.eq.1)then
-         open(7,file='est_energy.dat',access='append')
-         write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
-        endif
-        if(nwritev.gt.0) open(13,file='vel.dat',access='append')
-        if(ipimd.eq.1.or.ipimd.eq.0)then
-         open(2,file='temper.dat',access='append')
-         write(2,*)'#        Time[fs] Temperature           Temp-Average'
-        endif
-        if(ipimd.eq.2)then
-         open(3,file='pop.dat',access='append')
-         write(3,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
-         open(4,file='prob.dat',access='append')
-         write(4,*)'#    Time[fs] CurrentState   Probabilities'
-         open(8,file='PES.dat',access='append')
-         write(8,*)'#    Time[fs] Potential energies'
-        endif
-       if(isbc.eq.1) open(11,file='r.dat',access='append')
-        !irest endif
-      endif
+if(inose.gt.0)then
+  open(2,file='temper.dat',access=chaccess,action='write')
+  write(2,*)'#        Time[fs] Temperature           Temp-Average'
+endif
 
-!-----------------------------
+if(ipimd.eq.2)then
+  open(3,file='pop.dat',access=chaccess,action='write')
+  write(3,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
+  open(4,file='prob.dat')
+  write(4,*)'#    Time[fs] CurrentState   Probabilities'
+  open(8,file='PES.dat')
+  write(8,*)'#    Time[fs] Potential energies'
+endif
+
+if(isbc.eq.1)then
+ open(11,file='r.dat',access=chaccess,action='write')
+ write(11,*)'#Radius    density'
+endif
+
+if(icv.eq.1)then
+ open(122,file='cv.dat',access=chaccess,action='write')
+ write(122,*)'#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
+ close(122)
+ if(ihess.eq.1)then
+  open(123,file='cv_dcv.dat',access=chaccess,action='write')
+  write(123,*)'#         Time[fs]  Cv-DCV   Cv-DCV'
+  close(123)
+ endif
+endif
+
+!------------------------------------------------------
 
       do iat=1,natom
        am(iat)=am(iat)*amu
       enddo
 
-!pid of the proccess, currently needed for molpro jobs
+!-----PID of the proccess
       pid=GetPID()
       write(*,*)'Pid of the current proccess is:',pid
 
-!---- inames initialization, currently only for guillot. 
-!---- we do this because string comparison is very costly
+!-----inames initialization, currently only for guillot. 
+!-----we do this because string comparison is very costly
       if(pot.eq.'guillot') call inames_guillot()
 
 
@@ -718,7 +705,7 @@
        f=0 !what about nchain=1?
        !what about massive therm?
       endif
-!---- SETTING initial velocities according to the Maxwell-Boltzmann distribution
+!-----SETTING initial velocities according to the Maxwell-Boltzmann distribution
       if(irest.eq.0)then
 !-----Random number generation. Used for Maxwell-Boltzmann sampling      
       ifirst=-irandom

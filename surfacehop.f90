@@ -53,8 +53,7 @@
       integer function readnacm(itrj)
       use mod_qmmm,only:natqm
       implicit none
-      integer :: iost,ist1,ist2,iat
-      integer :: ipom,itrj
+      integer :: iost,ist1,ist2,iat,itrj
       iost=0  ! needed if each tocalc=0
       open(127,file='nacm.dat')
       do ist1=1,nstate-1
@@ -88,8 +87,8 @@
       end function
 
       subroutine calcnacm(itrj)
-      use mod_general,only:pid
       implicit none
+      integer,parameter :: accu=4
       integer :: ist1,ist2,itrj
       character*100 :: chsystem
        open(unit=510,file='state.dat')
@@ -105,7 +104,7 @@
        enddo
        close(510) 
 
-      write(chsystem,*)'./MOLPRO/r.molpro.nacm ',pid,'< state.dat'   !*ithread
+      write(chsystem,*)'./MOLPRO/r.molpro.nacm ',accu,'< state.dat'  !TODO predelat  !*ithread
       call system(chsystem)
       end subroutine
 
@@ -1073,7 +1072,7 @@
       use mod_sh,ONLY:nstate,dotproduct_old,dotproduct_new
       implicit none
       real*8 dotproduct_int(nstmax,nstmax,ntrajmax)
-      integer :: iat,ist1,ist2,itrj     !iteration counters
+      integer :: ist1,ist2,itrj     !iteration counters
       real*8 :: fr,frd
 
       do ist1=1,nstate
@@ -1083,8 +1082,7 @@
        enddo
       enddo
 
-
-      end
+      end subroutine interpolate_dot
 
       subroutine interpolate2(vx_old,vy_old,vz_old,vx_new,vy_new,vz_new, &
                       nacx_old,nacy_old,nacz_old,nacx_new,nacy_new,nacz_new,en_array_old,en_array_new,en_array_int, &

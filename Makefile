@@ -1,6 +1,6 @@
 #FFLAGS="-fopenmp -O2 -pg" #PARALLEL VERSION
 #CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
-FFLAGS =  -g #-O0 -ffpe-trap=invalid,zero,overflow -g static "  #-O2 -ip -ipo " #-fno-underscoring -fopenmp"
+FFLAGS =  -g -Wall -fbounds-check #-O0 -ffpe-trap=invalid,zero,overflow -g static "  #-O2 -ip -ipo " #-fno-underscoring -fopenmp"
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
 OUT = abin.dev
 FC = gfortran

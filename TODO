@@ -1,6 +1,10 @@
+todo: unit conversions - look at amber/terachem
+todo: asi preavat pro SH nac precision jako parametr, spojit r.molpro a r.molpro.nacm
+	only alter subroutine calcnacm, r.molpro will determine everything based on an extra parameter
+
+todo: otestovat molpro-sh/df-cas
 todo: getting compile time and printing it during execution see: http://computer-programming-forum.com/49-fortran/438586ee99d51bd9.htm
 todo: MPI version, initially at least for terachem
-todo: unit conversions - look at amber/terachem
 todo: nakonci odstranit ify v nosehoover.f90 lines, 28-29
 todo: prjit vsechna TODO v kodu
 todo: na konci pridat kontrolu pritomnosti restart.xyz
@@ -8,6 +12,11 @@ TODO: pri minimalizaci (ipimd=3) nedelat pocatecni rychlosti
 TODO: predavat cas ab initio skriptum pres force_abin, pres module it
 zkontrolovat format vypisovani movie a geom.dat v abin.dev
 todo: automaticke smazani checkpointfilu pri zacatku simulaci....i pri restartu?(asi ano) ... mozna pres slozku SCRATCH,spolecnou pro vsechny programy?
+
+Write the state of random number generator into restart file,
+Optional at the end of restart.xyz, its presence must be determined automatically
+i.e. common block i ranlcfg.inp
+common /xrandf/ x(np),last,init
 
 init.F90, zakazat pimd bez stagingu a opravit hlasku o NH, line 255
 TODO: convert all atom names strings to UPPPER CASE, must also change the comparisons in mass_init
