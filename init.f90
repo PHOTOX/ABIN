@@ -14,16 +14,17 @@
       use mod_sbc
       use mod_fftw3
       implicit none
-      real*8 :: ran1,dt,rans(10)
-      real*8 :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-      real*8 :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-      real*8 :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(out)   :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+      real*8,intent(out)   :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
+      real*8,intent(inout) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real*8,intent(inout) :: dt
+      real*8  :: ran1,rans(10)
       real*8  :: vx1(npartmax),vy1(npartmax),vz1(npartmax)
       integer :: irnd(nwalkmax),scaleveloc=1,readNHC
       integer :: iw,iat,inh,natom1,ifirst,itrj,ist1,imol,shiftdihed=1
       integer :: error=0,getpid,nproc=1,iknow=0,ipom,ipom2=0,is
-      character(len=2) :: shit
+      character(len=2)  :: shit
       character(len=10) :: chaccess
       LOGICAL :: file_exists
       real*8  :: wnw=5.0e-5,pom=0.0d0,ekin_mom=0.0d0,temp_mom=0.0d0,scal
@@ -640,13 +641,11 @@
 if(irest.eq.0)then
   open(10,file='movie_mini.xyz')
   close(10,status='delete')
-  open(10,file='restart.xyz')
-  close(10)
   chaccess='SEQUENTIAL'
-  if (nwritev.gt.0)then
-    open(13,file='vel.dat')
-    close(13,status='delete')
-  endif
+!  if (nwritev.gt.0)then !I think its not needed
+!    open(13,file='vel.dat')
+!    close(13,status='delete')
+!  endif
 else
   chaccess='APPEND'
 endif
@@ -999,7 +998,7 @@ endif
       deallocate( xi_x )
     endif
    endif
-   !TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
+!TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
 
 !--following is needed for cleaning up after ab initio jobs      

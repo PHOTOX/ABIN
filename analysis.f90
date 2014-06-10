@@ -6,12 +6,12 @@
      use mod_general
      use mod_system
      implicit none
-     real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-     real*8 fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-     real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-     real*8 amt(npartmax,nwalkmax)
-     real*8 eclas,equant
-     real*8 :: energy,dt
+     real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+     real*8,intent(in) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+     real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+     real*8,intent(in) :: amt(npartmax,nwalkmax)
+     real*8,intent(in) :: eclas,equant
+     real*8 :: dt  !,energy
 
 !     eclas comes from force_clas,equant from force_quantum
 !     energy=eclas+equant
@@ -111,17 +111,21 @@
      use mod_sh
      use mod_gle
      implicit none
-     real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-     real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-     integer :: iat,iw,inh,itrj,ist1,it,is
+     real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+     real*8,intent(in)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+     integer,intent(in) :: it
+     integer :: iat,iw,inh,itrj,ist1,is
+     LOGICAL :: file_exists
 
 !---NOTE: trajectories after restart are not precisely the same as without
 !restart, since we don't pass fxc and fxq. Therefore,first step after
 !restart is incorrect (see respa.f90).
+! I think the above argument is invalid, as we now always do the zero step forces
 
-     call system('cp restart.xyz restart.xyz.old')
+     INQUIRE(FILE='restart.xyz', EXIST=file_exists)
+     if(file_exists) call system('cp restart.xyz restart.xyz.old')
 
-     open(102,file='restart.xyz')
+     open(102,file='restart.xyz',action='READ')
 
      write(102,*)it
 
