@@ -136,14 +136,14 @@ endif
        if(inac.eq.0)then
         iost=readnacm(itrj)
         if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
-!-------------if NACM NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-        write(*,*)'WARNING: Some NACs not computed.Trying with decreased accuracy.'
+!-------------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
+        write(*,*)'WARNING: Some NACMEs not computed.Trying with decreased accuracy.'
         write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
         call calcnacm(itrj)
         iost=readnacm(itrj)
         endif
         if(iost.ne.0)then
-         write(*,*)'Some NACs not read. Exiting...'
+         write(*,*)'Some NACMEs not read. Exiting...'
          stop 1
         endif
        endif

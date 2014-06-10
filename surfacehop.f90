@@ -3,7 +3,7 @@
       use mod_array_size
       implicit none
       integer :: istate_init=1,nstate=1,ntraj=1,substep=10000
-      integer :: inac=0,nohop=0,nac_accu1=6,nac_accu2=4
+      integer :: inac=0,nohop=0,nac_accu1=7,nac_accu2=5 !7 is MOLPRO default
       real*8  :: dtp,alpha=0.1d0,eshift,deltae=100.,popthr=-1
       integer :: istate(ntrajmax)
       real*8  :: nacx(npartmax,ntrajmax,nstmax,nstmax)
@@ -107,7 +107,7 @@
       if(pot.eq.'molpro')then
         write(chsystem,'(A20,I13,I4.3,I3)')'./MOLPRO/r.molpro ',it,itrj,nac_accu2,' < state.dat'
       else
-        write(*,*)'Different accuracy for NAC is currently supported only by molpro.'
+        write(*,*)'Different accuracy for NACME is currently supported only by molpro.'
         write(*,*)'Exiting...'
         stop 1
       endif
@@ -237,7 +237,7 @@
        iost=readnacm(itrj)
        if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
 !------------if NACM NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-       write(*,*)'WARNING: Some NACs not computed.Trying with decreased accuracy.'
+       write(*,*)'WARNING: Some NACME not computed.Trying with decreased accuracy.'
        write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
        call calcnacm(itrj)
 

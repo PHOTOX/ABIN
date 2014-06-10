@@ -272,7 +272,7 @@
        write(*,*)'Ignoring readnhc=1 since irest=0.'
       endif
       if(inac.gt.2.or.inac.lt.0)then
-       write(*,*)'Parameter INAC must be 0,1 or 2.'   !be very carefull if you change this!
+       write(*,*)'Parameter "inac" must be 0,1 or 2.'   !be very carefull if you change this!
        if(iknow.ne.1) error=1
       endif
       if(irest.eq.1.and.scaleveloc.eq.1)then
@@ -292,13 +292,13 @@
        error=1
       endif
       if(nac_accu1.le.0.or.nac_accu2.lt.0)then
-       write(*,*)'Input error:NAC precision must be a positive integer.'
-       write(*,*)'The treshold is then 10^-(nac_accu)'
+       write(*,*)'Input error:NACME precision must be a positive integer.'
+       write(*,*)'The treshold is then 10^-(nac_accu).'
        error=1
       endif
       if(nac_accu1.le.nac_accu2)then
        write(*,*)'nac_accu1 < nac_accu2'
-       write(*,*)'I will compute NAC only with default accuracy:',nac_accu1
+       write(*,*)'I will compute NACME only with default accuracy:',nac_accu1
       endif
       if(imasst.ne.0.and.imasst.ne.1)then
               write(*,*)'Input error: imasst must be 1 or zero.'
