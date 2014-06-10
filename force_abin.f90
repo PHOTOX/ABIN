@@ -87,8 +87,9 @@
 !-Second argument is the bead index, used for parallel calculations
    write(chsystem,'(A20,I13,I4.3)')chsystem,it,iw
 
+   !for SH, pass the 4th parameter:precision of NAC as 10^(-nac_accu1)
    if(ipimd.eq.2)then
-    write(chsystem,'(A40,A12)')chsystem,' < state.dat'
+    write(chsystem,'(A40,I3,A12)')chsystem,nac_accu1,' < state.dat'
    endif
      
    call system(chsystem)

@@ -3,7 +3,7 @@
       use mod_array_size
       implicit none
       integer :: istate_init=1,nstate=1,ntraj=1,substep=10000
-      integer :: inac=0,nohop=0
+      integer :: inac=0,nohop=0,nac_accu1=6,nac_accu2=4
       real*8  :: dtp,alpha=0.1d0,eshift,deltae=100.,popthr=-1
       integer :: istate(ntrajmax)
       real*8  :: nacx(npartmax,ntrajmax,nstmax,nstmax)
@@ -14,7 +14,7 @@
       real*8  :: en_array(nstmax,ntrajmax)
       real*8  :: cel_re(nstmax,ntrajmax),cel_im(nstmax,ntrajmax)
       integer :: tocalc(nstmax,nstmax)
-      character*10 :: integ='euler'
+      character(len=10) :: integ='rk4'
       save
       contains
       subroutine set_tocalc()
@@ -70,7 +70,7 @@
           nacz(iat,itrj,ist2,ist1)=-nacz(iat,itrj,ist1,ist2)
          else
           close(127,status='delete')
-          write(*,*)'NACME between states',ist1,ist2,'not read.'
+          write(*,*)'WARNING:NACM between states',ist1,ist2,'not read.'
           readnacm=iost
           return
          endif
@@ -87,8 +87,8 @@
       end function
 
       subroutine calcnacm(itrj)
+      use mod_general, only: it
       implicit none
-      integer,parameter :: accu=4
       integer :: ist1,ist2,itrj
       character*100 :: chsystem
        open(unit=510,file='state.dat')
@@ -104,7 +104,14 @@
        enddo
        close(510) 
 
-      write(chsystem,*)'./MOLPRO/r.molpro.nacm ',accu,'< state.dat'  !TODO predelat  !*ithread
+      if(pot.eq.'molpro')then
+        write(chsystem,'(A20,I13,I4.3,I3)')'./MOLPRO/r.molpro ',it,itrj,nac_accu2,' < state.dat'
+      else
+        write(*,*)'Different accuracy for NAC is currently supported only by molpro.'
+        write(*,*)'Exiting...'
+        stop 1
+      endif
+
       call system(chsystem)
       end subroutine
 
@@ -228,17 +235,17 @@
         enddo
 
        iost=readnacm(itrj)
-       if(iost.ne.0)then
+       if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
 !------------if NACM NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-       write(*,*)'Some NACM not computed.Trying with decreased accuracy.'
-       write(*,*)'Calling script r.molpro.nacm'
+       write(*,*)'WARNING: Some NACs not computed.Trying with decreased accuracy.'
+       write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
        call calcnacm(itrj)
 
        iost=readnacm(itrj)
        endif
 !------------if NACM STILL NOT COMPUTED: USE OLD NACM--------------
        if(iost.ne.0)then
-        write(*,*)'Some nac not read. Exiting...'
+        write(*,*)'ERROR:Some NACs not read. Exiting...'
         stop 1
 !        do ist1=1,nstate-1
 !         do ist2=ist1+1,nstate

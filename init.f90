@@ -21,12 +21,12 @@
       real*8 :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
       real*8  :: vx1(npartmax),vy1(npartmax),vz1(npartmax)
       integer :: irnd(nwalkmax),scaleveloc=1,readNHC
-      integer :: iw,iat,inh,natom1,ifirst,itrj,ist1,ist2,imol,shiftdihed=1
+      integer :: iw,iat,inh,natom1,ifirst,itrj,ist1,imol,shiftdihed=1
       integer :: error=0,getpid,nproc=1,iknow=0,ipom,ipom2=0,is
       character(len=2) :: shit
       character(len=10) :: chaccess
       LOGICAL :: file_exists
-      real*8  :: wnw=5.0e-5,dum,pom=0.0d0,ekin_mom=0.0d0,temp_mom=0.0d0,scal
+      real*8  :: wnw=5.0e-5,pom=0.0d0,ekin_mom=0.0d0,temp_mom=0.0d0,scal
 !$    integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
       REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
@@ -42,7 +42,7 @@
                         nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
                         k,r0,k1,k2,k3,De,a, &
                         Nshake,ishake1,ishake2,shake_tol,nmol,nshakemol,names,natmol
-      namelist /sh/     ntraj,istate_init,nstate,substep,deltae,integ,inac,nohop,alpha,popthr
+      namelist /sh/     ntraj,istate_init,nstate,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 !TODO: some checking for accu1/2
       namelist /qmmm/   natqm,natmm,LJcomb,q,rmin,eps,attypes,inames,qmmmtype
       namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf
 
@@ -289,6 +289,15 @@
       if(istate_init.gt.nstate)then
        write(*,*)'Error:Initial state > number of computed states. Exiting...'
        error=1
+      endif
+      if(nac_accu1.le.0.or.nac_accu2.lt.0)then
+       write(*,*)'Input error:NAC precision must be a positive integer.'
+       write(*,*)'The treshold is then 10^-(nac_accu)'
+       error=1
+      endif
+      if(nac_accu1.le.nac_accu2)then
+       write(*,*)'nac_accu1 < nac_accu2'
+       write(*,*)'I will compute NAC only with default accuracy:',nac_accu1
       endif
       if(imasst.ne.0.and.imasst.ne.1)then
               write(*,*)'Input error: imasst must be 1 or zero.'
@@ -955,7 +964,7 @@ endif
    use mod_estimators, only: hess,h
    use mod_fftw3
    implicit none
-   integer :: iter=-3
+!   integer :: iter=-3
 !   CHARACTER(len=150) :: cleanup
 !   CHARACTER(len=20)  :: user,chpid
    close(1)
@@ -971,6 +980,7 @@ endif
    if(nwritev.gt.0) close(13)
 !--------------CLEANING-------------------------
    if (ihess.eq.1) deallocate ( hess )
+   if (ihess.eq.1.and.pot.eq.'nab') deallocate ( h )
    if (istage.eq.2) call fftw_end()
 
    if(inose.eq.1)then

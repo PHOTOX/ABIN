@@ -20,9 +20,7 @@ program abin_dyn
       use mod_array_size
       use mod_general
       use mod_system, ONLY:nshake
-      use mod_nhc, ONLY:imasst
       use mod_sh
-      use mod_estimators,ONLY:hess
       use mod_fftw3
       implicit none
       real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
@@ -40,7 +38,7 @@ program abin_dyn
       real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
       real*8 en_array_old(nstmax,ntrajmax)
       real*8 dt,TIME,eclas,equant
-      integer :: itrj,ist1,ist2,iost
+      integer :: itrj,iost
       integer :: iat,iw
       integer,dimension(8) :: values2,values1
       LOGICAL :: file_exists
@@ -137,15 +135,15 @@ endif
        eshift=-en_array(1,itrj)
        if(inac.eq.0)then
         iost=readnacm(itrj)
-        if(iost.ne.0)then
+        if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
 !-------------if NACM NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-        write(*,*)'Some NACM not computed.Trying with decreased accuracy.'
-        write(*,*)'Calling script r.molpro.nacm'
+        write(*,*)'WARNING: Some NACs not computed.Trying with decreased accuracy.'
+        write(*,*)'Calling script r.molpro with accuracy:',accu2
         call calcnacm(itrj)
         iost=readnacm(itrj)
         endif
         if(iost.ne.0)then
-         write(*,*)'Some nac not read. Exiting...'
+         write(*,*)'Some NACs not read. Exiting...'
          stop 1
         endif
        endif
