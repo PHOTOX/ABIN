@@ -87,10 +87,10 @@
       end function
 
       subroutine calcnacm(itrj)
-      use mod_general, only: it
+      use mod_general, only: it,pot
       implicit none
       integer :: ist1,ist2,itrj
-      character*100 :: chsystem
+      character(len=100) :: chsystem
        open(unit=510,file='state.dat')
        write(510,'(I2)')istate(itrj)
        write(510,'(I2)')nstate
