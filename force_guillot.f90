@@ -87,8 +87,9 @@
       end
                                         
       real*8 function vocl(r)
+      use mod_array_size
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ang
       qo=0.66d0
       vocl=(627.14*qo/1.89)/r
       sigma=3.6835677
@@ -135,6 +136,7 @@
 
       real*8 function vhcl(r)
       implicit real*8(a-h,o-z)
+      vocl=0.0d0
       r=r/1.89
       qh=0.66d0/2.0d0
       vhcl=-(627.14*qh/1.89)/r
