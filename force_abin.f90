@@ -87,7 +87,7 @@
 !-Second argument is the bead index, used for parallel calculations
    write(chsystem,'(A20,I13,I4.3)')chsystem,it,iw
 
-   !for SH, pass the 4th parameter:precision of NAC as 10^(-nac_accu1)
+  !for SH, pass the 4th parameter:precision of NACME as 10^(-nac_accu1)
    if(ipimd.eq.2)then
     write(chsystem,'(A40,I3,A12)')chsystem,nac_accu1,' < state.dat'
    endif
@@ -119,7 +119,7 @@
 !$OMP ATOMIC
       eclas=eclas+temp1
 ! SH             
-     if(ipimd.ne.2)then
+     if(ipimd.eq.2)then
       en_array(1,iw)=temp1
       do ist1=2,nstate
        read(20+iw,*)en_array(ist1,iw)

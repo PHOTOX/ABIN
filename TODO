@@ -1,15 +1,20 @@
-todo: unit conversions - look at amber/terachem
+TODO: delete all unusued variables
+TODO: some simple automatic testing....
 todo: asi preavat pro SH nac precision jako parametr, spojit r.molpro a r.molpro.nacm
 	only alter subroutine calcnacm, r.molpro will determine everything based on an extra parameter
 
 todo: otestovat molpro-sh/df-cas
+
+todo: unit conversions - look at amber/terachem
+
+todo: add "Job started at- "
+
+
 todo: getting compile time and printing it during execution see: http://computer-programming-forum.com/49-fortran/438586ee99d51bd9.htm
 todo: MPI version, initially at least for terachem
 todo: nakonci odstranit ify v nosehoover.f90 lines, 28-29
 todo: prjit vsechna TODO v kodu
-todo: na konci pridat kontrolu pritomnosti restart.xyz
 TODO: pri minimalizaci (ipimd=3) nedelat pocatecni rychlosti
-TODO: predavat cas ab initio skriptum pres force_abin, pres module it
 zkontrolovat format vypisovani movie a geom.dat v abin.dev
 todo: automaticke smazani checkpointfilu pri zacatku simulaci....i pri restartu?(asi ano) ... mozna pres slozku SCRATCH,spolecnou pro vsechny programy?
 

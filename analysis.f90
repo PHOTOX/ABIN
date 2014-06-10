@@ -60,9 +60,10 @@
      use mod_general, only: imini,nwalk,natom
      use mod_system, ONLY: names
      implicit none
-     real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-     integer :: iat,iw,it
-     character*20 :: fgeom
+     real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+     integer,intent(in) :: it
+     integer            :: iat,iw
+     character(len=20)  :: fgeom
      
      if(it.le.imini)then
            open(101,file='movie_mini.xyz',access='append')
@@ -89,7 +90,7 @@
      use mod_array_size
      use mod_general
      implicit none
-     real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+     real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
      integer :: iat,iw
      
 
@@ -125,7 +126,7 @@
      INQUIRE(FILE='restart.xyz', EXIST=file_exists)
      if(file_exists) call system('cp restart.xyz restart.xyz.old')
 
-     open(102,file='restart.xyz',action='READ')
+     open(102,file='restart.xyz',action='WRITE')
 
      write(102,*)it
 
@@ -214,10 +215,10 @@
      end
 
      subroutine printf(fx,fy,fz)
-     use mod_array_size
-     use mod_general
+     use mod_array_size, only: npartmax,nwalkmax
+     use mod_general, only: nwalk,natom
      implicit none
-     real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+     real*8,intent(in) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
      integer :: iat,iw
 
      do iw=1,nwalk
