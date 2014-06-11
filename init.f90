@@ -109,10 +109,10 @@
       if(istage.eq.2) call fftw_init(nwalk)
 
 !-----HERE WE CHECK FOR ERRORS IN INPUT-----------------------------------------------
-!$    if(nthreads.gt.1.and.(pot.ne.'nab'.and.pot.ne.'harm'.and.pot.ne.'guillot'.and.pot.ne.'g09'))then
-!$     write(*,*)'Parallel execution is currently only supported with NAB,G09 or model potentials.Exiting...'
-!$     stop
-!$    endif
+!!$    if(nthreads.gt.1.and.(pot.ne.'nab'.and.pot.ne.'harm'.and.pot.ne.'guillot'.and.pot.ne.'g09'))then
+!!$     write(*,*)'Parallel execution is currently only supported with NAB,G09 or model potentials.Exiting...'
+!!$     stop
+!!$    endif
 
       !-----Check,whether input variables don't exceeds array limits
       if(ntraj.gt.ntrajmax)then

@@ -45,8 +45,8 @@ program abin_dyn
 !$    integer :: nthreads,omp_get_max_threads
 
 
-      call date_and_time(VALUES=values1)
-      call system('rm -f engrad.dat nacm.dat hessian.dat geom.dat')
+     call date_and_time(VALUES=values1)
+     call system('rm -f engrad.dat.* nacm.dat hessian.dat.* geom.dat.*')
 
 
 !!   INPUT AND INITIALIZATION SECTION      
@@ -180,7 +180,7 @@ endif
 !-----CALL RESPA or VELOCITY VERLET--------------
       if(nshake.eq.0)then
        if (md.eq.1) call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-       if (md.eq.2) call verletstep(x,y,z,px,py,pz,amt,amg,dt,eclas,fxc,fyc,fzc)
+       if (md.eq.2) call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
       else
        call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
       endif
@@ -272,8 +272,6 @@ endif
 
       call finish()
 
-! some cleaning if we do parallel execution
-!!$   if(nthreads.gt.1.and.pot.ne.'guillot') call system('rm geom.*')
 !---------TIMING-------------------------------
       call cpu_time(TIME)
       write(*,*)'Total cpu time [s]'

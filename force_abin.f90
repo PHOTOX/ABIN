@@ -16,7 +16,7 @@
       integer :: ist1,ist2,iost
 !$    integer :: omp_get_max_threads,OMP_get_thread_num
 
-!$    nthreads=omp_get_max_threads()
+!!$    nthreads=omp_get_max_threads()
 
       eclas=0.0d0
 !     ithread=1
@@ -94,8 +94,6 @@
      
    call system(chsystem)
 
-!   if(nthreads.eq.1)then
-
 !----make sure that the file exist and flush the disc buffer     
      itest=0
      INQUIRE(FILE=chforce, EXIST=file_exists)
@@ -170,11 +168,10 @@
      if(ihess.eq.1)then
       close(unit=20+iw+nwalk,status='delete')
      endif
-!   nthreads endif     
-!    endif     
 
-    enddo
+    end do
 !$OMP END DO 
+!$OMP END PARALLEL  
 
 end
                                         

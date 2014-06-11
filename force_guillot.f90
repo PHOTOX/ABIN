@@ -30,7 +30,9 @@
        enddo
       enddo
 
-!$OMP PARALLEL DO PRIVATE(temp1,r,frb,fr)
+!TODO: IS OMP really working here?
+!disabled for safety
+!!$OMP PARALLEL DO PRIVATE(temp1,r,frb,fr)
       do k=1,nwalk
        temp1=0.0d0
 !       tempoo=0.0d0
@@ -75,11 +77,11 @@
          fz(j,k)=fz(j,k)+fr*(z(j,k)-z(i,k))/(r)
        enddo
       enddo
-!OMP ATOMIC 
+!!OMP ATOMIC 
        eclas=eclas+temp1
 
       enddo
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
       eclas=eclas/nwalk
 !      write(*,*)"CLAS"
 !      write(*,*)eclas,tempoo,tempoh,temphh
