@@ -1,163 +1,167 @@
 
-      module mod_sh
-      use mod_array_size
-      implicit none
-      integer :: istate_init=1,nstate=1,ntraj=1,substep=10000
-      integer :: inac=0,nohop=0,nac_accu1=7,nac_accu2=5 !7 is MOLPRO default
-      real*8  :: dtp,alpha=0.1d0,eshift,deltae=100.,popthr=-1
-      integer :: istate(ntrajmax)
-      real*8  :: nacx(npartmax,ntrajmax,nstmax,nstmax)
-      real*8  :: nacy(npartmax,ntrajmax,nstmax,nstmax)
-      real*8  :: nacz(npartmax,ntrajmax,nstmax,nstmax)
-      real*8  :: dotproduct_old(nstmax,nstmax,ntrajmax)=0.0d0 !for inac=1
-      real*8  :: dotproduct_new(nstmax,nstmax,ntrajmax)=0.0d0 !for inac=1
-      real*8  :: en_array(nstmax,ntrajmax)
-      real*8  :: cel_re(nstmax,ntrajmax),cel_im(nstmax,ntrajmax)
-      integer :: tocalc(nstmax,nstmax)
-      character(len=10) :: integ='rk4'
-      save
-      contains
-      subroutine set_tocalc()
-      integer :: ist1,ist2,itrj=1
-      real*8  :: pop,pop2
-      do ist1=1,nstate-1
-       do ist2=ist1+1,nstate
-        if(abs(en_array(ist1,itrj)-en_array(ist2,itrj)).lt.deltae) then
-          tocalc(ist1,ist2)=1 
-         else
-          tocalc(ist1,ist2)=0 
-        endif
-       enddo
-      enddo
+module mod_sh
+use mod_array_size
+implicit none
+integer :: istate_init=1,nstate=1,ntraj=1,substep=10000
+integer :: inac=0,nohop=0,nac_accu1=7,nac_accu2=5 !7 is MOLPRO default
+real*8  :: dtp,alpha=0.1d0,eshift,deltae=100.,popthr=-1
+integer :: istate(ntrajmax)
+real*8  :: nacx(npartmax,ntrajmax,nstmax,nstmax)
+real*8  :: nacy(npartmax,ntrajmax,nstmax,nstmax)
+real*8  :: nacz(npartmax,ntrajmax,nstmax,nstmax)
+real*8  :: dotproduct_old(nstmax,nstmax,ntrajmax)=0.0d0 !for inac=1
+real*8  :: dotproduct_new(nstmax,nstmax,ntrajmax)=0.0d0 !for inac=1
+real*8  :: en_array(nstmax,ntrajmax)
+real*8  :: cel_re(nstmax,ntrajmax),cel_im(nstmax,ntrajmax)
+integer :: tocalc(nstmax,nstmax)
+character(len=10) :: integ='rk4'
+save
+contains
+subroutine set_tocalc()
+integer :: ist1,ist2,itrj=1
+real*8  :: pop,pop2
 
-      if(inac.eq.2)then  ! for ADIABATIC dynamics
-      do ist1=1,nstate-1
-       do ist2=ist1+1,nstate
-        tocalc(ist1,ist2)=0
-       enddo
-      enddo
+do ist1=1,nstate-1
+   do ist2=ist1+1,nstate
+      if(abs(en_array(ist1,itrj)-en_array(ist2,itrj)).lt.deltae) then
+         tocalc(ist1,ist2)=1 
+      else
+         tocalc(ist1,ist2)=0 
       endif
+   enddo
+enddo
 
-      if(popthr.gt.0)then  
-!COMPUTE NACM only if population of the states is gt.popthr
-      do ist1=1,nstate-1
-       pop=cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
-       do ist2=ist1+1,nstate
-        pop2=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
-        if(pop.lt.popthr.and.pop2.lt.popthr.and.ist1.ne.istate(itrj).and.ist2.ne.istate(itrj)) tocalc(ist1,ist2)=0
-       enddo
+if(inac.eq.2)then  ! for ADIABATIC dynamics
+   do ist1=1,nstate-1
+      do ist2=ist1+1,nstate
+         tocalc(ist1,ist2)=0
       enddo
-      endif
-      end subroutine
+   enddo
+endif
 
-      integer function readnacm(itrj)
-      use mod_qmmm,only:natqm
-      implicit none
-      integer :: iost,ist1,ist2,iat,itrj
-      iost=0  ! needed if each tocalc=0
-      open(127,file='nacm.dat')
-      do ist1=1,nstate-1
-       do ist2=ist1+1,nstate
+if(popthr.gt.0)then  
+   !COMPUTE NACM only if population of the states is gt.popthr
+   do ist1=1,nstate-1
+      pop=cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
+      do ist2=ist1+1,nstate
+         pop2=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
+         if(pop.lt.popthr.and.pop2.lt.popthr.and.ist1.ne.istate(itrj).and.ist2.ne.istate(itrj)) tocalc(ist1,ist2)=0
+      enddo
+   enddo
+endif
+end subroutine
 
-       if(tocalc(ist1,ist2).eq.1)then
+integer function readnacm(itrj)
+use mod_qmmm,only:natqm
+implicit none
+integer :: iost,ist1,ist2,iat,itrj
+iost=0  ! needed if each tocalc=0
+open(127,file='nacm.dat')
+do ist1=1,nstate-1
+   do ist2=ist1+1,nstate
 
-        do iat=1,natqm              ! reading only for QM atoms
-         read(127,*,IOSTAT=iost)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
-         if(iost.eq.0)then
-          tocalc(ist1,ist2)=0   !marking as read, useful if we do decreased accuracy
-          nacx(iat,itrj,ist2,ist1)=-nacx(iat,itrj,ist1,ist2)
-          nacy(iat,itrj,ist2,ist1)=-nacy(iat,itrj,ist1,ist2)
-          nacz(iat,itrj,ist2,ist1)=-nacz(iat,itrj,ist1,ist2)
-         else
-          close(127,status='delete')
-          write(*,*)'WARNING:NACM between states',ist1,ist2,'not read.'
-          readnacm=iost
-          return
-         endif
-        enddo
+      if(tocalc(ist1,ist2).eq.1)then
+
+         do iat=1,natqm              ! reading only for QM atoms
+            read(127,*,IOSTAT=iost)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+            if(iost.eq.0)then
+               tocalc(ist1,ist2)=0   !marking as read, useful if we do decreased accuracy
+               nacx(iat,itrj,ist2,ist1)=-nacx(iat,itrj,ist1,ist2)
+               nacy(iat,itrj,ist2,ist1)=-nacy(iat,itrj,ist1,ist2)
+               nacz(iat,itrj,ist2,ist1)=-nacz(iat,itrj,ist1,ist2)
+            else
+               close(127,status='delete')
+               write(*,*)'WARNING:NACM between states',ist1,ist2,'not read.'
+               readnacm=iost
+               return
+            endif
+         enddo
 
 !--------if tocalc 
-       endif
+      endif
 
-       enddo
-      enddo
-      close(127,status='delete')
-      readnacm=iost
-      return
-      end function
+   enddo
+enddo
 
-      subroutine calcnacm(itrj)
-      use mod_general, only: it,pot
-      implicit none
-      integer :: ist1,ist2,itrj
-      character(len=100) :: chsystem
-       open(unit=510,file='state.dat')
-       write(510,'(I2)')istate(itrj)
-       write(510,'(I2)')nstate
+close(127,status='delete')
+readnacm=iost
+return
+end function
+
+subroutine calcnacm(itrj)
+use mod_general, only: it,pot
+implicit none
+integer :: ist1,ist2,itrj
+character(len=100) :: chsystem
+open(unit=510,file='state.dat')
+write(510,'(I2)')istate(itrj)
+write(510,'(I2)')nstate
 ! horni troj. matice bez diagonaly
 ! tocalc(,)=1 -> pocitame couplingy
 ! tocalc(,)=0 -> nepocitame couplingy
-       do ist1=1,nstate-1
-        do ist2=ist1+1,nstate
-         write(510,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
-        enddo
-       enddo
-       close(510) 
+do ist1=1,nstate-1
+   do ist2=ist1+1,nstate
+      write(510,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
+   enddo
+enddo
+close(510) 
 
-      if(pot.eq.'molpro')then
-        write(chsystem,'(A20,I13,I4.3,I3)')'./MOLPRO/r.molpro ',it,itrj,nac_accu2,' < state.dat'
-      else
-        write(*,*)'Different accuracy for NACME is currently supported only by molpro.'
-        write(*,*)'Exiting...'
-        stop 1
-      endif
+if(pot.eq.'molpro')then
+   write(*,*)'WARNING: Some NACME not computed.Trying with decreased accuracy.'
+   write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
+   write(chsystem,'(A20,I13,I4.3,I3,A12)')'./MOLPRO/r.molpro ',it,itrj,nac_accu2,' < state.dat'
+else
+   write(*,*)'Different accuracy for NACME is currently supported only by molpro.'
+   write(*,*)'Exiting...'
+   stop 1
+endif
 
-      call system(chsystem)
-      end subroutine
+call system(chsystem)
+end subroutine
 
-      subroutine move_vars(en_array_old,nacx_old,nacy_old,nacz_old,vx,vy,vz,vx_old,vy_old,vz_old,itrj)
-      use mod_general,only:natom
-      implicit none
-      real*8 en_array_old(nstmax,ntrajmax)
-      real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-      real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
-      integer :: itrj,ist1,ist2,iat
+subroutine move_vars(en_array_old,nacx_old,nacy_old,nacz_old,vx,vy,vz,vx_old,vy_old,vz_old,itrj)
+use mod_general,only:natom
+implicit none
+real*8,intent(out) :: en_array_old(nstmax,ntrajmax)
+real*8,intent(out) :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
+real*8,intent(out) :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
+real*8,intent(out) :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
+real*8,intent(out) :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
+real*8,intent(in)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+integer :: itrj,ist1,ist2,iat
 !---moving new to old variables
-      do ist1=1,nstate
-      en_array_old(ist1,itrj)=en_array(ist1,itrj)
+do ist1=1,nstate
+   en_array_old(ist1,itrj)=en_array(ist1,itrj)
 
-      if(inac.eq.0)then   ! nedelame, pokud nacitame rovnou dotprodukt
-       do ist2=1,nstate
-        do iat=1,natom
-         nacx_old(iat,itrj,ist1,ist2)=nacx(iat,itrj,ist1,ist2)
-         nacy_old(iat,itrj,ist1,ist2)=nacy(iat,itrj,ist1,ist2)
-         nacz_old(iat,itrj,ist1,ist2)=nacz(iat,itrj,ist1,ist2)
-        enddo
-       enddo
-      endif
-
+   if(inac.eq.0)then   ! nedelame, pokud nacitame rovnou dotprodukt
+      do ist2=1,nstate
+         do iat=1,natom
+            nacx_old(iat,itrj,ist1,ist2)=nacx(iat,itrj,ist1,ist2)
+            nacy_old(iat,itrj,ist1,ist2)=nacy(iat,itrj,ist1,ist2)
+            nacz_old(iat,itrj,ist1,ist2)=nacz(iat,itrj,ist1,ist2)
+         enddo
       enddo
+   endif
 
-      do iat=1,natom
-       vx_old(iat,itrj)=vx(iat,itrj)
-       vy_old(iat,itrj)=vy(iat,itrj)
-       vz_old(iat,itrj)=vz(iat,itrj)
-      enddo
+enddo
 
-      if(inac.eq.1)then
-       do ist1=1,nstate
-        do ist2=1,nstate
+do iat=1,natom
+   vx_old(iat,itrj)=vx(iat,itrj)
+   vy_old(iat,itrj)=vy(iat,itrj)
+   vz_old(iat,itrj)=vz(iat,itrj)
+enddo
+
+if(inac.eq.1)then
+   do ist1=1,nstate
+      do ist2=1,nstate
          dotproduct_old(ist1,ist2,itrj)=dotproduct_new(ist1,ist2,itrj)
-        enddo
-       enddo
-      endif
+      enddo
+   enddo
+endif
 
-      end subroutine
+end subroutine
 
-      end module
+end module
 
       subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
       use mod_array_size
@@ -166,28 +170,28 @@
       use mod_sh
       use mod_qmmm, ONLY:natqm
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-      real*8 vx_int(npartmax,nwalkmax),vy_int(npartmax,nwalkmax),vz_int(npartmax,nwalkmax)
-      real*8 vx_newint(npartmax,nwalkmax),vy_newint(npartmax,nwalkmax),vz_newint(npartmax,nwalkmax)
-      real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 en_array_old(nstmax,ntrajmax)
-      real*8 en_array_int(nstmax,ntrajmax),en_array_newint(nstmax,ntrajmax)
-      real*8 dcel_re(nstmax,ntrajmax),dcel_im(nstmax,ntrajmax)
-      real*8 ancx(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 ancy(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 ancz(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 ancx_newint(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 ancy_newint(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 ancz_newint(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 dotproduct(nstmax,nstmax,ntrajmax),dotproduct_newint(nstmax,nstmax,ntrajmax)
-      real*8 t(nstmax,nstmax)           !switching probabilities
-      real*8 t_tot(nstmax,nstmax)       !switching probabilities
-      real*8 ran(10)
-      real*8  pop(nstmax,ntrajmax),popsum
+      real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(inout) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real*8,intent(inout) :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
+      real*8,intent(inout) :: en_array_old(nstmax,ntrajmax)
+      real*8,intent(inout) :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
+      real*8,intent(inout) :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
+      real*8,intent(inout) :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
+      real*8  :: vx_int(npartmax,nwalkmax),vy_int(npartmax,nwalkmax),vz_int(npartmax,nwalkmax)
+      real*8  :: vx_newint(npartmax,nwalkmax),vy_newint(npartmax,nwalkmax),vz_newint(npartmax,nwalkmax)
+      real*8  :: en_array_int(nstmax,ntrajmax),en_array_newint(nstmax,ntrajmax)
+      real*8  :: dcel_re(nstmax,ntrajmax),dcel_im(nstmax,ntrajmax)
+      real*8  :: ancx(npartmax,ntrajmax,nstmax,nstmax)
+      real*8  :: ancy(npartmax,ntrajmax,nstmax,nstmax)
+      real*8  :: ancz(npartmax,ntrajmax,nstmax,nstmax)
+      real*8  :: ancx_newint(npartmax,ntrajmax,nstmax,nstmax)
+      real*8  :: ancy_newint(npartmax,ntrajmax,nstmax,nstmax)
+      real*8  :: ancz_newint(npartmax,ntrajmax,nstmax,nstmax)
+      real*8  :: dotproduct(nstmax,nstmax,ntrajmax),dotproduct_newint(nstmax,nstmax,ntrajmax)
+      real*8  :: t(nstmax,nstmax)           !switching probabilities
+      real*8  :: t_tot(nstmax,nstmax)       !switching probabilities
+      real*8  :: ran(10)
+      real*8  ::  pop(nstmax,ntrajmax),popsum
       integer :: itp
       integer :: iat,ist1,ist2,itrj     !iteration counters
       integer :: ist                    ! =istate(itrj)
@@ -195,8 +199,8 @@
       real*8  :: ekin_mom,apom,edif,tau,fact,sum_norm
       integer :: ihop,ijunk
       real*8  :: a_re,prob(nstmax),cn
-      character*500 :: formt
-      character*20 :: chist,chihop,chit
+      character(len=500) :: formt
+      character(len=20) :: chist,chihop,chit
       integer :: iost
 
 
@@ -235,10 +239,8 @@
         enddo
 
        iost=readnacm(itrj)
-       if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
 !------------if NACM NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-       write(*,*)'WARNING: Some NACME not computed.Trying with decreased accuracy.'
-       write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
+       if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
        call calcnacm(itrj)
 
        iost=readnacm(itrj)
