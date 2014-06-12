@@ -55,9 +55,6 @@
       enddo
       dt=-1  
 
-      xmin=0.5
-      xmax=3.5
-
       open(150,file="input.in", status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
       read(150,general)
       if(irest.eq.1)then
