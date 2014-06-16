@@ -3,7 +3,8 @@ module mod_sh
 use mod_array_size
 implicit none
 integer :: istate_init=1,nstate=1,ntraj=1,substep=10000
-integer :: inac=0,nohop=0,nac_accu1=7,nac_accu2=5 !7 is MOLPRO default
+integer :: inac=0,nohop=0
+integer :: nac_accu1=7,nac_accu2=5 !7 is MOLPRO default
 real*8  :: dtp,alpha=0.1d0,eshift,deltae=100.,popthr=-1
 integer :: istate(ntrajmax)
 real*8  :: nacx(npartmax,ntrajmax,nstmax,nstmax)
@@ -209,7 +210,7 @@ end module
 
       do ist1=1,nstate
        do ist2=1,nstate
-        t_tot(ist1,ist2)=0.0
+        t_tot(ist1,ist2)=0.0d0
        enddo
       enddo
 
@@ -225,14 +226,14 @@ end module
       do ist1=1,nstate-1
        do ist2=ist1+1,nstate
        if(tocalc(ist1,ist2).eq.0)then
-          write(*,*)'Not computing NACM(tocalc=0) for states',ist1,ist2
+          write(*,*)'Not computing NACME between states',ist1,ist2
           do iat=1,natqm        ! MUSIME NULOVAT UZ TADY,bo pak menime tocalc behem cteni
-           nacx(iat,itrj,ist1,ist2)=0.0
-           nacy(iat,itrj,ist1,ist2)=0.0
-           nacz(iat,itrj,ist1,ist2)=0.0
-           nacx(iat,itrj,ist2,ist1)=0.0
-           nacy(iat,itrj,ist2,ist1)=0.0
-           nacz(iat,itrj,ist2,ist1)=0.0
+           nacx(iat,itrj,ist1,ist2)=0.0d0
+           nacy(iat,itrj,ist1,ist2)=0.0d0
+           nacz(iat,itrj,ist1,ist2)=0.0d0
+           nacx(iat,itrj,ist2,ist1)=0.0d0
+           nacy(iat,itrj,ist2,ist1)=0.0d0
+           nacz(iat,itrj,ist2,ist1)=0.0d0
           enddo
          endif
          enddo
@@ -637,19 +638,19 @@ end module
       b_temp=0.
 
       do iat=1,natom
-        a_temp=a_temp+ancx(iat,itrj,state1,state2)**2/am(iat)
-        a_temp=a_temp+ancy(iat,itrj,state1,state2)**2/am(iat)
-        a_temp=a_temp+ancz(iat,itrj,state1,state2)**2/am(iat)
-        b_temp=b_temp+ancx(iat,itrj,state1,state2)*vx_int(iat,itrj)
-        b_temp=b_temp+ancy(iat,itrj,state1,state2)*vy_int(iat,itrj)
-        b_temp=b_temp+ancz(iat,itrj,state1,state2)*vz_int(iat,itrj)
+         a_temp=a_temp+ancx(iat,itrj,state1,state2)**2/am(iat)
+         a_temp=a_temp+ancy(iat,itrj,state1,state2)**2/am(iat)
+         a_temp=a_temp+ancz(iat,itrj,state1,state2)**2/am(iat)
+         b_temp=b_temp+ancx(iat,itrj,state1,state2)*vx_int(iat,itrj)
+         b_temp=b_temp+ancy(iat,itrj,state1,state2)*vy_int(iat,itrj)
+         b_temp=b_temp+ancz(iat,itrj,state1,state2)*vz_int(iat,itrj)
       enddo
       a_temp=0.5d0*a_temp
       c_temp=b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))
 
       if(c_temp.lt.0)then
-        write(3,'(A35,I3,A10,I3)')'#Frustrated Hop occured from state ',state1,' to state ',state2
-        return
+         write(3,'(A35,I3,A10,I3)')'#Frustrated Hop occured from state ',state1,' to state ',state2
+         return
       endif
 
       istate(itrj)=state2
@@ -658,20 +659,20 @@ end module
 !------------- Rescaling the velocities------------------------
 
       if(b_temp.lt.0) then
-       g_temp=(b_temp+dsqrt(b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))))/2.0d0/a_temp
+         g_temp=(b_temp+dsqrt(b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))))/2.0d0/a_temp
       endif
 
       if(b_temp.ge.0) then
-       g_temp=(b_temp-dsqrt(b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))))/2.0d0/a_temp
+         g_temp=(b_temp-dsqrt(b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))))/2.0d0/a_temp
       endif
 
-      write(*,*)a_temp,b_temp,c_temp,g_temp
+!      write(*,*)a_temp,b_temp,c_temp,g_temp
 
       !TODO: tohle asi neni uplne spravne..mame pouzit vx_int nebo vx?
       do iat=1,natom
-       vx(iat,itrj)=vx(iat,itrj)-g_temp*ancx(iat,itrj,state1,state2)/am(iat)
-       vy(iat,itrj)=vy(iat,itrj)-g_temp*ancy(iat,itrj,state1,state2)/am(iat)
-       vz(iat,itrj)=vz(iat,itrj)-g_temp*ancz(iat,itrj,state1,state2)/am(iat)
+         vx(iat,itrj)=vx(iat,itrj)-g_temp*ancx(iat,itrj,state1,state2)/am(iat)
+         vy(iat,itrj)=vy(iat,itrj)-g_temp*ancy(iat,itrj,state1,state2)/am(iat)
+         vz(iat,itrj)=vz(iat,itrj)-g_temp*ancz(iat,itrj,state1,state2)/am(iat)
       enddo
 
       end

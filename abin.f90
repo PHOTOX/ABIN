@@ -274,9 +274,9 @@ endif
 
 !---------TIMING-------------------------------
       call cpu_time(TIME)
-      write(*,*)'Total cpu time [s]'
+      write(*,*)'Total cpu time [s] (does not include ab initio calculations)'
       write(*,*)TIME
-      write(*,*)'Total cpu time [hours]'
+      write(*,*)'Total cpu time [hours] (does not include ab initio calculations)'
       write(*,*)TIME/3600.
 
       call date_and_time(VALUES=values2)

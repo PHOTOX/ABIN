@@ -3,11 +3,12 @@
       use mod_general
       use mod_nhc, ONLY: temp,inose
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 amg(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8 ak(npartmax,nwalkmax)
-      real*8 :: energy,equant
+      real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(in) :: amg(npartmax,nwalkmax)
+      real*8,intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(out) :: energy
+      real*8 :: ak(npartmax,nwalkmax)
+      real*8 :: equant
       integer :: iat,iw,i,j,kplus,kminus
 
       do iat=1,natom

@@ -14,7 +14,7 @@
       implicit none
       integer,parameter :: npartmax=3000,nwalkmax=300,maxchain=10,nshakemax=1
       integer,parameter :: nbinmax=3000,ndistmax=30
-      integer,parameter :: nstmax=10,ntrajmax=1
+      integer,parameter :: nstmax=15,ntrajmax=1
       real*8, parameter :: amu=1823.d0,ang=1.8897d0,autofs=0.02419d0,pi=3.14159265d0
       real*8, parameter :: autok=3.1577464d5,me=9.109382e-31 !electron mass
       real*8, parameter :: autom=5.2917720859e-11 ! atomic length
@@ -29,7 +29,7 @@
       module mod_general
       implicit none
       integer :: it,ipimd=0,istage=0,nwalk=1,ihess=0,md=1  
-      character*10 :: pot='default'
+      character(len=10) :: pot='default'
       integer :: imini=0,nstep=1,nabin=50
       integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0
       integer :: icv=0,irest=0,anal_ext=0,idebug=0
@@ -50,14 +50,14 @@
       use mod_array_size
       implicit none
       real*8  :: am(npartmax)
-      character*2 :: names(npartmax)
+      character(len=2) :: names(npartmax)
       integer :: inames(npartmax),imass_init=0
 !---distributions (distance,angle,dihedral)
       integer :: ndist=0,nbin=1000,dist1(ndistmax),dist2(ndistmax)
       integer :: nang=0,ang1(ndistmax),ang2(ndistmax),ang3(ndistmax)
       integer :: ndih=0,dih1(ndistmax),dih2(ndistmax),dih3(ndistmax),dih4(ndistmax),nbin_ang=180
       real*8  :: dist(nbinmax,ndistmax),dist_ang(nbinmax,ndistmax),dist_dih(nbinmax,ndistmax) 
-      real*8  :: xmin(ndistmax),xmax(ndistmax)
+      real*8  :: xmin=0.5d0,xmax=5.0d0
       real*8  :: shiftdih=360.0d0 ! 0 for (-180,180), 360 for (0,360)
 !SHAKE stuff
       real*8  :: dshake(nshakemax),shake_tol=0.001
@@ -234,9 +234,9 @@
       module mod_qmmm
       use mod_array_size
       implicit none
-      character*2 :: attypes(npartmax)
+      character(len=2) :: attypes(npartmax)
       integer :: natqm,natmm
-      character*10 :: LJcomb='LB',qmmmtype='NA'
+      character(len=10) :: LJcomb='LB',qmmmtype='NA'
       real*8  :: q(npartmax),rmin(npartmax),eps(npartmax)
       real*8,allocatable  :: AIJ(:,:),BIJ(:,:)
       save

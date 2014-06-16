@@ -9,10 +9,11 @@
       use mod_nhc, ONLY: inose,nhcham,calc_nhcham
       use mod_gle, ONLY:langham
       implicit none
-      integer :: iw,iat,itrj=1
-      real*8  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-      real*8  :: amt(npartmax,nwalkmax)
-      real*8  :: est_temp,temp1,ekin_mom,dt,eclas
+      integer :: iw,iat
+      real*8,intent(in)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      real*8,intent(in)  :: amt(npartmax,nwalkmax)
+      real*8,intent(in)  :: dt,eclas
+      real*8  :: est_temp,temp1,ekin_mom
       real*8  :: it2
       
       it2=it/ncalc
@@ -62,7 +63,7 @@
       use mod_general
       use mod_system, ONLY:am
       implicit none
-      real*8  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real*8,intent(in)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
       real*8  :: temp1,ekin_mom 
       integer :: iw,iat
 
@@ -86,7 +87,7 @@
       use mod_general
       use mod_system, ONLY:am
       implicit none
-      real*8  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      real*8,intent(in)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
       real*8  :: temp1,ekin_mom 
       integer :: iw,iat
 

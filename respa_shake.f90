@@ -33,7 +33,6 @@
       implicit none
       real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
       real*8 fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
       real*8 fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
       real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
@@ -48,7 +47,7 @@
         call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
       endif
 
-       call shiftP (px,py,pz,fxc,fyc,fzc,amt,dt/2.0d0)
+       call shiftP (px,py,pz,fxc,fyc,fzc,dt/2.0d0)
 
 ! RATTLE HERE!
       if(nshake.ge.1)then
@@ -64,10 +63,10 @@
       if(istage.eq.1)then
        call QtoX(x,y,z,transx,transy,transz)
        call QtoX(vx,vy,vz,transxv,transyv,transzv)
-       call shake(transx,transy,transz,transxv,transyv,transzv,dt,iq,iv) 
+       call shake(transx,transy,transz,transxv,transyv,transzv,iq,iv) 
        call XtoQ(transxv,transyv,transzv,vx,vy,vz)
       else
-       call shake(x,y,z,vx,vy,vz,dt,iq,iv) 
+       call shake(x,y,z,vx,vy,vz,iq,iv) 
       endif
       do iat=1,natom
        do iw=1,nwalk
@@ -91,7 +90,7 @@
         call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
        endif
 
-       call shiftP (px,py,pz,fxq,fyq,fzq,amt,dt/(2.0d0*nabin))
+       call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2.0d0*nabin))
 
 !--------RATTLE HERE!
       if(nshake.ge.1)then
@@ -107,13 +106,13 @@
       if(istage.eq.1)then
        call QtoX(x,y,z,transx,transy,transz)
        call QtoX(vx,vy,vz,transxv,transyv,transzv)
-       call shake(transx,transy,transz,transxv,transyv,transzv,dt,iq,iv) 
+       call shake(transx,transy,transz,transxv,transyv,transzv,iq,iv) 
        call XtoQ(transxv,transyv,transzv,vx,vy,vz)
 !      upravujeme pouze rychlosti, tak asi nepotrebujeme transformovat zpatky
 !      souradnice      
 !      call XtoQ(transx,transy,transz,x,y,z)
       else
-       call shake(x,y,z,vx,vy,vz,dt,iq,iv) 
+       call shake(x,y,z,vx,vy,vz,iq,iv) 
       endif
       do iat=1,natom
        do iw=1,nwalk
@@ -143,17 +142,17 @@
        iv=0
        if(istage.eq.1)then
         call QtoX(x,y,z,transx,transy,transz)
-        call shake(transx,transy,transz,transxv,transyv,transzv,dt,iq,iv) 
+        call shake(transx,transy,transz,transxv,transyv,transzv,iq,iv) 
         call XtoQ(transx,transy,transz,x,y,z)
        else
-        call shake(x,y,z,vx,vy,vz,dt,iq,iv) 
+        call shake(x,y,z,vx,vy,vz,iq,iv) 
        endif
       endif
 !------END OF SHAKE     
 
        call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 
-       call shiftP (px,py,pz,fxq,fyq,fzq,amt,dt/(2.0*nabin))
+       call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2.0*nabin))
 
       if(inose.eq.1)then
         call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
@@ -168,7 +167,7 @@
 
       call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 
-      call shiftP (px,py,pz,fxc,fyc,fzc,amt,dt/2.0d0)
+      call shiftP (px,py,pz,fxc,fyc,fzc,dt/2.0d0)
 
       if(inose.eq.1)then
         call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))

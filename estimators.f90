@@ -14,7 +14,7 @@
 !!$OMP threadprivate(h)   
       !following is for projected cv_pcv estimator, not properly implemented yet!
       real*8  :: cv_pcv=0.0d0,f_cumul=0.0d0,ex_cumul=0.0d0,fj=0.0d0,f2=0.0d0,rj_cumul=0.0d0
-      integer :: enmini=100.
+      integer :: enmini=100
       save
       end module
 
@@ -27,9 +27,9 @@
       use mod_nhc, ONLY:temp,inose
       use mod_system, ONLY:am,nshake
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
-      real*8  dt,eclas
+      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(in) :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
+      real*8,intent(in) :: dt,eclas
       real*8  :: xc(npartmax),yc(npartmax),zc(npartmax)
       real*8  :: cvhess(nwalkmax),dc(npartmax*3,nwalkmax)
       real*8  :: est_vir,est_prim,cv_prim,cv_vir,cv_dcv
@@ -141,7 +141,7 @@
         call hess_morse(x,y,z)
        endif
        if(pot.eq.'2dho')then
-        call hess_2dho(x,y,z)
+        call hess_2dho()
        endif
 
       cv_dcv=0.0d0
@@ -248,56 +248,56 @@
 !cccccDH:projected centroid virial Cv estimator according to :Glaesemann, Fried JCP,2002,vol 117,7
 !cccc It requiers one extra classical energy calculation for centroid variable
 
-      subroutine est_cvpcv(temp,it2,  &
-        est_vir_cumul,cv_vir,eclas,xc,yc,zc,  &
-        cv_pcv,f_cumul,ex_cumul,fj,f2,rj_cumul)
-      use mod_array_size
-      use mod_general 
-      implicit real*8(a-h,o-z)
-      real*8 xc(npartmax),yc(npartmax),zc(npartmax)
-
-      G=(9*natom*natom+6*natom)*0.25d0*temp**2
-
-      Vq=0.0d0
-      if(pot.ne.'harm')then
-       call system('./G09.DFT/energy.g09')
-       open(124,file='en_centroid.dat')
-       read(124,*)Vq
-       close(124)
-      endif
+!      subroutine est_cvpcv(temp,it2,  &
+!        est_vir_cumul,cv_vir,eclas,xc,yc,zc,  &
+!        cv_pcv,f_cumul,ex_cumul,fj,f2,rj_cumul)
+!      use mod_array_size
+!      use mod_general 
+!      implicit real*8(a-h,o-z)
+!      real*8 xc(npartmax),yc(npartmax),zc(npartmax)
+!
+!      G=(9*natom*natom+6*natom)*0.25d0*temp**2
+!
+!      Vq=0.0d0
+!      if(pot.ne.'harm')then
+!       call system('./G09.DFT/energy.g09')
+!       open(124,file='en_centroid.dat')
+!       read(124,*)Vq
+!       close(124)
+!      endif
 !   CALCULATION OF ENERGY OF THE CENTROID FOR HARMONIC OSCILATOR ccc
-      if(pot.eq.'harm')then
-        aa=0.302
-        r0=1.412*1.89
-        dx=xc(2)-xc(1)
-        dy=yc(2)-yc(1)
-        dz=zc(2)-zc(1)
-        r=dx**2+dy**2+dz**2
-        r=dsqrt(r)
-        Vq=0.5*aa*(r-r0)**2
-      endif
+!      if(pot.eq.'harm')then
+!        aa=0.302
+!        r0=1.412*1.89
+!        dx=xc(2)-xc(1)
+!        dy=yc(2)-yc(1)
+!        dz=zc(2)-zc(1)
+!        r=dx**2+dy**2+dz**2
+!        r=dsqrt(r)
+!        Vq=0.5*aa*(r-r0)**2
+!      endif
 
 !      TO think through: musime si nejak predavat j, ktere tvori pouze cast cv_vir
       
-      rj=cv_vir*temp**2+(est_vir_cumul/it)**2
-      rj_cumul=rj_cumul+rj
+!      rj=cv_vir*temp**2+(est_vir_cumul/it)**2
+!      rj_cumul=rj_cumul+rj
 
 !ccccccccccccccccccccccc
-      dV=Vq-eclas
-      ex=exp(-dV/temp)
-      ex_cumul=ex_cumul+ex
+!      dV=Vq-eclas
+!      ex=exp(-dV/temp)
+!      ex_cumul=ex_cumul+ex
 
 !     gf = g ..see the article
 !     DH: not really sure about the gf...
-      gf=(1.5d0*natom*temp)**2+1.5d0*natom*temp**2
-      f=gf*ex
-      f_cumul=f_cumul+f
-      f2=f2+f*f
-      fj=fj+f*rj
-      alfa=(fj/it2-rj_cumul/it2*f_cumul/it2)/(f2/it2-(f_cumul/it2)**2)
-      bigJ=rj_cumul/it2-alfa*f_cumul/it2+alfa*G*ex_cumul/it2
-      cv_pcv=(bigJ-(est_vir_cumul/it)**2)/temp**2
+!      gf=(1.5d0*natom*temp)**2+1.5d0*natom*temp**2
+!      f=gf*ex
+!      f_cumul=f_cumul+f
+!      f2=f2+f*f
+!      fj=fj+f*rj
+!      alfa=(fj/it2-rj_cumul/it2*f_cumul/it2)/(f2/it2-(f_cumul/it2)**2)
+!      bigJ=rj_cumul/it2-alfa*f_cumul/it2+alfa*G*ex_cumul/it2
+!      cv_pcv=(bigJ-(est_vir_cumul/it)**2)/temp**2
 
-      end
+!      end
 
 

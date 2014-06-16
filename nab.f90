@@ -10,7 +10,7 @@
       contains
       subroutine wrap(x,y,z)
       use mod_array_size
-      use mod_general,only:natom,nwalk
+      use mod_general,only:nwalk
       use mod_system,only:natmol,nmol
       implicit none
       real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
@@ -91,7 +91,6 @@
       subroutine force_nab(x,y,z,fx,fy,fz,eclas)
       use mod_array_size
       use mod_general
-      use mod_system,only:names
       use mod_estimators, ONLY: hess,h
       use mod_qmmm
       use mod_nab
@@ -102,7 +101,7 @@
       real*8 dummy1(npartmax),dummy2(npartmax*3)
       character(len=npartmax) :: dummy3
       real*8 :: eclas,energy,del
-      integer*8 :: iat,iat1,iat2,pom,iw,idum
+      integer*8 :: iat,iat1,iat2,pom,iw
       integer ::   idum1=1,idum2=1,idum3=1,idum4=1,idum5=1,idum6=1,idum7=1,idum8=1
       real*8, parameter :: fac=autokcal*ang
       real*8, parameter :: fac2=autokcal*ang*ang,fac3=autoKK*ang

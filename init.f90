@@ -14,11 +14,11 @@
       use mod_sbc
       use mod_fftw3
       implicit none
-      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(out)   :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-      real*8,intent(out)   :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-      real*8,intent(inout) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8,intent(inout) :: dt
+      real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+      real*8,intent(out) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
+      real*8,intent(out) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real*8,intent(out) :: dt
       real*8  :: ran1,rans(10)
       real*8  :: vx1(npartmax),vy1(npartmax),vz1(npartmax)
       integer :: irnd(nwalkmax),scaleveloc=1,readNHC
@@ -126,7 +126,7 @@
       endif
       if(nwalk.ge.nwalkmax)then
        write(*,*)'Maximum number of random walkers is:'
-       write(*,*)nwalkmax
+       write(*,*)nwalkmax-1  !because we write passed that in estimators.dat
        write(*,*)'Adjust variable nwalkmax in modules.f90'
        stop
       endif

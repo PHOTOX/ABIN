@@ -9,10 +9,10 @@
       save
       CONTAINS
       SUBROUTINE sbc_init(x,y,z)
-      use mod_general, ONLY:natom,nwalk
+      use mod_general, ONLY:natom !,nwalk
       use mod_system, ONLY:am,names
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8 r
       integer :: iw,iat
 
@@ -71,8 +71,8 @@
       use mod_general
       use mod_system, ONLY:am,names 
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
       real*8  :: r,frb
       integer :: iat,iw
 
@@ -118,30 +118,30 @@
       END MODULE
 
 
-      MODULE mod_bag
-      use mod_array_size
-      real*8,allocatable :: neigh1(:),neigh2(:),neigh3(:)
-      real*8 :: some_parameters
-      save
-      CONTAINS
-
-      SUBROUTINE bag_init()
-      !allocate(neigh1,neig)
-      END SUBROUTINE
-
-      SUBROUTINE force_bag(x,y,z,fx,fy,fz)
-      use mod_general
-      use mod_system, ONLY:am,names 
-      implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8  :: r,frb
-      integer :: iat,iw
-
-
-
-
-
-      END SUBROUTINE
-      END MODULE
+!      MODULE mod_bag
+!      use mod_array_size
+!      real*8,allocatable :: neigh1(:),neigh2(:),neigh3(:)
+!      real*8 :: some_parameters
+!      save
+ !     CONTAINS
+ !
+ !     SUBROUTINE bag_init()
+ !     !allocate(neigh1,neig)
+ !     END SUBROUTINE
+!
+!      SUBROUTINE force_bag(x,y,z,fx,fy,fz)
+!      use mod_general
+!      use mod_system, ONLY:am,names 
+!      implicit none
+!      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+!      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+!      real*8  :: r,frb
+!      integer :: iat,iw
+!
+!
+!
+!
+!
+!      END SUBROUTINE
+!      END MODULE
 

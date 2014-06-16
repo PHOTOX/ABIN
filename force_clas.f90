@@ -4,16 +4,16 @@
       use mod_qmmm, ONLY: qmmmtype
       use mod_nab, ONLY: ipbc,wrap,nsnb
       use mod_sbc
-      use mod_bag
+!      use mod_bag
       use mod_nhc, ONLY: inose
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(inout) ::  x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(inout) ::  fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(out)   :: energy
       real*8 transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
       real*8 fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
-      real*8 sumux(npartmax),sumuy(npartmax),sumuz(npartmax)
       integer :: iat,iw
-      real *8 :: energy,eclas
+      real *8 :: eclas
 
 ! Initialization
       do iw=1,nwalk
@@ -73,7 +73,8 @@
      END SELECT
 
       if (isbc.eq.1) call force_sbc(transx,transy,transz,fxab,fyab,fzab)
-      if (ibag.eq.1) call force_bag(transx,transy,transz,fxab,fyab,fzab)
+!      if (ibag.eq.1) call force_bag(transx,transy,transz,fxab,fyab,fzab)
+      if (ibag.eq.1) write(*,*) 'Warning,bag not supported yet. Ignoring...'
 
 !---------QMMM SECTION-----------------
      if(iqmmm.eq.1)then

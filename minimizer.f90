@@ -8,7 +8,7 @@
       real*8 x_new(npartmax,nwalkmax),y_new(npartmax,nwalkmax),z_new(npartmax,nwalkmax)
       real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
       real*8 fx_new(npartmax,nwalkmax),fy_new(npartmax,nwalkmax),fz_new(npartmax,nwalkmax)
-      integer :: iat,iw,iat1,iat2,iter
+      integer :: iat,iw,iter
       real*8  :: eclas,eclas_new
 
       iw=1

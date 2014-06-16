@@ -3,13 +3,13 @@
 !--------------------------------------------------------------------------
       SUBROUTINE shiftX (rx,ry,rz,px,py,pz,mass,dt)
       use mod_array_size
-      use mod_general
+      use mod_general,only:nwalk,natom
       implicit none
 
-      real*8 rx(npartmax,nwalkmax),ry(npartmax,nwalkmax),rz(npartmax,nwalkmax)
-      real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-      real*8 mass(npartmax,nwalkmax)
-      real*8  :: dt
+      real*8,intent(inout) :: rx(npartmax,nwalkmax),ry(npartmax,nwalkmax),rz(npartmax,nwalkmax)
+      real*8,intent(in)   :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      real*8,intent(in)    :: mass(npartmax,nwalkmax)
+      real*8,intent(in)    :: dt
       integer :: i,iw
 
       do iw=1,nwalk
@@ -26,15 +26,14 @@
       END
 
 
-      SUBROUTINE shiftP (px,py,pz,fx,fy,fz,mass,dt)   !MASS IS NOT REALLY NEEDED
+      SUBROUTINE shiftP (px,py,pz,fx,fy,fz,dt)
       use mod_array_size
-      use mod_general
+      use mod_general,only: nwalk,natom
       implicit none
 
-      real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8 mass(npartmax,nwalkmax) ! TODO get rid of this....
-      real*8 dt
+      real*8,intent(inout)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      real*8,intent(in)     :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(in)     :: dt
       integer :: i,iw
 
       do i=1, natom

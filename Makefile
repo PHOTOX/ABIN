@@ -1,13 +1,19 @@
-FFLAGS= -fopenmp -g #-O2  #PARALLEL VERSION
+#Makefile for ABIN		Daniel Hollas,2014
+
+#WARNING:dependecies on *.mod files are hidden!
+#if you change modules, you should recompile the whole thing i.e. touch *.f90
+
+#FFLAGS= -fopenmp -g #-O2  #PARALLEL VERSION
 #CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
-#FFLAGS =  -g -Wall -fbounds-check #-O0 -ffpe-trap=invalid,zero,overflow -g static "  #-O2 -ip -ipo " #-fno-underscoring -fopenmp"
+FFLAGS =  -g -Wall -fbounds-check #-O0 -ffpe-trap=invalid,zero,overflow -g static "  #-O2 -ip -ipo " #-fno-underscoring -fopenmp"
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
-OUT = abin.dev.openmp
+
+OUT = abin.dev
 FC = gfortran
 CC = gcc
 LD = -lfftw3 -lm -lstdc++
 
-
+# gfortran -c modules.f90 nosehoover.f90 estimators.f90  gle.F90
 F_OBJS = modules.o nosehoover.o stage.o estimators.o nab.o gle.o analyze_ext_distp.o potentials.o \
 velverlet.o surfacehop.o force_mm.o minimizer.o random.f force_bound.o respa_shake.o force_guillot.o \
 shake.o abin.o respa.o analysis.o init.o force_clas.o force_quantum.o density.o ran1.o vinit.o \
@@ -17,7 +23,7 @@ C_OBJS = nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o
 
 LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a
 
-abin.dev : ${C_OBJS} ${F_OBJS} ${LIBS}
+${OUT} : ${C_OBJS} ${F_OBJS} ${LIBS}
 	${FC} ${FFLAGS}  ${C_OBJS} ${F_OBJS} ${LIBS} ${LD} -o $@
 
 clean :

@@ -1,12 +1,18 @@
-      subroutine shake(x,y,z,vx,vy,vz,dt,iq,iv) 
+      subroutine shake(x,y,z,vx,vy,vz,iq,iv) 
       use mod_array_size
       use mod_general
       use mod_system, ONLY: am,NShake,IShake1,IShake2,dshake,shake_tol
-      implicit real*8(a-h,o-z)
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8 mi,mj,mij,agama,test
-      integer :: iat, iw,i,j,ixshake,iiter,maxcycle
+      !implicit real*8(a-h,o-z)
+      implicit none
+      real*8 :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8 :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      integer,intent(in) :: iq,iv
+      real*8  :: mi,mj,mij,agama
+      integer :: iw,i,j,ixshake,iiter,maxcycle,itest
+      real*8  :: dijiter2,xij,yij,zij,rij2
+      real*8  :: xdotij,ydotij,zdotij,dot
+      real*8  :: xiiter,yiiter,ziiter,xjiter,yjiter,zjiter
+      !TODO implicit none
       
       maxcycle=1000
       do iw=1,nwalk
@@ -14,10 +20,9 @@
       if(iw.eq.2.and.istage.eq.2) exit   !shake only centroid variable i.e. first normal mode
 
 ! PS&DHchange: SHAKE algorithm implemented, iteratively solved until convergence
-! criterion agama < shake_tol are met for all bonds. We stop program if we do
-! not converge after 1000 steps.
-! Velocities recalculated in a primitive way by method of
-! finite differences.
+! criterion agama < shake_tol are met for all bonds.
+! We stop program if we do not converge after 1000 steps.
+! Velocities recalculated in a primitive way by method of finite differences.
 
        if(iq.eq.1)then
 
@@ -43,7 +48,6 @@
         agama=dijiter2-dshake(ixshake)
         agama=agama/(4*dijiter2*mij)
 
-!        test=abs(dijiter2-dshake(ixshake))/dshake(ixshake)
         if(abs(agama).gt.shake_tol)then
          itest=1
 ! Rapaport, p.275, here with masses(small modification)
@@ -98,26 +102,26 @@
         agama=-dot/(2*rij2*mij)
 
         if(abs(agama).gt.shake_tol)then
-         itest=1
-        vx(i,iw)=vx(i,iw)-agama*xij/mi
-        vy(i,iw)=vy(i,iw)-agama*yij/mi
-        vz(i,iw)=vz(i,iw)-agama*zij/mi
-        vx(j,iw)=vx(j,iw)+agama*xij/mj
-        vy(j,iw)=vy(j,iw)+agama*yij/mj
-        vz(j,iw)=vz(j,iw)+agama*zij/mj
+           itest=1
+           vx(i,iw)=vx(i,iw)-agama*xij/mi
+           vy(i,iw)=vy(i,iw)-agama*yij/mi
+           vz(i,iw)=vz(i,iw)-agama*zij/mi
+           vx(j,iw)=vx(j,iw)+agama*xij/mj
+           vy(j,iw)=vy(j,iw)+agama*yij/mj
+           vz(j,iw)=vz(j,iw)+agama*zij/mj
         endif
 
 ! ixshake loop
         enddo
 
         if(itest.eq.0)then
-         exit
+           exit
         endif
 ! IITER loop
         enddo
         if (iiter.ge.maxcycle)then
-          write(*,*)'Velocity shake not converged after',maxcycle,'iterations. Exiting...'      
-          stop
+           write(*,*)'Velocity shake not converged after',maxcycle,'iterations. Exiting...'      
+           stop
         endif
         endif
 

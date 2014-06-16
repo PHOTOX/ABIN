@@ -27,21 +27,17 @@ C
 C------------------------------------------------------------------------
         SUBROUTINE vinit(TEMP, MASS, vx,vy,vz,nout,idum)
         use mod_general
-        use mod_system, only:nshake
  
         integer i
         REAL*8  VX(natom), VY(natom), VZ(natom)
         real*8  mass(natom)
-        integer idum,my_seed_random
+        integer idum 
         integer nout
         REAL*8  TEMP,SIGMA
         REAL*8  GAUSSabin
         real*8  vcmx,vcmy,vcmz,tm
-        real*8  ekin_mom,pom
  
 C Initialize the random number generator
-c        idum = my_seed_random (nout)
-c        idum = -454541246
         idum = -idum
 
 C Loop over atoms

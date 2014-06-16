@@ -15,7 +15,7 @@
       CONTAINS
       subroutine calc_nhcham()
       use mod_array_size
-      use mod_general, only:natom,nwalk,it,dime
+      use mod_general, only:natom,nwalk,dime
       implicit none
       integer iat,inh,iw
       nhcham=0.0d0
@@ -177,7 +177,7 @@
       subroutine nhc_temp() !currently not in use
       use mod_general, ONLY:nwalk,natom
       implicit none
-      integer :: inh,iw,iat
+      integer :: iw,iat
       real*8  :: ekin_mom=0.0d0,temp1=0.0d0
       do iw=1,nwalk
        do iat=1,natom
@@ -201,11 +201,10 @@
       use mod_nhc
       use mod_system, only: nshakemol
       implicit none
-      real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-      real*8 amt(npartmax,nwalkmax),G(maxchain)
-      real*8 :: pnhdotx,pnhdoty,pnhdotz
-      real*8 :: dt,dt2,dt4,ekin2,AA,ekin_p
-      real*8 :: wdt,wdt2,wdt4,pscale,omega
+      real*8  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      real*8  :: amt(npartmax,nwalkmax),G(maxchain)
+      real*8  :: dt,ekin2,AA
+      real*8  :: wdt,wdt2,wdt4,pscale
       integer :: iw,iat,inh
       integer :: nf,iresp,iyosh
       integer :: iat1,iat2,sumat,imol
@@ -290,7 +289,7 @@ enddo
       real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
       real*8 amt(npartmax,nwalkmax)
       real*8 Gx(maxchain),Gy(maxchain),Gz(maxchain)
-      real*8 :: dt,dt2,dt4,ekin2,AA
+      real*8 :: dt,AA
       real*8 :: wdt,wdt2,wdt4
       integer :: iw,iat,inh,istart
       integer :: iresp,iyosh

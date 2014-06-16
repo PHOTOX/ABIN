@@ -1,36 +1,33 @@
-TODO: delete all unusued variables
 TODO: some simple automatic testing....
-todo: asi preavat pro SH nac precision jako parametr, spojit r.molpro a r.molpro.nacm
-	only alter subroutine calcnacm, r.molpro will determine everything based on an extra parameter
 
-todo: otestovat molpro-sh/df-cas
+instead of restart0.xyz, make restart.xyz.$it
+
+check whether densities work
 
 todo: unit conversions - look at amber/terachem
+allocate arrays..must be in modules...use automatic arrays for local arrays where needed
+make explcit interface everywhere (for functions not in modules), put them into module
 
 todo: add "Job started at- "
 
 
 todo: getting compile time and printing it during execution see: http://computer-programming-forum.com/49-fortran/438586ee99d51bd9.htm
-todo: MPI version, initially at least for terachem
-todo: nakonci odstranit ify v nosehoover.f90 lines, 28-29
-todo: prjit vsechna TODO v kodu
-TODO: pri minimalizaci (ipimd=3) nedelat pocatecni rychlosti
+todo: MPI version for terachem
+todo: nakonci odstranit ify v nosehoover.f90 lines, 28-29 - asi NE
+todo: projit vsechna TODO v kodu
+TODO: pri minimalizaci (ipimd=3) nedelat pocatecni rychlosti - asi neni treba
 zkontrolovat format vypisovani movie a geom.dat v abin.dev
-todo: automaticke smazani checkpointfilu pri zacatku simulaci....i pri restartu?(asi ano) ... mozna pres slozku SCRATCH,spolecnou pro vsechny programy?
 
 Write the state of random number generator into restart file,
 Optional at the end of restart.xyz, its presence must be determined automatically
-i.e. common block i ranlcfg.inp
+i.e. common block in ranlcfg.inp
 common /xrandf/ x(np),last,init
 
 init.F90, zakazat pimd bez stagingu a opravit hlasku o NH, line 255
 TODO: convert all atom names strings to UPPPER CASE, must also change the comparisons in mass_init
 see this:http://stackoverflow.com/questions/10759375/how-can-i-write-a-to-upper-or-to-lower-function-in-f90
 
-udelat poradny r.molpro pro SH, predelat scratch,at pid neni treba
-vyjit z PETR-ICD/TRIMER/CASSCF-NUMER/ ale dat analyticke sily
 
-aktualizovat vstup pro MOLPRO, je rozdil mezi a11-11 a as67-1
 zkontrolovat omezeni pro molpro12 na cpmscf na jeden multi
 
 
@@ -71,4 +68,5 @@ a co mme2? jak ted delame hessian?
 
 http://archive.ambermd.org/201007/0619.html
 amber11/AmberTools/test/nab/Run.ips
+
 

@@ -17,9 +17,9 @@
       use mod_system, ONLY: names,am
       use mod_analyze_ext
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8 amt(npartmax,nwalkmax)
+      real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real*8,intent(in) :: amt(npartmax,nwalkmax)
       real*8  :: anorm,dx,dbin
       integer :: iw,ipom,ian,iat
       real*8  :: p(npartmax,nwalkmax)
@@ -36,8 +36,8 @@
        if(dime.eq.1.and.pot.eq.'2dho') p(1,iw)=vx(1,iw)*am(iat)
 
 
-       ipom=((p(iat,iw))-xmin)/dbin
-       if(ipom.gt.nbin.or.ipom.lt.0)then
+       ipom=ceiling( ((p(iat,iw))-xmin)/dbin )
+       if(ipom.gt.nbin.or.ipom.le.0)then
         write(*,*)'problems with p distribution function'
         write(*,*)'p=',p(iat,iw)
         stop
