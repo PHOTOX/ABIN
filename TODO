@@ -1,14 +1,31 @@
 TODO: some simple automatic testing....
 
+check, whether we have everywhere 0.0d0
+grep "0\.0" *f90 | grep -v d0
+see this page: https://gcc.gnu.org/onlinedocs/gcc-3.3.5/g77/Overly-Convenient-Options.html#Overly-Convenient-Options
+
+
 instead of restart0.xyz, make restart.xyz.$it
 
 check whether densities work
 
 todo: unit conversions - look at amber/terachem
+up to this, results compared to alpha version should be the same, if the atom masses are the same
+(alpha version e.g. has m(Cl)=35.45 instead of 35.45d0)
+
 allocate arrays..must be in modules...use automatic arrays for local arrays where needed
 make explcit interface everywhere (for functions not in modules), put them into module
 
-todo: add "Job started at- "
+todo: add "Job started at- " together with ABIN logo
+
+bug: floating point exception when inose=1 and temp=1.0(or even 10)
+present in alpha version as well
+file nosehoover.f90:356
+356           Gx(inh+1)=pnhx(iat,iw,inh)**2/Qm(iw)-temp
+maybe just wrong default thermostat parameters?
+see hollas@as67-1:~/TEST/PIMD.g09new
+works with tau0>0.002, we should test this value for cases when NHC drifts
+for PIMD with 4 beads, even temp=50K crushes!!
 
 
 todo: getting compile time and printing it during execution see: http://computer-programming-forum.com/49-fortran/438586ee99d51bd9.htm

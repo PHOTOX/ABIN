@@ -925,14 +925,16 @@ endif
       endif
 
       if(popthr.gt.0)then  
+         do itrj=1,ntraj
 !--COMPUTE NACs only if population of the states is gt.popthr
-      do ist1=1,nstate-1
-       pop=cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
-       do ist2=ist1+1,nstate
-        pop2=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
-        if(pop.lt.popthr.and.pop2.lt.popthr.and.ist1.ne.istate(itrj).and.ist2.ne.istate(itrj)) tocalc(ist1,ist2)=0
-       enddo
-      enddo
+            do ist1=1,nstate-1
+               pop=cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
+               do ist2=ist1+1,nstate
+                  pop2=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
+               if(pop.lt.popthr.and.pop2.lt.popthr.and.ist1.ne.istate(itrj).and.ist2.ne.istate(itrj)) tocalc(ist1,ist2)=0
+               enddo
+            enddo
+         enddo
       endif
 
       do itrj=1,ntraj
@@ -954,7 +956,7 @@ endif
 
    end
 
-   subroutine finish()
+subroutine finish()
    use mod_general
    use mod_nhc
    use mod_estimators, only: hess,h
@@ -998,13 +1000,10 @@ endif
 !TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
 
-!--following is needed for cleaning up after ab initio jobs      
-!      if(pot.ne.'nab'.and.pot.ne.'harm'.and.pot.ne.'2dho'.and.pot.ne.'morse'.and.pot.ne.'guillot'.and.pot.ne.'nab')then
-!       CALL get_environment_variable("USER", user)
-!       write (chpid,*)pid
-!       cleanup='rm -r /scratch/'//trim(user)//'/ABIN_SCRATCH_'//adjustl(chpid)
-!       call system(trim(cleanup))
-!      endif
+   write(*,*)''
+   write(*,*)'Job finished!'
+   write(*,*)''
 
-   end
+
+end
 

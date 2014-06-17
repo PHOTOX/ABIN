@@ -42,8 +42,8 @@
 !---- SH     
       if(ipimd.eq.2)then
        open(unit=20+iw+2*nwalk,file='state.dat')
-       write(20+iw+2*nwalk,'(I1)')istate(iw)
-       write(20+iw+2*nwalk,'(I1)')nstate
+       write(20+iw+2*nwalk,'(I2)')istate(iw)
+       write(20+iw+2*nwalk,'(I2)')nstate
 
 !horni troj. matice bez diagonaly
 ! tocalc(,)=1 -> pocitame couplingy
