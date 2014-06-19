@@ -848,113 +848,90 @@ endif
 
 
 
-      subroutine sh_init(nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
-      use mod_array_size
-      use mod_general,ONLY:natom,irandom,irest
-      use mod_sh
-      implicit none
-      real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-      real*8 en_array_old(nstmax,ntrajmax),dt,pop,pop2
-      integer :: itrj,ist1,ist2,iat
-      real*8  :: ran_test(10),pom=0.0d0,maxosc=0.0d0
+subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
+   use mod_array_size
+   use mod_general,ONLY:irandom,irest
+   use mod_sh
+   implicit none
+   real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
+   real*8  :: en_array_old(nstmax,ntrajmax),dt
+   real*8  :: dum_fx(size(vx_old,1),size(vx_old,2))
+   real*8  :: dum_fy(size(vy_old,1),size(vy_old,2))
+   real*8  :: dum_fz(size(vz_old,1),size(vz_old,2))
+   real*8  :: dum_eclas
+   integer :: itrj,ist1
+   real*8  :: ran_test(10),pom=0.0d0,maxosc=0.0d0
 
-     deltaE=deltaE/27.2114
-     dtp=dt/substep
-!-----random number initialization for surface hopping
-!      call gautrg(ran_test,0,IRandom,6)
-!      call vranf(ran_test,ntraj,0,6)
-       call vranf(ran_test,0,irandom,6)
+   deltaE=deltaE/27.2114
+   dtp=dt/substep
+!--random number initialization for surface hopping
+!  call gautrg(ran_test,0,IRandom,6)
+!  call vranf(ran_test,ntraj,0,6)
+   call vranf(ran_test,0,irandom,6)
 
-      do itrj=1,ntraj
-       do ist1=1,nstate
-        do ist2=1,nstate
-         tocalc(ist1,ist2)=1
-         dotproduct_old(ist1,ist2,itrj)=0.0d0
-         do iat=1,natom
-          nacx(iat,itrj,ist1,ist2)=0.0d0
-          nacy(iat,itrj,ist1,ist2)=0.0d0
-          nacz(iat,itrj,ist1,ist2)=0.0d0
-         enddo
-        enddo
-       enddo   
-      enddo
+   dotproduct_old=0.0d0
+   nacx=0.0d0
+   nacy=0.0d0
+   nacz=0.0d0
+   nacx_old=0.0d0
+   nacy_old=0.0d0
+   nacz_old=0.0d0
+   vx_old=0.0d0
+   vy_old=0.0d0
+   vz_old=0.0d0
+   en_array=0.0d0
+   en_array_old=0.0d0
 
-      if(inac.eq.2)then  ! for Adiab. dynamics
-       do ist1=1,nstate
-        do ist2=1,nstate
-         tocalc(ist1,ist2)=0
-        enddo
-       enddo
-      endif
+   !computing only energies, used for subsequent determination of tocalc according to deltae
+   tocalc=0
+   dum_eclas=0.0d0
+   dum_fx=0.0d0
+   dum_fy=0.0d0
+   dum_fz=0.0d0
+   call force_clas(dum_fx,dum_fy,dum_fz,x,y,z,dum_eclas)
+   call set_tocalc()
 
-     if(irest.ne.1)then
+   !-Determining the initial WF coefficients
+   if(irest.ne.1)then
 
 !automatic determination of initial state based on osc. streght
 ! NOT TESTED yet
-        if(istate_init.eq.-1)then
-         open(151,file='oscil.dat')
-        endif
-       do itrj=1,ntraj
+   if(istate_init.eq.-1)then
+      open(151,file='oscil.dat')
+   endif
+   do itrj=1,ntraj
 
-        if(istate_init.eq.-1)then
+      if(istate_init.eq.-1)then
          do ist1=1,nstate
-          read(151,*)pom
-          if(pom.gt.maxosc)then
-           istate(itrj)=ist1
-           maxosc=pom
-          endif
+            read(151,*)pom
+            if(pom.gt.maxosc)then
+               istate(itrj)=ist1
+               maxosc=pom
+            endif
          enddo
-        else
+      else
          istate(itrj)=istate_init
-        endif
+      endif
 
-        do ist1=1,nstate
+      do ist1=1,nstate
          cel_re(ist1,itrj)=0.0d0
          cel_im(ist1,itrj)=0.0d0
-        enddo
-        cel_re(istate(itrj),itrj)=1.0d0
-       enddo
-
-        if(istate_init.eq.-1)then
-         close(151)
-        endif
-!irest endif
-      endif
-
-      if(popthr.gt.0)then  
-         do itrj=1,ntraj
-!--COMPUTE NACs only if population of the states is gt.popthr
-            do ist1=1,nstate-1
-               pop=cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
-               do ist2=ist1+1,nstate
-                  pop2=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
-               if(pop.lt.popthr.and.pop2.lt.popthr.and.ist1.ne.istate(itrj).and.ist2.ne.istate(itrj)) tocalc(ist1,ist2)=0
-               enddo
-            enddo
-         enddo
-      endif
-
-      do itrj=1,ntraj
-       do ist1=1,nstate
-        en_array_old(ist1,itrj)=0.0d0
-
-        do ist2=1,nstate
-         do iat=1,natom
-          nacx_old(iat,itrj,ist1,ist2)=0.0d0
-          nacy_old(iat,itrj,ist1,ist2)=0.0d0
-          nacz_old(iat,itrj,ist1,ist2)=0.0d0
-          vx_old(iat,itrj)=0.0d0
-          vy_old(iat,itrj)=0.0d0
-          vz_old(iat,itrj)=0.0d0
-         enddo
-        enddo
-       enddo   
       enddo
+      cel_re(istate(itrj),itrj)=1.0d0
+   enddo
 
-   end
+   if(istate_init.eq.-1)then
+      close(151)
+   endif
+!irest endif
+   endif
+
+end
+
 
 subroutine finish()
    use mod_general

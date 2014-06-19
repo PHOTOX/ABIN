@@ -1,6 +1,6 @@
 ! -----------------------------------------------------------------
 !  ABIN: Program for Born-Oppenheimer MD with potential calculated 
-!  on-the-fly by an external procedure placed in ./DYN and lot more
+!  on-the-fly by an external procedure placed in ./DYN (and lot more)
 !------------------------------------------------------------------  
 !    Copyright (C) 2014  D.Hollas,M.Oncak, P.Slavicek
 !
@@ -88,10 +88,11 @@ program abin_dyn
 !------NORMAL MODE TRANSFORMATION-------------
       if(istage.eq.2)then
 if(idebug.eq.1)then
-        write(*,*)'Positions befir transform'
+        write(*,*)'Positions before transform'
 !        call printf(vx,vy,vz)
         call printf(x,y,z)
 endif
+!TODO: fix the aliasing
        call XtoU(x,y,z,x,y,z)
        call XtoU(vx,vy,vz,vx,vy,vz)
 if(idebug.eq.1)then
@@ -116,6 +117,7 @@ endif
        enddo
       enddo
 
+      !TODO: select case would be better here
       if (ipimd.eq.3)then
 
        call minimize(x,y,z,fxc,fyc,fzc,eclas)
@@ -128,32 +130,32 @@ endif
 !---------------- PROPAGATION-----------------------------------
 
 !----getting initial forces and energies
-      call force_clas(fxc,fyc,fzc,x,y,z,eclas)
+   call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 !----setting initial values for surface hoping
-      if(ipimd.eq.2)then
-       itrj=1  ! WARNING: nasty hack
-       eshift=-en_array(1,itrj)
-       if(inac.eq.0)then
-        iost=readnacm(itrj)
-        if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
+   if(ipimd.eq.2)then
+      itrj=1  ! WARNING: nasty hack
+      eshift=-en_array(1,itrj)
+      if(inac.eq.0)then
+         iost=readnacm(itrj)
+         if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
 !-------------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-        write(*,*)'WARNING: Some NACMEs not computed.Trying with decreased accuracy.'
-        write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
-        call calcnacm(itrj)
-        iost=readnacm(itrj)
-        endif
-        if(iost.ne.0)then
-         write(*,*)'Some NACMEs not read. Exiting...'
-         stop 1
-        endif
-       endif
-       call set_tocalc()
-       call move_vars(en_array_old,nacx_old,nacy_old,nacz_old,vx,vy,vz,vx_old,vy_old,vz_old,itrj)
+            write(*,*)'WARNING: Some NACMEs not computed.Trying with decreased accuracy.'
+            write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
+            call calcnacm(itrj)
+            iost=readnacm(itrj)
+         endif
+         if(iost.ne.0)then
+            write(*,*)'Some NACMEs not read. Exiting...'
+            stop 1
+         endif
       endif
+      call set_tocalc()
+      call move_vars(en_array_old,nacx_old,nacy_old,nacz_old,vx,vy,vz,vx_old,vy_old,vz_old,itrj)
+   endif
 
 !---------LOOP OVER TIME STEPS
 !-----it variable is set to 1 or read from restart.xyz in subroutine init
-      do it=it,nstep
+      do it=(it),nstep
 
       INQUIRE(FILE="EXIT", EXIST=file_exists)
       if(file_exists)then
@@ -185,6 +187,10 @@ endif
        call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
       endif
 
+      !TODO: call Update_vel()
+!      vx=px/amt
+!      vy=py/amt
+!      vz=pz/amt
       do iw=1,nwalk
        do iat=1,natom
         vx(iat,iw)=px(iat,iw)/amt(iat,iw)
@@ -197,6 +203,7 @@ endif
       if(ipimd.eq.2)then
 
       call surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
+      !TODO: px=amt*vx
       do itrj=1,ntraj
        do iat=1,natom
         px(iat,itrj)=amt(iat,itrj)*vx(iat,itrj)
@@ -289,4 +296,4 @@ endif
         values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
         values2(1)
      
-      end 
+end 

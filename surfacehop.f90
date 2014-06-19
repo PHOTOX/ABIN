@@ -1,4 +1,5 @@
-
+! modules and routines for Surface hopping dynamics
+! D. Hollas, O. Svoboda, P. Slavíček, M. Ončák
 module mod_sh
 use mod_array_size
 implicit none
@@ -97,9 +98,9 @@ character(len=100) :: chsystem
 open(unit=510,file='state.dat')
 write(510,'(I2)')istate(itrj)
 write(510,'(I2)')nstate
-! horni troj. matice bez diagonaly
-! tocalc(,)=1 -> pocitame couplingy
-! tocalc(,)=0 -> nepocitame couplingy
+! tocalc is upper triangular part of a matrix without diagonal
+! tocalc(,)=1 -> calculate NACME
+! tocalc(,)=0 -> don't calculate NACME
 do ist1=1,nstate-1
    do ist2=ist1+1,nstate
       write(510,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
@@ -164,7 +165,7 @@ end subroutine
 
 end module
 
-      subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
+subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
       use mod_array_size
       use mod_general
       use mod_system, ONLY: am,names
