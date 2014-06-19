@@ -1,3 +1,11 @@
+Program received signal SIGFPE, Arithmetic exception.
+[Switching to Thread 0x7fb507e476f0 (LWP 27865)]
+0x00000000004a3622 in surfacehop (x=0x116b9940, y=0x10fdbc40, z=0x108fdf40, vx=0x13fec740, vy=0x13230d40, vz=0x12475340, nacx_old=0x1a37cbc0, nacy_old=0x19e56600, nacz_old=0x19930040, vx_old=0x1390ea40, 
+    vy_old=0x12b53040, vz_old=0x11d97640, en_array_old=0x7fff0fe5cb40, dt=@0x7fff0fe5cc48) at surfacehop.f90:457
+457            t(ist1,ist2)=t(ist1,ist2)*dtp/(pop(ist1,itrj))
+Current language:  auto; currently fortran
+
+
 TODO: some simple automatic testing....
 
 check, whether we have everywhere 0.0d0

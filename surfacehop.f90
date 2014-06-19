@@ -1,5 +1,6 @@
 ! modules and routines for Surface hopping dynamics
 ! D. Hollas, O. Svoboda, P. Slavíček, M. Ončák
+!TODO: genericka funkce pro interpolace 
 module mod_sh
 use mod_array_size
 implicit none
@@ -209,11 +210,7 @@ subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz
      do itrj=1,ntraj
 
 
-      do ist1=1,nstate
-       do ist2=1,nstate
-        t_tot(ist1,ist2)=0.0d0
-       enddo
-      enddo
+      t_tot=0.0d0
 
       popsum=0.0d0
 !DEBUG
@@ -454,20 +451,18 @@ subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz
       do ist1=1,nstate
        pop(ist1,itrj)=cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
        do ist2=1,nstate
-         t(ist1,ist2)=t(ist1,ist2)*dtp/(pop(ist1,itrj))
-        if(t(ist1,ist2).lt.0.0d0)then
+         t(ist1,ist2)=t(ist1,ist2)*dtp/(pop(ist1,itrj)+1d-20) !TODO: nebezpeci deleni nulou
+        if(t(ist1,ist2).lt.0.0d0)then !TODO. to asi nemuze nastat, ne?
          t(ist1,ist2)=0.0d0
         endif
-        t_tot(ist1,ist2)=t_tot(ist1,ist2)+t(ist1,ist2)
+        t_tot(ist1,ist2)=t_tot(ist1,ist2)+t(ist1,ist2) !TODO: tomuhle nerozumim,jak se lisi t_tot a t?
        enddo
       enddo
 
 
-      do ist1=1,nstate
-       prob(ist1)=0.0d0
-      enddo
+      prob=0.0d0
 
-! Auxiliary calculations of prob
+! Auxiliary calculations of probabilities
       do ist1=1,nstate
        if(ist1.eq.ist.and.ist1.eq.1)then
         prob(ist1)=0.0d0
