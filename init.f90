@@ -666,9 +666,9 @@ endif
 if(ipimd.eq.2)then
   open(3,file='pop.dat',access=chaccess,action='write')
   write(3,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
-  open(4,file='prob.dat')
+  open(4,file='prob.dat',access=chaccess,action='write')
   write(4,*)'#    Time[fs] CurrentState   Probabilities'
-  open(8,file='PES.dat')
+  open(8,file='PES.dat',access=chaccess,action='write')
   write(8,*)'#    Time[fs] Potential energies'
 endif
 

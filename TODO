@@ -4,6 +4,9 @@ check, whether we have everywhere 0.0d0
 grep "0\.0" *f90 | grep -v d0
 see this page: https://gcc.gnu.org/onlinedocs/gcc-3.3.5/g77/Overly-Convenient-Options.html#Overly-Convenient-Options
 
+possible BUG: aliasing in shake_respa routines XtoU etc.
+asi jen v abin.f90 u UtoX, ale zkontrolovat vsude
+udelat rutinu move_arrays(transx,transy,transz,x,y,z)
 
 instead of restart0.xyz, make restart.xyz.$it
 
@@ -13,8 +16,9 @@ todo: unit conversions - look at amber/terachem
 up to this, results compared to alpha version should be the same, if the atom masses are the same
 (alpha version e.g. has m(Cl)=35.45 instead of 35.45d0)
 
+make explicit interface everywhere (for functions not in modules), put them into module
 allocate arrays..must be in modules...use automatic arrays for local arrays where needed
-make explcit interface everywhere (for functions not in modules), put them into module
+allocatable positions, velocities and momenta in modules, forces probably not?
 
 todo: add "Job started at- " together with ABIN logo
 
