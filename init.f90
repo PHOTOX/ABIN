@@ -853,12 +853,12 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
    use mod_general,ONLY:irandom,irest
    use mod_sh
    implicit none
-   real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-   real*8  :: en_array_old(nstmax,ntrajmax),dt
+   real*8,intent(in)   :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real*8,intent(out)  :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8,intent(out)  :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8,intent(out)  :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8,intent(out)  :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
+   real*8,intent(out)  :: en_array_old(nstmax,ntrajmax),dt
    real*8  :: dum_fx(size(vx_old,1),size(vx_old,2))
    real*8  :: dum_fy(size(vy_old,1),size(vy_old,2))
    real*8  :: dum_fz(size(vz_old,1),size(vz_old,2))
@@ -873,25 +873,19 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
 !  call vranf(ran_test,ntraj,0,6)
    call vranf(ran_test,0,irandom,6)
 
+   nacx=0.0d0     ; nacy=0.0d0       ; nacz=0.0d0
+   nacx_old=0.0d0 ; nacy_old=0.0d0   ; nacz_old=0.0d0
+   vx_old=0.0d0   ; vy_old=0.0d0     ; vz_old=0.0d0
    dotproduct_old=0.0d0
-   nacx=0.0d0
-   nacy=0.0d0
-   nacz=0.0d0
-   nacx_old=0.0d0
-   nacy_old=0.0d0
-   nacz_old=0.0d0
-   vx_old=0.0d0
-   vy_old=0.0d0
-   vz_old=0.0d0
    en_array=0.0d0
    en_array_old=0.0d0
 
    !computing only energies, used for subsequent determination of tocalc according to deltae
    tocalc=0
+   istate=1 !needed for force_clas,only used for assigning dum_clas
    dum_eclas=0.0d0
-   dum_fx=0.0d0
-   dum_fy=0.0d0
-   dum_fz=0.0d0
+   dum_fx=0.0d0   ; dum_fy=0.0d0    ;dum_fz=0.0d0
+
    call force_clas(dum_fx,dum_fy,dum_fz,x,y,z,dum_eclas)
    call set_tocalc()
 

@@ -55,7 +55,7 @@ program abin_dyn
 
 !-------SH initialization -- 
      if(ipimd.eq.2)then
-      call sh_init(nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
+      call sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
      endif
 
       write(*,*)''
