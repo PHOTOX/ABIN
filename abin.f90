@@ -93,8 +93,14 @@ if(idebug.eq.1)then
         call printf(x,y,z)
 endif
 !TODO: fix the aliasing
-       call XtoU(x,y,z,x,y,z)
-       call XtoU(vx,vy,vz,vx,vy,vz)
+       call XtoU(x,y,z,transx,transy,transz)
+       x=transx
+       y=transy
+       z=transz
+       call XtoU(vx,vy,vz,transxv,transyv,transzv)
+       vx=transxv
+       vy=transyv
+       vz=transzv
 if(idebug.eq.1)then
         write(*,*)'Positions after transform'
         call printf(x,y,z)

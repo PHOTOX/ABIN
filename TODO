@@ -1,7 +1,6 @@
 pravedpodobne nedavat ruzne indexy pro beady,
 kdyz nejedeme paralelne....muze zpomalovat
 
-SH: do not calculate the whole transition probability matrix t(ist1,ist2)
 TODO: some simple automatic testing....
 
 check, whether we have everywhere 0.0d0
@@ -13,8 +12,6 @@ asi jen v abin.f90 u UtoX, ale zkontrolovat vsude
 udelat rutinu move_arrays(transx,transy,transz,x,y,z)
 
 instead of restart0.xyz, make restart.xyz.$it
-
-check whether densities work
 
 todo: unit conversions - look at amber/terachem
 up to this, results compared to alpha version should be the same, if the atom masses are the same
@@ -40,8 +37,6 @@ todo: getting compile time and printing it during execution see: http://computer
 todo: MPI version for terachem
 todo: nakonci odstranit ify v nosehoover.f90 lines, 28-29 - asi NE
 todo: projit vsechna TODO v kodu
-TODO: pri minimalizaci (ipimd=3) nedelat pocatecni rychlosti - asi neni treba
-zkontrolovat format vypisovani movie a geom.dat v abin.dev
 
 Write the state of random number generator into restart file,
 Optional at the end of restart.xyz, its presence must be determined automatically
