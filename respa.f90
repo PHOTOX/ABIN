@@ -25,20 +25,20 @@ end if
 
 if(inose.eq.1)then
    if (imasst.eq.1)then
-      call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2.0*nabin))
+      call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2*nabin))
    else
-      call shiftNHC_yosh(px,py,pz,amt,dt/(2.0*nabin))
+      call shiftNHC_yosh(px,py,pz,amt,dt/(2*nabin))
    end if
 end if
 
-call shiftP (px,py,pz,fxc,fyc,fzc,amt,dt/2.0d0)
+call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
 
 if(inose.eq.1)then
    if (imasst.eq.1)then
-      call shiftNHC_yosh_mass (px,py,pz,amt,-dt/(2.0*nabin))
+      call shiftNHC_yosh_mass (px,py,pz,amt,-dt/(2*nabin))
    else
-      call shiftNHC_yosh (px,py,pz,amt,-dt/(2.0*nabin))
+      call shiftNHC_yosh (px,py,pz,amt,-dt/(2*nabin))
    end if
 end if
 
@@ -47,9 +47,9 @@ do iabin=1,nabin
 
    if(inose.eq.1)then
       if (imasst.eq.1)then
-         call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2.0*nabin))
+         call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2*nabin))
       else
-         call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
+         call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
       endif
    end if
 
@@ -65,7 +65,7 @@ do iabin=1,nabin
 !----quantum forces propagated using normal modes 
 !---- GLE must use physical masses, i.e. cartesian coordinates
 
-   call shiftP (px,py,pz,fxq,fyq,fzq,amt,dt/(2.0d0*nabin))
+   call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
 
 
    if(conatom.gt.0)then
@@ -82,7 +82,7 @@ do iabin=1,nabin
 
    call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 
-   call shiftP (px,py,pz,fxq,fyq,fzq,amt,dt/(2.0*nabin))
+   call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
 
    if (inose.eq.2.and.iabin.ne.nabin)then
       langham=langham+ekin_p(px,py,pz)
@@ -92,9 +92,9 @@ do iabin=1,nabin
 
    if(inose.eq.1)then
       if (imasst.eq.1)then
-         call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2.0*nabin))
+         call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2*nabin))
       else
-         call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
+         call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
       endif
    endif
 
@@ -104,21 +104,21 @@ enddo
 
 if(inose.eq.1)then
    if (imasst.eq.1)then
-      call shiftNHC_yosh_mass (px,py,pz,amt,-dt/(2.0*nabin))
+      call shiftNHC_yosh_mass (px,py,pz,amt,-dt/(2*nabin))
    else
-      call shiftNHC_yosh (px,py,pz,amt,-dt/(2.0*nabin))
+      call shiftNHC_yosh (px,py,pz,amt,-dt/(2*nabin))
    endif
 endif
 
 call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 
-call shiftP (px,py,pz,fxc,fyc,fzc,amt,dt/2.0d0)
+call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
 if(inose.eq.1)then
    if (imasst.eq.1)then
-      call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2.0*nabin))
+      call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2*nabin))
    else
-      call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
+      call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
    endif
 endif
 

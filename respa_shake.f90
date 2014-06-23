@@ -44,10 +44,10 @@
 
 
       if(inose.eq.1)then
-        call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
+        call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
       endif
 
-       call shiftP (px,py,pz,fxc,fyc,fzc,dt/2.0d0)
+       call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
 ! RATTLE HERE!
       if(nshake.ge.1)then
@@ -80,17 +80,17 @@
 
 
       if(inose.eq.1)then
-       call shiftNHC_yosh (px,py,pz,amt,-dt/(2.0*nabin))
+       call shiftNHC_yosh (px,py,pz,amt,-dt/(2*nabin))
       endif
 
 !------RESPA LOOP
       do iabin=1,nabin
      
        if(inose.eq.1)then
-        call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
+        call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
        endif
 
-       call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2.0d0*nabin))
+       call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
 
 !--------RATTLE HERE!
       if(nshake.ge.1)then
@@ -128,9 +128,9 @@
        if(conatom.gt.0)then
         do iw=1,nwalk
          do iat=1,conatom
-          px(iat,iw)=0.0
-          py(iat,iw)=0.0
-          pz(iat,iw)=0.0
+          px(iat,iw)=0.0d0
+          py(iat,iw)=0.0d0
+          pz(iat,iw)=0.0d0
          enddo
         enddo
        endif
@@ -152,25 +152,25 @@
 
        call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 
-       call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2.0*nabin))
+       call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
 
       if(inose.eq.1)then
-        call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
+        call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
       endif
 
       enddo
 !-----END OF RESPA LOOP
 
       if(inose.eq.1)then
-       call shiftNHC_yosh (px,py,pz,amt,-dt/(2.0*nabin))
+       call shiftNHC_yosh (px,py,pz,amt,-dt/(2*nabin))
       endif
 
       call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 
-      call shiftP (px,py,pz,fxc,fyc,fzc,dt/2.0d0)
+      call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
       if(inose.eq.1)then
-        call shiftNHC_yosh (px,py,pz,amt,dt/(2.0*nabin))
+        call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
       endif
 
 
