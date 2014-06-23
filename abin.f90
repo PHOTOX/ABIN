@@ -134,13 +134,10 @@ endif
 !----setting initial values for surface hoping
    if(ipimd.eq.2)then
       itrj=1  ! WARNING: nasty hack
-      eshift=-en_array(1,itrj)
       if(inac.eq.0)then
          iost=readnacm(itrj)
          if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
 !-------------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-            write(*,*)'WARNING: Some NACMEs not computed.Trying with decreased accuracy.'
-            write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
             call calcnacm(itrj)
             iost=readnacm(itrj)
          endif

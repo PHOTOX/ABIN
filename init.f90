@@ -888,6 +888,7 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
 
    call force_clas(dum_fx,dum_fy,dum_fz,x,y,z,dum_eclas)
    call set_tocalc()
+   eshift=-en_array(1,1)
 
    !-Determining the initial WF coefficients
    if(irest.ne.1)then

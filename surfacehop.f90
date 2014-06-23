@@ -290,7 +290,7 @@ subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz
 
       if(idebug.eq.1)then
       open(17,file='debug.nacm',access='append')
-      write(*,*)'Time step:',it
+      write(17,*)'Time step:',it
         do ist1=1,nstate
          do ist2=1,nstate
           do iat=1,natom
@@ -305,42 +305,42 @@ subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz
      endif
 
 !------READING time-derivative couplings----------------------------------
-      if ( inac.eq.1 ) then
+   if ( inac.eq.1 ) then
 
       open(100,file='tdcoups.dat')
       read(100,*)
       read(100,*)
-       do ist1=1,nstate
-        read(100,*)ijunk,(dotproduct_new(ist1,ist2,itrj),ist2=1,nstate)
-       enddo
+      do ist1=1,nstate
+         read(100,*)ijunk,(dotproduct_new(ist1,ist2,itrj),ist2=1,nstate)
+      enddo
       close(100)
 
-       do ist1=1,nstate
-        do ist2=1,nstate
-         dotproduct_new(ist1,ist2,itrj)=-dotproduct_new(ist1,ist2,itrj)/dt
-         if(ist1.eq.ist2)  dotproduct_new(ist1,ist2,itrj)=0.0d0
-        enddo
-       enddo
+      do ist1=1,nstate
+         do ist2=1,nstate
+            dotproduct_new(ist1,ist2,itrj)=-dotproduct_new(ist1,ist2,itrj)/dt
+            if(ist1.eq.ist2)  dotproduct_new(ist1,ist2,itrj)=0.0d0
+         enddo
+      enddo
 
       do ist1=1,nstate-1
-       do ist2=ist1+1,nstate
-        if(tocalc(ist1,ist2).eq.0)then
-         write(*,*)'Not computing NACM(tocalc=0) for states',ist1,ist2
-         dotproduct_new(ist1,ist2,itrj)=0.0d0
-         dotproduct_new(ist2,ist1,itrj)=0.0d0
-        endif
-       enddo
+         do ist2=ist1+1,nstate
+            if(tocalc(ist1,ist2).eq.0)then
+               write(*,*)'Not computing NACM(tocalc=0) for states',ist1,ist2
+               dotproduct_new(ist1,ist2,itrj)=0.0d0
+               dotproduct_new(ist2,ist1,itrj)=0.0d0
+            endif
+         enddo
       enddo
 
 
 !v prvnim korku nemame mezi cim interpolovat..bereme nulty krok jako prvni
-       if( it.eq.1) dotproduct_old=dotproduct_new
-
-       endif
+      if( it.eq.1) dotproduct_old=dotproduct_new
+       !TDC end if
+   endif
 !------------------END-OF-TDC-------------------------------
 
 ! Smaller time step for electron population transfer
-      do itp=1,substep      
+   do itp=1,substep      
 
       ist=istate(itrj)
 
@@ -440,23 +440,20 @@ subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz
 
       endif
 
-!----calculation of switching probabilities(asi nemusime pocitat celou matici)      
-      do ist1=1,nstate
-       do ist2=1,nstate
-        a_re=(cel_re(ist1,itrj)*cel_re(ist2,itrj)+cel_im(ist1,itrj)*cel_im(ist2,itrj))
-        t(ist1,ist2)=2*a_re*dotproduct(ist1,ist2,itrj)
-       enddo
-      enddo
+!--calculation of switching probabilities
+!- do not calculated the whole transition matrix
+!- t array could be one dimensional but whatever
+      pop(ist,itrj)=cel_re(ist,itrj)**2+cel_im(ist,itrj)**2
+      do ist2=1,nstate 
+        a_re=(cel_re(ist,itrj)*cel_re(ist2,itrj)+cel_im(ist,itrj)*cel_im(ist2,itrj))
+        t(ist,ist2)=2*a_re*dotproduct(ist,ist2,itrj)
+      enddo        
 
-      do ist1=1,nstate
-       pop(ist1,itrj)=cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
-       do ist2=1,nstate
-         t(ist1,ist2)=t(ist1,ist2)*dtp/(pop(ist1,itrj)+1d-20) !TODO: nebezpeci deleni nulou
-        if(t(ist1,ist2).lt.0.0d0)then !TODO. to asi nemuze nastat, ne?
-         t(ist1,ist2)=0.0d0
-        endif
-        t_tot(ist1,ist2)=t_tot(ist1,ist2)+t(ist1,ist2) !TODO: tomuhle nerozumim,jak se lisi t_tot a t?
-       enddo
+      do ist2=1,nstate 
+         t(ist,ist2)=t(ist,ist2)*dtp/(pop(ist,itrj)+1d-20)
+         if(t(ist,ist2).lt.0.0d0)  t(ist,ist2)=0.0d0
+         !cumulative probability over whole big step
+         t_tot(ist,ist2)=t_tot(ist,ist2)+t(ist,ist2)
       enddo
 
 
@@ -606,10 +603,10 @@ subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz
        write(8,fmt=formt)it*dt*autofs,(en_array(ist1,itrj),ist1=1,nstate)
       endif
 
-       ! ntraj enddo       
-       enddo
+   ! ntraj enddo       
+   enddo
 
-       end
+end subroutine
 
 
 
@@ -630,8 +627,8 @@ subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz
 
 !  Checking for frustrated hop
 
-      a_temp=0.
-      b_temp=0.
+      a_temp=0.d0
+      b_temp=0.d0
 
       do iat=1,natom
          a_temp=a_temp+ancx(iat,itrj,state1,state2)**2/am(iat)
