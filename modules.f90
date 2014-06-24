@@ -40,34 +40,6 @@ module mod_general
    integer :: parrespa=0 
    integer :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani  
    save
-contains 
-   elemental function UpperToLower(string) result (return_string)
-      character(len=*),intent(in) :: string
-      character(len=len(string))  :: return_string
-      integer, parameter          :: UPPER_A = iachar ('A'),UPPER_Z = iachar('Z')
-      integer, parameter          :: DELTA_LOWER_UPPER = iachar('a')-iachar('A')
-      integer                     :: c,i
-
-      do i=1,len(string)
-         c =iachar( string(i:i))
-         if (c >= UPPER_A .and. c <= UPPER_Z) c = c + DELTA_LOWER_UPPER
-         return_string(i:i) = achar(c)
-      end do
-   end function UpperToLower
-
-   elemental function LowerToUpper(string) result (return_string)
-      character(len=*),intent(in) :: string
-      character(len=len(string))  :: return_string
-      integer, parameter          :: LOWER_A = iachar ('a'),LOWER_Z = iachar('z')
-      integer, parameter          :: DELTA_UPPER_LOWER = iachar('A')-iachar('a')
-      integer                     :: c,i
-
-      do i=1,len(string)
-         c =iachar( string(i:i))
-         if (c >= LOWER_A .and. c <= LOWER_Z) c = c + DELTA_UPPER_LOWER
-         return_string(i:i) = achar(c)
-      end do
-   end function LowerToUpper
 end module
       
 !------------------------------------------------------

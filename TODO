@@ -1,5 +1,12 @@
-pravedpodobne nedavat ruzne indexy pro beady,
+! pridat nejakou hlasku kdyz chybi GLE-A nebo GLE-C
+clean gle.f90
+init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
+
+pravdepodobne nedavat ruzne indexy pro beady,
 kdyz nejedeme paralelne....muze zpomalovat?je nutne otestovat
+
+move functions Lowertoupper out of a module, conflict with save attribute of a module
+make interface and add to interfaces.f90
 
 TODO: some simple automatic testing....
 
@@ -38,11 +45,9 @@ common /xrandf/ x(np),last,init
 zkontrolovat omezeni pro molpro12 na cpmscf na jeden multi
 
 
-! pridat nejakou hlasku kdyz chybi GLE-A nebo GLE-C
-init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
 
 ###----UTILS
-analyze_movie
+spectra from movies
 cut_abin.....see slavicek@a11-11:~/CFConWATER/MD-TD  dodelat
 xyz reordering
 OOO....OHHH...H

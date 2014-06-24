@@ -1,9 +1,9 @@
 ! *********************************************************
-! * here we define the functions to be called for         *
-! * colored-noise thermostatting. incidentally, we also   *
+! * Here we define the functions to be called for         *
+! * colored-noise thermostatting. Incidentally, we also   *
 ! * write here a couple of functions for white-noise.     *
 ! *                                                       *
-! * code is licensed under GPLv3 [www.gnu.org]            *
+! * Code is licensed under GPLv3 [www.gnu.org]            *
 ! * please consider citing the relevant papers (listed    *
 ! * below) if you use GLE in your simulations.            *
 ! *                                                       *
@@ -15,12 +15,12 @@ module mod_gle
   real*8, allocatable, save ::  gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
   real*8, allocatable :: ran(:)
   real*8, allocatable :: ps(:,:,:)
-  real*8 wnt, wns, langham
-  integer, save :: ns,irand
+  real*8, save        :: wnt, wns, langham
+  integer, save       :: ns,irand
 contains
 
   ! initialize white-noise thermostat. 
-  ! the init and the propagator here are written with the same phylosophy 
+  ! the init and the propagator here are written with the same philosophy
   ! used for the full-fledged colored-noise stuff.
   subroutine wn_init(dt,wopt,irandom)
     use mod_general,only:natom
@@ -41,34 +41,31 @@ contains
   subroutine wn_step(px,py,pz,m)
     use mod_array_size
     use mod_general
-    use mod_nhc, only:temp
     implicit none
     real*8, intent(inout)  :: px(npartmax,nwalkmax)
     real*8, intent(inout)  :: py(npartmax,nwalkmax)
     real*8, intent(inout)  :: pz(npartmax,nwalkmax)
-    real*8, intent(in)  :: m(npartmax,nwalkmax)
+    real*8, intent(in)     :: m(npartmax,nwalkmax)
     integer :: iat,iw,pom
-    !DH: nemusime tady prenasobovat hmotnostma?
     iw=1
     pom=1
     call gautrg(ran,natom*3,0,6)
     do iat=1,natom
-      px(iat,iw)=wnt*px(iat,iw)+wns*ran(pom)*sqrt(m(iat,iw))  !zmenit generator...jak to
-      py(iat,iw)=wnt*py(iat,iw)+wns*ran(pom+1)*sqrt(m(iat,iw))  !zmenit generator...jak to
-      pz(iat,iw)=wnt*pz(iat,iw)+wns*ran(pom+2)*sqrt(m(iat,iw))  !zmenit generator...jak to
+      px(iat,iw)=wnt*px(iat,iw)+wns*ran(pom)*sqrt(m(iat,iw))  
+      py(iat,iw)=wnt*py(iat,iw)+wns*ran(pom+1)*sqrt(m(iat,iw))
+      pz(iat,iw)=wnt*pz(iat,iw)+wns*ran(pom+2)*sqrt(m(iat,iw))
       pom=pom+3
     end do
   end subroutine
   
-  ! initialize gle_init
   subroutine gle_init(dt,irandom)
     use mod_array_size
     use mod_general,only: natom,nwalk
-    use mod_nhc,only: temp
+    use mod_nhc,only: temp,inose
     implicit none
     real*8, intent(in)  :: dt
     real *8, allocatable :: gA(:,:), gC(:,:), gr(:)
-    integer i, j, k, h, cns, ios, irandom,iw
+    integer i, j, cns, ios, irandom,iw
     
 
     write(6,*) "# Initialization of GLE thermostat.                           "
@@ -78,18 +75,16 @@ contains
     write(6,*) "# Phy. Rev. Lett. 102, 020601 (2009)                          "
     write(6,*) "#                                                             "
     write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-    write(6,*) "# Phy. Rev. Lett. 102, 020601 (2009)                          "
-    write(6,*) "#                                                             "
-    write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
     write(6,*) "# Phy. Rev. Lett. 103, 030603 (2009)                          "
-    write(6,*) "#                                                             "
-    write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-    write(6,*) "# Phy. Rev. ???????  in press (2009)                          "
     write(6,*) "#                                                             "
 
     !reads in matrices
-    !reads A (in units of the "optimal" frequency of the fitting)
-    open(121,file='GLE-A',status='OLD',iostat=ios)
+    !reads A (in a.u. units)
+    open(121,file='GLE-A',status='OLD',iostat=ios,action='read')
+    if (ios.ne.0)then
+       write(0,*) "Error: could not read GLE-A file!"
+       write(0,*) "Exiting..."
+    end if
     read(121,*) ns
 
     !allocate everything we need
@@ -111,27 +106,30 @@ contains
     !WARNING: TODO: zkontrolovat, ze to robime spravne
 !    call gautrg(ran,0,IRandom,6)  !inicializace prng
     
-    if (ios.ne.0) write(0,*) "Error: could not read GLE-A file!"
     write(6,*)'Reading A-matrix. Expecting a.u. units!!!!'
     do i=1,ns+1
        read(121,*) gA(i,:)
     enddo
     close(121)
 
-    ! gamma for a WN langevin will be 1/tau, which would make it optimal for w=1/(2tau) angular frequency. 
+    !gamma for a WN langevin will be 1/tau, which would make it optimal for w=1/(2tau) angular frequency. 
     !DHmod: we DONT scale gA (which is expected to be fitted by http://gle4md.berlios.de/ ) 
     !A metrix is expected to be in atomic units of time 
     !gA=gA
 
-    ! reads C (in au!), or init to kT
-    ! C matrix from web must be scaled accordingly!!!(ie from eV to au)
-    open(121,file='GLE-C',status='OLD',iostat=ios)
-    if (ios.ne.0) then            
-       write(6,*) "# Using canonical-sampling, Cp=kT"
-       gC=0.
-       do i=1,ns+1
-          gC(i,i)=temp
-       enddo
+    ! reads C (in eV!), or init to kT
+    open(121,file='GLE-C',status='OLD',action='read',iostat=ios)
+    if (ios.ne.0)then
+      if(inose.eq.2)then
+         write(0,*) "Error: could not read GLE-C file!"
+         write(0,*) "Exiting..."
+      else   !in future release, we may use e.g. optimal sampling
+        write(6,*) "# Using canonical-sampling, Cp=kT"
+        gC=0.
+        do i=1,ns+1
+           gC(i,i)=temp
+        enddo
+      end if
     else    
        write(6,*) "# Reading specialized Cp matrix"
        write(6,*)'#Expecting eV units!!!!'
@@ -161,7 +159,7 @@ contains
     ! case of generic C, we use an extra slot for gp for the physical momentum, as we 
     ! could then use it to initialize the momentum in the calling code
 
-    !DH: ps or gp rewritten in init.F90 if irest.eq.1
+    !DH: ps or gp rewritten in init.f90 if irest.eq.1
     gA=gC   
     call cholesky(gA, gC, ns+1)
     
@@ -208,8 +206,7 @@ contains
     real*8, intent(inout)  :: py(npartmax,nwalkmax)
     real*8, intent(inout)  :: pz(npartmax,nwalkmax)
     real*8, intent(in)     :: m(npartmax,nwalkmax)
-    integer i, j, iat, iw
-    real*8 mfac, totm
+    integer                :: i, j, iat, iw
 
     do iw=1,nwalk
 !for GLE+PIMD, we store additional momenta in ps 3d matrices
@@ -278,7 +275,7 @@ contains
     real*8, intent(in)   :: M(n,n)
     real*8, intent(out)   :: EM(n,n)
     
-    real *8 :: tc(j+1), tmp(n,n), SM(n,n)
+    real *8 :: tc(j+1), SM(n,n)
     integer p, i
     tc(1)=1
     do i=1,j
@@ -306,6 +303,7 @@ contains
     enddo
   end subroutine matrix_exp
   
+  ! TODO: replace by more stable procedure from i-Py???
   ! brute-force "stabilized" cholesky decomposition.
   ! in practice, we compute LDL^T decomposition, and force
   ! to zero negative eigenvalues.
@@ -346,9 +344,9 @@ contains
        end if
     end do
     S=matmul(L,D)
-  end subroutine cholesky
+end subroutine cholesky
 
-real*8 function ran2(idum)
+real*8 function ran2(idum)  !we don't use this anymore
   implicit none
   real *8 x
   integer, intent(inout) :: idum
@@ -369,7 +367,7 @@ real*8 function ran2(idum)
   return
 end function ran2
 
-real*8 function rang(idum)
+real*8 function rang(idum) !we don't use this anymore
   implicit none
   integer, intent(inout) :: idum
   integer iset

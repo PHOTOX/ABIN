@@ -13,7 +13,22 @@
       use mod_nab
       use mod_sbc
       use mod_fftw3
+!     use mod_interfaces
       implicit none
+      INTERFACE
+
+      elemental function UpperToLower(string) result (return_string)
+      character(len=*),intent(in) :: string
+      character(len=len(string))  :: return_string
+      end function UpperToLower
+
+      elemental function LowerToUpper(string) result (return_string)
+      character(len=*),intent(in) :: string
+      character(len=len(string))  :: return_string
+      end function LowerToUpper
+
+      END INTERFACE
+
       real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
       real*8,intent(out) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
@@ -977,3 +992,30 @@ subroutine finish()
 
 end
 
+elemental function UpperToLower(string) result (return_string)
+   character(len=*),intent(in) :: string
+   character(len=len(string))  :: return_string
+   integer, parameter          :: UPPER_A = iachar ('A'),UPPER_Z = iachar('Z')
+   integer, parameter          :: DELTA_LOWER_UPPER = iachar('a')-iachar('A')
+   integer                     :: c,i
+
+   do i=1,len(string)
+      c =iachar( string(i:i))
+      if (c >= UPPER_A .and. c <= UPPER_Z) c = c + DELTA_LOWER_UPPER
+      return_string(i:i) = achar(c)
+   end do
+end function UpperToLower
+
+elemental function LowerToUpper(string) result (return_string)
+   character(len=*),intent(in) :: string
+   character(len=len(string))  :: return_string
+   integer, parameter          :: LOWER_A = iachar ('a'),LOWER_Z = iachar('z')
+   integer, parameter          :: DELTA_UPPER_LOWER = iachar('A')-iachar('a')
+   integer                     :: c,i
+
+   do i=1,len(string)
+      c =iachar( string(i:i))
+      if (c >= LOWER_A .and. c <= LOWER_Z) c = c + DELTA_UPPER_LOWER
+      return_string(i:i) = achar(c)
+   end do
+end function LowerToUpper
