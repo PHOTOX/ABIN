@@ -12,35 +12,63 @@
 !additional flags are needed
       module mod_array_size
       implicit none
-      integer,parameter :: npartmax=3000,nwalkmax=300,maxchain=10,nshakemax=1
-      integer,parameter :: nbinmax=3000,ndistmax=30
-      integer,parameter :: nstmax=15,ntrajmax=1
-      real*8, parameter :: amu=1823.d0,ang=1.8897d0,autofs=0.02419d0,pi=3.14159265d0
-      real*8, parameter :: autok=3.1577464d5,me=9.109382e-31 !electron mass
-      real*8, parameter :: autom=5.2917720859e-11 ! atomic length
-      real*8, parameter :: ambtoau=0.84d0/15.3067320d0 ! atomic length
-      real*8, parameter :: autokcal=627.51d0,autoKK=3.1577322d5,autoev=27.2114 
+      integer,parameter :: NPARTMAX=3000,NWALKMAX=300,MAXCHAIN=10,NSHAKEMAX=1
+      integer,parameter :: NBINMAX=3000,NDISTMAX=30
+      integer,parameter :: NSTMAX=15,NTRAJMAX=1
+      real*8, parameter :: AMU=1823.d0,ANG=1.8897d0,AUTOFS=0.02419d0,PI=3.14159265d0
+      real*8, parameter :: AUTOK=3.1577464d5,me=9.109382e-31 !electron mass
+      real*8, parameter :: AUTOM=5.2917720859e-11 ! atomic length
+      real*8, parameter :: AMBTOAU=0.84d0/15.3067320d0 ! atomic length
+      real*8, parameter :: AUTOKCAL=627.51d0,AUTOKK=3.1577322d5,AUTOEV=27.2114 
       save
       end module  
 !------------------------------------------------------
 !------------------------------------------------------
 
-!-----General simulation parameters      
-      module mod_general
-      implicit none
-      integer :: it,ipimd=0,istage=0,nwalk=1,ihess=0,md=1  
-      character(len=10) :: pot='default'
-      integer :: imini=0,nstep=1,nabin=50
-      integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0
-      integer :: icv=0,irest=0,anal_ext=0,idebug=0
-      integer :: irandom=156873,natom=0,pid,conatom=0
-      integer :: isbc=0,ibag=0  !spherical boundary conditions,elastic bag
-      integer :: iqmmm=0
-      real*8  :: gamm=20., gammthr=1e-10 !minthr=1e-15
-      integer :: parrespa=0 
-      integer :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani  
-      save
-      end module
+!--General simulation parameters      
+module mod_general
+   implicit none
+   integer :: it,ipimd=0,istage=0,nwalk=1,ihess=0,md=1  
+   character(len=10) :: pot='default'
+   integer :: imini=0,nstep=1,nabin=50
+   integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0
+   integer :: icv=0,irest=0,anal_ext=0,idebug=0
+   integer :: irandom=156873,natom=0,pid,conatom=0
+   integer :: isbc=0,ibag=0  !spherical boundary conditions,elastic bag
+   integer :: iqmmm=0
+   real*8  :: gamm=20., gammthr=1e-10 !minthr=1e-15
+   integer :: parrespa=0 
+   integer :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani  
+   save
+contains 
+   elemental function UpperToLower(string) result (return_string)
+      character(len=*),intent(in) :: string
+      character(len=len(string))  :: return_string
+      integer, parameter          :: UPPER_A = iachar ('A'),UPPER_Z = iachar('Z')
+      integer, parameter          :: DELTA_LOWER_UPPER = iachar('a')-iachar('A')
+      integer                     :: c,i
+
+      do i=1,len(string)
+         c =iachar( string(i:i))
+         if (c >= UPPER_A .and. c <= UPPER_Z) c = c + DELTA_LOWER_UPPER
+         return_string(i:i) = achar(c)
+      end do
+   end function UpperToLower
+
+   elemental function LowerToUpper(string) result (return_string)
+      character(len=*),intent(in) :: string
+      character(len=len(string))  :: return_string
+      integer, parameter          :: LOWER_A = iachar ('a'),LOWER_Z = iachar('z')
+      integer, parameter          :: DELTA_UPPER_LOWER = iachar('A')-iachar('a')
+      integer                     :: c,i
+
+      do i=1,len(string)
+         c =iachar( string(i:i))
+         if (c >= LOWER_A .and. c <= LOWER_Z) c = c + DELTA_UPPER_LOWER
+         return_string(i:i) = achar(c)
+      end do
+   end function LowerToUpper
+end module
       
 !------------------------------------------------------
 !------------------------------------------------------
@@ -77,91 +105,91 @@
         am(i)=16.00d0
        else if (names(i).eq.'S')then
         am(i)=32.07d0
-       else if (names(i).eq.'Se')then
+       else if (names(i).eq.'SE')then
         am(i)=78.971d0
-       else if (names(i).eq.'Te')then
+       else if (names(i).eq.'TE')then
         am(i)=127.60d0
        else if (names(i).eq.'N')then
         am(i)=14.00d0
        else if (names(i).eq.'P')then
         am(i)=30.97d0
-       else if (names(i).eq.'As')then
+       else if (names(i).eq.'AS')then
         am(i)=74.922d0
-       else if (names(i).eq.'Sb')then
+       else if (names(i).eq.'SB')then
         am(i)=121.76d0
-       else if (names(i).eq.'Bi')then
+       else if (names(i).eq.'BI')then
         am(i)=208.980d0
        else if (names(i).eq.'F')then
         am(i)=19.0d0
-       else if (names(i).eq.'Cl')then
+       else if (names(i).eq.'CL')then
         am(i)=35.45d0
-       else if (names(i).eq.'Br')then
+       else if (names(i).eq.'BR')then
         am(i)=79.904d0
        else if (names(i).eq.'I')then
         am(i)=126.90447d0
-       else if (names(i).eq.'Li')then
+       else if (names(i).eq.'LI')then
         am(i)=6.94d0
-       else if (names(i).eq.'Na')then
+       else if (names(i).eq.'NA')then
         am(i)=22.99d0
        else if (names(i).eq.'K')then
         am(i)=39.1d0
-       else if (names(i).eq.'Be')then
+       else if (names(i).eq.'BE')then
         am(i)=9.01d0
-       else if (names(i).eq.'Mg')then
+       else if (names(i).eq.'MG')then
         am(i)=24.305d0
-       else if (names(i).eq.'Ca')then
+       else if (names(i).eq.'CA')then
         am(i)=40.078d0
        else if (names(i).eq.'B')then
         am(i)=10.81d0
-       else if (names(i).eq.'Al')then
+       else if (names(i).eq.'AL')then
         am(i)=26.982d0
        else if (names(i).eq.'C')then
         am(i)=12.00d0
-       else if (names(i).eq.'Si')then
+       else if (names(i).eq.'SI')then
         am(i)=28.085d0
-       else if (names(i).eq.'Ge')then
+       else if (names(i).eq.'GE')then
         am(i)=72.630d0
-       else if (names(i).eq.'Sn')then
+       else if (names(i).eq.'SN')then
         am(i)=118.710d0
-       else if (names(i).eq.'Pb')then
+       else if (names(i).eq.'PB')then
         am(i)=207.2d0
-       else if (names(i).eq.'He')then
+       else if (names(i).eq.'HE')then
         am(i)=4.0d0
-       else if (names(i).eq.'Ne')then
+       else if (names(i).eq.'NE')then
         am(i)=20.18d0
-       else if (names(i).eq.'Ar')then
+       else if (names(i).eq.'AR')then
         am(i)=39.95d0
-       else if (names(i).eq.'Kr')then
+       else if (names(i).eq.'KR')then
         am(i)=83.798d0
-       else if (names(i).eq.'Xe')then
+       else if (names(i).eq.'XE')then
         am(i)=131.29d0
-       else if (names(i).eq.'Fe')then
+       else if (names(i).eq.'FE')then
         am(i)=55.845d0
-       else if (names(i).eq.'Ti')then
+       else if (names(i).eq.'TI')then
         am(i)=47.867d0
        else if (names(i).eq.'V')then
         am(i)=47.867d0
-       else if (names(i).eq.'Cr')then
+       else if (names(i).eq.'CR')then
         am(i)=51.9961d0
-       else if (names(i).eq.'Mn')then
+       else if (names(i).eq.'MN')then
         am(i)=54.938d0
-       else if (names(i).eq.'Co')then
+       else if (names(i).eq.'CO')then
         am(i)=58.933d0
-       else if (names(i).eq.'Ni')then
+       else if (names(i).eq.'NI')then
         am(i)=58.693d0
-       else if (names(i).eq.'Cu')then
+       else if (names(i).eq.'CU')then
         am(i)=63.546d0
-       else if (names(i).eq.'Zn')then
+       else if (names(i).eq.'ZN')then
         am(i)=65.38d0
-       else if (names(i).eq.'Ag')then
+       else if (names(i).eq.'AG')then
         am(i)=107.8682d0
-       else if (names(i).eq.'Au')then
+       else if (names(i).eq.'AU')then
         am(i)=196.967d0
-       else if (names(i).eq.'Pt')then
+       else if (names(i).eq.'PT')then
         am(i)=195.084d0
-       else if (names(i).eq.'Cd')then
+       else if (names(i).eq.'CD')then
         am(i)=112.414d0
-       else if (names(i).eq.'Hg')then
+       else if (names(i).eq.'HG')then
         am(i)=200.592d0
        else if (names(i).eq.'U')then
         am(i)=238.028d0
@@ -220,7 +248,7 @@
         inames(i)=1
        else if(names(i).eq.'O')then
         inames(i)=0
-       else if (names(i).eq.'Cl')then
+       else if (names(i).eq.'CL')then
         inames(i)=2
        endif
       enddo

@@ -2,56 +2,68 @@
 !  ABIN: Program for Born-Oppenheimer MD with potential calculated 
 !  on-the-fly by an external procedure placed in ./DYN (and lot more)
 !------------------------------------------------------------------  
-!    Copyright (C) 2014  D.Hollas,M.Oncak, P.Slavicek
+!  Copyright (C) 2014  D.Hollas,M.Oncak, P.Slavicek
 !
-!    This program is free software: you can redistribute it and/or modify
-!    it under the terms of the GNU General Public License as published by
-!    the Free Software Foundation, either version 3 of the License, or
-!    (at your option) any later version.
+!  This program is free software: you can redistribute it and/or modify
+!  it under the terms of the GNU General Public License as published by
+!  the Free Software Foundation, either version 3 of the License, or
+!  (at your option) any later version.
 !
-!    This program is distributed in the hope that it will be useful,
-!    but WITHOUT ANY WARRANTY; without even the implied warranty of
-!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-!    GNU General Public License for more details.
+!  This program is distributed in the hope that it will be useful,
+!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!  GNU General Public License for more details.
 !
-!    You should have received a copy of the GNU General Public License
-!    along with this program in the file LICENSE. If not, see <http://www.gnu.org/licenses/>.
+!  You should have received a copy of the GNU General Public License
+!  along with this program in the file LICENSE. If not, see <http://www.gnu.org/licenses/>.
 program abin_dyn
-      use mod_array_size
-      use mod_general
-      use mod_system, ONLY:nshake
-      use mod_sh
-      use mod_fftw3
-      implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)
-      real*8 fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-      real*8 fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-      real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-      real*8 transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-      real*8 transfxc(npartmax,nwalkmax),transfyc(npartmax,nwalkmax),transfzc(npartmax,nwalkmax)
-      real*8 transxv(npartmax,nwalkmax),transyv(npartmax,nwalkmax),transzv(npartmax,nwalkmax)
-      real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-      real*8 en_array_old(nstmax,ntrajmax)
-      real*8 dt,TIME,eclas,equant
-      integer :: itrj,iost
-      integer :: iat,iw
-      integer,dimension(8) :: values2,values1
-      LOGICAL :: file_exists
-!$    integer :: nthreads,omp_get_max_threads
+   use mod_array_size
+   use mod_general
+   use mod_system, ONLY:nshake
+   use mod_sh
+   use mod_fftw3
+   implicit none
+   real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real*8 amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)
+   real*8 fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+   real*8 fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
+   real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+   real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+   real*8 transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
+   real*8 transfxc(npartmax,nwalkmax),transfyc(npartmax,nwalkmax),transfzc(npartmax,nwalkmax)
+   real*8 transxv(npartmax,nwalkmax),transyv(npartmax,nwalkmax),transzv(npartmax,nwalkmax)
+   real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
+   real*8 en_array_old(nstmax,ntrajmax)
+   real*8 dt,TIME,eclas,equant
+   integer :: itrj,iost
+   integer :: iat,iw
+   integer,dimension(8) :: values2,values1
+   LOGICAL :: file_exists
+   character(len=20) :: chit
+   character(len=40) :: chrestart
+!$ integer :: nthreads,omp_get_max_threads
 
-
+     call PrintLogo()
      call date_and_time(VALUES=values1)
+     write(*,*)'Job started at:'
+     write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
+        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
+        values1(1)
      call system('rm -f engrad.dat.* nacm.dat hessian.dat.* geom.dat.*')
 
 
-!!   INPUT AND INITIALIZATION SECTION      
+!-   INPUT AND INITIALIZATION SECTION      
      call init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt) 
-     if(irest.eq.1)  call system('cp restart.xyz restart0.xyz')  !zaloha puvodniho restartu
+     if(irest.eq.1)then
+        write (chit,*)it-1
+        chrestart='cp restart.xyz restart.xyz.'//adjustl(chit)
+        write(*,*)'Making backup of the current restart file.'
+        write(*,*)chrestart
+        call system(chrestart)  
+     end if
 
 !-------SH initialization -- 
      if(ipimd.eq.2)then
@@ -67,23 +79,14 @@ program abin_dyn
 ! Masses, velocities and positions are transformed here into a new set of u variables
 ! See Tuckermann's article in "Quantum Simulations of Complex Many Body Systems'. 
       if(istage.eq.1)then
-      call XtoQ(x,y,z,transx,transy,transz)
-      do iat=1,natom
-       do iw=2,nwalk ! x(iat,1)=transx(iat,1)
-       x(iat,iw)=transx(iat,iw)
-       y(iat,iw)=transy(iat,iw)
-       z(iat,iw)=transz(iat,iw)
-       enddo
-      enddo
-      call XtoQ(vx,vy,vz,transxv,transyv,transzv)
-      do iat=1,natom
-       do iw=2,nwalk
-       vx(iat,iw)=transxv(iat,iw)
-       vy(iat,iw)=transyv(iat,iw)
-       vz(iat,iw)=transzv(iat,iw)
-       enddo
-      enddo
-
+         call XtoQ(x,y,z,transx,transy,transz)
+         x=transx
+         y=transy
+         z=transz
+         call XtoQ(vx,vy,vz,transxv,transyv,transzv)
+         vx=transxv
+         vy=transyv
+         vz=transzv
       endif
 !------NORMAL MODE TRANSFORMATION-------------
       if(istage.eq.2)then
@@ -92,7 +95,6 @@ if(idebug.eq.1)then
 !        call printf(vx,vy,vz)
         call printf(x,y,z)
 endif
-!TODO: fix the aliasing
        call XtoU(x,y,z,transx,transy,transz)
        x=transx
        y=transy
@@ -112,18 +114,14 @@ endif
       endif
 
       call init_mass(amg,amt)
-! End of transformations
+!-----End of transformations
 
-! Note that amt equals am if staging is off
-      do iw=1,nwalk
-       do iat=1,natom
-         px(iat,iw)=amt(iat,iw)*vx(iat,iw)   
-         py(iat,iw)=amt(iat,iw)*vy(iat,iw)   
-         pz(iat,iw)=amt(iat,iw)*vz(iat,iw)  
-       enddo
-      enddo
+!-----Note that amt equals am if staging is off
+      px=amt*vx   
+      py=amt*vy   
+      pz=amt*vz  
 
-      !TODO: select case would be better here
+
       if (ipimd.eq.3)then
 
        call minimize(x,y,z,fxc,fyc,fzc,eclas)
@@ -300,3 +298,23 @@ endif
         values2(1)
      
 end 
+
+
+subroutine PrintLogo()
+print '(a)','                      _ _ _       _       _         _ '
+print '(a)','         /\          |      \    | |     | |\      | |'
+print '(a)','        /  \         |   _   \   | |     | | \     | |'
+print '(a)','       / /\ \        |  |_|  |   | |     | |\ \    | |'
+print '(a)','      / /  \ \       |       /   | |     | | \ \   | |'
+print '(a)','     / /    \ \      |------|    | |     | |  \ \  | |'
+print '(a)','    / /------\ \     |------\    | |     | |   \ \ | |'
+print '(a)','   / /--------\ \    |   _   \   | |     | |    \ \| |'
+print '(a)','  / /          \ \   |  |_|  |   | |     | |     \ | |'
+print '(a)',' / /            \ \  |       /   | |     | |      \| |'
+print '(a)','/_/              \_\ |______/    |_|     |_|       |_|'
+print '(a)',' '
+print '(a)','     version 1.0'
+print '(a)','D. Hollas, O.Svoboda, M. Ončák, P. Slavíček       2014'
+print '(a)',' '
+
+end subroutine PrintLogo

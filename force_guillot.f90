@@ -20,7 +20,7 @@
 !        inames(i)=1
 !       else if(names(i).eq.'O')then
 !        inames(i)=0
-!       else if (names(i).eq.'Cl')then
+!       else if (names(i).eq.'CL')then
 !        inames(i)=2
 !       endif
        do k=1,nwalk

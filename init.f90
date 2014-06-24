@@ -68,7 +68,12 @@
       endif
       read(150,system)
       read(150,nhcopt)
-      if(ipimd.eq.2) read(150,sh)
+
+      pot=UpperToLower(pot)
+      if(ipimd.eq.2)then
+         read(150,sh)
+         integ=UpperToLower(integ)
+      end if
       if(iqmmm.eq.1.or.pot.eq.'mm') read(150,qmmm)
       if(qmmmtype.eq."nab".or.pot.eq.'nab') read(150,nab)
       close(150)
@@ -183,18 +188,13 @@
        error=1
       endif
       if(integ.ne.'euler'.and.integ.ne.'rk4'.and.integ.ne.'butcher')then
-       write(*,*)'integ must be "euler" or "rk4".'
+       write(*,*)'integ must be "euler","rk4" or "butcher".'
        error=1
       endif
       if(deltae.lt.0)then
        write(*,*)'Parameter deltae must be non-negative number.'
        error=1
       endif
-!      if(irandom.le.9999)then
-!              write(*,*)'Error in getting irandom from input.Possibly too short&
-!              or too long'
-!              error=1
-!      endif
       if(shiftdihed.ne.0.and.shiftdihed.ne.1)then
        write(*,*)'Shiftdihed must be either 0 (for dihedrals -180:180) or 1 (for dihedrals 0:360)'
        error=1
@@ -274,7 +274,7 @@
       endif
       if(irest.eq.1.and.scaleveloc.eq.1)then
        write(*,*)'irest=1 AND scaleveloc=1.'
-       write(*,*)'You are trying to scale to velocities read from restart.xyz.'
+       write(*,*)'You are trying to scale the velocities read from restart.xyz.'
        write(*,*)'I assume this is an error in input. Exiting...'
        write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
        if(iknow.ne.1) error=1
@@ -329,7 +329,7 @@
       write(*,*)'The Normal Mode transformation is only meaningful for PIMD. Exiting...'
        error=1
       endif
-      if(istage.eq.0.and.ipimd.eq.1)then
+      if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2)then
        write(*,*)'PIMD should be done with staging or normal mode transformation! Exiting...'
        write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
        if (iknow.ne.1) error=1
@@ -442,9 +442,9 @@
               write(*,*)'Input errors were found! Exiting now...'
               stop 1
       endif
-!--END OF ERROR CHECKING
+!-----END OF ERROR CHECKING
 
-!------------READING GEOMETRY
+!-----READING GEOMETRY
       open(111,file='mini.dat',status = "old", action = "read") 
       read(111,*)natom1
       if(natom1.ne.natom)then
@@ -455,12 +455,12 @@
       do iat=1,natom
 
         read(111,*)shit,x(iat,1),y(iat,1),z(iat,1)
-        
+
         if(imass_init.eq.0)then
          if(am(iat).le.0)then
           write(*,*)'Error on input:Mass array do not match names array.'
          endif
-         if(shit.ne.names(iat))then
+         if(LowerToUpper(shit).ne.LowerToUpper(names(iat)))then
           write(*,*)'Names of atoms in mini.dat and input.in do not match!'
           stop 1
          endif
@@ -468,6 +468,7 @@
          names(iat)=shit
         endif
 
+        names(iat)=LowerToUpper(names(iat))
         x(iat,1)=x(iat,1)*ang
         y(iat,1)=y(iat,1)*ang
         z(iat,1)=z(iat,1)*ang
@@ -486,24 +487,20 @@
       it=1
 
 
-!conversion of temperature from K to au
+!-----conversion of temperature from K to au
       write(*,*)'Target temperature in Kelvins =',temp
       temp=temp/autok
 !-----ZEROING some arrays
-      do iw=1,nwalk
-       cvhess_cumul(iw)=0.0d0
-       do iat=1,natom
-        fxq(iat,iw)=0.0d0 
-        fyq(iat,iw)=0.0d0 
-        fzq(iat,iw)=0.0d0 
-        fxc(iat,iw)=0.0d0 
-        fyc(iat,iw)=0.0d0 
-        fzc(iat,iw)=0.0d0 
-        vx(iat,iw)=0.0d0 
-        vy(iat,iw)=0.0d0 
-        vz(iat,iw)=0.0d0 
-        enddo
-       enddo
+      cvhess_cumul=0.0d0
+      fxq=0.0d0 
+      fyq=0.0d0 
+      fzq=0.0d0 
+      fxc=0.0d0 
+      fyc=0.0d0 
+      fzc=0.0d0 
+      vx=0.0d0 
+      vy=0.0d0 
+      vz=0.0d0 
 !----SHAKE initialization,determining the constrained bond lenghts
       if(nshake.ge.1)then
        write(*,*)'Setting distances for SHAKE from mini.dat'
@@ -795,8 +792,9 @@ endif
 
       if(iqmmm.eq.1.or.pot.eq.'mm')then
        if(qmmmtype.ne.'nab')then
-        call inames_init()
-        call ABr_init()
+         attypes=LowerToUpper(attypes)
+         call inames_init()
+         call ABr_init()
        endif
        write(*,nml=qmmm)
       endif
