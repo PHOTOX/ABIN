@@ -1,12 +1,9 @@
-! pridat nejakou hlasku kdyz chybi GLE-A nebo GLE-C
-clean gle.f90
+Write the state of random number generator into restart file,
+Optional at the end of restart.xyz, its presence must be determined automatically
+i.e. common block in ranlcfg.inp
+common /xrandf/ x(np),last,init
+
 init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
-
-pravdepodobne nedavat ruzne indexy pro beady,
-kdyz nejedeme paralelne....muze zpomalovat?je nutne otestovat
-
-move functions Lowertoupper out of a module, conflict with save attribute of a module
-make interface and add to interfaces.f90
 
 TODO: some simple automatic testing....
 
@@ -36,10 +33,6 @@ todo: MPI version for terachem
 
 todo: projit vsechna TODO v kodu
 
-Write the state of random number generator into restart file,
-Optional at the end of restart.xyz, its presence must be determined automatically
-i.e. common block in ranlcfg.inp
-common /xrandf/ x(np),last,init
 
 
 zkontrolovat omezeni pro molpro12 na cpmscf na jeden multi

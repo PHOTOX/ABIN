@@ -893,21 +893,12 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
    en_array=0.0d0
    en_array_old=0.0d0
 
-   !computing only energies, used for subsequent determination of tocalc according to deltae
-   tocalc=0
-   istate=1 !needed for force_clas,only used for assigning dum_clas
-   dum_eclas=0.0d0
-   dum_fx=0.0d0   ; dum_fy=0.0d0    ;dum_fz=0.0d0
 
-   call force_clas(dum_fx,dum_fy,dum_fz,x,y,z,dum_eclas)
-   call set_tocalc()
-   eshift=-en_array(1,1)
-
-   !-Determining the initial WF coefficients
+!--Determining the initial WF coefficients
    if(irest.ne.1)then
 
-!automatic determination of initial state based on osc. streght
-! NOT TESTED yet
+!--automatic determination of initial state based on osc. streght
+!  NOT TESTED yet
    if(istate_init.eq.-1)then
       open(151,file='oscil.dat')
    endif
@@ -937,6 +928,15 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
    endif
 !irest endif
    endif
+
+!--computing only energies, used for subsequent determination of tocalc according to deltae
+   tocalc=0
+   dum_eclas=0.0d0
+   dum_fx=0.0d0   ; dum_fy=0.0d0    ;dum_fz=0.0d0
+
+   call force_clas(dum_fx,dum_fy,dum_fz,x,y,z,dum_eclas)
+   call set_tocalc()
+   eshift=-en_array(1,1)
 
 end
 
