@@ -13,6 +13,7 @@
       use mod_nab
       use mod_sbc
       use mod_fftw3
+      use mod_random
 !     use mod_interfaces
       implicit none
       INTERFACE
@@ -529,7 +530,7 @@
      call dist_init() !zeroing distribution arrays
 
 !-----THERMOSTAT INITIALIZATION------------------
-     if (inose.gt.0)then
+if (inose.gt.0)then !TODO do not do if irest.eq.1
       call gautrg(rans,0,IRandom,6)  !inicializace prng
      endif
      if (inose.eq.1) call nhc_init()
@@ -537,11 +538,11 @@
      if (inose.eq.2.and.md.eq.1) call gle_init(dt*0.5/nabin,irandom)  
      if (inose.eq.3) call wn_init(dt*0.5,wnw,irandom)
 
-!in case of big systems, we dont want to manually set am and names arrays
-!----currently supported only for some elements
+!----In case of big systems, we don't want to manually set am and names arrays.
+!----Currently supported for most of the elements
      if (imass_init.eq.1) call mass_init()
 
-!-----performing RESTART from restart.xyz
+!----performing RESTART from restart.xyz
      if(irest.eq.1)then
       write(*,*)'irest=1,Reading geometry,velocities and NHC momenta from restart.xyz'
 
@@ -865,6 +866,7 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
    use mod_array_size
    use mod_general,ONLY:irandom,irest
    use mod_sh
+   use mod_random
    implicit none
    real*8,intent(in)   :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
    real*8,intent(out)  :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
@@ -884,7 +886,12 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
 !--random number initialization for surface hopping
 !  call gautrg(ran_test,0,IRandom,6)
 !  call vranf(ran_test,ntraj,0,6)
+   !TODO:DO NOT DO IF IREST.EQ.1 AND PRNG IN RESTART FILE
+   ! MOVE TO INIT ANYWAY
+
+!   if (.not.prngread)
    call vranf(ran_test,0,irandom,6)
+!end if
 
    nacx=0.0d0     ; nacy=0.0d0       ; nacz=0.0d0
    nacx_old=0.0d0 ; nacy_old=0.0d0   ; nacz_old=0.0d0
@@ -941,15 +948,17 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
 end
 
 
-subroutine finish()
+subroutine finish(values1,values2)
    use mod_general
    use mod_nhc
    use mod_estimators, only: hess,h
    use mod_fftw3
    implicit none
+   integer,dimension(8),intent(in)  :: values1
+   integer,dimension(8),intent(out) :: values2
+   real*8 :: TIME
 !   integer :: iter=-3
-!   CHARACTER(len=150) :: cleanup
-!   CHARACTER(len=20)  :: user,chpid
+
    close(1)
    close(2)
    if(ipimd.eq.1.or.icv.eq.1)then
@@ -989,6 +998,23 @@ subroutine finish()
    write(*,*)'Job finished!'
    write(*,*)''
 
+!---------TIMING-------------------------------
+   call cpu_time(TIME)
+   write(*,*)'Total cpu time [s] (does not include ab initio calculations)'
+   write(*,*)TIME
+   write(*,*)'Total cpu time [hours] (does not include ab initio calculations)'
+   write(*,*)TIME/3600.
+
+   call date_and_time(VALUES=values2)
+   write(*,*)'Job started at:'
+   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
+        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
+        values1(1)
+   write(*,*)'Job finished at:'
+   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values2(5),':',&
+        values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
+        values2(1)
+     
 
 end
 

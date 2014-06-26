@@ -173,23 +173,11 @@ end module
       end subroutine
 
       subroutine dist_init()
-      implicit none
-      integer :: idist,ibin
-      do idist=1,ndist
-       do ibin=1,nbin
-        dist(ibin,idist)=0.0d0
-       enddo
-      enddo
-      do idist=1,nang
-       do ibin=1,nbin_ang
-        dist_ang(ibin,idist)=0.0d0
-       enddo
-      enddo
-      do idist=1,ndih
-       do ibin=1,nbin_ang
-        dist_dih(ibin,idist)=0.0d0
-       enddo
-      enddo
+         implicit none
+         integer :: idist,ibin
+         dist=0.0d0
+         dist_ang=0.0d0
+         dist_dih=0.0d0
       end subroutine
 
       subroutine shake_init(x,y,z)

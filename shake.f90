@@ -12,7 +12,6 @@
       real*8  :: dijiter2,xij,yij,zij,rij2
       real*8  :: xdotij,ydotij,zdotij,dot
       real*8  :: xiiter,yiiter,ziiter,xjiter,yjiter,zjiter
-      !TODO implicit none
       
       maxcycle=1000
       do iw=1,nwalk

@@ -11,6 +11,7 @@
 ! *********************************************************
 
 module mod_gle
+  use mod_random
   implicit none
   real*8, allocatable, save ::  gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
   real*8, allocatable :: ran(:)
@@ -34,7 +35,6 @@ contains
     wns=sqrt(temp*(1.-wnt*wnt))
     langham=0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
     allocate( ran(natom*3) )  !allocating arrays for random numbers produced by gautrg
-!    call gautrg(ran,0,irandom,6)  !inicializace prng
   end subroutine
 
   ! white-noise propagator. time-step has been set in wn_init
@@ -84,6 +84,7 @@ contains
     if (ios.ne.0)then
        write(0,*) "Error: could not read GLE-A file!"
        write(0,*) "Exiting..."
+       stop 1
     end if
     read(121,*) ns
 
@@ -103,8 +104,6 @@ contains
     allocate(gr(ns+1))
     if(nwalk.gt.1) allocate(ps(natom*3,ns,nwalk))!each bead has to have its additional momenta
 
-    !WARNING: TODO: zkontrolovat, ze to robime spravne
-!    call gautrg(ran,0,IRandom,6)  !inicializace prng
     
     write(6,*)'Reading A-matrix. Expecting a.u. units!!!!'
     do i=1,ns+1

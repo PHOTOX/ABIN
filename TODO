@@ -1,7 +1,7 @@
 Write the state of random number generator into restart file,
 Optional at the end of restart.xyz, its presence must be determined automatically
-i.e. common block in ranlcfg.inp
-common /xrandf/ x(np),last,init
+
+ALWAYS INITIALIZE PRNG VIA VRANF ON INIT
 
 
 TODO: some simple automatic testing....

@@ -46,6 +46,7 @@
       subroutine nhc_init() 
       use mod_general
       use mod_system, ONLY:nshakemol
+      use mod_random
       implicit none
       real*8,allocatable  :: ran(:)
       integer :: inh,iw,iat,ipom,imol

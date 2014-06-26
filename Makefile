@@ -4,12 +4,12 @@
 # WARNING:dependecies on *.mod files are hidden!
 # if you change modules, you should recompile the whole thing i.e. make clean;make
 #
-OUT = abin.dev
+OUT = abin.random
 FC = gfortran
 CC = gcc
 
 #CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
-FFLAGS =  -g -Wall -fbounds-check -O0 -ffpe-trap=invalid,zero,overflow  #static # -O2 -ip -ipo " #-fno-underscoring -fopenmp"
+FFLAGS =  -g -fopenmp -Wall -fbounds-check -O0 -ffpe-trap=invalid,zero,overflow  #static # -O2 -ip -ipo " #-fno-underscoring -fopenmp"
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
 LD = -lfftw3 -lm -lstdc++
 
@@ -18,8 +18,8 @@ export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 
-F_OBJS = modules.o nosehoover.o stage.o estimators.o nab.o gle.o analyze_ext_distp.o potentials.o \
-velverlet.o surfacehop.o force_mm.o minimizer.o random.f force_bound.o respa_shake.o force_guillot.o \
+F_OBJS = modules.o mod_random.f90 nosehoover.o stage.o estimators.o nab.o gle.o analyze_ext_distp.o potentials.o \
+velverlet.o surfacehop.o force_mm.o minimizer.o force_bound.o respa_shake.o force_guillot.o \
 shake.o abin.o respa.o analysis.o init.o force_clas.o force_quantum.o density.o ran1.o vinit.o \
 shift.o ekin.o force_abin.o
 
@@ -36,7 +36,10 @@ ${OUT} : ${C_OBJS} ${F_OBJS} ${LIBS}
 clean :
 	/bin/rm -f *.o *.mod NAB/*.o
 
-.PHONY: clean
+clean :
+	/bin/bash ./test.sh ${OUT}
+
+.PHONY: clean test
 
 .SUFFIXES: .F90 .f90 .f95
 

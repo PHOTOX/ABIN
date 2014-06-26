@@ -172,6 +172,7 @@ subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz
       use mod_system, ONLY: am,names
       use mod_sh
       use mod_qmmm, ONLY:natqm
+      use mod_random, ONLY: vranf
       implicit none
       real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(inout) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
@@ -662,6 +663,7 @@ end subroutine
 !      write(*,*)a_temp,b_temp,c_temp,g_temp
 
       !TODO: tohle asi neni uplne spravne..mame pouzit vx_int nebo vx?
+      !asi VX, bo to potom budeme menit,vxint s timto nema nic spolecneho
       do iat=1,natom
          vx(iat,itrj)=vx(iat,itrj)-g_temp*ancx(iat,itrj,state1,state2)/am(iat)
          vy(iat,itrj)=vy(iat,itrj)-g_temp*ancy(iat,itrj,state1,state2)/am(iat)

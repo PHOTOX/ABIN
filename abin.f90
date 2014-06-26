@@ -37,7 +37,7 @@ program abin_dyn
    real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
    real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
    real*8 en_array_old(nstmax,ntrajmax)
-   real*8 dt,TIME,eclas,equant
+   real*8 dt,eclas,equant
    integer :: itrj,iost
    integer :: iat,iw
    integer,dimension(8) :: values2,values1
@@ -46,12 +46,7 @@ program abin_dyn
    character(len=40) :: chrestart
 !$ integer :: nthreads,omp_get_max_threads
 
-     call PrintLogo()
-     call date_and_time(VALUES=values1)
-     write(*,*)'Job started at:'
-     write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
-        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
-        values1(1)
+     call PrintLogo(values1)
      call system('rm -f engrad.dat.* nacm.dat hessian.dat.* geom.dat.*')
 
 
@@ -278,30 +273,16 @@ endif
 !   minimization endif
       endif
 
-      call finish()
+      call finish(values1,values2)
 
-!---------TIMING-------------------------------
-      call cpu_time(TIME)
-      write(*,*)'Total cpu time [s] (does not include ab initio calculations)'
-      write(*,*)TIME
-      write(*,*)'Total cpu time [hours] (does not include ab initio calculations)'
-      write(*,*)TIME/3600.
-
-      call date_and_time(VALUES=values2)
-      write(*,*)'Job started at:'
-      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
-        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
-        values1(1)
-      write(*,*)'Job finished at:'
-      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values2(5),':',&
-        values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
-        values2(1)
-     
 end 
 
 
-subroutine PrintLogo()
+subroutine PrintLogo(values1)
 include 'date.inc'
+integer,dimension(8),intent(out) :: values1
+call date_and_time(VALUES=values1)
+
 print '(a)','                      _ _ _       _       _         _ '
 print '(a)','         /\          |      \    | |     | |\      | |'
 print '(a)','        /  \         |   _   \   | |     | | \     | |'
@@ -321,5 +302,10 @@ print '(a)',' '
 print *,'Compiled at  ',date
 print *,commit
 print '(a)',' '
+
+write(*,*)'Job started at:'
+write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
+        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
+        values1(1)
 
 end subroutine PrintLogo
