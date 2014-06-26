@@ -301,6 +301,7 @@ end
 
 
 subroutine PrintLogo()
+include 'date.inc'
 print '(a)','                      _ _ _       _       _         _ '
 print '(a)','         /\          |      \    | |     | |\      | |'
 print '(a)','        /  \         |   _   \   | |     | | \     | |'
@@ -315,6 +316,10 @@ print '(a)','/_/              \_\ |______/    |_|     |_|       |_|'
 print '(a)',' '
 print '(a)','     version 1.0'
 print '(a)','D. Hollas, O.Svoboda, M. Oncak, P. Slavicek       2014'
+print '(a)',' '
+
+print *,'Compiled at  ',date
+print *,commit
 print '(a)',' '
 
 end subroutine PrintLogo

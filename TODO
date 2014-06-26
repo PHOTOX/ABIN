@@ -3,9 +3,10 @@ Optional at the end of restart.xyz, its presence must be determined automaticall
 i.e. common block in ranlcfg.inp
 common /xrandf/ x(np),last,init
 
-init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
 
 TODO: some simple automatic testing....
+
+init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
 
 check, whether we have everywhere 0.0d0
 grep "0\.0" *f90 | grep -v d0
@@ -27,13 +28,12 @@ maybe just wrong default thermostat parameters?
 see hollas@as67-1:~/TEST/PIMD.g09new
 works with tau0>0.002, we should test this value for cases when NHC drifts
 
-todo: getting compile time and printing it during execution see: http://computer-programming-forum.com/49-fortran/438586ee99d51bd9.htm
 
 todo: MPI version for terachem
 
 todo: projit vsechna TODO v kodu
 
-
+udelat r.molpro pro caspt2/casscf-nacm
 
 zkontrolovat omezeni pro molpro12 na cpmscf na jeden multi
 
