@@ -31,6 +31,7 @@ if(inose.eq.1)then
 
 endif
 
+!TODO zakazat inose=3 v init pro stabilni verzi
 if (inose.eq.3)  call wn_step(px,py,pz,amt)
 
 if (inose.eq.2)then

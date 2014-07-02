@@ -23,21 +23,51 @@ program abin_dyn
    use mod_sh
    use mod_fftw3
    implicit none
-   real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8 amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)
-   real*8 fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-   real*8 fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-   real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-   real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-   real*8 transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-   real*8 transfxc(npartmax,nwalkmax),transfyc(npartmax,nwalkmax),transfzc(npartmax,nwalkmax)
-   real*8 transxv(npartmax,nwalkmax),transyv(npartmax,nwalkmax),transzv(npartmax,nwalkmax)
-   real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-   real*8 en_array_old(nstmax,ntrajmax)
-   real*8 dt,eclas,equant
+   INTERFACE
+   subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
+   use mod_array_size
+   real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real*8,intent(out) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+   real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+   real*8,intent(out) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
+   real*8,intent(out) :: dt
+   end subroutine init
+   subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
+   use mod_array_size
+   implicit none
+   real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real*8,intent(in) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+   real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+   real*8,intent(in) :: amt(npartmax,nwalkmax)
+   real*8,intent(in) :: eclas,equant
+   real*8 :: dt  
+   end subroutine analysis
+   subroutine QtoX(x,y,z,transx,transy,transz)
+   use mod_array_size
+   real*8,intent(inout)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real*8,intent(out)    :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
+   end subroutine QtoX
+   subroutine XtoQ(x,y,z,transx,transy,transz)
+   use mod_array_size
+   real*8,intent(inout)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real*8,intent(out)    :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
+   end subroutine XtoQ
+   END INTERFACE
+   real*8  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real*8  :: amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)
+   real*8  :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+   real*8  :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
+   real*8  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+   real*8  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+   real*8  :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
+   real*8  :: transfxc(npartmax,nwalkmax),transfyc(npartmax,nwalkmax),transfzc(npartmax,nwalkmax)
+   real*8  :: transxv(npartmax,nwalkmax),transyv(npartmax,nwalkmax),transzv(npartmax,nwalkmax)
+   real*8  :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8  :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8  :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8  :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
+   real*8  :: en_array_old(nstmax,ntrajmax)
+   real*8  :: dt,eclas,equant
    integer :: itrj,iost
    integer :: iat,iw
    integer,dimension(8) :: values2,values1
@@ -125,11 +155,11 @@ endif
 
 
       write(*,*)'#      Step     Time [fs]'
-      
 !---------------- PROPAGATION-----------------------------------
 
 !----getting initial forces and energies
    call force_clas(fxc,fyc,fzc,x,y,z,eclas)
+   if (ipimd.eq.1) call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 !----setting initial values for surface hoping
    if(ipimd.eq.2)then
       itrj=1  ! WARNING: nasty hack

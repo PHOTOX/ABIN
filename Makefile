@@ -4,12 +4,12 @@
 # WARNING:dependecies on *.mod files are hidden!
 # if you change modules, you should recompile the whole thing i.e. make clean;make
 #
-OUT = abin.random2
+OUT = abin.dev
 FC = gfortran
 CC = gcc
 
 #CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
-FFLAGS =  -g  -Wall -fbounds-check -O0 -ffpe-trap=invalid,zero,overflow  #static # -O2 -ip -ipo " #-fno-underscoring -fopenmp"
+FFLAGS =  -g -fopenmp  -Wall -fbounds-check -O0 -ffpe-trap=invalid,zero,overflow  #static # -O2 -ip -ipo " #-fno-underscoring -fopenmp"
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
 LD = -lfftw3 -lm -lstdc++
 
