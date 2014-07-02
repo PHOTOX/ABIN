@@ -49,6 +49,9 @@ module mod_random
       integer,parameter :: np=1279,nq=418
       real*8  :: x(np)
       integer :: last,init
+      !gautrg variables determining its state
+      real*8  :: gsave
+      integer :: isave=-1
       save
       contains
 !---+----|----+----|----+----|----+----|----+----|----+----|----+----|--
@@ -90,8 +93,9 @@ module mod_random
       integer,parameter :: npoly=11
       real*8 :: gran(nran),scf(npoly),xran(1),ccf(npoly)
       real*8 :: cx,sx,y
-      save isave,gsave,tiny,twopi,pi4,scf,ccf
-      data isave/-1/
+!     save isave,gsave,tiny,twopi,pi4,scf,ccf
+      save tiny,twopi,pi4,scf,ccf
+!     data isave/-1/
 
 !      POLYNOMIAL FROM CHEBYSHEV APPROXIMATION ON [ 0.000, 0.790]
 !      FOR COS(X) WITH ABSOLUTE ERROR LESS THAN 0.2220E-14
@@ -662,34 +666,35 @@ module mod_random
       return
       end subroutine getstr
 
-      subroutine rsavef(iout,isave,lread)
+      subroutine rsavef(iout,lread)
          implicit none
          integer,intent(in) :: iout  !where do we write the state
-         integer,intent(in) :: isave !0=read,1=save
-         logical,intent(out):: lread
+!         integer,intent(in) :: isave !0=read,1=save
+         logical,intent(out),optional :: lread
          character(len=*),parameter   :: chprng='PRNG STATE (OPTIONAL)'
          character(len=50)  :: readstring
          integer            :: iost,i
          logical            :: lexist,lopened
 
-         lread=.false.
+         if(present(lread)) lread=.false.
 
          inquire(unit=iout,exist=lexist,opened=lopened)
          if(lexist.and..not.lopened)then
-            write(*,*)'Unit must be opened upon exit!!Exiting...'
+            write(*,*)'Unit for PRNG state must be opened!Exiting...'
             stop 1
 !           open(iout,access="append")
          end if
 
-         if (isave.eq.1)then
-            write(iout,'(A)')chprng
-            write(iout,*)init,last
-            do i=1,np
-               write(iout,*)x(i)
-            end do
-         end if
+!         if (isave.eq.1)then
+!         if (isave.eq.1)then
+!            write(iout,'(A)')chprng
+!            write(iout,*)init,last
+!            do i=1,np
+!               write(iout,*)x(i)
+!            end do
+!         end if
 
-         if (isave.eq.0)then
+         if (present(lread))then
             read(iout,'(A)',iostat=iost)readstring
             write(*,*)readstring
             if(iost /= 0)then
@@ -700,11 +705,19 @@ module mod_random
                stop 1
             else
                read(iout,*)init,last
+               read(iout,*)isave,gsave
                do i=1,np
                   read(iout,*)x(i)
                end do
                lread=.true.
             end if
+         else
+            write(iout,'(A)')chprng
+            write(iout,*)init,last
+            write(iout,*)isave,gsave
+            do i=1,np
+               write(iout,*)x(i)
+            end do
          end if
       end subroutine rsavef
            

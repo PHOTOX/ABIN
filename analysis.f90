@@ -111,6 +111,7 @@
      use mod_estimators
      use mod_sh
      use mod_gle
+     use mod_random
      implicit none
      real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
      real*8,intent(in)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
@@ -182,12 +183,12 @@
      if(inose.eq.2)then
       write(102,*)'Quantum Thermostat'
       if(nwalk.eq.1)then
-       do iat=1,natom
-        write(102,*)(gp(iat,is),is=1,ns)
+       do iat=1,natom*3
+        write(102,*)(gp(iat,is),is=2,ns+1)
        enddo
       else
        do iw=1,nwalk
-        do iat=1,natom
+        do iat=1,natom*3
          write(102,*)(ps(iat,is,iw),is=1,ns)
         enddo
        enddo
@@ -209,6 +210,8 @@
        enddo
       endif
      endif
+
+     call rsavef(102)
 
      close(102)
 

@@ -1,5 +1,5 @@
-!--Input and Initialization                         by Daniel Hollas,9.2.2012
-!-- some comment
+!-----Input and Initialization                         by Daniel Hollas,9.2.2012
+!- ---some comment
       subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
       use mod_array_size
       use mod_general
@@ -42,7 +42,7 @@
       integer :: error=0,getpid,nproc=1,iknow=0,ipom,ipom2=0,is
       character(len=2)  :: shit
       character(len=10) :: chaccess
-      LOGICAL :: file_exists
+      LOGICAL :: file_exists,prngread
       real*8  :: wnw=5.0e-5,pom=0.0d0,ekin_mom=0.0d0,temp_mom=0.0d0,scal
 !$    integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
@@ -70,6 +70,7 @@
        attypes(iat)=''
       enddo
       dt=-1  
+      prngread=.false.
 
       open(150,file="input.in", status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
       read(150,general)
@@ -116,6 +117,7 @@
       if(ipimd.eq.2)then
               nwalk=ntraj
               md=2
+              nabin=1
       endif
 
       if(ipimd.eq.1)then
@@ -341,8 +343,8 @@
       write(*,*)'The staging transformation is only meaningful for PIMD'
        error=1
       endif
-      if(istage.eq.1.and.ipimd.ne.1)then
-      write(*,*)'The Normal Mode transformation is only meaningful for PIMD. Exiting...'
+      if(istage.eq.2.and.ipimd.ne.1)then
+      write(*,*)'The normal mode transformation is only meaningful for PIMD. Exiting...'
        error=1
       endif
       if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2)then
@@ -351,7 +353,7 @@
        if (iknow.ne.1) error=1
       endif
       if(istage.eq.1.and.inose.eq.2)then
-       write(*,*)'The staging transformation is not compatible with GLE thermostat'
+       write(*,*)'The staging transformation is not compatible with GLE thermostat.'
        error=1
       endif
       if(nyosh.ne.1.and.nyosh.ne.3.and.nyosh.ne.7)then
@@ -529,18 +531,18 @@
 
      call dist_init() !zeroing distribution arrays
 
-!-----THERMOSTAT INITIALIZATION------------------
-if (inose.gt.0)then !TODO do not do if irest.eq.1
-      call gautrg(rans,0,IRandom,6)  !inicializace prng
-     endif
-     if (inose.eq.1) call nhc_init()
-     if (inose.eq.2.and.md.eq.2) call gle_init(dt*0.5,irandom)
-     if (inose.eq.2.and.md.eq.1) call gle_init(dt*0.5/nabin,irandom)  
-     if (inose.eq.3) call wn_init(dt*0.5,wnw,irandom)
-
 !----In case of big systems, we don't want to manually set am and names arrays.
 !----Currently supported for most of the elements
      if (imass_init.eq.1) call mass_init()
+
+!-----THERMOSTAT INITIALIZATION------------------ 
+!----MUST BE BEFORERESTART DUE TO ARRAY ALOCATION
+!     call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
+     call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
+     if (inose.eq.1) call nhc_init()
+     if (inose.eq.2) call gle_init(dt*0.5/nabin,irandom) !nabin is set to 1 unless ipimd=1
+     if (inose.eq.3) call wn_init(dt*0.5,wnw,irandom)
+
 
 !----performing RESTART from restart.xyz
      if(irest.eq.1)then
@@ -597,15 +599,15 @@ if (inose.gt.0)then !TODO do not do if irest.eq.1
 
      endif
 
-     if(inose.eq.2)then
+     if(inose.eq.2.and.readNHC.eq.1)then
       read(111,*)
       if(nwalk.eq.1)then
-       do iat=1,natom
-        read(111,*)(gp(iat,is),is=1,ns)
+       do iat=1,natom*3
+        read(111,*)(gp(iat,is),is=2,ns+1)
        enddo
       else
        do iw=1,nwalk
-        do iat=1,natom
+        do iat=1,natom*3
          read(111,*)(ps(iat,is,iw),is=1,ns)
         enddo
        enddo
@@ -629,6 +631,10 @@ if (inose.gt.0)then !TODO do not do if irest.eq.1
          enddo
         endif
        endif
+!     trying to restart PRNG
+      !prngread is optional argument determining, whether we write or read
+      call rsavef(111,prngread) 
+      !currently,prngread is not used, since vranf is initialize before restart
 
       
       close(111)
@@ -864,7 +870,7 @@ endif
 
 subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
    use mod_array_size
-   use mod_general,ONLY:irandom,irest
+   use mod_general,ONLY:irest
    use mod_sh
    use mod_random
    implicit none
@@ -879,19 +885,10 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
    real*8  :: dum_fz(size(vz_old,1),size(vz_old,2))
    real*8  :: dum_eclas
    integer :: itrj,ist1
-   real*8  :: ran_test(10),pom=0.0d0,maxosc=0.0d0
+   real*8  :: pom=0.0d0,maxosc=0.0d0
 
    deltaE=deltaE/27.2114
    dtp=dt/substep
-!--random number initialization for surface hopping
-!  call gautrg(ran_test,0,IRandom,6)
-!  call vranf(ran_test,ntraj,0,6)
-   !TODO:DO NOT DO IF IREST.EQ.1 AND PRNG IN RESTART FILE
-   ! MOVE TO INIT ANYWAY
-
-!   if (.not.prngread)
-   call vranf(ran_test,0,irandom,6)
-!end if
 
    nacx=0.0d0     ; nacy=0.0d0       ; nacz=0.0d0
    nacx_old=0.0d0 ; nacy_old=0.0d0   ; nacz_old=0.0d0

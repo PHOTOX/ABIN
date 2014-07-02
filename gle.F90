@@ -15,7 +15,7 @@ module mod_gle
   implicit none
   real*8, allocatable, save ::  gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
   real*8, allocatable :: ran(:)
-  real*8, allocatable :: ps(:,:,:)
+  real*8, allocatable,save :: ps(:,:,:)
   real*8, save        :: wnt, wns, langham
   integer, save       :: ns,irand
 contains
@@ -105,7 +105,7 @@ contains
     if(nwalk.gt.1) allocate(ps(natom*3,ns,nwalk))!each bead has to have its additional momenta
 
     
-    write(6,*)'Reading A-matrix. Expecting a.u. units!!!!'
+    write(6,*)'# Reading A-matrix. Expecting a.u. units!!!!'
     do i=1,ns+1
        read(121,*) gA(i,:)
     enddo
@@ -130,8 +130,8 @@ contains
         enddo
       end if
     else    
-       write(6,*) "# Reading specialized Cp matrix"
-       write(6,*)'#Expecting eV units!!!!'
+       write(6,*) "# Reading specialized Cp matrix."
+       write(6,*)'# Expecting eV units!!!'
        read(121,*) cns
        if (cns.ne.ns)then
            write(0,*) " Error: size mismatch between given GLE-A and GLE-C!"
@@ -158,7 +158,8 @@ contains
     ! case of generic C, we use an extra slot for gp for the physical momentum, as we 
     ! could then use it to initialize the momentum in the calling code
 
-    !DH: ps or gp rewritten in init.f90 if irest.eq.1
+    ! DH: ps or gp rewritten in init.f90 if irest.eq.1
+    ! TODO: asi pro jistotu inicializovat vzdy a restart to prepise
     gA=gC   
     call cholesky(gA, gC, ns+1)
     
@@ -181,11 +182,11 @@ contains
     endif
 !nwalk ENDDO
     enddo
-    
+    langham=0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
+   
     deallocate(gA)
     deallocate(gC)
     deallocate(gr)
-    langham=0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
   end subroutine gle_init
 
   ! the GLE propagator. 
@@ -207,6 +208,8 @@ contains
     real*8, intent(in)     :: m(npartmax,nwalkmax)
     integer                :: i, j, iat, iw
 
+!    call printf(px,py,pz)
+
     do iw=1,nwalk
 !for GLE+PIMD, we store additional momenta in ps 3d matrices
     if(nwalk.gt.1)then
@@ -224,8 +227,9 @@ contains
      gp(iat+natom*2,1)=pz(iat,iw) !<-- if m!= 1, here a proper scaling must be performed
     enddo
 
+
 #ifdef USELIBS
-    call dgemm('n','t',ndim,ns+1,ns+1,1.0d0,gp,natom*3,gT,ns+1,0.0d0,ngp,ndim)
+    call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,gp,natom*3,gT,ns+1,0.0d0,ngp,natom*3)
 #else
     ngp=transpose(matmul(gT,transpose(gp)))
 #endif

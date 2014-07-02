@@ -24,7 +24,6 @@
         do iw=1,nwalk
          do iat=1,natom
           nhcham=nhcham+pnhx(iat,iw,inh)*pnhx(iat,iw,inh)*0.5/Qm(iw)+temp*xi_x(iat,iw,inh)
-          !TODO: v plne vezi asi vyhodit
           if(dime.gt.1) nhcham=nhcham+pnhy(iat,iw,inh)*pnhy(iat,iw,inh)*0.5/Qm(iw)+temp*xi_y(iat,iw,inh)
           if(dime.gt.2) nhcham=nhcham+pnhz(iat,iw,inh)*pnhz(iat,iw,inh)*0.5/Qm(iw)+temp*xi_z(iat,iw,inh)
          end do

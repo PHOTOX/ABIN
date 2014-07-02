@@ -1,8 +1,11 @@
+RESTARTS DO NOT CHECK FOR PIMD with istage=1, WHY?
+# random numbers are now fine-same for restart or not, but we should also check for SH and vranf
+
+# added force_quant into init in abin.f90, helped, but still not perfect
+# commit abin.f90 after next commit
+
 Write the state of random number generator into restart file,
-Optional at the end of restart.xyz, its presence must be determined automatically
-
-ALWAYS INITIALIZE PRNG VIA VRANF ON INIT
-
+TEST IT! mainly for SH
 
 TODO: some simple automatic testing....
 
