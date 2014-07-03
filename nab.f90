@@ -90,7 +90,7 @@
       use mod_general
       use mod_estimators, ONLY: h
       use mod_harmon, ONLY: hess
-      use mod_qmmm
+      use mod_qmmm,ONLY:natqm
       implicit none
       real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)

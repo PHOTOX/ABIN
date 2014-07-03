@@ -54,7 +54,7 @@ program abin_dyn
 !-   INPUT AND INITIALIZATION SECTION      
      call init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt) 
      if(irest.eq.1)then
-        write (chit,*)it-1
+        write (chit,*)it
         chrestart='cp restart.xyz restart.xyz.'//adjustl(chit)
         write(*,*)'Making backup of the current restart file.'
         write(*,*)chrestart
@@ -151,7 +151,8 @@ endif
    endif
 
 !---------LOOP OVER TIME STEPS
-!-----it variable is set to 1 or read from restart.xyz in subroutine init
+!-----it variable is set to 0 or read from restart.xyz in subroutine init
+      it=it+1
       do it=(it),nstep
 
       INQUIRE(FILE="EXIT", EXIST=file_exists)
@@ -200,14 +201,9 @@ endif
       if(ipimd.eq.2)then
 
       call surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
-      !TODO: px=amt*vx
-      do itrj=1,ntraj
-       do iat=1,natom
-        px(iat,itrj)=amt(iat,itrj)*vx(iat,itrj)
-        py(iat,itrj)=amt(iat,itrj)*vy(iat,itrj)
-        pz(iat,itrj)=amt(iat,itrj)*vz(iat,itrj)
-       enddo
-      enddo
+      px=amt*vx
+      py=amt*vy
+      pz=amt*vz
 
       endif
 

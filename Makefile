@@ -19,8 +19,8 @@ export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 
-F_OBJS = modules.o interfaces.o random.o nosehoover.o stage.o potentials.o  estimators.o nab.o gle.o analyze_ext_distp.o  \
-velverlet.o surfacehop.o force_mm.o minimizer.o force_bound.o respa_shake.o force_guillot.o \
+F_OBJS = modules.o interfaces.o random.o nosehoover.o stage.o potentials.o  estimators.o force_mm.o nab.o gle.o analyze_ext_distp.o  \
+velverlet.o surfacehop.o minimizer.o force_bound.o respa_shake.o force_guillot.o \
 shake.o abin.o respa.o analysis.o init.o force_clas.o force_quantum.o density.o ran1.o vinit.o \
 shift.o ekin.o force_abin.o
 

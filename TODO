@@ -1,7 +1,6 @@
 # random numbers are now fine-same for restart or not, but we should also check for SH and vranf
 
 TODO: some simple automatic testing....
-make explicit interface everywhere (for functions not in modules), put them into module
 
 create module for densities and shake and guillot, move some variables from module system to module density
 move temperature scaling and other stuff to vinit, pass the whole vx,vy,vz arrays

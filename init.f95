@@ -488,9 +488,6 @@
       enddo
 !-----END OF READING GEOMETRY      
 
-      it=1
-
-
 !-----conversion of temperature from K to au
       write(*,*)'Target temperature in Kelvins =',temp
       temp=temp/autok
@@ -536,7 +533,6 @@
 
       open(111,file='restart.xyz',status = "OLD", action = "READ")
       read(111,*)it
-      it=it+1
       read(111,*)
       do iw=1,nwalk
        do iat=1,natom

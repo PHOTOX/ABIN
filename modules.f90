@@ -28,7 +28,7 @@
 !--General simulation parameters      
 module mod_general
    implicit none
-   integer :: it,ipimd=0,istage=0,nwalk=1,ihess=0,md=1  
+   integer :: it=0,ipimd=0,istage=0,nwalk=1,ihess=0,md=1  
    character(len=10) :: pot='default'
    integer :: imini=0,nstep=1,nabin=50
    integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0
