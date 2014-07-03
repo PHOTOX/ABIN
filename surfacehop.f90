@@ -164,13 +164,11 @@ endif
 
 end subroutine
 
-end module
 
-subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
+   subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
       use mod_array_size
       use mod_general
       use mod_system, ONLY: am,names
-      use mod_sh
       use mod_qmmm, ONLY:natqm
       use mod_random, ONLY: vranf
       implicit none
@@ -615,7 +613,6 @@ end subroutine
       use mod_array_size
       use mod_general, ONLY:natom
       use mod_system, ONLY: am
-      use mod_sh
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
       real*8 vx_int(npartmax,nwalkmax),vy_int(npartmax,nwalkmax),vz_int(npartmax,nwalkmax)
       real*8 en_array_int(nstmax,ntrajmax)
@@ -675,11 +672,10 @@ end subroutine
       subroutine hop_dot(vx,vy,vz,state1,state2,itrj)
       use mod_array_size
       use mod_general, ONLY:natom,idebug
-      use mod_sh, ONLY:en_array,istate
+      use mod_interfaces ,ONLY: ekin_v
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
       integer :: itrj,state1,state2,iat
       real*8  :: de,ekin,alfa,ekin_new
-      real*8  :: ekin_v
 
       ekin=0.0
       ekin_new=0.0
@@ -730,10 +726,10 @@ end subroutine
 
       subroutine integstep(k_re,k_im,en,y_re,y_im,dotproduct)
       use mod_array_size
-      use mod_sh,only:nstate,dtp
       real*8 k_re(nstmax),k_im(nstmax)
       real*8 dotproduct(nstmax,nstmax)
       real*8 en(nstmax),y_im(nstmax),y_re(nstmax)
+      integer :: ist1,ist2
 
       do ist1=1,nstate
        k_re(ist1)=en(ist1)*y_im(ist1)
@@ -751,7 +747,6 @@ end subroutine
       subroutine rk4step_new(en_array,en_array_new,dotproduct,dotproduct_new,vx,vy,vz,vx_new,vy_new,vz_new,&
                       nacx,nacy,nacz,nacx_new,nacy_new,nacz_new,itrj)
       use mod_array_size
-      use mod_sh,only:nstate,cel_re,cel_im,eshift
       implicit none
       real*8 vx_new(npartmax,nwalkmax),vy_new(npartmax,nwalkmax),vz_new(npartmax,nwalkmax)
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
@@ -820,7 +815,6 @@ end subroutine
 
       subroutine rk4step(en_array,en_array_new,dotproduct,dotproduct_new,itrj)
       use mod_array_size
-      use mod_sh,only:nstate,cel_re,cel_im,eshift
       implicit none
       real*8 en_array(nstmax,ntrajmax)
       real*8 en_array_new(nstmax,ntrajmax)
@@ -880,7 +874,6 @@ end subroutine
 
       subroutine butcherstep(en_array,en_array_new,dotproduct,dotproduct_new,itrj)
       use mod_array_size
-      use mod_sh,only:nstate,cel_re,cel_im,eshift
       implicit none
       real*8 en_array(nstmax,ntrajmax)
       real*8 en_array_new(nstmax,ntrajmax)
@@ -963,7 +956,6 @@ end subroutine
       subroutine rk4step_old(en_array_int,dotproduct,dotproduct_newint,itrj)
       use mod_array_size
       use mod_general
-      use mod_sh
       implicit none
       real*8 en_array_int(nstmax,ntrajmax)
       real*8 dotproduct(nstmax,nstmax,ntrajmax)
@@ -1034,7 +1026,6 @@ end subroutine
                       dotproduct,fr,frd,itrj)
       use mod_array_size
       use mod_general
-      use mod_sh
       implicit none
       real*8 dotproduct(nstmax,nstmax,ntrajmax)
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
@@ -1074,7 +1065,6 @@ end subroutine
 
       subroutine interpolate_dot(dotproduct_int,fr,frd,itrj)
       use mod_array_size
-      use mod_sh,ONLY:nstate,dotproduct_old,dotproduct_new
       implicit none
       real*8 dotproduct_int(nstmax,nstmax,ntrajmax)
       integer :: ist1,ist2,itrj     !iteration counters
@@ -1094,7 +1084,6 @@ end subroutine
                       dotproduct,fr,frd,itrj)
       use mod_array_size
       use mod_general,only:natom
-      use mod_sh, only:nstate
       implicit none
       real*8 dotproduct(nstmax,nstmax)
       real*8 vx_new(npartmax,nwalkmax),vy_new(npartmax,nwalkmax),vz_new(npartmax,nwalkmax)
@@ -1135,3 +1124,5 @@ end subroutine
        enddo
 
       end
+
+end module

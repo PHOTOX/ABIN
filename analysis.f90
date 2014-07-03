@@ -3,10 +3,14 @@
 !----Contains all analysis stuff
     subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
      use mod_array_size
+     use mod_analyze_ext
+     use mod_estimators
      use mod_general
      use mod_system
+!    use mod_density
      implicit none
-     real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+     !intent inout because of estimators, writing to nwalk+1
+     real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
      real*8,intent(in) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
      real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
      real*8,intent(in) :: amt(npartmax,nwalkmax)

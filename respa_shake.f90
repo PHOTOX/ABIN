@@ -23,23 +23,25 @@
 ! molecules and 6 NHC chains. 
 
 
-      subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
+subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
                  fxc,fyc,fzc,fxq,fyq,fzq)
       use mod_array_size
       use mod_general
-      use mod_nhc, ONLY:inose
+      use mod_nhc, ONLY:inose,shiftNHC_yosh,shiftNHC_yosh_mass
       use mod_system, ONLY:nshake
       use mod_fftw3
+      use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas,shake,utox,xtou,qtox,xtoq
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(inout) :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      real*8,intent(in)    :: amg(npartmax,nwalkmax),amt(npartmax,nwalkmax)
+      real*8,intent(in)    :: dt
+      real*8,intent(inout) :: eclas,equant
+      real*8,intent(inout) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+      real*8,intent(inout) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8 fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-      real*8 fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-      real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
       real*8 transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
       real*8 transxv(npartmax,nwalkmax),transyv(npartmax,nwalkmax),transzv(npartmax,nwalkmax)
-      real*8  :: amg(npartmax,nwalkmax),amt(npartmax,nwalkmax)
-      real*8  :: dt,eclas,equant
       integer :: iabin,iq,iv,iat,iw
 
 

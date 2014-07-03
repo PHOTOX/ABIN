@@ -191,14 +191,12 @@
       close(100)
       end subroutine
       
-      end module
 !------------------------------------------------------
 
 !TODO: pro pouziti na male systemy bude treba odstranit rotace
       SUBROUTINE shiftNHC_yosh (px,py,pz,amt,dt)
       use mod_array_size
       use mod_general
-      use mod_nhc
       use mod_system, only: nshakemol
       implicit none
       real*8  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
@@ -283,7 +281,6 @@ enddo
       SUBROUTINE shiftNHC_yosh_mass (px,py,pz,amt,dt)
       use mod_array_size
       use mod_general
-      use mod_nhc
       use mod_system,only:nshake
       implicit none
       real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
@@ -378,4 +375,4 @@ enddo
       return
       end
 
-
+end module mod_nhc

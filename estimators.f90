@@ -1,5 +1,4 @@
 
-
 !-----Special module only for subroutine estimators
       module mod_estimators
       use mod_array_size
@@ -9,23 +8,21 @@
       real*8  :: est_prim2_cumul=0.0d0,est_prim_vir=0.0d0,est_vir2_cumul=0.0d0
       real*8  :: cv_prim_cumul=0.0d0,cv_vir_cumul=0.0d0,cv_dcv_cumul=0.0d0
       real*8  :: cvhess_cumul(nwalkmax)
-      real*8,allocatable :: hess(:,:,:)
       real*8,allocatable :: h(:)
 !!$OMP threadprivate(h)   
       !following is for projected cv_pcv estimator, not properly implemented yet!
       real*8  :: cv_pcv=0.0d0,f_cumul=0.0d0,ex_cumul=0.0d0,fj=0.0d0,f2=0.0d0,rj_cumul=0.0d0
       integer :: enmini=100
       save
-      end module
-
+      contains
 
 !---- Predavame kartezske souradnice i sily!!!!
       subroutine estimators(x,y,z,fxab,fyab,fzab,eclas,dt)
       use mod_array_size
       use mod_general
-      use mod_estimators
       use mod_nhc, ONLY:temp,inose
       use mod_system, ONLY:am,nshake
+      use mod_harmon, ONLY:hess_harmon,hess_morse,hess_2dho,hess
       implicit none
       real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(in) :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
@@ -240,7 +237,8 @@
       endif
         
       return
-      end
+      end subroutine estimators
+end module
        
       
 

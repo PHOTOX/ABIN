@@ -26,16 +26,16 @@ C Adapted (real*8, no angular velocities, mass)   B. Schmidt, Apr 6, 1995
 C
 C------------------------------------------------------------------------
         SUBROUTINE vinit(TEMP, MASS, vx,vy,vz,nout,idum)
-        use mod_general
- 
-        integer i
-        REAL*8  VX(natom), VY(natom), VZ(natom)
-        real*8  mass(natom)
-        integer idum 
-        integer nout
-        REAL*8  TEMP,SIGMA
-        REAL*8  GAUSSabin
-        real*8  vcmx,vcmy,vcmz,tm
+        use mod_general, only: natom,pot
+        implicit none
+        REAL*8,intent(out)    ::  VX(:), VY(:), VZ(:)
+        real*8,intent(in)     ::  mass(:)
+        integer,intent(inout) ::  idum 
+        integer,intent(in)    ::  nout
+        integer   :: i
+        REAL*8    :: TEMP,SIGMA
+        REAL*8    :: GAUSSabin
+        real*8    :: vcmx,vcmy,vcmz,tm
  
 C Initialize the random number generator
         idum = -idum

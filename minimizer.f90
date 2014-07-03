@@ -3,13 +3,15 @@
       use mod_array_size
       use mod_general
       use mod_system, ONLY: names
+      use mod_interfaces, ONLY: force_clas,trajout
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 x_new(npartmax,nwalkmax),y_new(npartmax,nwalkmax),z_new(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8 fx_new(npartmax,nwalkmax),fy_new(npartmax,nwalkmax),fz_new(npartmax,nwalkmax)
+      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(inout) :: eclas
+      real*8  :: x_new(npartmax,nwalkmax),y_new(npartmax,nwalkmax),z_new(npartmax,nwalkmax)
+      real*8  :: fx_new(npartmax,nwalkmax),fy_new(npartmax,nwalkmax),fz_new(npartmax,nwalkmax)
       integer :: iat,iw,iter
-      real*8  :: eclas,eclas_new
+      real*8  :: eclas_new
 
       iw=1
       open(100,file='minimize.dat')

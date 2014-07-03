@@ -74,7 +74,7 @@
       use mod_general
       use mod_system, ONLY: am
       implicit none
-      real*8 :: amg(npartmax,nwalkmax),amt(npartmax,nwalkmax)
+      real*8,intent(out) :: amg(npartmax,nwalkmax),amt(npartmax,nwalkmax)
       real*8  :: lambda(nwalkmax+1)
       integer :: iat,iw
 
@@ -135,8 +135,8 @@
       use mod_array_size
       use mod_general
       implicit none
-      real*8  :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8  :: transfx(npartmax,nwalkmax),transfy(npartmax,nwalkmax),transfz(npartmax,nwalkmax)
+      real*8,intent(in)    :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(inout) :: transfx(npartmax,nwalkmax),transfy(npartmax,nwalkmax),transfz(npartmax,nwalkmax)
       integer :: iat,iw
       real*8  :: sumx=0.0d0,sumy=0.0d0,sumz=0.0d0
 
@@ -180,8 +180,8 @@
       use mod_array_size
       use mod_general
       implicit none
-      real*8  :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8  :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
+      real*8,intent(inout)  :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(in)     :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
       real*8  :: sumux(nwalkmax),sumuy(nwalkmax),sumuz(nwalkmax)
       integer :: iat,iw
 

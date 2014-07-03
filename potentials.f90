@@ -14,14 +14,14 @@
 !----   CONSTANTS for morse potential ccc
 !            V=De*(1-exp(-a(r-r0)))^2
       real*8 :: De=0.059167,a=-1.0d0
+      real*8,allocatable :: hess(:,:,:)
       save
-      end module
+      contains
 
 !------3D Harmonic Oscillator---only 1 particle!!
       subroutine force_2dho(x,y,z,fxab,fyab,fzab,eclas)
       use mod_array_size
       use mod_general
-      use mod_harmon
       implicit none
       real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out) :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
@@ -49,7 +49,6 @@
       subroutine force_harmon(x,y,z,fxab,fyab,fzab,eclas)
       use mod_array_size
       use mod_general
-      use mod_harmon
       implicit none
       real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out) :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
@@ -82,8 +81,6 @@
       subroutine hess_harmon(x,y,z)
       use mod_array_size
       use mod_general
-      use mod_harmon
-      use mod_estimators, ONLY: hess
       implicit none
       real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8            :: dx,dy,dz,r,fac
@@ -133,7 +130,6 @@
       subroutine force_morse(x,y,z,fxab,fyab,fzab,eclas)
       use mod_array_size
       use mod_general
-      use mod_harmon
       implicit none
       real*8,intent(in)  ::  x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out) ::  fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
@@ -171,8 +167,6 @@
       subroutine hess_morse(x,y,z)
       use mod_array_size
       use mod_general
-      use mod_harmon
-      use mod_estimators, ONLY: hess
       implicit none
       real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8             ::  dx,dy,dz,r,fac,ex,fac2
@@ -230,26 +224,25 @@
 
       end
 
-!theoretically only needs to be called once, but nah
-subroutine hess_2dho()
-use mod_array_size
-use mod_general
-use mod_harmon
-use mod_estimators, ONLY: hess
-implicit none
-integer :: i
+   !theoretically only needs to be called once, but nah
+   subroutine hess_2dho()
+   use mod_array_size
+   use mod_general
+   implicit none
+   integer :: i
 
-do i=1,nwalk
-   hess(1,1,i)=k1/nwalk
-   hess(2,2,i)=k2/nwalk
-   hess(3,3,i)=k3/nwalk
-   hess(2,1,i)=0.0d0
-   hess(3,1,i)=0.0d0
-   hess(3,2,i)=0.0d0
-   hess(1,2,i)=0.0d0
-   hess(1,3,i)=0.0d0
-   hess(2,3,i)=0.0d0
-enddo
+   do i=1,nwalk
+      hess(1,1,i)=k1/nwalk
+      hess(2,2,i)=k2/nwalk
+      hess(3,3,i)=k3/nwalk
+      hess(2,1,i)=0.0d0
+      hess(3,1,i)=0.0d0
+      hess(3,2,i)=0.0d0
+      hess(1,2,i)=0.0d0
+      hess(1,3,i)=0.0d0
+      hess(2,3,i)=0.0d0
+   enddo
 
-end
+   end
 
+end module mod_harmon

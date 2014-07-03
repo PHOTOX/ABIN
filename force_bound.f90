@@ -115,7 +115,7 @@
       return
       end subroutine
 
-      END MODULE
+      END MODULE mod_sbc
 
 
 !      MODULE mod_bag

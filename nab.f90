@@ -1,5 +1,6 @@
       module mod_nab
       use mod_array_size
+      implicit none
       real*8 boxx,boxy,boxz
       real*8 boxx2,boxy2,boxz2
       real*8  :: alpha_pme=-1,kappa_pme=-1,cutoff=10.0
@@ -84,19 +85,15 @@
 
       end subroutine
 
-      end module
-
-
-
       subroutine force_nab(x,y,z,fx,fy,fz,eclas)
       use mod_array_size
       use mod_general
-      use mod_estimators, ONLY: hess,h
+      use mod_estimators, ONLY: h
+      use mod_harmon, ONLY: hess
       use mod_qmmm
-      use mod_nab
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
       real*8 grad(npartmax*3),xyz(npartmax*3)
       real*8 dummy1(npartmax),dummy2(npartmax*3)
       character(len=npartmax) :: dummy3
@@ -232,3 +229,8 @@
 
       eclas=eclas/nwalk
       end
+
+      end module
+
+
+

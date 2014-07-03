@@ -13,11 +13,11 @@
 module mod_gle
   use mod_random
   implicit none
-  real*8, allocatable, save ::  gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
-  real*8, allocatable :: ran(:)
+  real*8, allocatable,save :: gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
+  real*8, allocatable,save :: ran(:)
   real*8, allocatable,save :: ps(:,:,:)
-  real*8, save        :: wnt, wns, langham
-  integer, save       :: ns,irand
+  real*8, save       :: wnt, wns, langham
+  integer,save       :: ns
 contains
 
   ! initialize white-noise thermostat. 
@@ -392,4 +392,5 @@ real*8 function rang(idum) !we don't use this anymore
   endif
   return
 end function rang
-end module
+
+end module mod_gle

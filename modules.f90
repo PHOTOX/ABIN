@@ -51,7 +51,7 @@ end module
       implicit none
       real*8  :: am(npartmax)
       character(len=2) :: names(npartmax)
-      integer :: inames(npartmax),imass_init=0
+      integer :: inames(npartmax),imass_init=1
 !---distributions (distance,angle,dihedral)
       integer :: ndist=0,nbin=1000,dist1(ndistmax),dist2(ndistmax)
       integer :: nang=0,ang1(ndistmax),ang2(ndistmax),ang3(ndistmax)
@@ -174,7 +174,6 @@ end module
 
       subroutine dist_init()
          implicit none
-         integer :: idist,ibin
          dist=0.0d0
          dist_ang=0.0d0
          dist_dih=0.0d0
@@ -217,60 +216,3 @@ end module
       end module 
 !------------------------------------------------------
 !------------------------------------------------------
-!------------------------------------------------------
-
-      module mod_qmmm
-      use mod_array_size
-      implicit none
-      character(len=2) :: attypes(npartmax)
-      integer :: natqm,natmm
-      character(len=10) :: LJcomb='LB',qmmmtype='NA'
-      real*8  :: q(npartmax),rmin(npartmax),eps(npartmax)
-      real*8,allocatable  :: AIJ(:,:),BIJ(:,:)
-      save
-      CONTAINS
-      subroutine inames_init()
-      use mod_general, ONLY:natom
-      use mod_system, ONLY:inames,names
-      implicit none
-      integer :: i,iat2,pom=0
-      save
-      do i=1,natom
-       pom=0
-       do iat2=1,natom
-       if(names(i).eq.attypes(iat2))then
-        inames(i)=iat2
-        pom=1
-        exit
-       endif
-       enddo
-       if (pom.eq.0)then
-        write(*,*)'Atom name does not have atom type for qmmm parameters. Exiting....'
-        stop 1
-       endif
-      enddo
-     end subroutine
-
-     subroutine ABr_init()
-     use mod_array_size, ONLY: ang
-     use mod_general, ONLY:natom
-     use mod_system, ONLY:inames
-     implicit none
-     integer :: iat1,iat2,i1,i2
-     real*8  :: epsij,rij
-     allocate(AIJ(natom,natom))
-     allocate(BIJ(natom,natom))
-     do iat1=1,natom
-      do iat2=1,natom
-      i1=inames(iat1)
-      i2=inames(iat2)
-       if(LJcomb.eq.'LB')then
-        rij=0.5*(rmin(i1)+rmin(i2))*ang
-        epsij=dsqrt(eps(i1)*eps(i2))
-       endif
-       BIJ(i1,i2)=2*6*epsij*rij**6
-       AIJ(i1,i2)=12*epsij*rij**12
-      enddo
-     enddo
-     end subroutine
-     end module

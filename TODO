@@ -1,13 +1,11 @@
-RESTARTS DO NOT CHECK FOR PIMD with istage=1, WHY?
 # random numbers are now fine-same for restart or not, but we should also check for SH and vranf
 
-# added force_quant into init in abin.f90, helped, but still not perfect
-# commit abin.f90 after next commit
-
-Write the state of random number generator into restart file,
-TEST IT! mainly for SH
-
 TODO: some simple automatic testing....
+make explicit interface everywhere (for functions not in modules), put them into module
+
+create module for densities and shake and guillot, move some variables from module system to module density
+move temperature scaling and other stuff to vinit, pass the whole vx,vy,vz arrays
+move sh_init into module mod_sh
 
 init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
 
@@ -19,9 +17,10 @@ todo: unit conversions - look at amber/terachem
 up to this, results compared to alpha version should be the same, if the atom masses are the same
 (alpha version e.g. has m(Cl)=35.45 instead of 35.45d0)
 
-make explicit interface everywhere (for functions not in modules), put them into module
-allocate arrays..must be in modules...use automatic arrays for local arrays where needed
+allocate arrays..must be in modules(why?,probably not since 2003)...use automatic arrays for local arrays where needed
 allocatable positions, velocities and momenta in modules, forces probably not?
+probably not in modules, no wide scope, this simplyfies things
+dont forget to allocate nwalk+1
 
 bug: floating point exception when inose=1 and temp=1.0(or even 10)
 present in alpha version as well

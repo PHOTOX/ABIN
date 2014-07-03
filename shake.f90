@@ -2,10 +2,9 @@
       use mod_array_size
       use mod_general
       use mod_system, ONLY: am,NShake,IShake1,IShake2,dshake,shake_tol
-      !implicit real*8(a-h,o-z)
       implicit none
-      real*8 :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(inout) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
       integer,intent(in) :: iq,iv
       real*8  :: mi,mj,mij,agama
       integer :: iw,i,j,ixshake,iiter,maxcycle,itest

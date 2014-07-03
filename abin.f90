@@ -2,7 +2,7 @@
 !  ABIN: Program for Born-Oppenheimer MD with potential calculated 
 !  on-the-fly by an external procedure placed in ./DYN (and lot more)
 !------------------------------------------------------------------  
-!  Copyright (C) 2014  D.Hollas,M.Oncak, P.Slavicek
+!  Copyright (C) 2014                     D.Hollas,M.Oncak, P.Slavicek
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -22,37 +22,8 @@ program abin_dyn
    use mod_system, ONLY:nshake
    use mod_sh
    use mod_fftw3
+   use mod_interfaces
    implicit none
-   INTERFACE
-   subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
-   use mod_array_size
-   real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8,intent(out) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-   real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-   real*8,intent(out) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-   real*8,intent(out) :: dt
-   end subroutine init
-   subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
-   use mod_array_size
-   implicit none
-   real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8,intent(in) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-   real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-   real*8,intent(in) :: amt(npartmax,nwalkmax)
-   real*8,intent(in) :: eclas,equant
-   real*8 :: dt  
-   end subroutine analysis
-   subroutine QtoX(x,y,z,transx,transy,transz)
-   use mod_array_size
-   real*8,intent(inout)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8,intent(out)    :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-   end subroutine QtoX
-   subroutine XtoQ(x,y,z,transx,transy,transz)
-   use mod_array_size
-   real*8,intent(inout)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8,intent(out)    :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-   end subroutine XtoQ
-   END INTERFACE
    real*8  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
    real*8  :: amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)
    real*8  :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)

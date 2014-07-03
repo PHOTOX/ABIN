@@ -7,9 +7,10 @@
       use mod_general
       use mod_system, ONLY: inames
       implicit real*8(a-h,o-z)
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8 eclas,temp1,r,fr
+      real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(out) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(out) :: eclas
+      real*8 :: temp1,r,fr
 !      integer :: inames(npartmax)
 
       eclas=0.0d0

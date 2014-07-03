@@ -8,14 +8,11 @@
       integer,parameter :: nbin=500
       real*8  dist(nbin,nwalkmax)
       save
-      end module
-                                        
-
+      contains
       subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
       use mod_array_size
       use mod_general
       use mod_system, ONLY: names,am
-      use mod_analyze_ext
       implicit none
       real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
@@ -67,6 +64,9 @@
         close(128)
       endif
    
-      end
+     end subroutine analyze_ext
+
+     end module
+                                        
 
 

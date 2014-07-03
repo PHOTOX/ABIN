@@ -7,8 +7,9 @@
 subroutine verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
 use mod_array_size
 use mod_general
-use mod_nhc, ONLY:inose,imasst
+use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
 use mod_gle
+use mod_interfaces, ONLY:shiftP,shiftX,force_clas,ekin_p
 implicit none
 real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
 real*8,intent(inout) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
@@ -16,7 +17,6 @@ real*8,intent(inout) :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,
 real*8,intent(in)    :: amt(npartmax,nwalkmax)
 real*8,intent(in)    :: dt
 real*8,intent(inout) :: eclas
-real*8  :: ekin_p
 integer :: iat,iw
 
 

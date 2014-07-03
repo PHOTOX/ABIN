@@ -14,22 +14,8 @@
       use mod_sbc
       use mod_fftw3
       use mod_random
-!     use mod_interfaces
+      use mod_interfaces,only:vinit,UpperToLower,LowerToUpper
       implicit none
-      INTERFACE
-
-      elemental function UpperToLower(string) result (return_string)
-      character(len=*),intent(in) :: string
-      character(len=len(string))  :: return_string
-      end function UpperToLower
-
-      elemental function LowerToUpper(string) result (return_string)
-      character(len=*),intent(in) :: string
-      character(len=len(string))  :: return_string
-      end function LowerToUpper
-
-      END INTERFACE
-
       real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
       real*8,intent(out) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
@@ -709,9 +695,7 @@ endif
 
 !------------------------------------------------------
 
-      do iat=1,natom
-       am(iat)=am(iat)*amu
-      enddo
+      am=am*amu
 
 !-----PID of the proccess
       pid=GetPID()
@@ -873,8 +857,9 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
    use mod_general,ONLY:irest
    use mod_sh
    use mod_random
+   use mod_interfaces,only:force_clas
    implicit none
-   real*8,intent(in)   :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real*8,intent(inout):: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
    real*8,intent(out)  :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
    real*8,intent(out)  :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
    real*8,intent(out)  :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
@@ -948,7 +933,8 @@ end
 subroutine finish(values1,values2)
    use mod_general
    use mod_nhc
-   use mod_estimators, only: hess,h
+   use mod_estimators, only: h
+   use mod_harmon, only: hess
    use mod_fftw3
    implicit none
    integer,dimension(8),intent(in)  :: values1

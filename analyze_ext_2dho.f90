@@ -14,15 +14,12 @@
       real*8  :: emin=-0.9d0,emax=0.9d0
       integer :: nbinen=400
       save
-      end module
-                                        
-
+      contains
 !---- Absorption spectrum via reflection principle
       subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
       use mod_array_size
       use mod_general
       use mod_system, ONLY: names
-      use mod_analyze_ext
       use mod_harmon
       implicit none
       real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
@@ -72,6 +69,9 @@
    
       return
       end
+
+      end module
+                                        
 
 
 

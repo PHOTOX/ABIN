@@ -2,19 +2,20 @@
       use mod_array_size
       use mod_general
       use mod_system, ONLY: names
-      use mod_estimators, ONLY: hess
+      use mod_harmon, ONLY: hess
       use mod_sh
       use mod_qmmm, ONLY:natqm
       implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8  :: eclas,temp1
+      real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real*8,intent(out)   :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(out)   :: eclas
+      real*8  :: temp1
       integer :: iat,iw,iat1,iat2,itest !,nthreads=1, ithread
       character(len=100) :: chsystem
       character(len=20) :: chgeom,chforce,chhess,fgeom
       logical :: file_exists
       integer :: ist1,ist2,iost
-!$    integer :: omp_get_max_threads,OMP_get_thread_num
+!!$    integer :: omp_get_max_threads,OMP_get_thread_num
 
 !!$    nthreads=omp_get_max_threads()
 

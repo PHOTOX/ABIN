@@ -1,3 +1,6 @@
+!-----BASED ON:
+!Quantum effects in simulated water by the Feynman&Hibbs approach,
+!Bertrand Guillot and Yves Guissani,J. Chem. Phys. 108, 10162 (1998);  
 
       module mod_analyze_ext
       use mod_array_size
@@ -5,17 +8,11 @@
       real*8  :: emin=0,emax=0.35
       integer :: nbinen=400
       save
-      end module
-                                        
-!-----BASED ON:
-!Quantum effects in simulated water by the Feynman&Hibbs approach,
-!Bertrand Guillot and Yves Guissani,J. Chem. Phys. 108, 10162 (1998);  
-
+      contains
       subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
       use mod_array_size
       use mod_general
       use mod_system, ONLY: inames
-      use mod_analyze_ext
       implicit real*8(a-h,o-z)
       real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
@@ -83,7 +80,10 @@
        close(200)
       endif
    
-      end
+      end subroutine analyze_ext
 
 
+
+      end module analyze_ext
+                                        
 

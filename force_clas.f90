@@ -1,17 +1,19 @@
       subroutine force_clas(fx,fy,fz,x,y,z,energy)
       use mod_array_size
       use mod_general
-      use mod_qmmm, ONLY: qmmmtype
-      use mod_nab, ONLY: ipbc,wrap,nsnb
+      use mod_qmmm, ONLY: qmmmtype,force_LJCoul
+      use mod_nab, ONLY: ipbc,wrap,nsnb,force_nab
       use mod_sbc
 !      use mod_bag
       use mod_nhc, ONLY: inose
+      use mod_harmon, ONLY: force_harmon,force_2dho,force_morse
+      use mod_interfaces,only:force_abin,QtoX,XtoQ,UtoX,XtoU,printf
       implicit none
       real*8,intent(inout) ::  x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(inout) ::  fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8,intent(out)   :: energy
-      real*8 transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-      real*8 fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
+      real*8,intent(out)   ::  energy
+      real*8  :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
+      real*8  :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
       integer :: iat,iw
       real *8 :: eclas
 
