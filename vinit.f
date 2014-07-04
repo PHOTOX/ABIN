@@ -26,10 +26,11 @@ C Adapted (real*8, no angular velocities, mass)   B. Schmidt, Apr 6, 1995
 C
 C------------------------------------------------------------------------
         SUBROUTINE vinit(TEMP, MASS, vx,vy,vz,nout,idum)
+        use mod_array_size,only:npartmax
         use mod_general, only: natom,pot
         implicit none
-        REAL*8,intent(out)    ::  VX(:), VY(:), VZ(:)
-        real*8,intent(in)     ::  mass(:)
+        REAL*8,intent(out)    :: VX(npartmax), VY(npartmax),VZ(npartmax)
+        real*8,intent(in)     ::  mass(npartmax)
         integer,intent(inout) ::  idum 
         integer,intent(in)    ::  nout
         integer   :: i

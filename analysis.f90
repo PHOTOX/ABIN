@@ -3,8 +3,8 @@
 !----Contains all analysis stuff
     subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
      use mod_array_size
-     use mod_analyze_ext
-     use mod_estimators
+     use mod_analyze_ext, only:analyze_ext
+     use mod_estimators ,only:estimators
      use mod_general
      use mod_system
 !    use mod_density

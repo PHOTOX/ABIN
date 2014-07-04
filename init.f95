@@ -14,7 +14,7 @@
       use mod_sbc
       use mod_fftw3
       use mod_random
-      use mod_interfaces,only:vinit,UpperToLower,LowerToUpper
+      use mod_interfaces,only:UpperToLower,LowerToUpper
       implicit none
       real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
