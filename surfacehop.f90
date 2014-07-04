@@ -605,11 +605,11 @@ end subroutine
    ! ntraj enddo       
    enddo
 
-end subroutine
+   end subroutine surfacehop
 
 
 
-      subroutine hop(vx,vy,vz,vx_int,vy_int,vz_int,ancx,ancy,ancz,en_array_int,state1,state2,itrj)
+   subroutine hop(vx,vy,vz,vx_int,vy_int,vz_int,ancx,ancy,ancz,en_array_int,state1,state2,itrj)
       use mod_array_size
       use mod_general, ONLY:natom
       use mod_system, ONLY: am
@@ -667,7 +667,7 @@ end subroutine
          vz(iat,itrj)=vz(iat,itrj)-g_temp*ancz(iat,itrj,state1,state2)/am(iat)
       enddo
 
-      end
+   end subroutine hop
 
       subroutine hop_dot(vx,vy,vz,state1,state2,itrj)
       use mod_array_size
@@ -722,9 +722,10 @@ end subroutine
 
       endif
 
-      end
+   end subroutine hop_dot
 
-      subroutine integstep(k_re,k_im,en,y_re,y_im,dotproduct)
+   !currently not in use
+   subroutine integstep(k_re,k_im,en,y_re,y_im,dotproduct)
       use mod_array_size
       real*8 k_re(nstmax),k_im(nstmax)
       real*8 dotproduct(nstmax,nstmax)
@@ -742,9 +743,10 @@ end subroutine
        k_im(ist1)=dtp*k_im(ist1)
       enddo
 
-      end
+   end subroutine integstep
 
-      subroutine rk4step_new(en_array,en_array_new,dotproduct,dotproduct_new,vx,vy,vz,vx_new,vy_new,vz_new,&
+   !currently not in use
+   subroutine rk4step_new(en_array,en_array_new,dotproduct,dotproduct_new,vx,vy,vz,vx_new,vy_new,vz_new,&
                       nacx,nacy,nacz,nacx_new,nacy_new,nacz_new,itrj)
       use mod_array_size
       implicit none
@@ -811,9 +813,9 @@ end subroutine
        cel_im(ist1,itrj)=cel_im(ist1,itrj)+k1_im(ist1)/6+k2_im(ist1)/3+k3_im(ist1)/3+k4_im(ist1)/6
       enddo
 
-      end
+   end subroutine rk4step_new
 
-      subroutine rk4step(en_array,en_array_new,dotproduct,dotproduct_new,itrj)
+   subroutine rk4step(en_array,en_array_new,dotproduct,dotproduct_new,itrj)
       use mod_array_size
       implicit none
       real*8 en_array(nstmax,ntrajmax)
@@ -869,10 +871,10 @@ end subroutine
        cel_im(ist1,itrj)=cel_im(ist1,itrj)+k1_im(ist1)/6+k2_im(ist1)/3+k3_im(ist1)/3+k4_im(ist1)/6
       enddo
 
-      end
+   end subroutine rk4step
 
 
-      subroutine butcherstep(en_array,en_array_new,dotproduct,dotproduct_new,itrj)
+   subroutine butcherstep(en_array,en_array_new,dotproduct,dotproduct_new,itrj)
       use mod_array_size
       implicit none
       real*8 en_array(nstmax,ntrajmax)
@@ -951,7 +953,7 @@ end subroutine
                         +32*k5_im(ist1)/90+7*k6_im(ist1)/90
       enddo
 
-      end
+   end subroutine butcherstep
 
       subroutine rk4step_old(en_array_int,dotproduct,dotproduct_newint,itrj)
       use mod_array_size
@@ -1019,9 +1021,9 @@ end subroutine
       enddo
 
 
-      end
+   end subroutine rk4step_old
 
-      subroutine interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_int,vy_int,vz_int, &
+   subroutine interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_int,vy_int,vz_int, &
                       ancx,ancy,ancz,nacx_old,nacy_old,nacz_old,en_array_int,en_array_old, &
                       dotproduct,fr,frd,itrj)
       use mod_array_size
@@ -1061,7 +1063,7 @@ end subroutine
         enddo
        enddo
 
-      end
+    end subroutine interpolate
 
       subroutine interpolate_dot(dotproduct_int,fr,frd,itrj)
       use mod_array_size
@@ -1123,6 +1125,6 @@ end subroutine
         enddo
        enddo
 
-      end
+    end subroutine  interpolate2
 
 end module

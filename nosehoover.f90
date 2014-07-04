@@ -276,7 +276,7 @@
 enddo
 
       return
-      end
+      end subroutine shiftNHC_yosh
 
       SUBROUTINE shiftNHC_yosh_mass (px,py,pz,amt,dt)
       use mod_array_size
@@ -373,6 +373,6 @@ enddo
       enddo
 
       return
-      end
+   end subroutine shiftNHC_yosh_mass
 
 end module mod_nhc

@@ -228,9 +228,9 @@
 !  close(100)
 
       eclas=eclas/nwalk
-      end
+   end subroutine force_nab
 
-      end module
+end module
 
 
 

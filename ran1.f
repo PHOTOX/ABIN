@@ -15,7 +15,7 @@ C
 C-------------------------------------------------------------------
       REAL*8 FUNCTION RAN1(IDUM)    
 
-      real*8 r(97),rm1,rm2                                                
+      real*8 r(97),rm1,rm2
       integer ix1,ix2,ix3
       integer ia1,ia2,ia3
       integer ic1,ic2,ic3

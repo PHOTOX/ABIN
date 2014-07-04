@@ -19,7 +19,7 @@
       contains
 
 !------3D Harmonic Oscillator---only 1 particle!!
-      subroutine force_2dho(x,y,z,fxab,fyab,fzab,eclas)
+   subroutine force_2dho(x,y,z,fxab,fyab,fzab,eclas)
       use mod_array_size
       use mod_general
       implicit none
@@ -42,11 +42,11 @@
       eclas=energy/nwalk
 
       return
-      end
+   end subroutine force_2dho
       
 
 !ccccccccHARMONIC OSCILLATOR--diatomic molecules--ccccccccccccccccccccc
-      subroutine force_harmon(x,y,z,fxab,fyab,fzab,eclas)
+   subroutine force_harmon(x,y,z,fxab,fyab,fzab,eclas)
       use mod_array_size
       use mod_general
       implicit none
@@ -74,11 +74,11 @@
          eclas=eclas+0.5*k*(r-r0)**2/nwalk
         enddo
 
-        end
+   end subroutine force_harmon
 
 
 
-      subroutine hess_harmon(x,y,z)
+   subroutine hess_harmon(x,y,z)
       use mod_array_size
       use mod_general
       implicit none
@@ -124,7 +124,7 @@
        enddo
 
 
-      end
+    end subroutine hess_harmon
 
 
       subroutine force_morse(x,y,z,fxab,fyab,fzab,eclas)
@@ -161,7 +161,7 @@
          eclas=eclas+De*(1-ex)**2/nwalk
         enddo
 
-        end
+     end subroutine force_morse
 
 
       subroutine hess_morse(x,y,z)
@@ -222,7 +222,7 @@
       enddo
 
 
-      end
+   end subroutine hess_morse
 
    !theoretically only needs to be called once, but nah
    subroutine hess_2dho()
@@ -243,6 +243,6 @@
       hess(2,3,i)=0.0d0
    enddo
 
-   end
+   end subroutine hess_2dho
 
 end module mod_harmon
