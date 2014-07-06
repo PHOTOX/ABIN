@@ -43,7 +43,6 @@ tau0=0.001,		! relaxation time of NHC thermostat
 &sh
 istate_init=2,		! initial electronic state
 nstate=3,		! number of electronic states
-ntraj=1,		!
 substep=1000,		! number of substeps for solving ESCH
 deltae=1.3,		! maximum energy difference [eV], for which we calculate NA coupling
 integ='euler',		! integrator for ESCHE:euler,butcher or rk4

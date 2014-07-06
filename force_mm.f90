@@ -6,7 +6,8 @@ module mod_qmmm
    implicit none
    character(len=2) :: attypes(npartmax)
    integer          :: natqm,natmm
-   character(len=10) :: LJcomb='LB',qmmmtype='NA'
+   character(len=10),parameter :: LJcomb='LB' !no other option for now
+   character(len=10) :: qmmmtype='NA'
    real*8  :: q(npartmax),rmin(npartmax),eps(npartmax)
    real*8,allocatable  :: AIJ(:,:),BIJ(:,:)
    save

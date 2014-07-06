@@ -9,6 +9,7 @@ use mod_general
 use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
 use mod_gle
 use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas,ekin_p
+use mod_system, ONLY:constrainP
 implicit none
 real*8,intent(inout)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
 real*8,intent(inout)  :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
@@ -17,7 +18,7 @@ real*8,intent(inout)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax
 real*8,intent(in)     :: amg(npartmax,nwalkmax),amt(npartmax,nwalkmax)
 real*8,intent(in)     :: dt
 real*8,intent(inout)  :: eclas,equant
-integer               :: iabin,iat,iw
+integer               :: iabin
 
 if (inose.eq.2)then
    langham=langham+ekin_p(px,py,pz)
@@ -34,6 +35,7 @@ if(inose.eq.1)then
 end if
 
 call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+if(conatom.gt.0) call constrainP (px,py,pz)
 
 
 if(inose.eq.1)then
@@ -70,21 +72,15 @@ do iabin=1,nabin
    call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
 
 
-   if(conatom.gt.0)then
-      do iw=1,nwalk
-         do iat=1,conatom
-            px(iat,iw)=0.0
-            py(iat,iw)=0.0
-            pz(iat,iw)=0.0
-         enddo
-      enddo
-   endif
+   if(conatom.gt.0) call constrainP (px,py,pz)
  
    call shiftX(x,y,z,px,py,pz,amt,dt/nabin)
 
    call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 
    call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
+
+   if(conatom.gt.0) call constrainP (px,py,pz)
 
    if (inose.eq.2.and.iabin.ne.nabin)then
       langham=langham+ekin_p(px,py,pz)
@@ -115,6 +111,7 @@ endif
 call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 
 call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+if(conatom.gt.0) call constrainP (px,py,pz)
 
 if(inose.eq.1)then
    if (imasst.eq.1)then

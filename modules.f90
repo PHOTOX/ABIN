@@ -8,7 +8,7 @@
 
 !-----Contains various array limits. Modify here if you need larger arrays (for big systems)
 !-----Also contains some physical constants
-!----- If you set these too large, compiler will complain...maybe some
+!-----If you set these too large, compiler will complain...maybe some
 !additional flags are needed
       module mod_array_size
       implicit none
@@ -198,7 +198,7 @@ end module
       end subroutine
 !---potentially useful for guillot and other empirical force fields, because string
 !---comparison is very cpu demanding!!
-      subroutine inames_guillot()
+   subroutine inames_guillot()
       use mod_general, ONLY:natom
       implicit none
       integer :: i
@@ -211,8 +211,22 @@ end module
         inames(i)=2
        endif
       enddo
-     end subroutine
+   end subroutine
 
-      end module 
+   subroutine constrainP (px,py,pz)
+      use mod_array_size, only: npartmax,nwalkmax
+      use mod_general, only: nwalk,conatom
+      real*8,intent(inout)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      integer               :: iw,iat
+      do iw=1,nwalk
+         do iat=1,conatom
+            px(iat,iw)=0.0d0
+            py(iat,iw)=0.0d0
+            pz(iat,iw)=0.0d0
+         enddo
+      enddo
+   end subroutine constrainP
+
+end module 
 !------------------------------------------------------
 !------------------------------------------------------

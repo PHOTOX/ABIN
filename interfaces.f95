@@ -219,6 +219,10 @@ module mod_interfaces
    real*8,intent(in) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
    end subroutine printf 
 
+   subroutine abinerror(chcaller)
+   character(len=*),intent(in)   :: chcaller
+   end subroutine abinerror
+
    END INTERFACE
 
 end module mod_interfaces

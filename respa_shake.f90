@@ -31,6 +31,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
       use mod_system, ONLY:nshake
       use mod_fftw3
       use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas,shake,utox,xtou,qtox,xtoq
+      use mod_system, ONLY:constrainP
       implicit none
       real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(inout) :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
@@ -49,7 +50,8 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
         call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
       endif
 
-       call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+      call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+      if(conatom.gt.0) call constrainP (px,py,pz)
 
 ! RATTLE HERE!
       if(nshake.ge.1)then
@@ -93,6 +95,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
        endif
 
        call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
+       if(conatom.gt.0) call constrainP (px,py,pz)
 
 !--------RATTLE HERE!
       if(nshake.ge.1)then
@@ -155,6 +158,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
        call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 
        call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
+       if(conatom.gt.0) call constrainP (px,py,pz)
 
       if(inose.eq.1)then
         call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
@@ -170,6 +174,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
       call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 
       call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+      if(conatom.gt.0) call constrainP (px,py,pz)
 
       if(inose.eq.1)then
         call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))

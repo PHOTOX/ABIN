@@ -41,35 +41,34 @@
 !       temphh=0.0d0
        do i=1,natom
         do j=i+1,natom
+         fr=0.0d0
          r=(x(i,k)-x(j,k))**2+(y(i,k)-y(j,k))**2+(z(i,k)-z(j,k))**2
          r=dsqrt(r)
          if(inames(i).eq.0.and.inames(j).eq.0)then
           temp1=temp1+voo(r)
 !          tempoo=tempoo+voo(r)
           fr=froo(r) 
-         endif
-         if(inames(i).eq.0.and.inames(j).eq.1.or.inames(i).eq.1&
+       else if(inames(i).eq.0.and.inames(j).eq.1.or.inames(i).eq.1&
       .and.inames(j).eq.0)then
           temp1=temp1+voh(r)
           fr=froh(r) 
 !          tempoh=tempoh+voh(r)
-         endif
-         if(inames(i).eq.2.and.inames(j).eq.0.or.inames(i).eq.0&
+        else if(inames(i).eq.2.and.inames(j).eq.0.or.inames(i).eq.0&
        .and.inames(j).eq.2)then
           temp1=temp1+vocl(r)
           fr=frocl(r) 
-         endif
-         if(inames(i).eq.2.and.inames(j).eq.1.or.inames(i).eq.1&
+      else if(inames(i).eq.2.and.inames(j).eq.1.or.inames(i).eq.1&
       .and.inames(j).eq.2)then
           temp1=temp1+vhcl(r)
           fr=frhcl(r) 
-         endif
-
-         if(inames(i).eq.1.and.inames(j).eq.1)then
+      else if(inames(i).eq.1.and.inames(j).eq.1)then
           temp1=temp1+vhh(r)
           fr=frhh(r) 
 !          temphh=temphh+vhh(r)
-         endif
+      else 
+         write(*,*)'Unrecognized atom pair in force guillot!'
+         call abinerror('force_guillot')
+      end if
          fx(i,k)=fx(i,k)+fr*(x(i,k)-x(j,k))/(r)
          fx(j,k)=fx(j,k)+fr*(x(j,k)-x(i,k))/(r)
          fy(i,k)=fy(i,k)+fr*(y(i,k)-y(j,k))/(r)

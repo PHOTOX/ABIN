@@ -10,7 +10,7 @@ FC = gfortran
 CC = gcc
 
 #CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
-FFLAGS =  -g -fopenmp  -Wall -fbounds-check -O0 -ffpe-trap=invalid,zero,overflow  #static # -O2 -ip -ipo " #-fno-underscoring -fopenmp"
+FFLAGS = -O0 # -g -fopenmp  -Wall -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
 LD = -lfftw3 -lm -lstdc++
 

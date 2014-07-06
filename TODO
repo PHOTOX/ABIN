@@ -1,20 +1,32 @@
-# random numbers are now fine-same for restart or not, but we should also check for SH and vranf
+
+I think that hop is wrong, we should not use vx_int
+
+ the optimization changes results of SH for older varsions, why????
+
+BUG:small differences in pop.dat between dev and alpha versions, why?
 
 TODO: some simple automatic testing....
+at least 3 SH - for each integrator and different settings
+also test inac=1 (LUKAS code)
+
+create subroutine error(name-of-calling-subroutine,error-code), error code only 1
+create file ERROR with message:
+
+
+
+todo: unit conversions - look at amber/terachem
+up to this, results compared to alpha version should be the same, if the atom masses are the same
+(alpha version e.g. has m(Cl)=35.45 instead of 35.45d0)
+
+check, whether we have everywhere 0.0d0
+grep "0\.0" *f90 | grep -v d0
+see this page: https://gcc.gnu.org/onlinedocs/gcc-3.3.5/g77/Overly-Convenient-Options.html#Overly-Convenient-Options
 
 create module for densities and shake and guillot, move some variables from module system to module density
 move temperature scaling and other stuff to vinit, pass the whole vx,vy,vz arrays
 move sh_init into module mod_sh
 
 init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
-
-check, whether we have everywhere 0.0d0
-grep "0\.0" *f90 | grep -v d0
-see this page: https://gcc.gnu.org/onlinedocs/gcc-3.3.5/g77/Overly-Convenient-Options.html#Overly-Convenient-Options
-
-todo: unit conversions - look at amber/terachem
-up to this, results compared to alpha version should be the same, if the atom masses are the same
-(alpha version e.g. has m(Cl)=35.45 instead of 35.45d0)
 
 allocate arrays..must be in modules(why?,probably not since 2003)...use automatic arrays for local arrays where needed
 allocatable positions, velocities and momenta in modules, forces probably not?

@@ -7,6 +7,7 @@
 subroutine verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
 use mod_array_size
 use mod_general
+use mod_system, ONLY: constrainP
 use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
 use mod_gle
 use mod_interfaces, ONLY:shiftP,shiftX,force_clas,ekin_p
@@ -17,7 +18,6 @@ real*8,intent(inout) :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,
 real*8,intent(in)    :: amt(npartmax,nwalkmax)
 real*8,intent(in)    :: dt
 real*8,intent(inout) :: eclas
-integer :: iat,iw
 
 
 !---THERMOSTATS------------------
@@ -43,15 +43,7 @@ endif
 
 call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
-if(conatom.gt.0)then
-   do iw=1,nwalk
-      do iat=1,conatom
-         px(iat,iw)=0.0d0
-         py(iat,iw)=0.0d0
-         pz(iat,iw)=0.0d0
-      enddo
-   enddo
-endif
+if(conatom.gt.0) call constrainP (px,py,pz)
 
 call shiftX(x,y,z,px,py,pz,amt,dt)
 
@@ -59,6 +51,7 @@ call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 
 call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
+if(conatom.gt.0) call constrainP (px,py,pz)
 !---THERMOSTATS------------------
 
 if (inose.eq.3)  call wn_step(px,py,pz,amt)

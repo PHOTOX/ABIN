@@ -1,10 +1,13 @@
 ! modules and routines for Surface hopping dynamics
 ! D. Hollas, O. Svoboda, P. Slavíček, M. Ončák
 !TODO: genericka funkce pro interpolace 
+!TODO: refactor everything
 module mod_sh
 use mod_array_size
+use mod_interfaces,only:abinerror
 implicit none
-integer :: istate_init=1,nstate=1,ntraj=1,substep=10000
+integer,parameter :: ntraj=1
+integer :: istate_init=1,nstate=1,substep=10000
 integer :: inac=0,nohop=0
 integer :: nac_accu1=7,nac_accu2=5 !7 is MOLPRO default
 real*8  :: dtp,alpha=0.1d0,eshift,deltae=100.,popthr=-1
@@ -13,15 +16,17 @@ real*8  :: nacx(npartmax,ntrajmax,nstmax,nstmax)
 real*8  :: nacy(npartmax,ntrajmax,nstmax,nstmax)
 real*8  :: nacz(npartmax,ntrajmax,nstmax,nstmax)
 real*8  :: dotproduct_old(nstmax,nstmax,ntrajmax)=0.0d0 !for inac=1
-real*8  :: dotproduct_new(nstmax,nstmax,ntrajmax)=0.0d0 !for inac=1
+real*8  :: dotproduct_new(nstmax,nstmax,ntrajmax)=0.0d0 !for inac=1 !TODO: rename
 real*8  :: en_array(nstmax,ntrajmax)
 real*8  :: cel_re(nstmax,ntrajmax),cel_im(nstmax,ntrajmax)
 integer :: tocalc(nstmax,nstmax)
-character(len=10) :: integ='rk4'
+character(len=10) :: integ='butcher'
+real*8  :: wfthresh=0.001d0
 save
 contains
 subroutine set_tocalc()
-integer :: ist1,ist2,itrj=1
+integer,parameter :: itrj=1 
+integer :: ist1,ist2
 real*8  :: pop,pop2
 
 do ist1=1,nstate-1
@@ -92,112 +97,137 @@ return
 end function
 
 subroutine calcnacm(itrj)
-use mod_general, only: it,pot
-implicit none
-integer :: ist1,ist2,itrj
-character(len=100) :: chsystem
-open(unit=510,file='state.dat')
-write(510,'(I2)')istate(itrj)
-write(510,'(I2)')nstate
-! tocalc is upper triangular part of a matrix without diagonal
-! tocalc(,)=1 -> calculate NACME
-! tocalc(,)=0 -> don't calculate NACME
-do ist1=1,nstate-1
-   do ist2=ist1+1,nstate
-      write(510,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
+   use mod_general, only: it,pot
+   implicit none
+   integer :: ist1,ist2,itrj
+   character(len=100) :: chsystem
+   open(unit=510,file='state.dat')
+   write(510,'(I2)')istate(itrj)
+   write(510,'(I2)')nstate
+   ! tocalc is upper triangular part of a matrix without diagonal
+   ! tocalc(,)=1 -> calculate NACME
+   ! tocalc(,)=0 -> don't calculate NACME
+   do ist1=1,nstate-1
+      do ist2=ist1+1,nstate
+         write(510,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
+      enddo
    enddo
-enddo
-close(510) 
+   close(510) 
 
-if(pot.eq.'molpro')then
-   write(*,*)'WARNING: Some NACME not computed.Trying with decreased accuracy.'
-   write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
-   write(chsystem,'(A20,I13,I4.3,I3,A12)')'./MOLPRO/r.molpro ',it,itrj,nac_accu2,' < state.dat'
-else
-   write(*,*)'Different accuracy for NACME is currently supported only by molpro.'
-   write(*,*)'Exiting...'
-   stop 1
-endif
+   if(pot.eq.'molpro')then
+      write(*,*)'WARNING: Some NACME not computed.Trying with decreased accuracy.'
+      write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
+      write(chsystem,'(A20,I13,I4.3,I3,A12)')'./MOLPRO/r.molpro ',it,itrj,nac_accu2,' < state.dat'
+   else
+      write(*,*)'Different accuracy for NACME is currently supported only by MOLPRO.'
+      call abinerror('calcnacm')
+   endif
 
-call system(chsystem)
-end subroutine
+   call system(chsystem)
+end subroutine calcnacm
 
 subroutine move_vars(en_array_old,nacx_old,nacy_old,nacz_old,vx,vy,vz,vx_old,vy_old,vz_old,itrj)
-use mod_general,only:natom
-implicit none
-real*8,intent(out) :: en_array_old(nstmax,ntrajmax)
-real*8,intent(out) :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-real*8,intent(out) :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-real*8,intent(out) :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-real*8,intent(out) :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
-real*8,intent(in)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-integer :: itrj,ist1,ist2,iat
-!---moving new to old variables
-do ist1=1,nstate
-   en_array_old(ist1,itrj)=en_array(ist1,itrj)
+   use mod_general,only:natom
+   implicit none
+   real*8,intent(out) :: en_array_old(nstmax,ntrajmax)
+   real*8,intent(out) :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
+   real*8,intent(out) :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8,intent(out) :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8,intent(out) :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
+   real*8,intent(in)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+   integer :: itrj,ist1,ist2,iat
+   !---moving new to old variables
+   do ist1=1,nstate
+      en_array_old(ist1,itrj)=en_array(ist1,itrj)
+   
+      if(inac.eq.0)then   ! nedelame, pokud nacitame rovnou dotprodukt
+         do ist2=1,nstate
+            do iat=1,natom
+               nacx_old(iat,itrj,ist1,ist2)=nacx(iat,itrj,ist1,ist2)
+               nacy_old(iat,itrj,ist1,ist2)=nacy(iat,itrj,ist1,ist2)
+               nacz_old(iat,itrj,ist1,ist2)=nacz(iat,itrj,ist1,ist2)
+            enddo
+         enddo
+      endif
+   
+   enddo
+   
+   do iat=1,natom
+      vx_old(iat,itrj)=vx(iat,itrj)
+      vy_old(iat,itrj)=vy(iat,itrj)
+   vz_old(iat,itrj)=vz(iat,itrj)
+   enddo
 
-   if(inac.eq.0)then   ! nedelame, pokud nacitame rovnou dotprodukt
-      do ist2=1,nstate
-         do iat=1,natom
-            nacx_old(iat,itrj,ist1,ist2)=nacx(iat,itrj,ist1,ist2)
-            nacy_old(iat,itrj,ist1,ist2)=nacy(iat,itrj,ist1,ist2)
-            nacz_old(iat,itrj,ist1,ist2)=nacz(iat,itrj,ist1,ist2)
+   if(inac.eq.1)then
+      do ist1=1,nstate
+         do ist2=1,nstate
+            dotproduct_old(ist1,ist2,itrj)=dotproduct_new(ist1,ist2,itrj)
          enddo
       enddo
    endif
 
-enddo
+end subroutine move_vars
+   
+   subroutine check_popsum(itrj,popsumin)
+      real*8,intent(in),optional :: popsumin
+      integer,intent(in)         :: itrj
+      real*8                     :: popsum
+      integer                    :: ist1
 
-do iat=1,natom
-   vx_old(iat,itrj)=vx(iat,itrj)
-   vy_old(iat,itrj)=vy(iat,itrj)
-   vz_old(iat,itrj)=vz(iat,itrj)
-enddo
+      popsum=0.0d0
+      if(present(popsumin))then
+         popsum=popsumin
+      else
+         do ist1=1,nstate 
+            popsum=popsum+cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
+         end do
+      end if
 
-if(inac.eq.1)then
-   do ist1=1,nstate
-      do ist2=1,nstate
-         dotproduct_old(ist1,ist2,itrj)=dotproduct_new(ist1,ist2,itrj)
-      enddo
-   enddo
-endif
-
-end subroutine
+      if (abs(popsum-1.0d0).gt.wfthresh)then
+         write(*,*)'ERROR:Sum of populations=',popsum, &
+          'which differs from 1.0 by more than wfthresh=',wfthresh
+         write(*,*)'Increase number of substeps or use more accurate integrator.'
+         call abinerror('surfacehop')
+      end if
+   end subroutine check_popsum
 
 
+!TODO: move nacx_old and en_array_old to mod_sh. Move vx_old, but where? probably mod_sh
    subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
       use mod_array_size
       use mod_general
-      use mod_system, ONLY: am,names
+      use mod_system, ONLY: names
       use mod_qmmm, ONLY:natqm
       use mod_random, ONLY: vranf
+      use mod_interfaces, ONLY:ekin_v
       implicit none
       real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(inout) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
       real*8,intent(inout) :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-      real*8,intent(inout) :: en_array_old(nstmax,ntrajmax)
       real*8,intent(inout) :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
       real*8,intent(inout) :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
       real*8,intent(inout) :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
+      real*8,intent(inout) :: en_array_old(nstmax,ntrajmax)
+      real*8,intent(in)    :: dt
       real*8  :: vx_int(npartmax,nwalkmax),vy_int(npartmax,nwalkmax),vz_int(npartmax,nwalkmax)
       real*8  :: vx_newint(npartmax,nwalkmax),vy_newint(npartmax,nwalkmax),vz_newint(npartmax,nwalkmax)
       real*8  :: en_array_int(nstmax,ntrajmax),en_array_newint(nstmax,ntrajmax)
       real*8  :: dcel_re(nstmax,ntrajmax),dcel_im(nstmax,ntrajmax)
-      real*8  :: ancx(npartmax,ntrajmax,nstmax,nstmax)
+      real*8  :: ancx(npartmax,ntrajmax,nstmax,nstmax)  !TODO:rename to nacx_int,automatic arrays
       real*8  :: ancy(npartmax,ntrajmax,nstmax,nstmax)
       real*8  :: ancz(npartmax,ntrajmax,nstmax,nstmax)
-      real*8  :: ancx_newint(npartmax,ntrajmax,nstmax,nstmax)
+      real*8  :: ancx_newint(npartmax,ntrajmax,nstmax,nstmax)!TODO:rename to nacx_newint,automatic arrays
       real*8  :: ancy_newint(npartmax,ntrajmax,nstmax,nstmax)
       real*8  :: ancz_newint(npartmax,ntrajmax,nstmax,nstmax)
-      real*8  :: dotproduct(nstmax,nstmax,ntrajmax),dotproduct_newint(nstmax,nstmax,ntrajmax)
+      real*8  :: dotproduct(nstmax,nstmax,ntrajmax),dotproduct_newint(nstmax,nstmax,ntrajmax) !rename dotproduct_int
       real*8  :: t(nstmax,nstmax)           !switching probabilities
-      real*8  :: t_tot(nstmax,nstmax)       !switching probabilities
+      real*8  :: t_tot(nstmax,nstmax)       !cumulative switching probabilities
       real*8  :: ran(10)
-      real*8  ::  pop(nstmax,ntrajmax),popsum
+      real*8  ::  pop(nstmax,ntrajmax),popsum !populations
       integer :: itp
       integer :: iat,ist1,ist2,itrj     !iteration counters
       integer :: ist                    ! =istate(itrj)
-      real*8  :: vect_olap,fr,frd,dt,temp1
+      real*8  :: vect_olap,fr,frd
       real*8  :: ekin_mom,apom,edif,tau,fact,sum_norm
       integer :: ihop,ijunk
       real*8  :: a_re,prob(nstmax),cn
@@ -245,8 +275,8 @@ end subroutine
        endif
 !------------if NACM STILL NOT COMPUTED: USE OLD NACM--------------
        if(iost.ne.0)then
-        write(*,*)'ERROR:Some NACs not read. Exiting...'
-        stop 1
+        write(*,*)'ERROR:Some NACMEs not read.'
+        call abinerror('surfacehop')
 !        do ist1=1,nstate-1
 !         do ist2=ist1+1,nstate
 !
@@ -439,11 +469,13 @@ end subroutine
 
       endif
 
+      call check_popsum(itrj)
+
 !--calculation of switching probabilities
 !- do not calculated the whole transition matrix
 !- t array could be one dimensional but whatever
-      pop(ist,itrj)=cel_re(ist,itrj)**2+cel_im(ist,itrj)**2
       do ist2=1,nstate 
+        pop(ist2,itrj)=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
         a_re=(cel_re(ist,itrj)*cel_re(ist2,itrj)+cel_im(ist,itrj)*cel_im(ist2,itrj))
         t(ist,ist2)=2*a_re*dotproduct(ist,ist2,itrj)
       enddo        
@@ -474,6 +506,7 @@ end subroutine
        endif
       enddo
 
+      !TODO:should we hop before decoherence?????
 ! HOPPING      
       if (nohop.ne.1)then
 
@@ -519,13 +552,11 @@ end subroutine
 
       if(alpha.gt.0)then
 ! Quantum decoherence part----------------------------------
-       do iat=1,natom
-        temp1=vx_int(iat,itrj)**2+vy_int(iat,itrj)**2+vz_int(iat,itrj)**2
-        temp1=0.5*temp1*am(iat)
-        ekin_mom=ekin_mom+temp1
-       enddo
+      
+      ekin_mom=ekin_v(vx_int,vy_int,vz_int)
 
-      if(ekin_mom.gt.1.0d-4)then
+      if(idebug.eq.3) write(*,*)'ekin_mom=',ekin_mom
+      if(ekin_mom.gt.1.0d-4)then !TODO: why this number?
 
       do ist1=1,nstate
        if(ist1.ne.istate(itrj)) then
@@ -545,13 +576,21 @@ end subroutine
 ! RENORMALIZATION OF ISTATE     
       sum_norm=1.0d0
       do ist1=1,nstate
-       if(ist1.ne.istate(itrj)) then
-        sum_norm=sum_norm-cel_re(ist1,itrj)**2-cel_im(ist1,itrj)**2
-       endif
+         if(ist1.ne.istate(itrj)) then
+            sum_norm=sum_norm-cel_re(ist1,itrj)**2-cel_im(ist1,itrj)**2
+         endif
       enddo
-      fact=sum_norm/(cel_re(istate(itrj),itrj)**2+cel_im(istate(itrj),itrj)**2+1.0d-7)
+      fact=sum_norm/(cel_re(istate(itrj),itrj)**2+cel_im(istate(itrj),itrj)**2+1.0d-7) !TODO:smaller number
+      !Following should never happen as we check for wfthresh later in this subroutine
+      if(fact.lt.0.0d0)then
+         write(*,*)'Fatal error in surfacehop during decoherence renormalization.'
+         write(*,*)'fact=',fact,'but should be > 0'
+         write(*,*)'This usually means inaccurate integration of electronic SE.'
+         write(*,*)'Increase number of substeps or use more accurate integrator.'
+         call abinerror('surfacehop')
+      end if
       fact=dsqrt(fact)
-!     write(148,*)'renomr',fact,istate(itrj)
+!     write(*,*)'renomr',fact,istate(itrj)
 
       cel_re(istate(itrj),itrj)=cel_re(istate(itrj),itrj)*fact
       cel_im(istate(itrj),itrj)=cel_im(istate(itrj),itrj)*fact
@@ -593,6 +632,8 @@ end subroutine
        popsum=popsum+pop(ist1,itrj)
       enddo
 
+      call check_popsum(itrj,popsum)
+
       if(modulo(it,nwrite).eq.0)then
        write(formt,'(A10,I3,A13)')'(F15.2,I3,',nstate,'F10.5,1F10.7)'
        write(3,fmt=formt)it*dt*autofs,istate(itrj),(pop(ist1,itrj), ist1=1,nstate),popsum
@@ -606,8 +647,6 @@ end subroutine
    enddo
 
    end subroutine surfacehop
-
-
 
    subroutine hop(vx,vy,vz,vx_int,vy_int,vz_int,ancx,ancy,ancz,en_array_int,state1,state2,itrj)
       use mod_array_size
@@ -669,16 +708,61 @@ end subroutine
 
    end subroutine hop
 
-      subroutine hop_dot(vx,vy,vz,state1,state2,itrj)
+   subroutine interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_int,vy_int,vz_int, &
+                      ancx,ancy,ancz,nacx_old,nacy_old,nacz_old,en_array_int,en_array_old, &
+                      dotproduct,fr,frd,itrj)
+      use mod_array_size
+      use mod_general
+      implicit none
+      real*8 dotproduct(nstmax,nstmax,ntrajmax)
+      real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
+      real*8 vx_int(npartmax,nwalkmax),vy_int(npartmax,nwalkmax),vz_int(npartmax,nwalkmax)
+      real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
+      real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
+      real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
+      real*8 ancx(npartmax,ntrajmax,nstmax,nstmax)
+      real*8 ancy(npartmax,ntrajmax,nstmax,nstmax)
+      real*8 ancz(npartmax,ntrajmax,nstmax,nstmax)
+      real*8 en_array_int(nstmax,ntrajmax)
+      real*8 en_array_old(nstmax,ntrajmax)
+      integer :: iat,ist1,ist2,itrj     !iteration counters
+      real*8 :: fr,frd
+      
+      do ist1=1,nstate
+
+        en_array_int(ist1,itrj)=en_array(ist1,itrj)*fr+en_array_old(ist1,itrj)*frd
+        do ist2=1,nstate
+         dotproduct(ist1,ist2,itrj)=0.0d0
+         do iat=1,natom
+         ancx(iat,itrj,ist1,ist2)=nacx(iat,itrj,ist1,ist2)*fr+nacx_old(iat,itrj,ist1,ist2)*frd
+         ancy(iat,itrj,ist1,ist2)=nacy(iat,itrj,ist1,ist2)*fr+nacy_old(iat,itrj,ist1,ist2)*frd
+         ancz(iat,itrj,ist1,ist2)=nacz(iat,itrj,ist1,ist2)*fr+nacz_old(iat,itrj,ist1,ist2)*frd
+         vx_int(iat,itrj)=vx(iat,itrj)*fr+vx_old(iat,itrj)*frd
+         vy_int(iat,itrj)=vy(iat,itrj)*fr+vy_old(iat,itrj)*frd
+         vz_int(iat,itrj)=vz(iat,itrj)*fr+vz_old(iat,itrj)*frd
+         dotproduct(ist1,ist2,itrj)=dotproduct(ist1,ist2,itrj)+vx_int(iat,itrj)*ancx(iat,itrj,ist1,ist2)
+         dotproduct(ist1,ist2,itrj)=dotproduct(ist1,ist2,itrj)+vy_int(iat,itrj)*ancy(iat,itrj,ist1,ist2)
+         dotproduct(ist1,ist2,itrj)=dotproduct(ist1,ist2,itrj)+vz_int(iat,itrj)*ancz(iat,itrj,ist1,ist2)
+         enddo
+        enddo
+       enddo
+
+    end subroutine interpolate
+
+   end module mod_sh
+
+   subroutine hop_dot(vx,vy,vz,state1,state2,itrj)
       use mod_array_size
       use mod_general, ONLY:natom,idebug
       use mod_interfaces ,ONLY: ekin_v
+      use mod_sh, ONLY:en_array,istate
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
       integer :: itrj,state1,state2,iat
       real*8  :: de,ekin,alfa,ekin_new
 
-      ekin=0.0
-      ekin_new=0.0
+      ekin=0.0d0
+      ekin_new=0.0d0
 
       de=en_array(state2,itrj)-en_array(state1,itrj)
       ekin=ekin_v(vx,vy,vz)
@@ -724,9 +808,14 @@ end subroutine
 
    end subroutine hop_dot
 
+
+
+
    !currently not in use
    subroutine integstep(k_re,k_im,en,y_re,y_im,dotproduct)
       use mod_array_size
+      use mod_sh, only:nstate,dtp
+      implicit none
       real*8 k_re(nstmax),k_im(nstmax)
       real*8 dotproduct(nstmax,nstmax)
       real*8 en(nstmax),y_im(nstmax),y_re(nstmax)
@@ -749,6 +838,7 @@ end subroutine
    subroutine rk4step_new(en_array,en_array_new,dotproduct,dotproduct_new,vx,vy,vz,vx_new,vy_new,vz_new,&
                       nacx,nacy,nacz,nacx_new,nacy_new,nacz_new,itrj)
       use mod_array_size
+      use mod_sh,only:nstate,cel_re,cel_im,eshift
       implicit none
       real*8 vx_new(npartmax,nwalkmax),vy_new(npartmax,nwalkmax),vz_new(npartmax,nwalkmax)
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
@@ -817,6 +907,7 @@ end subroutine
 
    subroutine rk4step(en_array,en_array_new,dotproduct,dotproduct_new,itrj)
       use mod_array_size
+      use mod_sh,only:nstate,cel_re,cel_im,eshift
       implicit none
       real*8 en_array(nstmax,ntrajmax)
       real*8 en_array_new(nstmax,ntrajmax)
@@ -876,6 +967,7 @@ end subroutine
 
    subroutine butcherstep(en_array,en_array_new,dotproduct,dotproduct_new,itrj)
       use mod_array_size
+      use mod_sh,only:nstate,cel_re,cel_im,eshift
       implicit none
       real*8 en_array(nstmax,ntrajmax)
       real*8 en_array_new(nstmax,ntrajmax)
@@ -955,118 +1047,10 @@ end subroutine
 
    end subroutine butcherstep
 
-      subroutine rk4step_old(en_array_int,dotproduct,dotproduct_newint,itrj)
+
+   subroutine interpolate_dot(dotproduct_int,fr,frd,itrj)
       use mod_array_size
-      use mod_general
-      implicit none
-      real*8 en_array_int(nstmax,ntrajmax)
-      real*8 dotproduct(nstmax,nstmax,ntrajmax)
-      real*8 dotproduct_newint(nstmax,nstmax,ntrajmax)
-      real*8 dotproduct2(nstmax,nstmax,ntrajmax)
-      real*8 k1_re(nstmax,ntrajmax),k1_im(nstmax,ntrajmax)
-      real*8 k2_re(nstmax,ntrajmax),k2_im(nstmax,ntrajmax)
-      real*8 k3_re(nstmax,ntrajmax),k3_im(nstmax,ntrajmax)
-      real*8 k4_re(nstmax,ntrajmax),k4_im(nstmax,ntrajmax)
-      integer :: ist1,ist2,itrj     !iteration counters
-
-
-      do ist1=1,nstate
-       k1_re(ist1,itrj)=(en_array_int(ist1,itrj)+eshift)*cel_im(ist1,itrj)
-       k1_im(ist1,itrj)=-(en_array_int(ist1,itrj)+eshift)*cel_re(ist1,itrj)
-       do ist2=1,nstate
-         k1_re(ist1,itrj)=k1_re(ist1,itrj)-cel_re(ist2,itrj)*dotproduct(ist1,ist2,itrj)
-         k1_im(ist1,itrj)=k1_im(ist1,itrj)-cel_im(ist2,itrj)*dotproduct(ist1,ist2,itrj)
-         k1_re(ist1,itrj)=dtp*k1_re(ist1,itrj)
-         k1_im(ist1,itrj)=dtp*k1_im(ist1,itrj)
-       enddo
-      enddo
-
-      do ist1=1,nstate
-       k2_re(ist1,itrj)=(en_array_int(ist1,itrj)+eshift)*(cel_im(ist1,itrj)+k1_im(ist1,itrj)/2)
-       k2_im(ist1,itrj)=-(en_array_int(ist1,itrj)+eshift)*(cel_re(ist1,itrj)+k1_re(ist1,itrj)/2)
-       do ist2=1,nstate
-        dotproduct2(ist1,ist2,itrj)=(dotproduct(ist1,ist2,itrj)+dotproduct_newint(ist1,ist2,itrj))/2
-         k2_re(ist1,itrj)=k2_re(ist1,itrj)-(cel_re(ist2,itrj)+k1_re(ist2,itrj)/2)*dotproduct2(ist1,ist2,itrj)
-         k2_im(ist1,itrj)=k2_im(ist1,itrj)-(cel_im(ist2,itrj)+k1_im(ist2,itrj)/2)*dotproduct2(ist1,ist2,itrj)
-         k2_re(ist1,itrj)=dtp*k2_re(ist1,itrj)
-         k2_im(ist1,itrj)=dtp*k2_im(ist1,itrj)
-       enddo
-      enddo
-
-      do ist1=1,nstate
-       k3_re(ist1,itrj)=(en_array_int(ist1,itrj)+eshift)*(cel_im(ist1,itrj)+k2_im(ist1,itrj)/2)
-       k3_im(ist1,itrj)=-(en_array_int(ist1,itrj)+eshift)*(cel_re(ist1,itrj)+k2_re(ist1,itrj)/2)
-       do ist2=1,nstate
-         k3_re(ist1,itrj)=k3_re(ist1,itrj)-(cel_re(ist2,itrj)+k2_re(ist2,itrj)/2)*dotproduct2(ist1,ist2,itrj)
-         k3_im(ist1,itrj)=k3_im(ist1,itrj)-(cel_im(ist2,itrj)+k2_im(ist2,itrj)/2)*dotproduct2(ist1,ist2,itrj)
-         k3_re(ist1,itrj)=dtp*k3_re(ist1,itrj)
-         k3_im(ist1,itrj)=dtp*k3_im(ist1,itrj)
-       enddo
-      enddo
-
-      do ist1=1,nstate
-       k4_re(ist1,itrj)=(en_array_int(ist1,itrj)+eshift)*(cel_im(ist1,itrj)+k3_im(ist1,itrj))
-       k4_im(ist1,itrj)=-(en_array_int(ist1,itrj)+eshift)*(cel_re(ist1,itrj)+k3_re(ist1,itrj))
-       do ist2=1,nstate
-         k4_re(ist1,itrj)=k4_re(ist1,itrj)-(cel_re(ist2,itrj)+k3_re(ist2,itrj))*dotproduct_newint(ist1,ist2,itrj)
-         k4_im(ist1,itrj)=k4_im(ist1,itrj)-(cel_im(ist2,itrj)+k3_im(ist2,itrj))*dotproduct_newint(ist1,ist2,itrj)
-         k4_re(ist1,itrj)=dtp*k4_re(ist1,itrj)
-         k4_im(ist1,itrj)=dtp*k4_im(ist1,itrj)
-       enddo
-      enddo
-
-      do ist1=1,nstate
-       cel_re(ist1,itrj)=cel_re(ist1,itrj)+k1_re(ist1,itrj)/6+k2_re(ist1,itrj)/3+k3_re(ist1,itrj)/3+k4_re(ist1,itrj)/6
-       cel_im(ist1,itrj)=cel_im(ist1,itrj)+k1_im(ist1,itrj)/6+k2_im(ist1,itrj)/3+k3_im(ist1,itrj)/3+k4_im(ist1,itrj)/6
-      enddo
-
-
-   end subroutine rk4step_old
-
-   subroutine interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_int,vy_int,vz_int, &
-                      ancx,ancy,ancz,nacx_old,nacy_old,nacz_old,en_array_int,en_array_old, &
-                      dotproduct,fr,frd,itrj)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8 dotproduct(nstmax,nstmax,ntrajmax)
-      real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8 vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-      real*8 vx_int(npartmax,nwalkmax),vy_int(npartmax,nwalkmax),vz_int(npartmax,nwalkmax)
-      real*8 nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 nacz_old(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 ancx(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 ancy(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 ancz(npartmax,ntrajmax,nstmax,nstmax)
-      real*8 en_array_int(nstmax,ntrajmax)
-      real*8 en_array_old(nstmax,ntrajmax)
-      integer :: iat,ist1,ist2,itrj     !iteration counters
-      real*8 :: fr,frd
-      
-      do ist1=1,nstate
-
-        en_array_int(ist1,itrj)=en_array(ist1,itrj)*fr+en_array_old(ist1,itrj)*frd
-        do ist2=1,nstate
-         dotproduct(ist1,ist2,itrj)=0.0
-         do iat=1,natom
-         ancx(iat,itrj,ist1,ist2)=nacx(iat,itrj,ist1,ist2)*fr+nacx_old(iat,itrj,ist1,ist2)*frd
-         ancy(iat,itrj,ist1,ist2)=nacy(iat,itrj,ist1,ist2)*fr+nacy_old(iat,itrj,ist1,ist2)*frd
-         ancz(iat,itrj,ist1,ist2)=nacz(iat,itrj,ist1,ist2)*fr+nacz_old(iat,itrj,ist1,ist2)*frd
-         vx_int(iat,itrj)=vx(iat,itrj)*fr+vx_old(iat,itrj)*frd
-         vy_int(iat,itrj)=vy(iat,itrj)*fr+vy_old(iat,itrj)*frd
-         vz_int(iat,itrj)=vz(iat,itrj)*fr+vz_old(iat,itrj)*frd
-         dotproduct(ist1,ist2,itrj)=dotproduct(ist1,ist2,itrj)+vx_int(iat,itrj)*ancx(iat,itrj,ist1,ist2)
-         dotproduct(ist1,ist2,itrj)=dotproduct(ist1,ist2,itrj)+vy_int(iat,itrj)*ancy(iat,itrj,ist1,ist2)
-         dotproduct(ist1,ist2,itrj)=dotproduct(ist1,ist2,itrj)+vz_int(iat,itrj)*ancz(iat,itrj,ist1,ist2)
-         enddo
-        enddo
-       enddo
-
-    end subroutine interpolate
-
-      subroutine interpolate_dot(dotproduct_int,fr,frd,itrj)
-      use mod_array_size
+      use mod_sh,ONLY:nstate,dotproduct_old,dotproduct_new
       implicit none
       real*8 dotproduct_int(nstmax,nstmax,ntrajmax)
       integer :: ist1,ist2,itrj     !iteration counters
@@ -1079,13 +1063,14 @@ end subroutine
        enddo
       enddo
 
-      end subroutine interpolate_dot
+    end subroutine interpolate_dot
 
-      subroutine interpolate2(vx_old,vy_old,vz_old,vx_new,vy_new,vz_new, &
+    subroutine interpolate2(vx_old,vy_old,vz_old,vx_new,vy_new,vz_new, &
                       nacx_old,nacy_old,nacz_old,nacx_new,nacy_new,nacz_new,en_array_old,en_array_new,en_array_int, &
                       dotproduct,fr,frd,itrj)
       use mod_array_size
       use mod_general,only:natom
+      use mod_sh,only:nstate
       implicit none
       real*8 dotproduct(nstmax,nstmax)
       real*8 vx_new(npartmax,nwalkmax),vy_new(npartmax,nwalkmax),vz_new(npartmax,nwalkmax)
@@ -1110,7 +1095,7 @@ end subroutine
 
         en_array_int(ist1)=en_array_new(ist1)*fr+en_array_old(ist1)*frd
         do ist2=1,nstate
-         dotproduct(ist1,ist2)=0.0
+         dotproduct(ist1,ist2)=0.0d0
          do iat=1,natom
          ancx(iat,itrj,ist1,ist2)=nacx_new(iat,itrj,ist1,ist2)*fr+nacx_old(iat,itrj,ist1,ist2)*frd
          ancy(iat,itrj,ist1,ist2)=nacy_new(iat,itrj,ist1,ist2)*fr+nacy_old(iat,itrj,ist1,ist2)*frd
@@ -1127,4 +1112,3 @@ end subroutine
 
     end subroutine  interpolate2
 
-end module

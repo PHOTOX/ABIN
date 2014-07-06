@@ -113,7 +113,7 @@
      use mod_general,only:icv,ihess,nwalk,ipimd,natom
      use mod_nhc
      use mod_estimators
-     use mod_sh
+     use mod_sh,only:cel_re,cel_im,ntraj,nstate,istate
      use mod_gle
      use mod_random
      implicit none

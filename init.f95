@@ -25,11 +25,11 @@
       real*8  :: vx1(npartmax),vy1(npartmax),vz1(npartmax)
       integer :: irnd(nwalkmax),scaleveloc=1,readNHC
       integer :: iw,iat,inh,natom1,ifirst,itrj,ist1,imol,shiftdihed=1
-      integer :: error=0,getpid,nproc=1,iknow=0,ipom,ipom2=0,is
+      integer :: error,getpid,nproc=1,iknow=0,ipom,ipom2=0,is
       character(len=2)  :: shit
       character(len=10) :: chaccess
       LOGICAL :: file_exists,prngread
-      real*8  :: wnw=5.0e-5,pom=0.0d0,ekin_mom=0.0d0,temp_mom=0.0d0,scal
+      real*8  :: wnw=5.0e-5,pom,ekin_mom,temp_mom,scal
 !$    integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
       REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
@@ -45,8 +45,8 @@
                         nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
                         k,r0,k1,k2,k3,De,a, &
                         Nshake,ishake1,ishake2,shake_tol,nmol,nshakemol,names,natmol
-      namelist /sh/     ntraj,istate_init,nstate,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 !TODO: some checking for accu1/2
-      namelist /qmmm/   natqm,natmm,LJcomb,q,rmin,eps,attypes,inames,qmmmtype
+      namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 !TODO: some checking for accu1/2
+      namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,inames,qmmmtype
       namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf
 
 
@@ -57,6 +57,9 @@
       enddo
       dt=-1  
       prngread=.false.
+      error=0
+      pom=0.0d0
+      ekin_mom=0.0d0 ;temp_mom=0.0d0
 
       open(150,file="input.in", status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
       read(150,general)
@@ -83,7 +86,6 @@
 
 !$    call OMP_set_num_threads(nproc)
 !$    nthreads=omp_get_max_threads()
-!$    write(*,*)nthreads
 
 !     resetting number of walkers to 1 in case of classical simulation      
       if(ipimd.eq.0)then
@@ -115,10 +117,10 @@
       if(istage.eq.2) call fftw_init(nwalk)
 
 !-----HERE WE CHECK FOR ERRORS IN INPUT-----------------------------------------------
-!!$    if(nthreads.gt.1.and.(pot.ne.'nab'.and.pot.ne.'harm'.and.pot.ne.'guillot'.and.pot.ne.'g09'))then
-!!$     write(*,*)'Parallel execution is currently only supported with NAB,G09 or model potentials.Exiting...'
-!!$     stop
-!!$    endif
+!$    if(nthreads.gt.1.and.ipimd.ne.1)then
+!$     write(*,*)'Parallel execution is currently only supported with PIMD (ipimd=1)'
+!$     call abinerror('init')
+!$    endif
 
       !-----Check,whether input variables don't exceeds array limits
       if(ntraj.gt.ntrajmax)then

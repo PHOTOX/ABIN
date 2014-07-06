@@ -48,7 +48,7 @@ program abin_dyn
 !$ integer :: nthreads,omp_get_max_threads
 
      call PrintLogo(values1)
-     call system('rm -f engrad.dat.* nacm.dat hessian.dat.* geom.dat.*')
+     call system('rm -f ERROR engrad.dat.* nacm.dat hessian.dat.* geom.dat.*')
 
 
 !-   INPUT AND INITIALIZATION SECTION      
@@ -176,6 +176,16 @@ endif
        endif
        exit                                          !break from time loop
       endif
+
+      if(idebug.eq.2)then
+         write(*,*)'positions',it
+         call printf(x,y,z)
+         write(*,*)'momenta',it
+         call printf(px,py,pz)
+         write(*,*)'forces',it
+         call printf(fxc,fyc,fzc)
+      end if
+
 
 !-----CALL RESPA or VELOCITY VERLET--------------
       if(nshake.eq.0)then
@@ -306,3 +316,12 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
         values1(1)
 
 end subroutine PrintLogo
+
+subroutine abinerror(chcaller)
+   character(len=*),intent(in)   :: chcaller
+   open(unit=500,file='ERROR')
+   write(500,*)'FATAL ERROR encountered in subroutine:',chcaller
+   write(500,*)'Check standard output for further information. Exiting now...'
+   close(unit=500)
+   stop 1
+end subroutine abinerror

@@ -696,11 +696,12 @@ module mod_random
 
          if (present(lread))then
             read(iout,'(A)',iostat=iost)readstring
-            write(*,*)readstring
             if(iost /= 0)then
                write(*,*)'PRNG state not present in restart file.Ignoring...'
             else if (chprng.ne.trim(readstring)) then
                write(*,*)'PRNG STATE IN RESTART FILE SEEMS TO BE BROKEN.'
+               write(*,*)'Expected:',chprng
+               write(*,*)'Got',readstring
                write(*,*)'Exiting...'
                stop 1
             else
