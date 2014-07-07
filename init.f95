@@ -14,6 +14,7 @@
       use mod_sbc
       use mod_fftw3
       use mod_random
+      use mod_guillot,ONLY: inames_guillot
       use mod_interfaces,only:UpperToLower,LowerToUpper
       implicit none
       real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
@@ -823,7 +824,7 @@ endif
         call nab_getcharges(charges) !see nabinit.c
 
         do iat=1,natom
-         charges(iat)=charges(iat)*ambtoau*sqrt(167100.75)  !for macsimus units
+         charges(iat)=charges(iat)*ambtoau*sqrt(167100.75d0)  !for macsimus units
         enddo
         write(*,*)'Box sizes[Ang]: ',boxx,boxy,boxz
         write(*,*)'Half of box size: ',boxx2,boxy2,boxz2

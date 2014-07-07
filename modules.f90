@@ -6,20 +6,24 @@
 
 
 
-!-----Contains various array limits. Modify here if you need larger arrays (for big systems)
-!-----Also contains some physical constants
-!-----If you set these too large, compiler will complain...maybe some
-!additional flags are needed
+!-----mod_array_size contains various array limits. Modify here if you need larger arrays (for big systems)
+!-----It also contains some physical constants.
+      ! Exact values for ANG,AUTOKCAL and AUTODEBYE,me,AUTOM,AUTOFS,AMU: 
+      ! Mohr, Taylor, Newell, Rev. Mod. Phys. 80 (2008) 633-730
+      ! and using the thermochemical calorie (1 cal = 4.184 J):'
       module mod_array_size
       implicit none
-      integer,parameter :: NPARTMAX=3000,NWALKMAX=300,MAXCHAIN=10,NSHAKEMAX=1
+      integer,parameter :: NPARTMAX=3000,NWALKMAX=300,MAXCHAIN=10,NSHAKEMAX=100
       integer,parameter :: NBINMAX=3000,NDISTMAX=30
       integer,parameter :: NSTMAX=15,NTRAJMAX=1
-      real*8, parameter :: AMU=1823.d0,ANG=1.8897d0,AUTOFS=0.02419d0,PI=3.14159265d0
-      real*8, parameter :: AUTOK=3.1577464d5,me=9.109382e-31 !electron mass
+      real*8, parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
+      real*8, parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
+      real*8, parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
       real*8, parameter :: AUTOM=5.2917720859e-11 ! atomic length
-      real*8, parameter :: AMBTOAU=0.84d0/15.3067320d0 ! atomic length
-      real*8, parameter :: AUTOKCAL=627.51d0,AUTOKK=3.1577322d5,AUTOEV=27.2114 
+      real*8, parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
+      real*8, parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.2114 
+      real*8, parameter :: AUTODEBYE =  2.54174623d0
+      real*8, parameter :: KBinAU = 0.9999999748284666d0  !boltzmann units in au,not used
       save
       end module  
 !------------------------------------------------------
@@ -60,9 +64,9 @@ end module
       real*8  :: xmin=0.5d0,xmax=5.0d0
       real*8  :: shiftdih=360.0d0 ! 0 for (-180,180), 360 for (0,360)
 !SHAKE stuff
-      real*8  :: dshake(nshakemax),shake_tol=0.001
+      real*8  :: dshake(nshakemax),shake_tol=0.001d0
       integer :: nshake=0,IShake1(nshakemax),IShake2(nshakemax),nmol=1
-!      integer :: molfirst(npartmax)  !not in use anymore
+!     integer :: molfirst(npartmax)  !not in use anymore
       integer :: natmol(npartmax),nshakemol(npartmax)
       save
       CONTAINS
@@ -70,29 +74,37 @@ end module
       use mod_general, ONLY: natom
       implicit none
       integer :: i
+      ! Accurate values for H1 and H2 taken from: 
+      ! Mohr, Taylor, Newell, Rev. Mod. Phys. 80 (2008) 633-730
+      ! Other atomic weights taken from Handbook of Chemistry and Physics, 2013
+      ! Original citation: Wieser, M. E., et al., Pure Appl. Chem. 85, 1047, 2013
       do i=1,natom
        if(names(i).eq.'H')then
-        am(i)=1.00d0
+        am(i)=1.008d0
+       else if(names(i).eq.'H1')then
+        am(i)=1.00782503207d0 
+       else if(names(i).eq.'H2'.or.names(i).eq.'D')then
+        am(i)=2.01410177785d0
        else if(names(i).eq.'O')then
-        am(i)=16.00d0
+        am(i)=15.999d0
        else if (names(i).eq.'S')then
-        am(i)=32.07d0
+        am(i)=32.06d0
        else if (names(i).eq.'SE')then
         am(i)=78.971d0
        else if (names(i).eq.'TE')then
         am(i)=127.60d0
        else if (names(i).eq.'N')then
-        am(i)=14.00d0
+        am(i)=14.007d0
        else if (names(i).eq.'P')then
-        am(i)=30.97d0
+        am(i)=30.973761998d0
        else if (names(i).eq.'AS')then
-        am(i)=74.922d0
+        am(i)=74.921595d0
        else if (names(i).eq.'SB')then
-        am(i)=121.76d0
+        am(i)=121.760d0
        else if (names(i).eq.'BI')then
-        am(i)=208.980d0
+        am(i)=208.98040d0
        else if (names(i).eq.'F')then
-        am(i)=19.0d0
+        am(i)=18.998403163d0
        else if (names(i).eq.'CL')then
         am(i)=35.45d0
        else if (names(i).eq.'BR')then
@@ -102,11 +114,11 @@ end module
        else if (names(i).eq.'LI')then
         am(i)=6.94d0
        else if (names(i).eq.'NA')then
-        am(i)=22.99d0
+        am(i)=22.98976928d0
        else if (names(i).eq.'K')then
-        am(i)=39.1d0
+        am(i)=39.0983d0
        else if (names(i).eq.'BE')then
-        am(i)=9.01d0
+        am(i)=9.0121831d0
        else if (names(i).eq.'MG')then
         am(i)=24.305d0
        else if (names(i).eq.'CA')then
@@ -114,9 +126,9 @@ end module
        else if (names(i).eq.'B')then
         am(i)=10.81d0
        else if (names(i).eq.'AL')then
-        am(i)=26.982d0
+        am(i)=26.9815385d0
        else if (names(i).eq.'C')then
-        am(i)=12.00d0
+        am(i)=12.011d0
        else if (names(i).eq.'SI')then
         am(i)=28.085d0
        else if (names(i).eq.'GE')then
@@ -126,29 +138,29 @@ end module
        else if (names(i).eq.'PB')then
         am(i)=207.2d0
        else if (names(i).eq.'HE')then
-        am(i)=4.0d0
+        am(i)=4.002602d0
        else if (names(i).eq.'NE')then
-        am(i)=20.18d0
+        am(i)=20.1797d0
        else if (names(i).eq.'AR')then
-        am(i)=39.95d0
+        am(i)=39.948d0
        else if (names(i).eq.'KR')then
         am(i)=83.798d0
        else if (names(i).eq.'XE')then
-        am(i)=131.29d0
+        am(i)=131.293d0
        else if (names(i).eq.'FE')then
         am(i)=55.845d0
        else if (names(i).eq.'TI')then
         am(i)=47.867d0
        else if (names(i).eq.'V')then
-        am(i)=47.867d0
+        am(i)=50.9415d0
        else if (names(i).eq.'CR')then
         am(i)=51.9961d0
        else if (names(i).eq.'MN')then
-        am(i)=54.938d0
+        am(i)=54.938044d0
        else if (names(i).eq.'CO')then
-        am(i)=58.933d0
+        am(i)=58.933194d0
        else if (names(i).eq.'NI')then
-        am(i)=58.693d0
+        am(i)=58.6934d0
        else if (names(i).eq.'CU')then
         am(i)=63.546d0
        else if (names(i).eq.'ZN')then
@@ -156,7 +168,7 @@ end module
        else if (names(i).eq.'AG')then
         am(i)=107.8682d0
        else if (names(i).eq.'AU')then
-        am(i)=196.967d0
+        am(i)=196.966569d0
        else if (names(i).eq.'PT')then
         am(i)=195.084d0
        else if (names(i).eq.'CD')then
@@ -164,7 +176,81 @@ end module
        else if (names(i).eq.'HG')then
         am(i)=200.592d0
        else if (names(i).eq.'U')then
-        am(i)=238.028d0
+        am(i)=238.02891d0
+       else if (names(i).eq.'TL')then
+        am(i)=204.38d0
+       else if (names(i).eq.'BA')then
+        am(i)=137.327d0
+       else if (names(i).eq.'CE')then
+        am(i)=140.116d0
+       else if (names(i).eq.'CS')then
+        am(i)=132.90545196d0
+       else if (names(i).eq.'DY')then
+        am(i)=162.500d0
+       else if (names(i).eq.'ER')then
+        am(i)=167.259d0
+       else if (names(i).eq.'EU')then
+        am(i)=151.964d0
+       else if (names(i).eq.'GD')then
+        am(i)=157.25d0
+       else if (names(i).eq.'GA')then
+        am(i)=69.723d0
+       else if (names(i).eq.'HF')then
+        am(i)=178.49d0
+       else if (names(i).eq.'HO')then
+        am(i)=164.93033d0
+       else if (names(i).eq.'IN')then
+        am(i)=114.818d0
+       else if (names(i).eq.'IR')then
+        am(i)=192.217d0
+       else if (names(i).eq.'LA')then
+        am(i)=138.90547d0
+       else if (names(i).eq.'LU')then
+        am(i)=174.9668d0
+       else if (names(i).eq.'MO')then
+        am(i)=95.95d0
+       else if (names(i).eq.'ND')then
+        am(i)=144.242d0
+       else if (names(i).eq.'NB')then
+        am(i)=92.90637d0
+       else if (names(i).eq.'OS')then
+        am(i)=190.23d0
+       else if (names(i).eq.'PD')then
+        am(i)=106.42d0
+       else if (names(i).eq.'PR')then
+        am(i)=140.90766d0
+       else if (names(i).eq.'PA')then
+        am(i)=231.03588d0
+       else if (names(i).eq.'RE')then
+        am(i)=186.207d0
+       else if (names(i).eq.'RH')then
+        am(i)=102.90550d0
+       else if (names(i).eq.'RB')then
+        am(i)=85.4678d0
+       else if (names(i).eq.'RU')then
+        am(i)=101.07d0
+       else if (names(i).eq.'SM')then
+        am(i)=150.36d0
+       else if (names(i).eq.'SC')then
+        am(i)=44.955908d0
+       else if (names(i).eq.'SR')then
+        am(i)=87.62d0
+       else if (names(i).eq.'TA')then
+        am(i)=180.94788d0
+       else if (names(i).eq.'TB')then
+        am(i)=158.92535d0
+       else if (names(i).eq.'TH')then
+        am(i)=232.0377d0
+       else if (names(i).eq.'TM')then
+        am(i)=168.93422d0
+       else if (names(i).eq.'W')then
+        am(i)=183.84d0
+       else if (names(i).eq.'YB')then
+        am(i)=173.054d0
+       else if (names(i).eq.'Y')then
+        am(i)=88.90584d0
+       else if (names(i).eq.'ZR')then
+        am(i)=91.224d0
        else 
         write(*,*)'Unknown atom.',names(i),'Exiting..'
         stop
@@ -179,6 +265,7 @@ end module
          dist_dih=0.0d0
       end subroutine
 
+      !TODO: move to mod_shake
       subroutine shake_init(x,y,z)
       implicit none
       real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
@@ -196,22 +283,6 @@ end module
         dshake(ixshake)=(xi-xj)**2+(yi-yj)**2+(zi-zj)**2
         enddo
       end subroutine
-!---potentially useful for guillot and other empirical force fields, because string
-!---comparison is very cpu demanding!!
-   subroutine inames_guillot()
-      use mod_general, ONLY:natom
-      implicit none
-      integer :: i
-      do i=1,natom
-       if(names(i).eq.'H')then
-        inames(i)=1
-       else if(names(i).eq.'O')then
-        inames(i)=0
-       else if (names(i).eq.'CL')then
-        inames(i)=2
-       endif
-      enddo
-   end subroutine
 
    subroutine constrainP (px,py,pz)
       use mod_array_size, only: npartmax,nwalkmax

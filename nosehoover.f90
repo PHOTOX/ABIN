@@ -70,7 +70,7 @@
       if(ams.lt.0.and.tau0.lt.0)then
        write(*,*)'Warning. Ams and tau0 not set.'
        write(*,*)'Using default value tau0=0.001'
-        tau=0.001/autofs*1000
+        tau=0.001d0/autofs*1000
        else
         tau=tau0/autofs*1000
       endif

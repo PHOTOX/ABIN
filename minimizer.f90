@@ -20,9 +20,9 @@
       write(100,'(A5,F10.4,1E20.8)')'#  0  ',gamm,eclas
 
       do iat=1,conatom
-        fx(iat,iw)=0.0
-        fy(iat,iw)=0.0
-        fz(iat,iw)=0.0
+        fx(iat,iw)=0.0d0
+        fy(iat,iw)=0.0d0
+        fz(iat,iw)=0.0d0
       enddo
 
       !-----------------------------------------------------------

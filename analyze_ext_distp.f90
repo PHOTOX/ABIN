@@ -4,7 +4,7 @@
 ! he/she must also modify  analysis.f90 and possibly also  abin.f90
       module mod_analyze_ext
       use mod_array_size
-      real*8  :: xmin=-20.0,xmax=20.0
+      real*8  :: xmin=-20.0d0,xmax=20.0d0
       integer,parameter :: nbin=500
       real*8  dist(nbin,nwalkmax)
       save
@@ -47,7 +47,7 @@
 !--print output every nwrite steps              
         open(128,file='distp.dat')
         do iw=1,nwalk
-        anorm=0.0
+        anorm=0.0d0
         dx=(xmax-xmin)/nbin
 
         do ian=1,nbin

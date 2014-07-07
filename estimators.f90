@@ -82,9 +82,9 @@
 
 ! Calculating centroids
       do iat=1,natom
-       xc(iat)=0.0
-       yc(iat)=0.0
-       zc(iat)=0.0
+       xc(iat)=0.0d0
+       yc(iat)=0.0d0
+       zc(iat)=0.0d0
        do iw=1,nwalk
         xc(iat)=xc(iat)+x(iat,iw)           
         yc(iat)=yc(iat)+y(iat,iw)           

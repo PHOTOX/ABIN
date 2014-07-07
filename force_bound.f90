@@ -4,7 +4,7 @@
       use mod_array_size
       real*8  :: xcm=0.0d0,ycm=0.0d0,zcm=0.0d0,mass_total=0.0d0
       real*8  :: rmax=0.0d0
-      real*8  :: rb_sbc=-1,kb_sbc=0.02,rho=-1
+      real*8  :: rb_sbc=-1,kb_sbc=0.02d0,rho=-1
       real*8  :: fact=autom**3/me
       save
       CONTAINS
@@ -109,7 +109,7 @@
       enddo
 
 !      if(idebug.eq.1)then
-       if(modulo(it,nwrite).eq.0) write(11,*)it,rmax,mass_total/(4/3.*pi*rmax**3)/fact
+       if(modulo(it,nwrite).eq.0) write(11,*)it,rmax,mass_total/(4.0d0/3.0d0*pi*rmax**3)/fact
 !      endif
 
       return

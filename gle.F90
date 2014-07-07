@@ -13,6 +13,8 @@
 module mod_gle
   use mod_random
   implicit none
+  private
+  public :: ns, gp, ps, langham,gle_step,wn_init,gle_init,wn_step
   real*8, allocatable,save :: gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
   real*8, allocatable,save :: ran(:)
   real*8, allocatable,save :: ps(:,:,:)
@@ -199,7 +201,7 @@ contains
   ! momentum/velocity (as used by the calling code) by scaling with the mass the white-noise
   ! random numbers. 
   subroutine gle_step(px,py,pz,m)
-    use mod_array_size
+    use mod_array_size,only:npartmax,nwalkmax
     use mod_general,only:natom,nwalk
     implicit none
     real*8, intent(inout)  :: px(npartmax,nwalkmax)

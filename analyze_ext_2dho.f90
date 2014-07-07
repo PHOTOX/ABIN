@@ -5,9 +5,9 @@
       module mod_analyze_ext
       use mod_array_size
 !----force constants for displaced oscillator      
-      real*8  :: k1p=0.334,k2p=0.00334
+      real*8  :: k1p=0.334d0,k2p=0.00334d0
 !----displacement
-      real*8  :: dd1=0.5d0,dd2=5.00
+      real*8  :: dd1=0.5d0,dd2=5.00d0
 !----v0 is adiabatic excitation energy 
       real*8  :: v0=0.1d0
       real*8  :: abs(nbinmax)

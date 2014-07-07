@@ -308,6 +308,7 @@ print '(a)',' '
 
 print *,'Compiled at  ',date
 print *,commit
+!$ print *,'Compiled with parallel OpenMP support for PIMD.'
 print '(a)',' '
 
 write(*,*)'Job started at:'

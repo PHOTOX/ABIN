@@ -2,16 +2,22 @@
 !Quantum effects in simulated water by the Feynman&Hibbs approach,
 !Bertrand Guillot and Yves Guissani,J. Chem. Phys. 108, 10162 (1998);  
 
+module mod_guillot
+   use mod_array_size, ONLY: ANG,AUTOKCAL
+   private
+   public :: force_guillot,inames_guillot
+
+   CONTAINS
       subroutine force_guillot(x,y,z,fx,fy,fz,eclas)
       use mod_array_size
       use mod_general
       use mod_system, ONLY: inames
       implicit real*8(a-h,o-z)
-      real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(out) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+      real*8,intent(in)  :: x(:,:),y(:,:),z(:,:)
+      real*8,intent(out) :: fx(:,:),fy(:,:),fz(:,:)
       real*8,intent(out) :: eclas
       real*8 :: temp1,r,fr
-!      integer :: inames(npartmax)
+!     integer :: inames(npartmax)
 
       eclas=0.0d0
 
@@ -93,141 +99,142 @@
       implicit real*8(a-h,o-z)
       r=r/ang
       qo=0.66d0
-      vocl=(627.14*qo/1.89)/r
-      sigma=3.6835677
+      vocl=(AUTOKCAL*qo/ANG)/r
+      sigma=3.6835677d0
       rred=sigma/r
-      epsilon=0.1230367
+      epsilon=0.1230367d0
       vocl=vocl+4*epsilon*(rred**12-rred**6)
 
-      r=r*1.89
-      vocl=vocl/627.14
+      r=r*ANG
+      vocl=vocl/AUTOKCAL
       return
       end
 
       real*8 function voclIS(r)
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ANG
       voclIS=0.0d0
-      sigma=3.6835677
+      sigma=3.6835677d0
       rred=sigma/r
-      epsilon=0.1230367
+      epsilon=0.1230367d0
       voclIS=voclIS+4*epsilon*(rred**12-rred**6)
 
 
-      r=r*1.89
-      voclIS=voclIS/627.14
+      r=r*ANG
+      voclIS=voclIS/AUTOKCAL
       return
       end
 
       real*8 function frocl(r)
       implicit real*8(a-h,o-z)
 
-      r=r/1.89
+      r=r/ANG
       qo=0.66d0
-      frocl=-(627.14*qo/1.89)/(r**2)
-      sigma=3.6835677
+      frocl=-(AUTOKCAL*qo/ANG)/(r**2)
+      sigma=3.6835677d0
       rred=sigma/r
-      epsilon=0.1230367
+      epsilon=0.1230367d0
       frocl=frocl+0.5d0*(-12*rred**13+6*rred**7)/sigma
 
-      r=r*1.89
-      frocl=frocl/627.14
-      frocl=-frocl/1.89d0
+      r=r*ANG
+      frocl=frocl/AUTOKCAL
+      frocl=-frocl/ANG
       return
       end
 
       real*8 function vhcl(r)
       implicit real*8(a-h,o-z)
+      real*8 :: vocl
       vocl=0.0d0
-      r=r/1.89
+      r=r/ANG
       qh=0.66d0/2.0d0
-      vhcl=-(627.14*qh/1.89)/r
-      sigma=2.0000000
+      vhcl=-(AUTOKCAL*qh/ANG)/r
+      sigma=2.0000000d0
       rred=sigma/r
-      epsilon=0.1230367
+      epsilon=0.1230367d0
       vocl=vocl+4*epsilon*(rred**12-rred**6)
-      r=r*1.89
-      vhcl=vhcl/627.14
+      r=r*ANG
+      vhcl=vhcl/AUTOKCAL
       return
       end
 
       real*8 function vhclIS(r)
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ANG
       vhclIS=0.0d0
       sigma=2.0000000
       rred=sigma/r
       epsilon=0.1230367
       vhclIS=vhclIS+4*epsilon*(rred**12-rred**6)
-      r=r*1.89
-      vhclIS=vhclIS/627.14
+      r=r*ANG
+      vhclIS=vhclIS/AUTOKCAL
       return
       end
 
 
       real*8 function frhcl(r)
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ANG
       qh=0.66d0/2.0d0
-      frhcl=(627.14*qh/1.89)/(r**2)
-      sigma=2.0000000
+      frhcl=(AUTOKCAL*qh/ANG)/(r**2)
+      sigma=2.0000000d0
       rred=sigma/r
-      epsilon=0.1230367
+      epsilon=0.1230367d0
       frhcl=frhcl+0.5d0*(-12*rred**13+6*rred**7)/sigma
-      r=r*1.89
-      frhcl=frhcl/627.14
-      frhcl=-frhcl/1.89d0
+      r=r*ANG
+      frhcl=frhcl/AUTOKCAL
+      frhcl=-frhcl/ANG
       return
       end
 
                                                     
       real*8 function voo(r)
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ANG
 
-      voo=144.358/r
-      sigma=3.74
+      voo=144.358d0/r
+      sigma=3.74d0
       rred=sigma/r
       voo=voo+0.5d0*(rred**8-rred**6)
 
-      r=r*1.89
-      voo=voo/627.14
+      r=r*ANG
+      voo=voo/AUTOKCAL
 !      write(*,*)'voo1',voo
       return
       end
 
       real*8 function froo(r)
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ANG
 
-      froo=-144.358/(r**2)
-      sigma=3.74
+      froo=-144.358d0/(r**2)
+      sigma=3.74d0
       rred=sigma/r
       froo=froo+0.5d0*(-8*rred**9+6*rred**7)/sigma
 
-      r=r*1.89
-      froo=froo/627.14
-      froo=-froo/1.89d0
+      r=r*ANG
+      froo=froo/AUTOKCAL
+      froo=-froo/ANG
 !      write(*,*)'froo',froo
       return
       end
 
       real*8 function voh(r)
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ANG
 
 !      do i=1,100
-!      r=0.5*0.05*(i-1)
+!      r=0.5d0*0.05d0*(i-1)
 
-      c=72.269
+      c=72.269d0
       voh=-c/r
-      expon=0.9*(r-2.2)
-      expon1=-5.8*(r-1.07)
-      voh=voh-4.3/(1+exp(expon))
-      voh=voh+3.9*((exp(expon1)-1)**2-1)
+      expon=0.9d0*(r-2.2d0)
+      expon1=-5.8d0*(r-1.07d0)
+      voh=voh-4.3d0/(1+exp(expon))
+      voh=voh+3.9d0*((exp(expon1)-1)**2-1)
 
-      r=r*1.89
-      voh=voh/627.14
+      r=r*ANG
+      voh=voh/AUTOKCAL
 !      write(*,*)'voh',r,voh
 !      enddo
 !      stop
@@ -236,60 +243,80 @@
 
       real*8 function froh(r)
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ANG
 
-      c=72.269
+      c=72.269d0
       froh=c/(r**2)
-      expon=0.9*(r-2.2)
-      expon1=-5.8*(r-1.07)
-      froh=froh+(4.3/(1+exp(expon))**2)*0.9*exp(expon)
-      froh=froh-3.9*2*5.8*(exp(expon1)-1)*exp(expon1)
+      expon=0.9d0*(r-2.2d0)
+      expon1=-5.8d0*(r-1.07d0)
+      froh=froh+(4.3d0/(1+exp(expon))**2)*0.9d0*exp(expon)
+      froh=froh-3.9d0*2d0*5.8d0*(exp(expon1)-1)*exp(expon1)
 
-      r=r*1.89
-      froh=froh/627.14
-      froh=-froh/1.89
+      r=r*ANG
+      froh=froh/AUTOKCAL
+      froh=-froh/ANG
 !      write(*,*)'froh',froh
       return
       end
 
       real*8 function vhh(r)
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ANG
 
-      c=36.1345
+      c=36.1345d0
       vhh=c/r
-      expon=3.1*(r-2.05)
-      expon1=-6.0*(r-1.495)
+      expon=3.1d0*(r-2.05d0)
+      expon1=-6.0d0*(r-1.495d0)
       vhh=vhh+17/(1+exp(expon))
       vhh=vhh+13*((exp(expon1)-1)**2-1)
 
-      r=r*1.89
-      vhh=vhh/627.14
+      r=r*ANG
+      vhh=vhh/AUTOKCAL
 !      write(*,*)'vhh',r,vhh
       return
       end
 
       real*8 function frhh(r)
       implicit real*8(a-h,o-z)
-      r=r/1.89
+      r=r/ANG
 !      write(*,*)'r in frhh',r
 
-      c=36.1345
+      c=36.1345d0
       frhh=-c/(r**2)
 !      write(*,*)'frhh in frhh',frhh
-      expon=3.1*(r-2.05)
-      expon1=-6.0*(r-1.495)
-      frhh=frhh-(17.0d0/(1+exp(expon))**2)*3.1*exp(expon)
+      expon=3.1d0*(r-2.05)
+      expon1=-6.0d0*(r-1.495d0)
+      frhh=frhh-(17.0d0/(1+exp(expon))**2)*3.1d0*exp(expon)
 !      write(*,*)'frhh in frhh',frhh
-      frhh=frhh-13.0*2*6.0*(exp(expon1)-1)*exp(expon1)
+      frhh=frhh-13.0d0*2.0d0*6.0d0*(exp(expon1)-1)*exp(expon1)
 !      write(*,*)'frhh in frhh',frhh
 
-      r=r*1.89
-      frhh=frhh/627.14
-      frhh=-frhh/1.89
+      r=r*ANG
+      frhh=frhh/AUTOKCAL
+      frhh=-frhh/ANG
 !      write(*,*)'frhh',frhh
       return
-      end
+   end
+!---potentially useful for guillot and other empirical force fields, because string
+!---comparison is very cpu demanding!!
+!--TODO:move to guillot
+   subroutine inames_guillot()
+      use mod_general, ONLY:natom
+      use mod_system, ONLY:inames,names
+      implicit none
+      integer :: i
+      do i=1,natom
+       if(names(i).eq.'H')then
+        inames(i)=1
+       else if(names(i).eq.'O')then
+        inames(i)=0
+       else if (names(i).eq.'CL')then
+        inames(i)=2
+       endif
+      enddo
+   end subroutine
+
+END MODULE mod_GUILLOT
 
 
 

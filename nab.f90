@@ -3,7 +3,7 @@
       implicit none
       real*8 boxx,boxy,boxz
       real*8 boxx2,boxy2,boxz2
-      real*8  :: alpha_pme=-1,kappa_pme=-1,cutoff=10.0
+      real*8  :: alpha_pme=-1,kappa_pme=-1,cutoff=10.0d0
       real*8 :: charges(npartmax),epsinf=3d33
       integer :: ipbc=0,nsnb=1
       integer :: ips=0 ! 1-both LJ and coul, 2-coul 3- LJ

@@ -21,7 +21,7 @@
       do iw=1,nwalk
        do iat=1,natom
         temp1=px(iat,iw)**2+py(iat,iw)**2+pz(iat,iw)**2
-        temp1=0.5*temp1/amt(iat,iw)
+        temp1=0.5d0*temp1/amt(iat,iw)
         ekin_mom=ekin_mom+temp1
        enddo
       enddo
@@ -72,7 +72,7 @@
       do iw=1,nwalk
        do iat=1,natom
         temp1=vx(iat,iw)**2+vy(iat,iw)**2+vz(iat,iw)**2
-        temp1=0.5*temp1*am(iat)
+        temp1=0.5d0*temp1*am(iat)
         ekin_mom=ekin_mom+temp1
        enddo
       enddo
@@ -96,7 +96,7 @@
       do iw=1,nwalk
        do iat=1,natom
         temp1=px(iat,iw)**2+py(iat,iw)**2+pz(iat,iw)**2
-        temp1=0.5*temp1/am(iat)
+        temp1=0.5d0*temp1/am(iat)
         ekin_mom=ekin_mom+temp1
        enddo
       enddo
