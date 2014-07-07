@@ -15,7 +15,7 @@
       use mod_fftw3
       use mod_random
       use mod_guillot,ONLY: inames_guillot
-      use mod_interfaces,only:UpperToLower,LowerToUpper
+      use mod_utils
       implicit none
       real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
@@ -30,7 +30,7 @@
       character(len=2)  :: shit
       character(len=10) :: chaccess
       LOGICAL :: file_exists,prngread
-      real*8  :: wnw=5.0e-5,pom,ekin_mom,temp_mom,scal
+      real*8  :: wnw=5.0d-5,pom,ekin_mom,temp_mom,scal
 !$    integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
       REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
@@ -170,7 +170,6 @@
        write(*,*)'Maximum number of bins for densities is:'
        write(*,*)nbinmax
        write(*,*)'Adjust variable nbinmax in modules.f90'
-              error=1
        stop
       endif
 !----------HERE we check for errors in input.      
@@ -446,8 +445,8 @@
       endif
 
       if(error.eq.1)then
-              write(*,*)'Input errors were found! Exiting now...'
-              stop 1
+         write(*,*)'Input errors were found! Exiting now...'
+         call abinerror('init')
       endif
 !-----END OF ERROR CHECKING
 
@@ -456,7 +455,7 @@
       read(111,*)natom1
       if(natom1.ne.natom)then
         write(*,*)'No. of atoms in input.in and in mini.dat do not match.'
-        stop 1
+        call abinerror('init')
       endif
       read(111,*)
       do iat=1,natom
@@ -469,7 +468,7 @@
          endif
          if(LowerToUpper(shit).ne.LowerToUpper(names(iat)))then
           write(*,*)'Names of atoms in mini.dat and input.in do not match!'
-          stop 1
+          call abinerror('init')
          endif
         else
          names(iat)=shit
@@ -742,14 +741,8 @@ endif
 
 !Nulovani rychlosti pro constrainovane atomy
        if(conatom.gt.0)then
-       write(*,*)'Removing initial velocity of constrained atoms.'
-        do iw=1,nwalk
-         do iat=1,conatom
-          vx(iat,iw)=0.0
-          vy(iat,iw)=0.0
-          vz(iat,iw)=0.0
-         enddo
-        enddo
+         write(*,*)'Removing initial velocity of constrained atoms.'
+         call constrainP(vx,vy,vz)
        endif
 
 ! Scaling of velocities to correct temperature after COM velocity removal           
@@ -929,101 +922,3 @@ subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_arra
 end
 
 
-subroutine finish(values1,values2)
-   use mod_general
-   use mod_nhc
-   use mod_estimators, only: h
-   use mod_harmon, only: hess
-   use mod_fftw3
-   implicit none
-   integer,dimension(8),intent(in)  :: values1
-   integer,dimension(8),intent(out) :: values2
-   real*8 :: TIME
-!   integer :: iter=-3
-
-   close(1)
-   close(2)
-   if(ipimd.eq.1.or.icv.eq.1)then
-    close(7)
-   endif
-   if(ipimd.eq.2)then
-    close(3)
-    close(4)
-    close(5)
-   endif
-   if(nwritev.gt.0) close(13)
-!--------------CLEANING-------------------------
-   if (ihess.eq.1) deallocate ( hess )
-   if (ihess.eq.1.and.pot.eq.'nab') deallocate ( h )
-   if (istage.eq.2) call fftw_end()
-
-   if(inose.eq.1)then
-    deallocate( w )
-    deallocate( Qm )
-    deallocate( ms )
-    if (imasst.eq.1)then
-      deallocate( pnhx )
-      deallocate( pnhy )
-      deallocate( pnhz )
-      deallocate( xi_x )
-      deallocate( xi_y )
-      deallocate( xi_z )
-     else
-      deallocate( pnhx )
-      deallocate( xi_x )
-    endif
-   endif
-!TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
-!   if(pot.eq.'nab') call mme(NULL,NULL,iter)
-
-   write(*,*)''
-   write(*,*)'Job finished!'
-   write(*,*)''
-
-!---------TIMING-------------------------------
-   call cpu_time(TIME)
-   write(*,*)'Total cpu time [s] (does not include ab initio calculations)'
-   write(*,*)TIME
-   write(*,*)'Total cpu time [hours] (does not include ab initio calculations)'
-   write(*,*)TIME/3600.
-
-   call date_and_time(VALUES=values2)
-   write(*,*)'Job started at:'
-   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
-        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
-        values1(1)
-   write(*,*)'Job finished at:'
-   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values2(5),':',&
-        values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
-        values2(1)
-     
-
-end
-
-elemental function UpperToLower(string) result (return_string)
-   character(len=*),intent(in) :: string
-   character(len=len(string))  :: return_string
-   integer, parameter          :: UPPER_A = iachar ('A'),UPPER_Z = iachar('Z')
-   integer, parameter          :: DELTA_LOWER_UPPER = iachar('a')-iachar('A')
-   integer                     :: c,i
-
-   do i=1,len(string)
-      c =iachar( string(i:i))
-      if (c >= UPPER_A .and. c <= UPPER_Z) c = c + DELTA_LOWER_UPPER
-      return_string(i:i) = achar(c)
-   end do
-end function UpperToLower
-
-elemental function LowerToUpper(string) result (return_string)
-   character(len=*),intent(in) :: string
-   character(len=len(string))  :: return_string
-   integer, parameter          :: LOWER_A = iachar ('a'),LOWER_Z = iachar('z')
-   integer, parameter          :: DELTA_UPPER_LOWER = iachar('A')-iachar('a')
-   integer                     :: c,i
-
-   do i=1,len(string)
-      c =iachar( string(i:i))
-      if (c >= LOWER_A .and. c <= LOWER_Z) c = c + DELTA_UPPER_LOWER
-      return_string(i:i) = achar(c)
-   end do
-end function LowerToUpper

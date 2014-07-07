@@ -1,8 +1,14 @@
 ! initial version                         P. Slavicek a kol., Mar 25, 2009
 !
 !--------------------------------------------------------------------------
-      SUBROUTINE temperature(px,py,pz,amt,dt,eclas)
-      use mod_array_size
+module mod_kinetic
+   use mod_const, ONLY: DP
+   implicit none
+   private
+   public :: temperature, ekin_v, ekin_p
+   contains
+   subroutine temperature(px,py,pz,amt,dt,eclas)
+      use mod_const, ONLY:AUtoFS,AUtoK
       use mod_general
       use mod_estimators, ONLY:est_temp_cumul,entot_cumul
       use mod_system, ONLY: nshake
@@ -10,8 +16,8 @@
       use mod_gle, ONLY:langham
       implicit none
       integer :: iw,iat
-      real*8,intent(in)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-      real*8,intent(in)  :: amt(npartmax,nwalkmax)
+      real*8,intent(in)  :: px(:,:),py(:,:),pz(:,:)
+      real*8,intent(in)  :: amt(:,:)
       real*8,intent(in)  :: dt,eclas
       real*8  :: est_temp,temp1,ekin_mom
       real*8  :: it2
@@ -59,11 +65,10 @@
 
 
       real*8 function ekin_v (vx,vy,vz)
-      use mod_array_size
-      use mod_general
+      use mod_general, ONLY: nwalk, natom
       use mod_system, ONLY:am
       implicit none
-      real*8,intent(in)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real*8,intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
       real*8  :: temp1,ekin_mom 
       integer :: iw,iat
 
@@ -83,11 +88,10 @@
       END
 !
       real*8 function ekin_p (px,py,pz)
-      use mod_array_size
-      use mod_general
+      use mod_general, ONLY: nwalk, natom
       use mod_system, ONLY:am
       implicit none
-      real*8,intent(in)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      real*8,intent(in)  :: px(:,:),py(:,:),pz(:,:)
       real*8  :: temp1,ekin_mom 
       integer :: iw,iat
 
@@ -105,3 +109,5 @@
 
       RETURN
       END
+
+end module mod_kinetic

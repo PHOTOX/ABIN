@@ -11,6 +11,7 @@ module mod_guillot
       subroutine force_guillot(x,y,z,fx,fy,fz,eclas)
       use mod_array_size
       use mod_general
+      use mod_utils, ONLY: abinerror
       use mod_system, ONLY: inames
       implicit real*8(a-h,o-z)
       real*8,intent(in)  :: x(:,:),y(:,:),z(:,:)
@@ -49,7 +50,7 @@ module mod_guillot
         do j=i+1,natom
          fr=0.0d0
          r=(x(i,k)-x(j,k))**2+(y(i,k)-y(j,k))**2+(z(i,k)-z(j,k))**2
-         r=dsqrt(r)
+         r=sqrt(r)
          if(inames(i).eq.0.and.inames(j).eq.0)then
           temp1=temp1+voo(r)
 !          tempoo=tempoo+voo(r)
@@ -162,9 +163,9 @@ module mod_guillot
       implicit real*8(a-h,o-z)
       r=r/ANG
       vhclIS=0.0d0
-      sigma=2.0000000
+      sigma=2.0000000d0
       rred=sigma/r
-      epsilon=0.1230367
+      epsilon=0.1230367d0
       vhclIS=vhclIS+4*epsilon*(rred**12-rred**6)
       r=r*ANG
       vhclIS=vhclIS/AUTOKCAL

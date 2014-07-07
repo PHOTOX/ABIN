@@ -23,6 +23,8 @@ program abin_dyn
    use mod_sh
    use mod_fftw3
    use mod_interfaces
+   use mod_kinetic, ONLY: temperature
+   use mod_utils, only: abinerror, printf
    implicit none
    real*8  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
    real*8  :: amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)
@@ -143,7 +145,7 @@ endif
          endif
          if(iost.ne.0)then
             write(*,*)'Some NACMEs not read. Exiting...'
-            stop 1
+            call abinerror('main program')
          endif
       endif
       call set_tocalc()
@@ -318,11 +320,75 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
 
 end subroutine PrintLogo
 
-subroutine abinerror(chcaller)
-   character(len=*),intent(in)   :: chcaller
-   open(unit=500,file='ERROR')
-   write(500,*)'FATAL ERROR encountered in subroutine:',chcaller
-   write(500,*)'Check standard output for further information. Exiting now...'
-   close(unit=500)
-   stop 1
-end subroutine abinerror
+subroutine finish(values1,values2)
+   use mod_general
+   use mod_nhc
+   use mod_estimators, only: h
+   use mod_harmon, only: hess
+   use mod_fftw3
+   implicit none
+   integer,dimension(8),intent(in)  :: values1
+   integer,dimension(8),intent(out) :: values2
+   real*8 :: TIME
+!   integer :: iter=-3
+
+   close(1)
+   close(2)
+   if(ipimd.eq.1.or.icv.eq.1)then
+    close(7)
+   endif
+   if(ipimd.eq.2)then
+    close(3)
+    close(4)
+    close(5)
+   endif
+   if(nwritev.gt.0) close(13)
+!--------------CLEANING-------------------------
+   if (ihess.eq.1) deallocate ( hess )
+   if (ihess.eq.1.and.pot.eq.'nab') deallocate ( h )
+   if (istage.eq.2) call fftw_end()
+
+   if(inose.eq.1)then
+    deallocate( w )
+    deallocate( Qm )
+    deallocate( ms )
+    if (imasst.eq.1)then
+      deallocate( pnhx )
+      deallocate( pnhy )
+      deallocate( pnhz )
+      deallocate( xi_x )
+      deallocate( xi_y )
+      deallocate( xi_z )
+     else
+      deallocate( pnhx )
+      deallocate( xi_x )
+    endif
+   endif
+!TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
+!   if(pot.eq.'nab') call mme(NULL,NULL,iter)
+
+   write(*,*)''
+   write(*,*)'Job finished!'
+   write(*,*)''
+
+   write(*,*)''
+
+!---------TIMING-------------------------------
+   call cpu_time(TIME)
+   write(*,*)'Total cpu time [s] (does not include ab initio calculations)'
+   write(*,*)TIME
+   write(*,*)'Total cpu time [hours] (does not include ab initio calculations)'
+   write(*,*)TIME/3600.
+
+   call date_and_time(VALUES=values2)
+   write(*,*)'Job started at:'
+   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
+        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
+        values1(1)
+   write(*,*)'Job finished at:'
+   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values2(5),':',&
+        values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
+        values2(1)
+end subroutine finish
+
+

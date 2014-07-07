@@ -14,7 +14,7 @@ do idist=1,ndist
    r=(x(dist1(idist),iw)-x(dist2(idist),iw))**2
    r=r+(y(dist1(idist),iw)-y(dist2(idist),iw))**2
    r=r+(z(dist1(idist),iw)-z(dist2(idist),iw))**2
-   r=dsqrt(r)
+   r=sqrt(r)
 
    if(dime.eq.1.and.pot.eq.'2dho') r=x(1,iw)
 

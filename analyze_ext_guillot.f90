@@ -29,7 +29,7 @@
        do i=1,natom
         do j=i+1,natom
          r=(x(i,k)-x(j,k))**2+(y(i,k)-y(j,k))**2+(z(i,k)-z(j,k))**2
-         r=dsqrt(r)
+         r=sqrt(r)
 !         if(inames(i).eq.0.and.inames(j).eq.0)then
 !          tempoo=tempoo+voo(r)
 !         endif

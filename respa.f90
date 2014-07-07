@@ -8,7 +8,8 @@ use mod_array_size
 use mod_general
 use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
 use mod_gle
-use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas,ekin_p
+use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas
+use mod_kinetic, ONLY:ekin_p
 use mod_system, ONLY:constrainP
 implicit none
 real*8,intent(inout)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)

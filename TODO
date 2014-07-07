@@ -11,6 +11,8 @@ create module for densities, ekin and shake, move some variables from module sys
 move temperature scaling and other stuff to vinit, pass the whole vx,vy,vz arrays
 move sh_init into module mod_sh
 
+eliminate real comparisons in gle
+
 init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
 
 bug: floating point exception when inose=1 and temp=1.0(or even 10)
@@ -26,6 +28,11 @@ allocatable positions, velocities and momenta in modules, forces probably not?
 probably not in modules, no wide scope, this simplyfies things
 dont forget to allocate nwalk+1
 
+convert real*8 to real(DP), 
+and check also other things here:
+http://www.fortran90.org/src/best-practices.html
+
+disablovat eulera a rk4..jen s iknow
 
 
 todo: MPI version for terachem

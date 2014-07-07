@@ -4,13 +4,13 @@
 !TODO: refactor everything
 module mod_sh
 use mod_array_size
-use mod_interfaces,only:abinerror
+use mod_utils, only: abinerror, printf
 implicit none
 integer,parameter :: ntraj=1
 integer :: istate_init=1,nstate=1,substep=10000
 integer :: inac=0,nohop=0
 integer :: nac_accu1=7,nac_accu2=5 !7 is MOLPRO default
-real*8  :: dtp,alpha=0.1d0,eshift,deltae=100.,popthr=-1
+real*8  :: dtp,alpha=0.1d0,eshift,deltae=100.d0,popthr=-1
 integer :: istate(ntrajmax)
 real*8  :: nacx(npartmax,ntrajmax,nstmax,nstmax)
 real*8  :: nacy(npartmax,ntrajmax,nstmax,nstmax)
@@ -199,7 +199,7 @@ end subroutine move_vars
       use mod_system, ONLY: names
       use mod_qmmm, ONLY:natqm
       use mod_random, ONLY: vranf
-      use mod_interfaces, ONLY:ekin_v
+      use mod_kinetic, ONLY:ekin_v
       implicit none
       real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(inout) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
@@ -377,7 +377,7 @@ end subroutine move_vars
 
 
       if(integ.ne.'euler')then 
-        fr=float(itp)/float(substep)
+        fr=real(itp,DP)/real(substep,DP)
         frd=1.0d0-fr
 
         call interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_newint,vy_newint,vz_newint, &
@@ -390,7 +390,7 @@ end subroutine move_vars
 
       endif
 
-       fr=float(itp-1)/float(substep)
+       fr=real(itp-1,DP)/real(substep,DP)
        frd=1.0d0-fr
 
        call interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_int,vy_int,vz_int, &
@@ -589,7 +589,7 @@ end subroutine move_vars
          write(*,*)'Increase number of substeps or use more accurate integrator.'
          call abinerror('surfacehop')
       end if
-      fact=dsqrt(fact)
+      fact=sqrt(fact)
 !     write(*,*)'renomr',fact,istate(itrj)
 
       cel_re(istate(itrj),itrj)=cel_re(istate(itrj),itrj)*fact
@@ -689,11 +689,11 @@ end subroutine move_vars
 !------------- Rescaling the velocities------------------------
 
       if(b_temp.lt.0) then
-         g_temp=(b_temp+dsqrt(b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))))/2.0d0/a_temp
+         g_temp=(b_temp+sqrt(b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))))/2.0d0/a_temp
       endif
 
       if(b_temp.ge.0) then
-         g_temp=(b_temp-dsqrt(b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))))/2.0d0/a_temp
+         g_temp=(b_temp-sqrt(b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))))/2.0d0/a_temp
       endif
 
 !      write(*,*)a_temp,b_temp,c_temp,g_temp
@@ -755,7 +755,8 @@ end subroutine move_vars
    subroutine hop_dot(vx,vy,vz,state1,state2,itrj)
       use mod_array_size
       use mod_general, ONLY:natom,idebug
-      use mod_interfaces ,ONLY: ekin_v
+      use mod_utils, ONLY: printf !TODO, vyhodit
+      use mod_kinetic ,ONLY: ekin_v
       use mod_sh, ONLY:en_array,istate
       real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
       integer :: itrj,state1,state2,iat
@@ -769,7 +770,7 @@ end subroutine move_vars
 
       if(ekin.ge.de)then
 
-        alfa=dsqrt(1-de/ekin)
+        alfa=sqrt(1-de/ekin)
 
         if(idebug.eq.1)then
          write(*,*)'Velocity before rescaling'

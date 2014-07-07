@@ -10,10 +10,10 @@
 !---constants for 3DHO
       real*8 :: k1=0.0d0,k2=0.0d0,k3=0.0d0
 !---constants for 1D 2-particle harmonic oscillator
-      real*8 :: k=0.000, r0=0.0d0
+      real*8 :: k=0.000d0, r0=0.0d0
 !----   CONSTANTS for morse potential ccc
 !            V=De*(1-exp(-a(r-r0)))^2
-      real*8 :: De=0.059167,a=-1.0d0
+      real*8 :: De=0.059167d0,a=-1.0d0
       real*8,allocatable :: hess(:,:,:)
       save
       contains
@@ -35,8 +35,8 @@
         fxab(1,iw)=-k1*x(1,iw)
         fyab(1,iw)=-k2*y(1,iw)
         fzab(1,iw)=-k3*z(1,iw)
-        energy=energy+0.5*k1*x(1,iw)**2+0.5*k2*y(1,iw)**2
-        energy=energy+0.5*k3*z(1,iw)**2
+        energy=energy+0.5d0*k1*x(1,iw)**2+0.5d0*k2*y(1,iw)**2
+        energy=energy+0.5d0*k3*z(1,iw)**2
       enddo
 
       eclas=energy/nwalk
@@ -63,7 +63,7 @@
          dy=y(2,i)-y(1,i)
          dz=z(2,i)-z(1,i)
          r=dx**2+dy**2+dz**2
-         r=dsqrt(r)
+         r=sqrt(r)
          fac=k*(r-r0)/r
          fxab(1,i)=fac*dx
          fxab(2,i)=-fxab(1,i)
@@ -71,7 +71,7 @@
          fyab(2,i)=-fyab(1,i)
          fzab(1,i)=fac*dz
          fzab(2,i)=-fzab(1,i)
-         eclas=eclas+0.5*k*(r-r0)**2/nwalk
+         eclas=eclas+0.5d0*k*(r-r0)**2/nwalk
         enddo
 
    end subroutine force_harmon
@@ -92,7 +92,7 @@
          dy=y(2,i)-y(1,i)
          dz=z(2,i)-z(1,i)
          r=dx**2+dy**2+dz**2
-         r=dsqrt(r)
+         r=sqrt(r)
          fac=k*(r-r0)/r
          hess(1,1,i)=(k*dx**2/r**2-fac*dx**2/r**2+fac)/nwalk
          hess(2,2,i)=(k*dy**2/r**2-fac*dy**2/r**2+fac)/nwalk
@@ -141,7 +141,7 @@
 !NOT REALLY SURE about a
 !if it is not set from input, we determine it from k(normaly used for
 !harmon osciallator)
-      if(a.le.0) a=dsqrt(k/2/De)
+      if(a.le.0) a=sqrt(k/2/De)
         eclas=0.0d0
 
         do i=1,nwalk
@@ -149,7 +149,7 @@
          dy=y(2,i)-y(1,i)
          dz=z(2,i)-z(1,i)
          r=dx**2+dy**2+dz**2
-         r=dsqrt(r)
+         r=sqrt(r)
          ex=exp(-a*(r-r0))
          fac=2*a*ex*De*(1-ex)/r
          fxab(1,i)=fac*dx
@@ -173,7 +173,7 @@
       integer            :: i,ipom1,ipom2
 
 !NOT REALLY SURE about a
-       a=dsqrt(k/2/De)
+       a=sqrt(k/2/De)
 
        do i=1,nwalk
 
@@ -181,7 +181,7 @@
         dy=y(2,i)-y(1,i)
         dz=z(2,i)-z(1,i)
         r=dx**2+dy**2+dz**2
-        r=dsqrt(r)
+        r=sqrt(r)
         ex=exp(-a*(r-r0))
         fac=2*a*ex*De*(1-ex)/r
         fac2=2*De*a**2*ex**2/r**2

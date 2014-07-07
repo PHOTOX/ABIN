@@ -49,7 +49,7 @@ module mod_qmmm
     i2=inames(iat2)
      if(LJcomb.eq.'LB')then
       rij=0.5*(rmin(i1)+rmin(i2))*ang
-      epsij=dsqrt(eps(i1)*eps(i2))
+      epsij=sqrt(eps(i1)*eps(i2))
      endif
      BIJ(i1,i2)=2*6*epsij*rij**6
      AIJ(i1,i2)=12*epsij*rij**12

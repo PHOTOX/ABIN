@@ -19,11 +19,28 @@
       real*8, parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
       real*8, parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
       real*8, parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
-      real*8, parameter :: AUTOM=5.2917720859e-11 ! atomic length
+      real*8, parameter :: AUTOM=5.2917720859d-11 ! atomic length
       real*8, parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
-      real*8, parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.2114 
+      real*8, parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0 
       real*8, parameter :: AUTODEBYE =  2.54174623d0
       real*8, parameter :: KBinAU = 0.9999999748284666d0  !boltzmann units in au,not used
+      INTEGER, PARAMETER :: DP = KIND(1.0d0)
+      save
+      end module  
+
+      module mod_const
+      implicit none
+      real*8, parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
+      real*8, parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
+      real*8, parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
+      real*8, parameter :: AUTOM=5.2917720859d-11 ! atomic length
+      real*8, parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
+      real*8, parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0
+      real*8, parameter :: AUTODEBYE =  2.54174623d0
+      real*8, parameter :: KBinAU = 0.9999999748284666d0  !boltzmann units in au,not used
+      INTEGER, PARAMETER :: DP = KIND(1.0d0)
+      !example of use
+      !REAL(KIND=DP) :: x
       save
       end module  
 !------------------------------------------------------
@@ -40,7 +57,7 @@ module mod_general
    integer :: irandom=156873,natom=0,pid,conatom=0
    integer :: isbc=0,ibag=0  !spherical boundary conditions,elastic bag
    integer :: iqmmm=0
-   real*8  :: gamm=20., gammthr=1e-10 !minthr=1e-15
+   real*8  :: gamm=20.d0, gammthr=1d-10 !minthr=1e-15
    integer :: parrespa=0 
    integer :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani  
    save
@@ -128,7 +145,7 @@ end module
        else if (names(i).eq.'AL')then
         am(i)=26.9815385d0
        else if (names(i).eq.'C')then
-        am(i)=12.011d0
+        am(i)=12.0110d0
        else if (names(i).eq.'SI')then
         am(i)=28.085d0
        else if (names(i).eq.'GE')then

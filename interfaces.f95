@@ -15,16 +15,6 @@ module mod_interfaces
    integer,intent(in) :: it
    end subroutine trajout
 
-   elemental function UpperToLower(string) result (return_string)
-   character(len=*),intent(in) :: string
-   character(len=len(string))  :: return_string
-   end function UpperToLower
-
-   elemental function LowerToUpper(string) result (return_string)
-   character(len=*),intent(in) :: string
-   character(len=len(string))  :: return_string
-   end function LowerToUpper
-
    subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
    IMPORT :: npartmax,nwalkmax
    real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
@@ -184,24 +174,6 @@ module mod_interfaces
    real*8 :: dt  
    end subroutine analysis
 
-   SUBROUTINE temperature(px,py,pz,amt,dt,eclas)
-   IMPORT :: npartmax,nwalkmax
-   real*8,intent(in)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-   real*8,intent(in)  :: amt(npartmax,nwalkmax)
-   real*8,intent(in)  :: dt,eclas
-   end subroutine temperature
-
-   function ekin_v (vx,vy,vz)
-   IMPORT :: npartmax,nwalkmax
-   real*8,intent(in)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-   real*8             :: ekin_v
-   end function ekin_v
-   function ekin_p (px,py,pz)
-   IMPORT :: npartmax,nwalkmax
-   real*8,intent(in)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-   real*8             :: ekin_p
-   end function ekin_p
-
    subroutine restout(x,y,z,vx,vy,vz,it)
    IMPORT :: npartmax,nwalkmax
    real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
@@ -213,15 +185,6 @@ module mod_interfaces
    integer,dimension(8),intent(in)  :: values1
    integer,dimension(8),intent(out) :: values2
    end subroutine finish
-
-   subroutine printf(fx,fy,fz)
-   IMPORT :: npartmax,nwalkmax
-   real*8,intent(in) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-   end subroutine printf 
-
-   subroutine abinerror(chcaller)
-   character(len=*),intent(in)   :: chcaller
-   end subroutine abinerror
 
    END INTERFACE
 

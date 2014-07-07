@@ -126,7 +126,7 @@ contains
          write(0,*) "Exiting..."
       else   !in future release, we may use e.g. optimal sampling
         write(6,*) "# Using canonical-sampling, Cp=kT"
-        gC=0.
+        gC=0.0d0
         do i=1,ns+1
            gC(i,i)=temp
         enddo
@@ -289,7 +289,7 @@ contains
     
     !scale
     SM=M*(1./2.**k)
-    EM=0.
+    EM=0.d0
     do i=1,n
        EM(i,i)=tc(j+1)
     enddo
@@ -318,21 +318,21 @@ contains
     real*8, intent(out)   :: S(n,n)
     real *8 :: L(n,n), D(n,n) 
     integer i,j,k
-    S=0.
-    L=0.
-    D=0.
+    S=0.d0
+    L=0.d0
+    D=0.d0
     do i=1,n
-       L(i,i)=1.0
+       L(i,i)=1.0d0
        do j=1,i-1
           L(i,j)=SST(i,j);
           do k=1,j-1
              L(i,j)=L(i,j)-L(i,k)*L(j,k)*D(k,k)
           enddo
-          if (D(j,j).ne. 0.0) then
+          if (D(j,j).ne. 0.0d0) then
             L(i,j)=L(i,j)/D(j,j) 
           else
             write(0,*) "Warning: zero eigenvalue in LDL^T decomposition."
-            L(i,j)=0.
+            L(i,j)=0.d0
           end if
        enddo
        D(i,i)=SST(i,i)
@@ -345,7 +345,7 @@ contains
          D(i,i)=sqrt(D(i,i))
        else
          write(0,*) "Warning: negative eigenvalue (",D(i,i),")in LDL^T decomposition."
-         D(i,i)=0.0
+         D(i,i)=0.0d0
        end if
     end do
     S=matmul(L,D)

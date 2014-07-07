@@ -10,7 +10,8 @@ use mod_general
 use mod_system, ONLY: constrainP
 use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
 use mod_gle
-use mod_interfaces, ONLY:shiftP,shiftX,force_clas,ekin_p
+use mod_interfaces, ONLY:shiftP,shiftX,force_clas
+use mod_kinetic, ONLY:ekin_p
 implicit none
 real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
 real*8,intent(inout) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)

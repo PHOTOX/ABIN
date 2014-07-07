@@ -15,7 +15,7 @@
       use mod_system,only:natmol,nmol
       implicit none
       real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      integer*8 :: i,iat,iat2,iw,iww,iwrap=0
+      integer :: i,iat,iat2,iw,iww,iwrap=0
 
       iwrap=0
 
@@ -97,8 +97,8 @@
       real*8 grad(npartmax*3),xyz(npartmax*3)
       real*8 dummy1(npartmax),dummy2(npartmax*3)
       character(len=npartmax) :: dummy3
-      real*8 :: eclas,energy,del
-      integer*8 :: iat,iat1,iat2,pom,iw
+      real*8  :: eclas,energy,del
+      integer :: iat,iat1,iat2,pom,iw
       integer ::   idum1=1,idum2=1,idum3=1,idum4=1,idum5=1,idum6=1,idum7=1,idum8=1
       real*8, parameter :: fac=autokcal*ang
       real*8, parameter :: fac2=autokcal*ang*ang,fac3=autoKK*ang

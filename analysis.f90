@@ -221,18 +221,4 @@
 
      end
 
-     subroutine printf(fx,fy,fz)
-     use mod_array_size, only: npartmax,nwalkmax
-     use mod_general, only: nwalk,natom
-     implicit none
-     real*8,intent(in) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-     integer :: iat,iw
-
-     do iw=1,nwalk
-      do iat=1,natom
-       write(*,*)fx(iat,iw),fy(iat,iw),fz(iat,iw)
-      enddo
-     enddo
-
-     end
 

@@ -43,6 +43,7 @@
       end subroutine
 
       subroutine nhc_init() 
+      use mod_array_size
       use mod_general
       use mod_system, ONLY:nshakemol
       use mod_random
@@ -152,7 +153,7 @@
 
 !-----NOW SET SUZUKI-YOSHIDA WEIGHTS
       if(nyosh.eq.3)then
-      w(1)=1/(2-2**(1/3.))
+      w(1)=1.0_DP/(2.0_DP-2**(1.0_DP/3.0_DP))
       w(3)=w(1)
       w(2)=1-w(1)-w(3)
 !      write(*,*)w(1),w(2),w(3)
@@ -161,11 +162,11 @@
               w(1)=1
       endif
       if(nyosh.eq.7)then
-       w(1)=0.784513610477560
+       w(1)=0.784513610477560_DP
        w(7)=w(1)
-       w(2)=0.235573213359357
+       w(2)=0.235573213359357_DP
        w(6)=w(2)
-       w(3)=-1.17767998417887
+       w(3)=-1.17767998417887_DP
        w(5)=w(3)
        w(4)=1-w(1)-w(2)-w(3)-w(5)-w(6)-w(7)
       endif

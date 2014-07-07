@@ -35,7 +35,7 @@
       iw=1
       do iat=1,natom
        r=(x(iat,iw)-xcm)**2+(y(iat,iw)-ycm)**2+(z(iat,iw)-zcm)**2
-       r=dsqrt(r)
+       r=sqrt(r)
        if(r.gt.rmax.and.names(iat).ne.'H')then
         rmax=r
        endif
@@ -93,7 +93,7 @@
       do iw=1,nwalk
        do iat=1,natom
         r=(x(iat,iw)-xcm)**2+(y(iat,iw)-ycm)**2+(z(iat,iw)-zcm)**2
-        r=dsqrt(r)
+        r=sqrt(r)
         if(r.gt.rb_sbc.and.names(iat).ne.'H')then
          frb=-kb_sbc*(r-rb_sbc)
          fx(iat,iw)=fx(iat,iw)+frb*(x(iat,iw)-xcm)/(r)

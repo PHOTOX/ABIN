@@ -10,7 +10,7 @@ FC = gfortran
 CC = gcc
 
 #CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
-FFLAGS = -g -fopenmp  -Wall -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
+FFLAGS =  -g -fopenmp  -Wall -Wextra -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
 LD = -lfftw3 -lm -lstdc++
 
@@ -19,10 +19,10 @@ export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 
-F_OBJS = modules.o interfaces.o random.o nosehoover.o stage.o potentials.o  estimators.o force_mm.o nab.o gle.o analyze_ext_distp.o  \
+F_OBJS = modules.o utils.o interfaces.o random.o nosehoover.o stage.o potentials.o  estimators.o force_mm.o nab.o gle.o ekin.o analyze_ext_distp.o  \
 velverlet.o surfacehop.o minimizer.o force_bound.o respa_shake.o force_guillot.o \
 shake.o respa.o analysis.o init.o force_clas.o force_quantum.o density.o ran1.o vinit.o \
-shift.o ekin.o force_abin.o
+shift.o force_abin.o
 
 C_OBJS = nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o  EWALD/ewaldf.o
 
