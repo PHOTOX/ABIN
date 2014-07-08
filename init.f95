@@ -29,6 +29,7 @@
       integer :: error,getpid,nproc=1,iknow=0,ipom,ipom2=0,is
       character(len=2)  :: shit
       character(len=10) :: chaccess
+      character(len=200)  :: chinput, chcoords
       LOGICAL :: file_exists,prngread
       real*8  :: wnw=5.0d-5,pom,ekin_mom,temp_mom,scal
 !$    integer :: nthreads,omp_get_max_threads
@@ -50,6 +51,11 @@
       namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,inames,qmmmtype
       namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf
 
+      chcoords='mini.dat'
+      chinput='input.in'
+      call Get_cmdline(chinput, chcoords)
+      write(*,*)'Will read parameters from input file ',chinput
+      write(*,*)'Will read xyz coordinates from file ',chcoords
 
       do iat=1,npartmax
        am(iat)=0.0d0
@@ -62,7 +68,7 @@
       pom=0.0d0
       ekin_mom=0.0d0 ;temp_mom=0.0d0
 
-      open(150,file="input.in", status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
+      open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
       read(150,general)
       if(irest.eq.1)then
        readnhc=1   !readnhc has precedence before initNHC
@@ -451,7 +457,7 @@
 !-----END OF ERROR CHECKING
 
 !-----READING GEOMETRY
-      open(111,file='mini.dat',status = "old", action = "read") 
+      open(111,file=chcoords,status = "old", action = "read") 
       read(111,*)natom1
       if(natom1.ne.natom)then
         write(*,*)'No. of atoms in input.in and in mini.dat do not match.'
@@ -627,11 +633,14 @@
 !!!!! END OF RESTART 
 
 
+      write(*,*)
       write(*,*)'-------SIMULATION PARAMETERS---------------'
       write(*,nml=general)
+      write(*,*)
+      write(*,nml=system)
       if ( inose.ge.1 ) write(*,nml=nhcopt)
       if ( ipimd.eq.2 ) write(*,nml=sh)
-      write(*,nml=system)
+      write(*,*)
 
 !------------END OF INPUT SECTION---------------------
 

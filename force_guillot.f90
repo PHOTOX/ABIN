@@ -93,7 +93,7 @@ module mod_guillot
 !      write(*,*)"CLAS"
 !      write(*,*)eclas,tempoo,tempoh,temphh
    
-      end
+      end subroutine force_guillot
                                         
       real*8 function vocl(r)
       use mod_array_size
@@ -109,7 +109,7 @@ module mod_guillot
       r=r*ANG
       vocl=vocl/AUTOKCAL
       return
-      end
+   end function vocl
 
       real*8 function voclIS(r)
       implicit real*8(a-h,o-z)
@@ -124,7 +124,7 @@ module mod_guillot
       r=r*ANG
       voclIS=voclIS/AUTOKCAL
       return
-      end
+   end function voclIS
 
       real*8 function frocl(r)
       implicit real*8(a-h,o-z)
@@ -141,7 +141,7 @@ module mod_guillot
       frocl=frocl/AUTOKCAL
       frocl=-frocl/ANG
       return
-      end
+   end function frocl
 
       real*8 function vhcl(r)
       implicit real*8(a-h,o-z)
@@ -157,7 +157,7 @@ module mod_guillot
       r=r*ANG
       vhcl=vhcl/AUTOKCAL
       return
-      end
+   end function vhcl
 
       real*8 function vhclIS(r)
       implicit real*8(a-h,o-z)
@@ -170,7 +170,7 @@ module mod_guillot
       r=r*ANG
       vhclIS=vhclIS/AUTOKCAL
       return
-      end
+   end function vhclIS
 
 
       real*8 function frhcl(r)
@@ -186,7 +186,7 @@ module mod_guillot
       frhcl=frhcl/AUTOKCAL
       frhcl=-frhcl/ANG
       return
-      end
+      end function frhcl
 
                                                     
       real*8 function voo(r)
@@ -202,7 +202,7 @@ module mod_guillot
       voo=voo/AUTOKCAL
 !      write(*,*)'voo1',voo
       return
-      end
+      end function voo
 
       real*8 function froo(r)
       implicit real*8(a-h,o-z)
@@ -218,7 +218,7 @@ module mod_guillot
       froo=-froo/ANG
 !      write(*,*)'froo',froo
       return
-      end
+   end function froo
 
       real*8 function voh(r)
       implicit real*8(a-h,o-z)
@@ -240,7 +240,7 @@ module mod_guillot
 !      enddo
 !      stop
 !      return
-      end
+      end function voh
 
       real*8 function froh(r)
       implicit real*8(a-h,o-z)
@@ -258,9 +258,9 @@ module mod_guillot
       froh=-froh/ANG
 !      write(*,*)'froh',froh
       return
-      end
+   end function froh
 
-      real*8 function vhh(r)
+   real*8 function vhh(r)
       implicit real*8(a-h,o-z)
       r=r/ANG
 
@@ -275,9 +275,9 @@ module mod_guillot
       vhh=vhh/AUTOKCAL
 !      write(*,*)'vhh',r,vhh
       return
-      end
+   end function vhh
 
-      real*8 function frhh(r)
+   real*8 function frhh(r)
       implicit real*8(a-h,o-z)
       r=r/ANG
 !      write(*,*)'r in frhh',r
@@ -297,7 +297,8 @@ module mod_guillot
       frhh=-frhh/ANG
 !      write(*,*)'frhh',frhh
       return
-   end
+   end function frhh
+
 !---potentially useful for guillot and other empirical force fields, because string
 !---comparison is very cpu demanding!!
 !--TODO:move to guillot
@@ -315,7 +316,7 @@ module mod_guillot
         inames(i)=2
        endif
       enddo
-   end subroutine
+   end subroutine inames_guillot
 
 END MODULE mod_GUILLOT
 

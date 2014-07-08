@@ -61,7 +61,7 @@ module mod_kinetic
       endif
       
       RETURN
-      END
+      end subroutine temperature
 
 
       real*8 function ekin_v (vx,vy,vz)
@@ -85,7 +85,7 @@ module mod_kinetic
       ekin_v=ekin_mom
 
       RETURN
-      END
+      END function ekin_v
 !
       real*8 function ekin_p (px,py,pz)
       use mod_general, ONLY: nwalk, natom
@@ -108,6 +108,6 @@ module mod_kinetic
       ekin_p=ekin_mom
 
       RETURN
-      END
+      END function ekin_p
 
 end module mod_kinetic

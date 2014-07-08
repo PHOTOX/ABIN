@@ -432,18 +432,15 @@ end subroutine move_vars
       !------END-OF-INTERPOLATIONS-------------------------------------
 
        
-       if(integ.eq.'rk4')then
-        call rk4step(en_array_int,en_array_newint,dotproduct,dotproduct_newint,itrj)
+       if(integ.eq.'rk4') call rk4step(en_array_int,en_array_newint,dotproduct,dotproduct_newint,itrj)
         !interpolujeme dotprodukt poctive i uvnitr integratoru...
 !        call rk4step_new(en_array_int,en_array_newint,dotproduct,dotproduct_newint, &
 !                      vx_int,vy_int,vz_int,vx_newint,vy_newint,vz_newint,  &
 !                      ancx,ancy,ancz,ancx_newint,ancy_newint,ancz_newint,itrj)
-       endif
 
-       if(integ.eq.'butcher')then
-        call butcherstep(en_array_int,en_array_newint,dotproduct,dotproduct_newint,itrj)
-       endif
+       if(integ.eq.'butcher') call butcherstep(en_array_int,en_array_newint,dotproduct,dotproduct_newint,itrj)
 
+       !TODO: move to function
        if(integ.eq.'euler')then
 
       do ist1=1,nstate
@@ -647,7 +644,7 @@ end subroutine move_vars
    enddo
 
    end subroutine surfacehop
-
+!  TODO: rename state1 to statein and state2 to stateout
    subroutine hop(vx,vy,vz,vx_int,vy_int,vz_int,ancx,ancy,ancz,en_array_int,state1,state2,itrj)
       use mod_array_size
       use mod_general, ONLY:natom
@@ -667,6 +664,7 @@ end subroutine move_vars
       a_temp=0.d0
       b_temp=0.d0
 
+      ! isnt b_temp simply dot product??
       do iat=1,natom
          a_temp=a_temp+ancx(iat,itrj,state1,state2)**2/am(iat)
          a_temp=a_temp+ancy(iat,itrj,state1,state2)**2/am(iat)
@@ -684,10 +682,11 @@ end subroutine move_vars
       endif
 
       istate(itrj)=state2
-       write(3,'(A24,I3,A10,I3)')'#Hop occured from state ',state1,' to state ',state2
+      write(3,'(A24,I3,A10,I3)')'#Hop occured from state ',state1,' to state ',state2
 
 !------------- Rescaling the velocities------------------------
 
+!     TODO use c_temp here
       if(b_temp.lt.0) then
          g_temp=(b_temp+sqrt(b_temp**2+4*a_temp*(en_array_int(state1,itrj)-en_array_int(state2,itrj))))/2.0d0/a_temp
       endif
