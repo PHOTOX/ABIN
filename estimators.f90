@@ -21,7 +21,7 @@
       use mod_array_size
       use mod_general
       use mod_nhc, ONLY:temp,inose
-      use mod_system, ONLY:am,nshake
+      use mod_system, ONLY:am,nshake, dime
       use mod_harmon, ONLY:hess_harmon,hess_morse,hess_2dho,hess
       implicit none
       real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)

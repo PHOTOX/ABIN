@@ -7,7 +7,7 @@
 subroutine verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
 use mod_array_size
 use mod_general
-use mod_system, ONLY: constrainP
+use mod_system, ONLY: constrainP, conatom
 use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
 use mod_gle
 use mod_interfaces, ONLY:shiftP,shiftX,force_clas

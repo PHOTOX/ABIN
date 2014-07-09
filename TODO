@@ -1,4 +1,5 @@
 I think that hop is wrong, we should not use vx_int
+check velverlet and how we should integrate SH
 
 TODO: some simple automatic testing....
 at least 3 SH - for each integrator and different settings
@@ -7,11 +8,9 @@ also test inac=1 (LUKAS code)
 when tests are availabel, check whether  following options change program behaviour
 see this page: https://gcc.gnu.org/onlinedocs/gcc-3.3.5/g77/Overly-Convenient-Options.html#Overly-Convenient-Options
 
-create module for densities, ekin and shake, move some variables from module system to module density
-move temperature scaling and other stuff to vinit, pass the whole vx,vy,vz arrays
-move sh_init into module mod_sh
+create module for densities, shake, move some variables from module system to module density
 
-eliminate real comparisons in gle
+move sh_init into module mod_sh
 
 init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
 
@@ -23,7 +22,9 @@ maybe just wrong default thermostat parameters?
 see hollas@as67-1:~/TEST/PIMD.g09new
 works with tau0>0.002, we should test this value for cases when NHC drifts
 
+
 allocate arrays..must be in modules(why?,probably not since 2003)...use automatic arrays for local arrays where needed
+will need to move variable natom to section general to allocate arrays from section system in advance
 allocatable positions, velocities and momenta in modules, forces probably not?
 probably not in modules, no wide scope, this simplyfies things
 dont forget to allocate nwalk+1

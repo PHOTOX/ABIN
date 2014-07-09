@@ -12,7 +12,7 @@
       subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
       use mod_array_size
       use mod_general
-      use mod_system, ONLY: names,am
+      use mod_system, ONLY: names, am, dime
       implicit none
       real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)

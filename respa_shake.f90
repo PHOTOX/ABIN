@@ -31,7 +31,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
       use mod_system, ONLY:nshake
       use mod_fftw3
       use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas,shake,utox,xtou,qtox,xtoq
-      use mod_system, ONLY:constrainP
+      use mod_system, ONLY:constrainP, conatom
       implicit none
       real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(inout) :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)

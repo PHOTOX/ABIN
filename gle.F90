@@ -11,30 +11,30 @@
 ! *********************************************************
 
 module mod_gle
-  use mod_random
+  use mod_const, only: DP
+  use mod_random, only: gautrg
   implicit none
   private
   public :: ns, gp, ps, langham,gle_step,wn_init,gle_init,wn_step
-  real*8, allocatable,save :: gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
-  real*8, allocatable,save :: ran(:)
-  real*8, allocatable,save :: ps(:,:,:)
-  real*8, save       :: wnt, wns, langham
+  real(DP), allocatable,save :: gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
+  real(DP), allocatable,save :: ran(:)
+  real(DP), allocatable,save :: ps(:,:,:)
+  real(DP), save       :: wnt, wns, langham
   integer,save       :: ns
 contains
 
   ! initialize white-noise thermostat. 
   ! the init and the propagator here are written with the same philosophy
   ! used for the full-fledged colored-noise stuff.
-  subroutine wn_init(dt,wopt,irandom)
+  subroutine wn_init(dt,wopt)
     use mod_general,only:natom
     use mod_nhc,only:temp
     implicit none
-    real*8, intent(in) :: dt,wopt
-    real*8 g
-    integer irandom
-    g=2.*wopt
+    real(DP), intent(in) :: dt,wopt
+    real(DP) g
+    g=2.d0*wopt
     wnt=exp(-dt*g)
-    wns=sqrt(temp*(1.-wnt*wnt))
+    wns=sqrt(temp*(1.d0-wnt*wnt))
     langham=0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
     allocate( ran(natom*3) )  !allocating arrays for random numbers produced by gautrg
   end subroutine
@@ -60,14 +60,14 @@ contains
     end do
   end subroutine
   
-  subroutine gle_init(dt,irandom)
+  subroutine gle_init(dt)
     use mod_array_size
     use mod_general,only: natom,nwalk
     use mod_nhc,only: temp,inose
     implicit none
-    real*8, intent(in)  :: dt
-    real *8, allocatable :: gA(:,:), gC(:,:), gr(:)
-    integer i, j, cns, ios, irandom,iw
+    real(DP), intent(in)  :: dt
+    real(DP), allocatable :: gA(:,:), gC(:,:), gr(:)
+    integer :: i, j, cns, ios, iw
     
 
     write(6,*) "# Initialization of GLE thermostat.                           "
@@ -204,10 +204,10 @@ contains
     use mod_array_size,only:npartmax,nwalkmax
     use mod_general,only:natom,nwalk
     implicit none
-    real*8, intent(inout)  :: px(npartmax,nwalkmax)
-    real*8, intent(inout)  :: py(npartmax,nwalkmax)
-    real*8, intent(inout)  :: pz(npartmax,nwalkmax)
-    real*8, intent(in)     :: m(npartmax,nwalkmax)
+    real(DP), intent(inout)  :: px(npartmax,nwalkmax)
+    real(DP), intent(inout)  :: py(npartmax,nwalkmax)
+    real(DP), intent(inout)  :: pz(npartmax,nwalkmax)
+    real(DP), intent(in)     :: m(npartmax,nwalkmax)
     integer                :: i, j, iat, iw
 
 !    call printf(px,py,pz)
@@ -278,7 +278,7 @@ contains
   subroutine matrix_exp(M, n, j, k, EM)
     integer, intent(in)  :: n, j, k
     real*8, intent(in)   :: M(n,n)
-    real*8, intent(out)   :: EM(n,n)
+    real*8, intent(out)  :: EM(n,n)
     
     real *8 :: tc(j+1), SM(n,n)
     integer p, i
@@ -288,7 +288,7 @@ contains
     enddo
     
     !scale
-    SM=M*(1./2.**k)
+    SM=M*(1.d0/2.d0**k)
     EM=0.d0
     do i=1,n
        EM(i,i)=tc(j+1)
@@ -328,7 +328,7 @@ contains
           do k=1,j-1
              L(i,j)=L(i,j)-L(i,k)*L(j,k)*D(k,k)
           enddo
-          if (D(j,j).ne. 0.0d0) then
+          if (D(j,j).gt. 1.0d-10) then
             L(i,j)=L(i,j)/D(j,j) 
           else
             write(0,*) "Warning: zero eigenvalue in LDL^T decomposition."

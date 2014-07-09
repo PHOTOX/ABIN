@@ -1,8 +1,8 @@
-
+!TODO: module, move some vars from mod_general
       subroutine minimize(x,y,z,fx,fy,fz,eclas)
       use mod_array_size
-      use mod_general
-      use mod_system, ONLY: names
+      use mod_general, only: gamm, gammthr, natom, nwrite, nwritex, imini
+      use mod_system, ONLY: names, conatom
       use mod_interfaces, ONLY: force_clas,trajout
       implicit none
       real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)

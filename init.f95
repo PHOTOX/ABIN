@@ -16,22 +16,21 @@
       use mod_random
       use mod_guillot,ONLY: inames_guillot
       use mod_utils
+      use mod_vinit, only: vinit, scalevelocities
       implicit none
       real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
       real*8,intent(out) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
       real*8,intent(out) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
       real*8,intent(out) :: dt
-      real*8  :: ran1,rans(10)
-      real*8  :: vx1(npartmax),vy1(npartmax),vz1(npartmax)
-      integer :: irnd(nwalkmax),scaleveloc=1,readNHC
-      integer :: iw,iat,inh,natom1,ifirst,itrj,ist1,imol,shiftdihed=1
-      integer :: error,getpid,nproc=1,iknow=0,ipom,ipom2=0,is
+      real*8  :: rans(10)
+      integer :: iw,iat,inh,natom1,itrj,ist1,imol,shiftdihed=1
+      integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0, is
       character(len=2)  :: shit
       character(len=10) :: chaccess
       character(len=200)  :: chinput, chcoords
       LOGICAL :: file_exists,prngread
-      real*8  :: wnw=5.0d-5,pom,ekin_mom,temp_mom,scal
+      real*8  :: wnw=5.0d-5
 !$    integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
       REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
@@ -65,8 +64,6 @@
       dt=-1  
       prngread=.false.
       error=0
-      pom=0.0d0
-      ekin_mom=0.0d0 ;temp_mom=0.0d0
 
       open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
       read(150,general)
@@ -531,8 +528,8 @@
 !     call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      if (inose.eq.1) call nhc_init()
-     if (inose.eq.2) call gle_init(dt*0.5/nabin,irandom) !nabin is set to 1 unless ipimd=1
-     if (inose.eq.3) call wn_init(dt*0.5,wnw,irandom)
+     if (inose.eq.2) call gle_init(dt*0.5/nabin) !nabin is set to 1 unless ipimd=1
+     if (inose.eq.3) call wn_init(dt*0.5,wnw)
 
 
 !----performing RESTART from restart.xyz
@@ -704,7 +701,6 @@ endif
 
       am=am*amu
 
-!-----PID of the proccess
       pid=GetPID()
       write(*,*)'Pid of the current proccess is:',pid
 
@@ -720,76 +716,19 @@ endif
        f=0 !what about nchain=1?
        !what about massive therm?
       endif
+
 !-----SETTING initial velocities according to the Maxwell-Boltzmann distribution
-      if(irest.eq.0)then
-!-----Random number generation. Used for Maxwell-Boltzmann sampling      
-      ifirst=-irandom
-      do iw=1,nwalk
-       irnd(iw)=ran1(ifirst)*irandom
-       ifirst=-irnd(iw)
-      enddo
+!     TODO: odstraneni rotace
+      if(irest.eq.0) call vinit(TEMP,am,vx,vy,vz)
 
-!  We use vx1 variables because vinit needs one-dimensional array.
-       do iw=1,nwalk
-        ifirst=irnd(iw)
-        call vinit(TEMP,am,vx1,vy1,vz1,110,ifirst)
-
-        do iat=1,natom
-         vx(iat,iw)=vx1(iat)
-         vy(iat,iw)=vy1(iat)
-         vz(iat,iw)=vz1(iat)
-        enddo
-       enddo
-
-        write(*,*)'Removing center of mass velocity'
-
-
-! TODO: odstraneni rotace
-!       irest endif    
-       endif
-
-!Nulovani rychlosti pro constrainovane atomy
-       if(conatom.gt.0)then
+      if(conatom.gt.0)then
          write(*,*)'Removing initial velocity of constrained atoms.'
          call constrainP(vx,vy,vz)
-       endif
+      endif
 
-! Scaling of velocities to correct temperature after COM velocity removal           
-! or if restarting to different temperature
-       ekin_mom=0.0d0
-       do iw=1,nwalk
-       do iat=1,natom
-        pom=vx(iat,iw)**2+vy(iat,iw)**2+vz(iat,iw)**2
-        pom=0.5*pom*am(iat)
-        ekin_mom=ekin_mom+pom
-       enddo
-       enddo
-       if(ekin_mom.gt.0.1d-14)then
-        temp_mom=2*ekin_mom/(dime*nwalk*natom-nshake-f-dime*conatom*nwalk)
-       else
-        temp_mom=0.0d0
-       endif
-       write(*,*)'Initial temperature [K]:',temp_mom*autok
-
-! TODO: pro normal modes nemusi nutne fungovat!
-       if(scaleveloc.eq.1.and.temp_mom.gt.0.1e-10)then
-        ekin_mom=0.0d0
-        write(*,*)'Scaling velocities to correct temperature.'
-        scal=dsqrt(temp/temp_mom)
-        do iw=1,nwalk
-         do iat=1,natom
-         vx(iat,iw) = vx(iat,iw)*scal 
-         vy(iat,iw) = vy(iat,iw)*scal
-         vz(iat,iw) = vz(iat,iw)*scal
-         pom=vx(iat,iw)**2+vy(iat,iw)**2+vz(iat,iw)**2
-         pom=0.5*pom*am(iat)
-         ekin_mom=ekin_mom+pom
-        enddo
-       enddo
-       temp_mom=2*ekin_mom/(dime*nwalk*natom-nshake-f-dime*conatom*nwalk)
-       write(*,*)'Temperature after scaling [K]:',temp_mom*autok
-       endif
-
+      ! If scaleveloc=1, scale initial velocitites
+      ! Otherwise, just get the temperature.
+      call ScaleVelocities(vx, vy, vz)
 
        
 !----some stuff for spherical boundary onditions
@@ -844,10 +783,7 @@ endif
 
 !--------END OF INITIALIZATION-------------------
 
-
-
       call flush()
-
 
       end
 

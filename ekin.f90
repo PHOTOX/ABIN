@@ -6,12 +6,13 @@ module mod_kinetic
    implicit none
    private
    public :: temperature, ekin_v, ekin_p
+   !TODO: move est_temp_cumul and entot_cumul 
    contains
    subroutine temperature(px,py,pz,amt,dt,eclas)
       use mod_const, ONLY:AUtoFS,AUtoK
       use mod_general
       use mod_estimators, ONLY:est_temp_cumul,entot_cumul
-      use mod_system, ONLY: nshake
+      use mod_system, ONLY: nshake, dime, f, conatom
       use mod_nhc, ONLY: inose,nhcham,calc_nhcham
       use mod_gle, ONLY:langham
       implicit none

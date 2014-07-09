@@ -1,5 +1,6 @@
 
 module mdstep
+   use mod_system, ONLY: conatom, constrainP
    use mod_kinetic, ONLY: ekin_p
    implicit none
    private
@@ -37,12 +38,9 @@ module mdstep
 !  which are only in respashake function
 !  GLE and NHC thermostats available at the moment
    subroutine verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
-   use mod_general, ONLY: conatom
-   use mod_system, ONLY: constrainP
-   use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
-   use mod_gle, ONLY:langham,gle_step
-   use mod_interfaces, ONLY:shiftP,shiftX,force_clas,ekin_p
-   implicit none
+   use mod_nhc, ONLY:inose, imasst, shiftNHC_yosh, shiftNHC_yosh_mass
+   use mod_gle, ONLY:langham, gle_step
+!   use mod_interfaces, ONLY:force_clas
    real*8,intent(inout) :: x(:,:),y(:,:),z(:,:)
    real*8,intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
    real*8,intent(inout) :: px(:,:),py(:,:),pz(:,:)
@@ -111,13 +109,10 @@ module mdstep
    ! further info is before subroutine respa_shake
    subroutine respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
               fxc,fyc,fzc,fxq,fyq,fzq)
-   use mod_array_size
-   use mod_general, ONLY: conatom, istage
+   use mod_general, ONLY: istage
    use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
    use mod_gle, ONLY:langham, gle_step
-   use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas,ekin_p
-   use mod_system, ONLY:constrainP
-   implicit none
+!   use mod_interfaces, ONLY:force_quantum,force_clas
    real*8,intent(inout)  :: x(:,:),y(:,:),z(:,:)
    real*8,intent(inout)  :: fxc(:,:),fyc(:,:),fzc(:,:)
    real*8,intent(inout)  :: fxq(:,:),fyq(:,:),fzq(:,:)
@@ -264,13 +259,11 @@ module mdstep
 
 subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
                  fxc,fyc,fzc,fxq,fyq,fzq)
-      use mod_general, ONLY: conatom, istage
+      use mod_general, ONLY: istage
       use mod_nhc, ONLY:inose,shiftNHC_yosh,shiftNHC_yosh_mass
       use mod_system, ONLY:nshake
       use mod_fftw3
-      use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas,shake,utox,xtou,qtox,xtoq
-      use mod_system, ONLY:constrainP
-      implicit none
+!      use mod_interfaces, ONLY:force_quantum,force_clas,shake,utox,xtou,qtox,xtoq
       real*8,intent(inout) :: x(:,:),y(:,:),z(:,:)
       real*8,intent(inout) :: px(:,:),py(:,:),pz(:,:)
       real*8,intent(in)    :: amg(:,:),amt(:,:)

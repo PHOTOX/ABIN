@@ -4,7 +4,7 @@
       use mod_qmmm, ONLY: qmmmtype,force_LJCoul
       use mod_nab, ONLY: ipbc,wrap,nsnb,force_nab
       use mod_sbc
-!      use mod_bag
+      use mod_system, only: conatom
       use mod_nhc, ONLY: inose
       use mod_harmon, ONLY: force_harmon,force_2dho,force_morse
       use mod_interfaces,only:force_abin,QtoX,XtoQ,UtoX,XtoU

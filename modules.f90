@@ -13,7 +13,7 @@
       ! and using the thermochemical calorie (1 cal = 4.184 J):'
       module mod_array_size
       implicit none
-      integer,parameter :: NPARTMAX=3000,NWALKMAX=300,MAXCHAIN=10,NSHAKEMAX=100
+      integer,parameter :: NPARTMAX=3000,NWALKMAX=200,MAXCHAIN=10,NSHAKEMAX=100
       integer,parameter :: NBINMAX=3000,NDISTMAX=30
       integer,parameter :: NSTMAX=15,NTRAJMAX=1
       real*8, parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
@@ -54,12 +54,11 @@ module mod_general
    integer :: imini=0,nstep=1,nabin=50
    integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0
    integer :: icv=0,irest=0,anal_ext=0,idebug=0
-   integer :: irandom=156873,natom=0,pid,conatom=0
+   integer :: irandom=156873,natom=0,pid
    integer :: isbc=0,ibag=0  !spherical boundary conditions,elastic bag
    integer :: iqmmm=0
    real*8  :: gamm=20.d0, gammthr=1d-10 !minthr=1e-15
    integer :: parrespa=0 
-   integer :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani  
    save
 end module
       
@@ -72,7 +71,8 @@ end module
       implicit none
       real*8  :: am(npartmax)
       character(len=2) :: names(npartmax)
-      integer :: inames(npartmax),imass_init=1
+      integer :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani 
+      integer :: inames(npartmax),imass_init=1,conatom=0
 !---distributions (distance,angle,dihedral)
       integer :: ndist=0,nbin=1000,dist1(ndistmax),dist2(ndistmax)
       integer :: nang=0,ang1(ndistmax),ang2(ndistmax),ang3(ndistmax)
@@ -303,7 +303,7 @@ end module
 
    subroutine constrainP (px,py,pz)
       use mod_array_size, only: npartmax,nwalkmax
-      use mod_general, only: nwalk,conatom
+      use mod_general, only: nwalk
       real*8,intent(inout)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
       integer               :: iw,iat
       do iw=1,nwalk
