@@ -13,8 +13,8 @@
       ! and using the thermochemical calorie (1 cal = 4.184 J):'
       module mod_array_size
       implicit none
-      integer,parameter :: NPARTMAX=3000,NWALKMAX=200,MAXCHAIN=10,NSHAKEMAX=100
-      integer,parameter :: NBINMAX=3000,NDISTMAX=30
+      integer,parameter :: NPARTMAX=3000,NWALKMAX=200,MAXCHAIN=10,NSHAKEMAX=6000
+      integer,parameter :: NBINMAX=2000,NDISTMAX=30
       integer,parameter :: NSTMAX=15,NTRAJMAX=1
       real*8, parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
       real*8, parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
@@ -74,17 +74,7 @@ end module
       integer :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani 
       integer :: inames(npartmax),imass_init=1,conatom=0
 !---distributions (distance,angle,dihedral)
-      integer :: ndist=0,nbin=1000,dist1(ndistmax),dist2(ndistmax)
-      integer :: nang=0,ang1(ndistmax),ang2(ndistmax),ang3(ndistmax)
-      integer :: ndih=0,dih1(ndistmax),dih2(ndistmax),dih3(ndistmax),dih4(ndistmax),nbin_ang=180
-      real*8  :: dist(nbinmax,ndistmax),dist_ang(nbinmax,ndistmax),dist_dih(nbinmax,ndistmax) 
-      real*8  :: xmin=0.5d0,xmax=5.0d0
-      real*8  :: shiftdih=360.0d0 ! 0 for (-180,180), 360 for (0,360)
 !SHAKE stuff
-      real*8  :: dshake(nshakemax),shake_tol=0.001d0
-      integer :: nshake=0,IShake1(nshakemax),IShake2(nshakemax),nmol=1
-!     integer :: molfirst(npartmax)  !not in use anymore
-      integer :: natmol(npartmax),nshakemol(npartmax)
       save
       CONTAINS
       subroutine mass_init()
@@ -273,32 +263,6 @@ end module
         stop
        endif
       enddo
-      end subroutine
-
-      subroutine dist_init()
-         implicit none
-         dist=0.0d0
-         dist_ang=0.0d0
-         dist_dih=0.0d0
-      end subroutine
-
-      !TODO: move to mod_shake
-      subroutine shake_init(x,y,z)
-      implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 xi,yi,zi,xj,yj,zj
-      integer :: ixshake,i,j
-        Do ixshake=1,NShake
-        i=IShake1(ixshake)
-        j=IShake2(ixshake)
-        xi=x(i,1)
-        yi=y(i,1)
-        zi=z(i,1)
-        xj=x(j,1)
-        yj=y(j,1)
-        zj=z(j,1)
-        dshake(ixshake)=(xi-xj)**2+(yi-yj)**2+(zi-zj)**2
-        enddo
       end subroutine
 
    subroutine constrainP (px,py,pz)

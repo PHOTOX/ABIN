@@ -39,14 +39,6 @@ module mod_interfaces
    real*8,intent(out) :: amg(npartmax,nwalkmax),amt(npartmax,nwalkmax)
    end subroutine 
 
-!   SUBROUTINE vinit(TEMP,MASS,vx,vy,vz,nout,idum)
-!   IMPORT :: npartmax,nwalkmax
-!   REAL*8,intent(out)    ::  VX(npartmax), VY(npartmax), VZ(npartmax)
-!   real*8,intent(in)     ::  mass(npartmax),temp
-!   integer,intent(inout) ::  idum 
-!   integer,intent(in)    ::  nout
-!   end subroutine vinit
-
    subroutine QtoX(x,y,z,transx,transy,transz)
    IMPORT :: npartmax,nwalkmax
    real*8,intent(inout)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
@@ -156,13 +148,6 @@ module mod_interfaces
    real*8,intent(in)    :: mass(npartmax,nwalkmax)
    real*8,intent(in)    :: dt
    end subroutine shiftX
-
-   subroutine shake(x,y,z,vx,vy,vz,iq,iv) 
-   IMPORT :: npartmax,nwalkmax
-   real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8,intent(inout) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-   integer,intent(in) :: iq,iv
-   end subroutine shake
 
    subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
    IMPORT :: npartmax,nwalkmax

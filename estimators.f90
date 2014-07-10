@@ -3,7 +3,6 @@
       module mod_estimators
       use mod_array_size
       implicit none
-      real*8  :: est_temp_cumul=0.0d0,entot_cumul=0.0d0
       real*8  :: est_prim_cumul=0.0d0,est_vir_cumul=0.0d0
       real*8  :: est_prim2_cumul=0.0d0,est_prim_vir=0.0d0,est_vir2_cumul=0.0d0
       real*8  :: cv_prim_cumul=0.0d0,cv_vir_cumul=0.0d0,cv_dcv_cumul=0.0d0
@@ -21,8 +20,9 @@
       use mod_array_size
       use mod_general
       use mod_nhc, ONLY:temp,inose
-      use mod_system, ONLY:am,nshake, dime
+      use mod_system, ONLY:am,dime
       use mod_harmon, ONLY:hess_harmon,hess_morse,hess_2dho,hess
+      use mod_shake, only: nshake
       implicit none
       real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(in) :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)

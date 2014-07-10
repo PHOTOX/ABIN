@@ -7,7 +7,7 @@
      use mod_estimators ,only:estimators
      use mod_general
      use mod_system
-!    use mod_density
+     use mod_density
      implicit none
      !intent inout because of estimators, writing to nwalk+1
      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
@@ -113,6 +113,7 @@
      use mod_general,only:icv,ihess,nwalk,ipimd,natom
      use mod_nhc
      use mod_estimators
+     use mod_kinetic, only: entot_cumul, est_temp_cumul
      use mod_sh,only:cel_re,cel_im,ntraj,nstate,istate
      use mod_gle
      use mod_random

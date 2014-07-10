@@ -100,9 +100,10 @@ END subroutine vinit
 subroutine ScaleVelocities(vx,vy,vz)
    use mod_const,   only: autok
    use mod_general, only: natom, nwalk
-   use mod_system,  only: dime, nshake, f, conatom
+   use mod_system,  only: dime, f, conatom
    use mod_nhc,     only: scaleveloc, temp
    use mod_kinetic, only: ekin_v
+   use mod_shake,   only: nshake
    real(DP),intent(out)    :: vx(:,:), vy(:,:), vz(:,:)
    real(DP)  :: ekin_mom, temp_mom, scal
 

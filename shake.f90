@@ -1,16 +1,48 @@
-      subroutine shake(x,y,z,vx,vy,vz,iq,iv) 
-      use mod_array_size
-      use mod_general
-      use mod_system, ONLY: am,NShake,IShake1,IShake2,dshake,shake_tol
+
+module mod_shake
+   use mod_array_size, only: nshakemax
+   use mod_const, only: DP
+   private
+   public   :: shake_init, shake_tol, nshake, shake, ishake1, ishake2
+   real(DP) :: shake_tol=0.001d0
+   real(DP), allocatable :: dshake(:)
+   !we can't alloce these, because we read them through namelist
+   integer  :: ishake1(nshakemax),ishake2(nshakemax)
+   integer  :: nshake=0
+   save
+   contains
+
+   subroutine shake_init(x,y,z)
+   implicit none
+   real*8 x(:,:),y(:,:),z(:,:)
+   real*8 xi,yi,zi,xj,yj,zj
+   integer :: ixshake,i,j
+   allocate ( dshake(nshake) )
+   Do ixshake=1,nshake
+      i=ishake1(ixshake)
+      j=ishake2(ixshake)
+      xi=x(i,1)
+      yi=y(i,1)
+      zi=z(i,1)
+      xj=x(j,1)
+      yj=y(j,1)
+      zj=z(j,1)
+      dshake(ixshake)=(xi-xj)**2+(yi-yj)**2+(zi-zj)**2
+   enddo
+   end subroutine shake_init
+
+   subroutine shake(x,y,z,vx,vy,vz,iq,iv) 
+      use mod_general, only: nwalk, istage
+      use mod_system, ONLY: am
       implicit none
-      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(inout) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
       integer,intent(in) :: iq,iv
-      real*8  :: mi,mj,mij,agama
-      integer :: iw,i,j,ixshake,iiter,maxcycle,itest
-      real*8  :: dijiter2,xij,yij,zij,rij2
-      real*8  :: xdotij,ydotij,zdotij,dot
-      real*8  :: xiiter,yiiter,ziiter,xjiter,yjiter,zjiter
+      real(DP)  :: mi,mj,mij,agama
+      integer   :: iw,i,j,ixshake,iiter,maxcycle,itest
+      real(DP)  :: dijiter2,xij,yij,zij,rij2
+      real(DP)  :: xdotij,ydotij,zdotij,dot
+      real(DP)  :: xiiter,yiiter,ziiter,xjiter,yjiter,zjiter
       
       maxcycle=1000
       do iw=1,nwalk
@@ -128,5 +160,6 @@
    
 
       return  
-      end
+   end subroutine shake
 
+end module mod_shake

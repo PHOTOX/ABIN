@@ -251,7 +251,8 @@ module mdstep
 ! We then append each "molecule" with its own thermostat.
 ! Definition of molecules are controlled by variables nmolt,natmolt nshakemol.
 ! Note that molecules must be in sequential order.
-! For global thermostattting (i.e. dynamics is not disturbed that much), specify the system as one molecule. But don't do this with PIMD!!
+! For global thermostattting (i.e. dynamics is not disturbed that much), specify the system as one molecule.
+! But don't do this with PIMD!!
 
 ! I.e for system of Chloride in 5 TIP3P waters, there will be 6
 ! molecules and 6 NHC chains. 
@@ -261,9 +262,8 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
                  fxc,fyc,fzc,fxq,fyq,fzq)
       use mod_general, ONLY: istage
       use mod_nhc, ONLY:inose,shiftNHC_yosh,shiftNHC_yosh_mass
-      use mod_system, ONLY:nshake
+      use mod_shake, only: shake, nshake
       use mod_fftw3
-!      use mod_interfaces, ONLY:force_quantum,force_clas,shake,utox,xtou,qtox,xtoq
       real*8,intent(inout) :: x(:,:),y(:,:),z(:,:)
       real*8,intent(inout) :: px(:,:),py(:,:),pz(:,:)
       real*8,intent(in)    :: amg(:,:),amt(:,:)

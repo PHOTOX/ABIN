@@ -28,10 +28,10 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
       use mod_array_size
       use mod_general
       use mod_nhc, ONLY:inose,shiftNHC_yosh,shiftNHC_yosh_mass
-      use mod_system, ONLY:nshake
-      use mod_fftw3
-      use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas,shake,utox,xtou,qtox,xtoq
+      use mod_interfaces, ONLY:shiftP,shiftX,force_quantum,force_clas,utox,xtou,qtox,xtoq
       use mod_system, ONLY:constrainP, conatom
+      use mod_shake, only: shake, nshake
+      use mod_fftw3
       implicit none
       real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(inout) :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)

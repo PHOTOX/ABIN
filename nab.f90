@@ -7,12 +7,12 @@
       real*8 :: charges(npartmax),epsinf=3d33
       integer :: ipbc=0,nsnb=1
       integer :: ips=0 ! 1-both LJ and coul, 2-coul 3- LJ
+      integer :: natmol(npartmax), nmol=1
       save
       contains
       subroutine wrap(x,y,z)
       use mod_array_size
       use mod_general,only:nwalk
-      use mod_system,only:natmol,nmol
       implicit none
       real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       integer :: i,iat,iat2,iw,iww,iwrap=0

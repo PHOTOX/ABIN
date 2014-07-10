@@ -5,23 +5,24 @@ module mod_kinetic
    use mod_const, ONLY: DP
    implicit none
    private
-   public :: temperature, ekin_v, ekin_p
-   !TODO: move est_temp_cumul and entot_cumul 
+   public :: temperature, ekin_v, ekin_p, est_temp_cumul, entot_cumul
+   real(DP) :: est_temp_cumul=0.0d0,entot_cumul=0.0d0
+   save
    contains
    subroutine temperature(px,py,pz,amt,dt,eclas)
       use mod_const, ONLY:AUtoFS,AUtoK
       use mod_general
-      use mod_estimators, ONLY:est_temp_cumul,entot_cumul
-      use mod_system, ONLY: nshake, dime, f, conatom
+      use mod_system, ONLY: dime, f, conatom
       use mod_nhc, ONLY: inose,nhcham,calc_nhcham
       use mod_gle, ONLY:langham
+      use mod_shake, only: nshake
       implicit none
       integer :: iw,iat
-      real*8,intent(in)  :: px(:,:),py(:,:),pz(:,:)
-      real*8,intent(in)  :: amt(:,:)
-      real*8,intent(in)  :: dt,eclas
-      real*8  :: est_temp,temp1,ekin_mom
-      real*8  :: it2
+      real(DP),intent(in)  :: px(:,:),py(:,:),pz(:,:)
+      real(DP),intent(in)  :: amt(:,:)
+      real(DP),intent(in)  :: dt,eclas
+      real(DP)  :: est_temp,temp1,ekin_mom
+      real(DP)  :: it2
       
       it2=it/ncalc
       ekin_mom=0.0d0
@@ -65,12 +66,12 @@ module mod_kinetic
       end subroutine temperature
 
 
-      real*8 function ekin_v (vx,vy,vz)
+      real(DP) function ekin_v (vx,vy,vz)
       use mod_general, ONLY: nwalk, natom
       use mod_system, ONLY:am
       implicit none
-      real*8,intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
-      real*8  :: temp1,ekin_mom 
+      real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
+      real(DP)  :: temp1,ekin_mom 
       integer :: iw,iat
 
       ekin_mom=0.0d0
@@ -88,12 +89,12 @@ module mod_kinetic
       RETURN
       END function ekin_v
 !
-      real*8 function ekin_p (px,py,pz)
+      real(DP) function ekin_p (px,py,pz)
       use mod_general, ONLY: nwalk, natom
       use mod_system, ONLY:am
       implicit none
-      real*8,intent(in)  :: px(:,:),py(:,:),pz(:,:)
-      real*8  :: temp1,ekin_mom 
+      real(DP),intent(in)  :: px(:,:),py(:,:),pz(:,:)
+      real(DP)  :: temp1,ekin_mom 
       integer :: iw,iat
 
       ekin_mom=0.0d0

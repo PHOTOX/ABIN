@@ -17,6 +17,9 @@
       use mod_guillot,ONLY: inames_guillot
       use mod_utils
       use mod_vinit, only: vinit, scalevelocities
+      use mod_density
+      use mod_shake
+      use mod_kinetic, only: entot_cumul, est_temp_cumul
       implicit none
       real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
@@ -41,14 +44,14 @@
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,ibag,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
                parrespa,dime,ncalc,idebug,enmini,rho,iknow
 
-      namelist /nhcopt/ inose,temp,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,scaleveloc,readNHC,initNHC,nmolt,natmolt
+      namelist /nhcopt/ inose,temp,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,scaleveloc,readNHC,initNHC,nmolt,natmolt,nshakemol
       namelist /system/ natom,am,imass_init,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax, &
                         nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
                         k,r0,k1,k2,k3,De,a, &
-                        Nshake,ishake1,ishake2,shake_tol,nmol,nshakemol,names,natmol
+                        Nshake,ishake1,ishake2,shake_tol,names
       namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 !TODO: some checking for accu1/2
       namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,inames,qmmmtype
-      namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf
+      namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
 
       chcoords='mini.dat'
       chinput='input.in'
@@ -77,6 +80,9 @@
        scaleveloc=1
       endif
       read(150,system)
+      !HACK, need to allocate before we read
+      allocate ( natmolt(natom) )
+      allocate ( nshakemol(natom) )
       read(150,nhcopt)
 
       pot=UpperToLower(pot)
@@ -169,7 +175,7 @@
        write(*,*)'Adjust variable ndistmax in modules.f90'
        stop
       endif
-      if(nbin.ge.nbinmax)then
+      if(nbin.gt.nbinmax)then
        write(*,*)'Maximum number of bins for densities is:'
        write(*,*)nbinmax
        write(*,*)'Adjust variable nbinmax in modules.f90'
@@ -229,7 +235,7 @@
               error=1
       endif
       if(nrest.le.0)then
-              write(*,*)'Input error: nwritex must be positive.'
+              write(*,*)'Input error: nrest must be positive.'
               error=1
       endif
       if(nabin.le.0)then

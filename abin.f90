@@ -19,12 +19,12 @@
 program abin_dyn
    use mod_array_size
    use mod_general
-   use mod_system, ONLY:nshake
    use mod_sh
    use mod_fftw3
    use mod_interfaces
    use mod_kinetic, ONLY: temperature
    use mod_utils, only: abinerror, printf
+   use mod_shake, only: nshake
    implicit none
    real*8  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
    real*8  :: amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)

@@ -55,12 +55,13 @@ fi
 cd TESTS
 err=0
 
-files=( geom.dat.??? ORCA/input* state.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie_mini.xyz restart.xyz.old restart.xyz restart.xyz.? )
+files=(temper.dat r.dat vel.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? ORCA/input* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie_mini.xyz restart.xyz.old restart.xyz restart.xyz.? )
 #EULER should check wf_thresh conditions
 if [[ $2 == "sh" ]];then
 folders=( SH_EULER SH_RK4 SH_BUTCHER )
 else
-folders=( SH_EULER SH_RK4 SH_BUTCHER PIGLE CMD PIMD ABINITIO SHAKE HARMON )
+#folders=( SH_EULER SH_RK4 SH_BUTCHER SH_TDC PIGLE CMD PIMD ABINITIO SHAKE HARMON )
+folders=( SHAKE )
 fi
 
 for dir in ${folders[@]}

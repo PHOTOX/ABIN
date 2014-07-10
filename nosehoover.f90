@@ -7,11 +7,12 @@
       integer :: inose=-1,nchain=4,initNHC=-1
       integer :: imasst=1  ! switch for massive thermostatting
       integer :: nrespnose=3,nyosh=7,nmolt=1
-      integer :: natmolt(npartmax)
+      integer,allocatable :: natmolt(:)
       integer :: scaleveloc, readNHC
       real*8,allocatable :: pnhx(:,:,:),pnhy(:,:,:),pnhz(:,:,:)
       real*8,allocatable :: xi_x(:,:,:), xi_y(:,:,:),xi_z(:,:,:)
       real*8,allocatable :: w(:),ms(:,:),Qm(:)
+      integer,allocatable :: nshakemol(:)
       save
       CONTAINS
       subroutine calc_nhcham()
@@ -47,7 +48,7 @@
       subroutine nhc_init() 
       use mod_array_size
       use mod_general
-      use mod_system, ONLY:nshakemol, dime
+      use mod_system, ONLY: dime
       use mod_random
       implicit none
       real*8,allocatable  :: ran(:)
@@ -200,7 +201,7 @@
       SUBROUTINE shiftNHC_yosh (px,py,pz,amt,dt)
       use mod_array_size
       use mod_general
-      use mod_system, only: nshakemol, dime
+      use mod_system, only: dime
       implicit none
       real*8  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
       real*8  :: amt(npartmax,nwalkmax),G(maxchain)
@@ -284,7 +285,7 @@ enddo
       SUBROUTINE shiftNHC_yosh_mass (px,py,pz,amt,dt)
       use mod_array_size
       use mod_general
-      use mod_system,only:nshake
+      use mod_shake,only:nshake
       implicit none
       real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
       real*8 amt(npartmax,nwalkmax)

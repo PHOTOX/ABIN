@@ -3,7 +3,7 @@
 !TODO: genericka funkce pro interpolace 
 !TODO: refactor everything
 module mod_sh
-use mod_array_size
+use mod_array_size, only: npartmax, nwalkmax, nstmax, ntrajmax
 use mod_utils, only: abinerror, printf
 implicit none
 integer,parameter :: ntraj=1
@@ -194,7 +194,7 @@ end subroutine move_vars
 
 !TODO: move nacx_old and en_array_old to mod_sh. Move vx_old, but where? probably mod_sh
    subroutine surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
-      use mod_array_size
+      use mod_const, only: ANG, DP, AUTOFS
       use mod_general
       use mod_system, ONLY: names
       use mod_qmmm, ONLY:natqm
@@ -504,6 +504,7 @@ end subroutine move_vars
       enddo
 
       !TODO:should we hop before decoherence?????
+      ! every article says something different
 ! HOPPING      
       if (nohop.ne.1)then
 

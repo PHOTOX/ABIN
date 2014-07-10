@@ -8,7 +8,7 @@ also test inac=1 (LUKAS code)
 when tests are availabel, check whether  following options change program behaviour
 see this page: https://gcc.gnu.org/onlinedocs/gcc-3.3.5/g77/Overly-Convenient-Options.html#Overly-Convenient-Options
 
-create module for densities, shake, move some variables from module system to module density
+create module for  shake, move some variables from module system to module density
 
 move sh_init into module mod_sh
 
