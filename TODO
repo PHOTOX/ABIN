@@ -1,5 +1,14 @@
+2 problems: 
+1. different potential energies with compilation without fopenmp u PIGLE,CMD,PIMD
+not for SH,ABINITIO or SHAKE, which is weird
+in comit 205ab06 (vinit), the bug is present only fro CMD, which is even weirder
+
+2. different results for SH with and without restart,what are we missing? 
+
+
 I think that hop is wrong, we should not use vx_int
-check velverlet and how we should integrate SH
+and also, after hop, in vx_int arrays will suddenly change...
+maybe it would be easiest to just hop once per big time step
 
 TODO: some simple automatic testing....
 at least 3 SH - for each integrator and different settings
@@ -7,10 +16,6 @@ also test inac=1 (LUKAS code)
 
 when tests are availabel, check whether  following options change program behaviour
 see this page: https://gcc.gnu.org/onlinedocs/gcc-3.3.5/g77/Overly-Convenient-Options.html#Overly-Convenient-Options
-
-create module for  shake, move some variables from module system to module density
-
-move sh_init into module mod_sh
 
 init.F90 radek ~607-608 ..nechapu...restart.xyz tam vubec nemuze byt, kdyz irest.eq.0, asi smazat
 

@@ -14,8 +14,8 @@ module mod_shake
 
    subroutine shake_init(x,y,z)
    implicit none
-   real*8 x(:,:),y(:,:),z(:,:)
-   real*8 xi,yi,zi,xj,yj,zj
+   real(DP) x(:,:),y(:,:),z(:,:)
+   real(DP) xi,yi,zi,xj,yj,zj
    integer :: ixshake,i,j
    allocate ( dshake(nshake) )
    Do ixshake=1,nshake

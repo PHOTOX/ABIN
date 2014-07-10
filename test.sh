@@ -60,8 +60,8 @@ files=(temper.dat r.dat vel.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? 
 if [[ $2 == "sh" ]];then
 folders=( SH_EULER SH_RK4 SH_BUTCHER )
 else
-#folders=( SH_EULER SH_RK4 SH_BUTCHER SH_TDC PIGLE CMD PIMD ABINITIO SHAKE HARMON )
-folders=( SHAKE )
+folders=( SH_EULER SH_RK4 SH_BUTCHER SH_TDC PIGLE CMD PIMD ABINITIO SHAKE HARMON )
+#folders=( SHAKE )
 fi
 
 for dir in ${folders[@]}

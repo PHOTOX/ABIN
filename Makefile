@@ -10,7 +10,7 @@ FC = gfortran
 CC = gcc
 
 #CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
-FFLAGS =  -g -fopenmp   -Wall -Wextra -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
+FFLAGS =  -g  -Wall -Wextra -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
 LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a
 LDLIBS = -lfftw3 -lm -lstdc++ ${LIBS}

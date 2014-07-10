@@ -19,7 +19,7 @@
 program abin_dyn
    use mod_array_size
    use mod_general
-   use mod_sh
+   use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_fftw3
    use mod_interfaces
    use mod_kinetic, ONLY: temperature
@@ -35,14 +35,9 @@ program abin_dyn
    real*8  :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
    real*8  :: transfxc(npartmax,nwalkmax),transfyc(npartmax,nwalkmax),transfzc(npartmax,nwalkmax)
    real*8  :: transxv(npartmax,nwalkmax),transyv(npartmax,nwalkmax),transzv(npartmax,nwalkmax)
-   real*8  :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8  :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8  :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
    real*8  :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-   real*8  :: en_array_old(nstmax,ntrajmax)
    real*8  :: dt,eclas,equant
-   integer :: itrj,iost
-   integer :: iat,iw
+   integer :: iat, iw, itrj
    integer,dimension(8) :: values2,values1
    LOGICAL :: file_exists
    character(len=20) :: chit
@@ -65,7 +60,7 @@ program abin_dyn
 
 !-------SH initialization -- 
      if(ipimd.eq.2)then
-      call sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
+      call sh_init(x,y,z,vx_old,vy_old,vz_old,dt)
      endif
 
       write(*,*)''
@@ -135,22 +130,11 @@ endif
    if (ipimd.eq.1) call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 !----setting initial values for surface hoping
    if(ipimd.eq.2)then
-      itrj=1  ! WARNING: nasty hack
-      if(inac.eq.0)then
-         iost=readnacm(itrj)
-         if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
-!-------------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-            call calcnacm(itrj)
-            iost=readnacm(itrj)
-         endif
-         if(iost.ne.0)then
-            write(*,*)'Some NACMEs not read. Exiting...'
-            call abinerror('main program')
-         endif
-      endif
-      call set_tocalc()
-      call move_vars(en_array_old,nacx_old,nacy_old,nacz_old,vx,vy,vz,vx_old,vy_old,vz_old,itrj)
-   endif
+      do itrj=1, ntraj
+         call get_nacm(itrj)
+         call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
+      end do
+   end if
 
 !---------LOOP OVER TIME STEPS
 !-----it variable is set to 0 or read from restart.xyz in subroutine init
@@ -212,7 +196,7 @@ endif
 !-------SURFACE HOPPING SECTION----------------------------      
       if(ipimd.eq.2)then
 
-      call surfacehop(x,y,z,vx,vy,vz,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
+      call surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt)
       px=amt*vx
       py=amt*vy
       pz=amt*vz

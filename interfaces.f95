@@ -24,16 +24,6 @@ module mod_interfaces
    real*8,intent(out) :: dt
    end subroutine init
 
-   subroutine sh_init(x,y,z,nacx_old,nacy_old,nacz_old,vx_old,vy_old,vz_old,en_array_old,dt)
-   IMPORT :: npartmax,nwalkmax,nstmax,ntrajmax
-   real*8,intent(inout)   :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8,intent(out)  :: nacx_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8,intent(out)  :: nacy_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8,intent(out)  :: nacz_old(npartmax,ntrajmax,nstmax,nstmax)
-   real*8,intent(out)  :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-   real*8,intent(out)  :: en_array_old(nstmax,ntrajmax),dt
-   end subroutine sh_init
-
    subroutine init_mass(amg,amt)
    IMPORT :: npartmax,nwalkmax
    real*8,intent(out) :: amg(npartmax,nwalkmax),amt(npartmax,nwalkmax)
