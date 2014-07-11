@@ -22,9 +22,8 @@ export DATE=`date +"%X %x"`
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 
 F_OBJS = modules.o utils.o interfaces.o random.o shake.o nosehoover.o stage.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
-force_mm.o nab.o analyze_ext_distp.o velverlet.o surfacehop.o minimizer.o force_bound.o respa_shake.o force_guillot.o \
-respa.o density.o analysis.o init.o force_clas.o force_quantum.o  \
-shift.o force_abin.o
+force_mm.o nab.o analyze_ext_distp.o surfacehop.o minimizer.o force_bound.o force_guillot.o \
+density.o analysis.o init.o force_clas.o force_quantum.o force_abin.o mdstep.o 
 
 C_OBJS = nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o  EWALD/ewaldf.o
 
@@ -54,7 +53,7 @@ makeref :
 
 .PHONY: clean test testsh testcl makeref
 
-.SUFFIXES: .F90 .f90 .f95
+.SUFFIXES: .F90 .f90 .f95 .f03 .F03
 
 .F90.o:
 	$(FC) $(FFLAGS) -c $<
@@ -63,5 +62,11 @@ makeref :
 	$(FC) $(FFLAGS) -c $<
 
 .f95.o:
+	$(FC) $(FFLAGS) -c $<
+
+.f03.o:
+	$(FC) $(FFLAGS) -c $<
+
+.F03.o:
 	$(FC) $(FFLAGS) -c $<
 

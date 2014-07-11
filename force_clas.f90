@@ -7,9 +7,10 @@
       use mod_system, only: conatom
       use mod_nhc, ONLY: inose
       use mod_harmon, ONLY: force_harmon,force_2dho,force_morse
-      use mod_interfaces,only:force_abin,QtoX,XtoQ,UtoX,XtoU
+      use mod_interfaces,only:force_abin
       use mod_guillot, ONLY: force_guillot
       use mod_utils, only: printf
+      use mod_transform
       implicit none
       real*8,intent(inout) ::  x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(inout) ::  fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)

@@ -1,52 +1,76 @@
 
-module mdstep
-   use mod_system, ONLY: conatom, constrainP
-   use mod_kinetic, ONLY: ekin_p
+module mod_mdstep
+   use mod_const,    only: DP
+   use mod_system,   only: conatom, constrainP
+   use mod_kinetic,  only: ekin_p
+   use mod_transform
+   use mod_interfaces, ONLY:force_clas, force_quantum
    implicit none
    private
-   public :: verletstep,respastep,respashake,force_clas,force_quantum
+   public :: verletstep,respastep,respashake
 
    contains
 
    SUBROUTINE shiftX (rx,ry,rz,px,py,pz,mass,dt)
-   real*8,intent(inout) :: rx(:,:),ry(:,:),rz(:,:)
-   real*8,intent(in)   :: px(:,:),py(:,:),pz(:,:)
-   real*8,intent(in)    :: mass(:,:)
-   real*8,intent(in)    :: dt
+   use mod_general, only: natom, nwalk
+   real(DP),intent(inout) :: rx(:,:),ry(:,:),rz(:,:)
+   real(DP),intent(in)    :: px(:,:),py(:,:),pz(:,:)
+   real(DP),intent(in)    :: mass(:,:)
+   real(DP),intent(in)    :: dt
+   integer :: i, iw
 
-      RX = RX + dt * PX/MASS
-      RY = RY + dt * PY/MASS
-      RZ = RZ + dt * PZ/MASS
+      do iw=1,nwalk
+       do i=1, natom
+
+         RX(i,iw) = RX(i,iw) + dt * PX(i,iw)/MASS(i,iw)
+         RY(i,iw) = RY(i,iw) + dt * PY(i,iw)/MASS(i,iw)
+         RZ(i,iw) = RZ(i,iw) + dt * PZ(i,iw)/MASS(i,iw)
+
+       end do
+      end do
+      !RX = RX + dt * PX/MASS
+      !RY = RY + dt * PY/MASS
+      !RZ = RZ + dt * PZ/MASS
 
    RETURN
    END
 
    SUBROUTINE shiftP (px,py,pz,fx,fy,fz,dt)
-   real*8,intent(inout)  :: px(:,:),py(:,:),pz(:,:)
-   real*8,intent(in)     :: fx(:,:),fy(:,:),fz(:,:)
-   real*8,intent(in)     :: dt
+   use mod_general,only: nwalk,natom
+   real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
+   real(DP),intent(in)     :: fx(:,:),fy(:,:),fz(:,:)
+   real(DP),intent(in)     :: dt
+   integer :: i,iw
 
-      PX = PX + dt*FX
-      PY = PY + dt*FY
-      PZ = PZ + dt*FZ
+      do i=1, natom
+       do iw=1,nwalk
+
+         PX(I,iw) = PX(I,iw) + dt*FX(I,iw)
+         PY(I,iw) = PY(I,iw) + dt*FY(I,iw)
+         PZ(I,iw) = PZ(I,iw) + dt*FZ(I,iw)
+
+       end do
+      end do
+!      PX = PX + dt*FX
+!      PY = PY + dt*FY
+!      PZ = PZ + dt*FZ
 
    RETURN
    END
 
-!----- Velocity verlet ALGORITHM                              Daniel Hollas,2012
+!--Velocity verlet ALGORITHM                              Daniel Hollas,2012
 !  At this moment it does not contain shake routines,
 !  which are only in respashake function
 !  GLE and NHC thermostats available at the moment
    subroutine verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
    use mod_nhc, ONLY:inose, imasst, shiftNHC_yosh, shiftNHC_yosh_mass
-   use mod_gle, ONLY:langham, gle_step
-!   use mod_interfaces, ONLY:force_clas
-   real*8,intent(inout) :: x(:,:),y(:,:),z(:,:)
-   real*8,intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
-   real*8,intent(inout) :: px(:,:),py(:,:),pz(:,:)
-   real*8,intent(in)    :: amt(:,:)
-   real*8,intent(in)    :: dt
-   real*8,intent(inout) :: eclas
+   use mod_gle, ONLY:langham, gle_step, wn_step
+   real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
+   real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
+   real(DP),intent(in)    :: amt(:,:)
+   real(DP),intent(in)    :: dt
+   real(DP),intent(inout) :: eclas
 
 
    !---THERMOSTATS------------------
@@ -109,18 +133,17 @@ module mdstep
    ! further info is before subroutine respa_shake
    subroutine respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
               fxc,fyc,fzc,fxq,fyq,fzq)
-   use mod_general, ONLY: istage
+   use mod_general, ONLY: istage, nabin
    use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
    use mod_gle, ONLY:langham, gle_step
-!   use mod_interfaces, ONLY:force_quantum,force_clas
-   real*8,intent(inout)  :: x(:,:),y(:,:),z(:,:)
-   real*8,intent(inout)  :: fxc(:,:),fyc(:,:),fzc(:,:)
-   real*8,intent(inout)  :: fxq(:,:),fyq(:,:),fzq(:,:)
-   real*8,intent(inout)  :: px(:,:),py(:,:),pz(:,:)
-   real*8,intent(in)     :: amg(:,:),amt(:,:)
-   real*8,intent(in)     :: dt
-   real*8,intent(inout)  :: eclas,equant
-   integer               :: iabin
+   real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout)  :: fxc(:,:),fyc(:,:),fzc(:,:)
+   real(DP),intent(inout)  :: fxq(:,:),fyq(:,:),fzq(:,:)
+   real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
+   real(DP),intent(in)     :: amg(:,:),amt(:,:)
+   real(DP),intent(in)     :: dt
+   real(DP),intent(inout)  :: eclas,equant
+   integer                 :: iabin
    
    if (inose.eq.2)then
       langham=langham+ekin_p(px,py,pz)
@@ -260,21 +283,17 @@ module mdstep
 
 subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
                  fxc,fyc,fzc,fxq,fyq,fzq)
-      use mod_general, ONLY: istage
+      use mod_general, ONLY: nabin
       use mod_nhc, ONLY:inose,shiftNHC_yosh,shiftNHC_yosh_mass
       use mod_shake, only: shake, nshake
-      use mod_fftw3
-      real*8,intent(inout) :: x(:,:),y(:,:),z(:,:)
-      real*8,intent(inout) :: px(:,:),py(:,:),pz(:,:)
-      real*8,intent(in)    :: amg(:,:),amt(:,:)
-      real*8,intent(in)    :: dt
-      real*8,intent(inout) :: eclas,equant
-      real*8,intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
-      real*8,intent(inout) :: fxq(:,:),fyq(:,:),fzq(:,:)
-      real*8 vx(:,:),vy(:,:),vz(:,:)
-      real*8 transx(:,:),transy(:,:),transz(:,:)
-      real*8 transxv(:,:),transyv(:,:),transzv(:,:)
-      integer :: iabin,iq,iv
+      real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
+      real(DP),intent(in)    :: amg(:,:),amt(:,:)
+      real(DP),intent(in)    :: dt
+      real(DP),intent(inout) :: eclas,equant
+      real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
+      real(DP),intent(inout) :: fxq(:,:),fyq(:,:),fzq(:,:)
+      integer  :: iabin
 
 
       if(inose.eq.1)then
@@ -285,25 +304,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
       if(conatom.gt.0) call constrainP (px,py,pz)
 
 ! RATTLE HERE!
-      if(nshake.ge.1)then
-      iq=0 ;iv=1
-      !TODO: do this conversion inside the shake routine
-      vx=px/amt
-      vy=py/amt
-      vz=pz/amt
-      if(istage.eq.1)then
-       call QtoX(x,y,z,transx,transy,transz)
-       call QtoX(vx,vy,vz,transxv,transyv,transzv)
-       call shake(transx,transy,transz,transxv,transyv,transzv,iq,iv) 
-       call XtoQ(transxv,transyv,transzv,vx,vy,vz)
-      else
-       call shake(x,y,z,vx,vy,vz,iq,iv) 
-      endif
-      px=vx*amt
-      py=vy*amt
-      pz=vz*amt
-      endif
-!------END OF RATTLE     
+      if(nshake.ge.1) call shake(x,y,z,px,py,pz,amt,0,1) 
 
 
       if(inose.eq.1)then
@@ -321,27 +322,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
        if(conatom.gt.0) call constrainP (px,py,pz)
 
 !--------RATTLE HERE!
-   if(nshake.ge.1)then
-   iq=0 ;iv=1
-   vx=px/amt
-   vy=py/amt
-   vz=pz/amt
-   if(istage.eq.1)then
-    call QtoX(x,y,z,transx,transy,transz)
-    call QtoX(vx,vy,vz,transxv,transyv,transzv)
-    call shake(transx,transy,transz,transxv,transyv,transzv,iq,iv) 
-    call XtoQ(transxv,transyv,transzv,vx,vy,vz)
-!    upravujeme pouze rychlosti, tak asi nepotrebujeme transformovat zpatky
-!    souradnice      
-    call XtoQ(transx,transy,transz,x,y,z)
-   else
-    call shake(x,y,z,vx,vy,vz,iq,iv) 
-   endif
-    px=vx*amt
-    py=vy*amt
-    pz=vz*amt
-   endif
-!------END OF RATTLE     
+   if(nshake.ge.1) call shake(x,y,z,px,py,pz,amt,0,1) 
 
 !CONSTRAINING ATOMS
     if(conatom.gt.0) call constrainP (px,py,pz)
@@ -349,18 +330,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
     call shiftX(x,y,z,px,py,pz,amt,dt/nabin)
 
 !------SHAKE , iq=1, iv=0
-   if(NShake.ge.1)then 
-    iq=1
-    iv=0
-    if(istage.eq.1)then
-     call QtoX(x,y,z,transx,transy,transz)
-     call shake(transx,transy,transz,transxv,transyv,transzv,iq,iv) 
-     call XtoQ(transx,transy,transz,x,y,z)
-    else
-     call shake(x,y,z,vx,vy,vz,iq,iv) 
-    endif
-   endif
-!------END OF SHAKE     
+   if(NShake.gt.0) call shake(x,y,z,px,py,pz,amt,1,0) 
 
     call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 
@@ -390,4 +360,4 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
 
    end
 
-end module mdstep
+end module mod_mdstep

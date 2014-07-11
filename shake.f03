@@ -3,6 +3,7 @@ module mod_shake
    use mod_array_size, only: nshakemax
    use mod_const, only: DP
    use mod_utils, only: abinerror
+   implicit none
    private
    public   :: shake_init, shake_tol, nshake, shake, ishake1, ishake2
    real(DP) :: shake_tol=0.001d0
@@ -14,7 +15,6 @@ module mod_shake
    contains
 
    subroutine shake_init(x,y,z)
-   implicit none
    real(DP) x(:,:),y(:,:),z(:,:)
    real(DP) xi,yi,zi,xj,yj,zj
    integer :: ixshake,i,j
@@ -32,19 +32,37 @@ module mod_shake
    enddo
    end subroutine shake_init
 
-   subroutine shake(x,y,z,vx,vy,vz,iq,iv) 
-      use mod_general, only: nwalk, istage
+   subroutine shake(x,y,z,px,py,pz,amt,iq,iv) 
+!      use mod_array_size, only: nwalkmax, npartmax
+      use mod_general, only: natom, nwalk, istage
       use mod_system, ONLY: am
-      implicit none
       real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
-      real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
-      integer,intent(in) :: iq,iv
+      real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
+      real(DP),intent(in)    :: amt(:,:)
+      integer,intent(in)     :: iq,iv
+      real(DP),allocatable,save :: vx(:,:),vy(:,:),vz(:,:)
       real(DP)  :: mi,mj,mij,agama
-      integer   :: iw,i,j,ixshake,iiter,maxcycle,itest
+      integer   :: iat, iw,i,j,ixshake,iiter,maxcycle,itest
       real(DP)  :: dijiter2,xij,yij,zij,rij2
       real(DP)  :: xdotij,ydotij,zdotij,dot
       real(DP)  :: xiiter,yiiter,ziiter,xjiter,yjiter,zjiter
+
+      if( .not.allocated(vx) )then
+         allocate( vx(natom, nwalk) )
+         allocate( vy(natom, nwalk) )
+         allocate( vz(natom, nwalk) )
+      end if
       
+      if (iv.eq.1)then
+         do iw=1,nwalk
+            do iat=1,natom
+               vx(iat,iw)=px(iat,iw)/amt(iat,iw)
+               vy(iat,iw)=py(iat,iw)/amt(iat,iw)
+               vz(iat,iw)=pz(iat,iw)/amt(iat,iw)
+            end do
+         end do
+      end if
+
       maxcycle=1000
       do iw=1,nwalk
 
@@ -158,6 +176,16 @@ module mod_shake
 
 
       enddo
+
+      if (iv.eq.1)then
+         do iw=1,nwalk
+            do iat=1,natom
+               px(iat,iw)=vx(iat,iw)*amt(iat,iw)
+               py(iat,iw)=vy(iat,iw)*amt(iat,iw)
+               pz(iat,iw)=vz(iat,iw)*amt(iat,iw)
+            end do
+         end do
+      end if
    
 
       return  

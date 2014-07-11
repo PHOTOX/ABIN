@@ -13,7 +13,7 @@
       use mod_gle
       use mod_nab
       use mod_sbc
-      use mod_fftw3
+      use mod_fftw3  ,only: fftw_init
       use mod_random
       use mod_guillot,ONLY: inames_guillot
       use mod_utils

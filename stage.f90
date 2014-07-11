@@ -1,15 +1,69 @@
-!-----STAGE.f                                  P.Slavicek and D.Hollas, 9.2.2012
-!-----Various staging transformation subroutines are placed here.
-!-----NORMAL MODE TRANSFORMATION added during March 2013
+
+module mod_fftw3
+   use, intrinsic :: iso_c_binding
+   include 'fftw3.f03'
+   type(C_PTR) :: plan_utox,plan_xtou
+   real(C_DOUBLE), dimension(:), allocatable :: x_in, y_in, z_in
+   complex(C_DOUBLE_COMPLEX), dimension(:), allocatable :: cx, cy, cz
+   save
+   contains
+
+   subroutine fftw_init(nwalk)
+      use mod_const, only: DP
+      integer :: nwalk
+
+      if(DP.ne.C_DOUBLE)then
+         write(*,*)'WARNING: Kind DP is not equal kind C_DOUBLE'
+         write(*,*)'Precision might be lost during normal mode transform.'
+         write(*,*)'Set iknow=1 if you want to proceed.'
+         if (iknow.ne.1) call abinerror('fftw_init')
+      end if
+
+      allocate( x_in(nwalk+1) )
+      allocate( y_in(nwalk+1) )
+      allocate( z_in(nwalk+1) )
+
+      allocate( cx(nwalk+1) )
+      allocate( cy(nwalk+1) )
+      allocate( cz(nwalk+1) )
+
+      plan_xtou=fftw_plan_dft_r2c_1d(nwalk,x_in,cx, FFTW_MEASURE)
+      plan_utox=fftw_plan_dft_c2r_1d(nwalk,cx,x_in, FFTW_MEASURE)
+
+   end subroutine
+
+   subroutine fftw_end()
+      deallocate( x_in )
+      deallocate( y_in )
+      deallocate( z_in )
+
+      deallocate( cx )
+      deallocate( cy )
+      deallocate( cz )
+
+      call fftw_destroy_plan(plan_xtou)
+      call fftw_destroy_plan(plan_utox)
+   end subroutine
+end module mod_fftw3
+
+!---mod_transform                  P.Slavicek and D.Hollas, 9.2.2012
+!---Various staging transformation subroutines are placed here.
+!---NORMAL MODE TRANSFORMATION added during March 2013
+
+module mod_transform
+   use mod_const, only: DP
+   use mod_general, only:natom, nwalk
+   implicit none
+   private
+   public :: UtoX, XtoU, QtoX, XtoQ, FXtoFQ, FQtoFX
+   public :: init_mass
+   contains
 
 !     This routine transforms staging coordinates to cartesian coordinates, which are stored
 !     in trans matrices,values in x,y and z matrices are NOT modified!!      
-      subroutine QtoX(x,y,z,transx,transy,transz)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8,intent(inout)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(out)    :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
+   subroutine QtoX(x,y,z,transx,transy,transz)
+      real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out)    :: transx(:,:),transy(:,:),transz(:,:)
       integer :: iat,iw
 
       do iat=1,natom
@@ -32,16 +86,13 @@
        enddo
       enddo
 
-      end
+   end subroutine QtoX
 
 !     This routine transforms cartesian to staging coordinates, which are stored
 !     in trans matrices,values in x,y and z matrices are NOT modified!!      
-      subroutine XtoQ(x,y,z,transx,transy,transz)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8,intent(inout)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(out) :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
+   subroutine XtoQ(x,y,z,transx,transy,transz)
+      real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out) :: transx(:,:),transy(:,:),transz(:,:)
       integer :: iat,iw
 
 ! (nwalk+1)th walker is identical to the first one in the polymer
@@ -65,17 +116,16 @@
        enddo
       enddo
 
-      end
+   end subroutine XtoQ
 
 
                                         
-      subroutine init_mass(amg,amt)
-      use mod_array_size
-      use mod_general
+   subroutine init_mass(amg,amt)
+      use mod_const, only: PI
+      use mod_general, only: istage
       use mod_system, ONLY: am
-      implicit none
-      real*8,intent(out) :: amg(npartmax,nwalkmax),amt(npartmax,nwalkmax)
-      real*8  :: lambda(nwalkmax+1)
+      real(DP),intent(out) :: amg(:,:),amt(:,:)
+      real(DP)  :: lambda(size(amg,2)+1)
       integer :: iat,iw
 
 ! NOTE: am was multiplied by amu earlier in the init.f
@@ -109,8 +159,8 @@
        do iat=1,natom
         lambda(1)=0
         do iw=2,nwalk,2
-        lambda(iw)=2*nwalk*(1-cos(pi*iw/nwalk))
-        lambda(iw+1)=lambda(iw)
+         lambda(iw)=2*nwalk*(1-cos(PI*iw/nwalk))
+         lambda(iw+1)=lambda(iw)
         enddo
         do iw=2,nwalk
          amg(iat,iw)=am(iat)*lambda(iw)
@@ -126,19 +176,16 @@
 
       endif
 
-      end
+    end subroutine init_mass
 
 !     This routine transforms staging forces to cartesian forces, which are stored
 !     in trans matrices,values in fx,fy and fz matrices are NOT modified!!
 !     used in estimators.f90      
-      subroutine FQtoFX(fx,fy,fz,transfx,transfy,transfz)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8,intent(in)    :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8,intent(inout) :: transfx(npartmax,nwalkmax),transfy(npartmax,nwalkmax),transfz(npartmax,nwalkmax)
-      integer :: iat,iw
-      real*8  :: sumx=0.0d0,sumy=0.0d0,sumz=0.0d0
+   subroutine FQtoFX(fx,fy,fz,transfx,transfy,transfz)
+      real(DP),intent(in)    :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(inout) :: transfx(:,:),transfy(:,:),transfz(:,:)
+      real(DP)  :: sumx, sumy, sumz
+      integer   :: iat,iw
 
 
       do iat=1,natom
@@ -161,9 +208,9 @@
        transfz(iat,1)=fz(iat,1)-sumz
       enddo
 
-       return 
+      return 
 
-       end
+   end subroutine FQtoFX
 
 
 ! This routine transforms cartesian forces to staging forces, which are stored
@@ -176,13 +223,10 @@
 ! futhermore, the dphi/dx(i-1) should actually be dphi/du(i-1)
 ! See Tuckerman's lecture notes. The force is therefore transformed 
 ! reccursively. sumux-z contains the (i-1) force used for this purpose.
-      subroutine FXtoFQ(fxab,fyab,fzab,fx,fy,fz)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8,intent(inout)  :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8,intent(in)     :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
-      real*8  :: sumux(nwalkmax),sumuy(nwalkmax),sumuz(nwalkmax)
+   subroutine FXtoFQ(fxab,fyab,fzab,fx,fy,fz)
+      real(DP),intent(inout)  :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(in)     :: fxab(:,:),fyab(:,:),fzab(:,:)
+      real(DP)  :: sumux(size(fx,2)),sumuy(size(fx,2)),sumuz(size(fx,2))
       integer :: iat,iw
 
       do iat=1,natom
@@ -214,42 +258,17 @@
        enddo
 
        return
-       end
+   end subroutine FXtoFQ
 
-      module mod_fftw3
-      use mod_array_size
-      use, intrinsic :: iso_c_binding
-      include 'fftw3.f03'
-      type(C_PTR) :: plan_utox,plan_xtou
-      real(C_DOUBLE), dimension(nwalkmax+1) :: x_in,y_in,z_in
-      complex(C_DOUBLE_COMPLEX), dimension(nwalkmax+1) :: cx,cy,cz
-      save
-      contains
-      subroutine fftw_init(nwalk)
-      integer :: nwalk
-!      plan_xtou=fftw_plan_dft_1d(nwalk,x_in,cx, FFTW_FORWARD,FFTW_MEASURE)
-!      plan_utox=fftw_plan_dft_1d(nwalk,cx,x_in, FFTW_BACKWARD,FFTW_MEASURE)
-      plan_xtou=fftw_plan_dft_r2c_1d(nwalk,x_in,cx, FFTW_MEASURE)
-      plan_utox=fftw_plan_dft_c2r_1d(nwalk,cx,x_in, FFTW_MEASURE)
-
-      end subroutine
-      subroutine fftw_end()
-      call fftw_destroy_plan(plan_xtou)
-      call fftw_destroy_plan(plan_utox)
-      end subroutine
-      end module
 
 !     This routine transforms normal mode coordinates to cartesian coordinates, which are stored
 !     in trans matrices,values in x,y and z matrices are NOT modified!!      
 !     masses are also modified
-      subroutine UtoX(x,y,z,transx,transy,transz)
-      use mod_array_size
-      use mod_general
+   subroutine UtoX(x,y,z,transx,transy,transz)
       use mod_fftw3
-      implicit none
-      real*8  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8  :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-      integer :: iat,iw
+      real(DP)  :: x(:,:),y(:,:),z(:,:)
+      real(DP)  :: transx(:,:),transy(:,:),transz(:,:)
+      integer   :: iat,iw
 
        do iat=1,natom
 
@@ -280,18 +299,16 @@
 !      write(*,*)'normal modes back to cartesian'
 !      call printf(transx/ang,transy/ang,transz/ang)
 
-      end
+   end subroutine UtoX
 
-!     This routine transforms cartesian to normal coordinates, which are stored
-!     in trans matrices,values in x,y and z matrices are NOT modified!!      
-      subroutine XtoU(x,y,z,transx,transy,transz)
-      use mod_array_size
-      use mod_general
+!  This routine transforms cartesian to normal coordinates, which are stored
+!  in trans matrices,values in x,y and z matrices are NOT modified!!      
+   subroutine XtoU(x,y,z,transx,transy,transz)
       use mod_fftw3
-      implicit none
-      real*8  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8  :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-      integer :: iat,iw
+      use mod_general, only: idebug
+      real(DP)  :: x(:,:),y(:,:),z(:,:)
+      real(DP)  :: transx(:,:),transy(:,:),transz(:,:)
+      integer   :: iat,iw
 
       do iat=1,natom
        do iw=1,nwalk
@@ -331,4 +348,6 @@ endif
 
 
 
-      end
+   end subroutine XtoU
+
+end module mod_transform
