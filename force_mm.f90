@@ -2,22 +2,23 @@
 !- Daniel Hollas                        2013
 !------------------------------------------------------
 module mod_qmmm
-   use mod_array_size
+   use mod_const, only: DP
+   use mod_array_size, only:npartmax, nwalkmax
+   use mod_utils, only: abinerror
    implicit none
    character(len=2) :: attypes(npartmax)
    integer          :: natqm,natmm
    character(len=10),parameter :: LJcomb='LB' !no other option for now
    character(len=10) :: qmmmtype='NA'
-   real*8  :: q(npartmax),rmin(npartmax),eps(npartmax)
-   real*8,allocatable  :: AIJ(:,:),BIJ(:,:)
+   real(DP)  :: q(npartmax),rmin(npartmax),eps(npartmax)
+   real(DP),allocatable  :: AIJ(:,:),BIJ(:,:)
    save
    CONTAINS
    subroutine inames_init()
    use mod_general, ONLY:natom
    use mod_system, ONLY:inames,names
-   implicit none
-   integer :: i,iat2,pom=0
-   save
+   integer :: i,iat2,pom
+
    do i=1,natom
     pom=0
     do iat2=1,natom
@@ -29,18 +30,18 @@ module mod_qmmm
     enddo
     if (pom.eq.0)then
      write(*,*)'Atom name does not have atom type for qmmm parameters. Exiting....'
-     stop 1
+     call abinerror('inames_init')
     endif
    enddo
+
    end subroutine inames_init
 
    subroutine ABr_init()
-   use mod_array_size, ONLY: ang
-   use mod_general, ONLY:natom
-   use mod_system, ONLY:inames
-   implicit none
+   use mod_const,    ONLY: ANG
+   use mod_general,  ONLY:natom
+   use mod_system,   ONLY:inames
    integer :: iat1,iat2,i1,i2
-   real*8  :: epsij,rij
+   real(DP)  :: epsij,rij
    allocate(AIJ(natom,natom))
    allocate(BIJ(natom,natom))
    do iat1=1,natom
@@ -62,12 +63,12 @@ module mod_qmmm
    use mod_general
    use mod_system, ONLY:inames 
    implicit none
-   real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8,intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-   real*8,intent(inout) :: eclas
+   real(DP),intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real(DP),intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+   real(DP),intent(inout) :: eclas
    integer :: iw,iat1,iat2,i1,i2
-   real*8  :: r,kLJ,kC
-   real*8  :: ri,ri3,dx,dy,dz
+   real(DP)  :: r,kLJ,kC
+   real(DP)  :: ri,ri3,dx,dy,dz
 
    do iw=1,nwalk
       do iat1=1,natom

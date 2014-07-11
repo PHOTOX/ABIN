@@ -5,6 +5,7 @@
       use mod_harmon, ONLY: hess
       use mod_sh
       use mod_qmmm, ONLY:natqm
+      use mod_utils,  only: abinerror
       implicit none
       real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
       real*8,intent(out)   :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
@@ -79,8 +80,7 @@
               write(chsystem,*)'./DYN/r.dyn '
       case DEFAULT
               write(*,*)'Error in input parameter "pot"'
-              write(*,*)'Exiting, NOW!'
-              stop 1
+              call abinerror('force_abin')
      end SELECT
 
 !-Passing arguments to bash script
@@ -111,9 +111,9 @@
       read(20+iw,*,IOSTAT=iost)temp1
       if(iost.ne.0)then
               write(*,*)'Fatal problem with reading energy from engrad.dat'
-              write(*,*)'This usually means, that the ab initio program failed. See the appropriate output files.'
-              write(*,*)'Exiting...'
-              stop 1
+              write(*,*)'This usually means, that the ab initio program failed.'
+              write(*,*)'See the appropriate output files.'
+              call abinerror('force_abin')
       endif
 !$OMP ATOMIC
       eclas=eclas+temp1
@@ -131,10 +131,10 @@
      do iat=1,natqm
       read(20+iw,*,IOSTAT=iost)fx(iat,iw),fy(iat,iw),fz(iat,iw)
       if(iost.ne.0)then
-              write(*,*)'Fatal problem with reading gradients from engrad.dat'
-              write(*,*)'This usually means, that the ab initio program failed. See the appropriate output files.'
-              write(*,*)'Exiting...'
-              stop 1
+              write(*,*)'Fatal problem with reading energy from engrad.dat'
+              write(*,*)'This usually means, that the ab initio program failed.'
+              write(*,*)'See the appropriate output files.'
+              call abinerror('force_abin')
       endif
 !---Conversion to forces        
        fx(iat,iw)=-fx(iat,iw)

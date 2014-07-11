@@ -1,16 +1,17 @@
-# Makefile for ABIN		Daniel Hollas,2014
-# Simply type "make" and you should get the binary
+# Super simple Makefile for ABIN		Daniel Hollas,2014
+# Simply type "make" and you should get the binary named $OUT
 # Before recompiling, it is wise to clean up by "make clean"
 #
 # WARNING:dependecies on *.mod files are hidden!
 # if you change modules, you should recompile the whole thing i.e. make clean;make
 #
 OUT = abin.dev
+# You actually have to use gfortran, becouse of precompiled LIBS
 FC = gfortran
 CC = gcc
 
 #CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
-FFLAGS =  -g  -Wall -Wextra -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
+FFLAGS =  -g -fopenmp  -Wall -Wextra -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
 LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a
 LDLIBS = -lfftw3 -lm -lstdc++ ${LIBS}

@@ -3,23 +3,24 @@
 !---Should the user need something more then coordinates(velocities,forces),
 ! he/she must also modify  analysis.f90 and possibly also  abin.f90
       module mod_analyze_ext
-      use mod_array_size
-      real*8  :: xmin=-20.0d0,xmax=20.0d0
+      use mod_const, only: DP
+      use mod_array_size, only: nbinmax, nwalkmax
+      real(DP)  :: xmin=-20.0d0,xmax=20.0d0
       integer,parameter :: nbin=500
-      real*8  dist(nbin,nwalkmax)
+      real(DP)  dist(nbinmax,nwalkmax)
       save
       contains
       subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
-      use mod_array_size
-      use mod_general
-      use mod_system, ONLY: names, am, dime
+      use mod_general,  only: it, natom, nwalk, pot, nwrite
+      use mod_system,   only: names, am, dime
+      use mod_utils,    only: abinerror
       implicit none
-      real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8,intent(in) :: amt(npartmax,nwalkmax)
-      real*8  :: anorm,dx,dbin
+      real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
+      real(DP),intent(in) :: amt(:,:)
+      real(DP)  :: p(size(vx,1),size(vx,2))
+      real(DP)  :: anorm,dx,dbin
       integer :: iw,ipom,ian,iat
-      real*8  :: p(npartmax,nwalkmax)
 
       iat=1
 
@@ -37,7 +38,7 @@
        if(ipom.gt.nbin.or.ipom.le.0)then
         write(*,*)'problems with p distribution function'
         write(*,*)'p=',p(iat,iw)
-        stop
+        call abinerror('analyze_ext')
        endif
 
        dist(ipom,iw)=dist(ipom,iw)+1.0

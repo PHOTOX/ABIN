@@ -1,9 +1,6 @@
-2 problems: 
-1. different potential energies with compilation without fopenmp u PIGLE,CMD,PIMD
-not for SH,ABINITIO or SHAKE, which is weird
-in comit 205ab06 (vinit), the bug is present only fro CMD, which is even weirder
+we should first make all the TESTS and comit them, then we can play around
 
-2. different results for SH with and without restart,what are we missing? 
+different results for SH with and without restart,what are we missing? 
 
 
 I think that hop is wrong, we should not use vx_int

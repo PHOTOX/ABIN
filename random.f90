@@ -667,7 +667,7 @@ module mod_random
       end subroutine getstr
 
       subroutine rsavef(iout,lread)
-         implicit none
+         use mod_utils, only: abinerror
          integer,intent(in) :: iout  !where do we write the state
 !         integer,intent(in) :: isave !0=read,1=save
          logical,intent(out),optional :: lread
@@ -681,8 +681,7 @@ module mod_random
          inquire(unit=iout,exist=lexist,opened=lopened)
          if(lexist.and..not.lopened)then
             write(*,*)'Unit for PRNG state must be opened!Exiting...'
-            stop 1
-!           open(iout,access="append")
+            call abinerror('rsavef')
          end if
 
 !         if (isave.eq.1)then
@@ -699,11 +698,10 @@ module mod_random
             if(iost /= 0)then
                write(*,*)'PRNG state not present in restart file.Ignoring...'
             else if (chprng.ne.trim(readstring)) then
-               write(*,*)'PRNG STATE IN RESTART FILE SEEMS TO BE BROKEN.'
+               write(*,*)'ERROR: PRNG STATE IN RESTART FILE SEEMS TO BE BROKEN.'
                write(*,*)'Expected:',chprng
                write(*,*)'Got',readstring
-               write(*,*)'Exiting...'
-               stop 1
+               call abinerror('rsavef')
             else
                read(iout,*)init,last
                read(iout,*)isave,gsave

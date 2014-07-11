@@ -2,6 +2,7 @@
 module mod_shake
    use mod_array_size, only: nshakemax
    use mod_const, only: DP
+   use mod_utils, only: abinerror
    private
    public   :: shake_init, shake_tol, nshake, shake, ishake1, ishake2
    real(DP) :: shake_tol=0.001d0
@@ -99,8 +100,8 @@ module mod_shake
         enddo
         
         if (iiter.ge.maxcycle)then
-          write(*,*)'Shake not converged after',maxcycle,'iterations. Exiting...'      
-          stop
+          write(*,*)'Error: Shake not converged after',maxcycle,'iterations. Exiting...'      
+          call abinerror('shake')
         endif
         
         endif
@@ -151,7 +152,7 @@ module mod_shake
         enddo
         if (iiter.ge.maxcycle)then
            write(*,*)'Velocity shake not converged after',maxcycle,'iterations. Exiting...'      
-           stop
+           call abinerror('shake')
         endif
         endif
 

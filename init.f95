@@ -91,7 +91,10 @@
          integ=UpperToLower(integ)
       end if
       if(iqmmm.eq.1.or.pot.eq.'mm') read(150,qmmm)
-      if(qmmmtype.eq."nab".or.pot.eq.'nab') read(150,nab)
+      if(qmmmtype.eq."nab".or.pot.eq.'nab')then
+         allocate ( natmol(natom) )
+         read(150,nab)
+      end if
       close(150)
 
 !$    call OMP_set_num_threads(nproc)
@@ -766,6 +769,7 @@ endif
        call nab_init(alpha_pme,cutoff,nsnb,ipbc,ips,iqmmm) !C function...see nabinit.c
 
        if(ipbc.eq.1)then
+        allocate ( charges(natom) )
         if (nchain.eq.1) f=3
         call nab_getbox(boxx,boxy,boxz) !see nabinit.c
         call nab_getcharges(charges) !see nabinit.c

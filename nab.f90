@@ -1,21 +1,22 @@
       module mod_nab
-      use mod_array_size
+      use mod_const, only: DP
       implicit none
-      real*8 boxx,boxy,boxz
-      real*8 boxx2,boxy2,boxz2
-      real*8  :: alpha_pme=-1,kappa_pme=-1,cutoff=10.0d0
-      real*8 :: charges(npartmax),epsinf=3d33
-      integer :: ipbc=0,nsnb=1
-      integer :: ips=0 ! 1-both LJ and coul, 2-coul 3- LJ
-      integer :: natmol(npartmax), nmol=1
+      real(DP) :: boxx,boxy,boxz
+      real(DP) :: boxx2,boxy2,boxz2
+      real(DP) :: alpha_pme=-1,kappa_pme=-1,cutoff=100.0d0
+      real(DP) :: epsinf=3d33
+      real(DP), allocatable :: charges(:)
+      integer, allocatable  :: natmol(:) !used for wraping, independent of nmolt
+      integer  :: nmol=1 !used for wraping, independent of nmolt
+      integer  :: ipbc=0,nsnb=1
+      integer  :: ips=0 ! 1-both LJ and coul, 2-coul 3- LJ
       save
       contains
+
       subroutine wrap(x,y,z)
-      use mod_array_size
       use mod_general,only:nwalk
-      implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      integer :: i,iat,iat2,iw,iww,iwrap=0
+      real(DP) :: x(:,:),y(:,:),z(:,:)
+      integer  :: i,iat,iat2,iw,iww,iwrap
 
       iwrap=0
 
@@ -86,32 +87,35 @@
       end subroutine
 
       subroutine force_nab(x,y,z,fx,fy,fz,eclas)
-      use mod_array_size
-      use mod_general
-      use mod_estimators, ONLY: h
-      use mod_harmon, ONLY: hess
-      use mod_qmmm,ONLY:natqm
-      implicit none
-      real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8 grad(npartmax*3),xyz(npartmax*3)
-      real*8 dummy1(npartmax),dummy2(npartmax*3)
-      character(len=npartmax) :: dummy3
-      real*8  :: eclas,energy,del
+      use mod_const,       only: AUtoKCAL, ANG, AUtoKK
+      use mod_general,     only: ihess, natom, nwalk, ncalc, idebug, iqmmm, it
+      use mod_estimators,  only: h
+      use mod_harmon,      only: hess
+      use mod_qmmm,        only: natqm
+      real(DP), intent(in)    :: x(:,:),y(:,:),z(:,:)
+      real(DP), intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP), intent(inout) :: eclas
+      real(DP), parameter     :: fac=autokcal*ang
+      real(DP), parameter     :: fac2=autokcal*ang*ang,fac3=autoKK*ang
+      real(DP)                :: grad(size(x,1)*3),xyz(size(x,1)*3)
+      real(DP)                :: dummy1(size(x,1)),dummy2(size(x,1)*3)
+      character(len=size(x,1)):: dummy3
+      real(DP)                :: energy,del
       integer :: iat,iat1,iat2,pom,iw
-      integer ::   idum1=1,idum2=1,idum3=1,idum4=1,idum5=1,idum6=1,idum7=1,idum8=1
-      real*8, parameter :: fac=autokcal*ang
-      real*8, parameter :: fac2=autokcal*ang*ang,fac3=autoKK*ang
+      integer :: idum1=1,idum2=1,idum3=1,idum4=1,idum5=1,idum6=1,idum7=1,idum8=1
       !pro ewalda
-      real*8  mme,mme2,en_ewald,mme_qmmm
-      integer :: iter  !jak casto delame non-bonded list update?musi byt totozne s hodnotou v souboru sff_my.c
+      real(DP) ::  mme,mme2,en_ewald,mme_qmmm
+      integer  :: iter  !jak casto delame non-bonded list update?musi byt totozne s hodnotou v souboru sff_my.c
+
+      en_ewald=0.0d0
+
 
       del=fac2*nwalk
       iter=it   !dulezite pro update non-bond listu
       if (idebug.eq.1.and.it.ne.nsnb) iter=-1
 
-!!      PRO PARALELNI IMPLEMENTACI JE TREBA  vztvorit wrapper pro update nblistu
-!!$      if ((modulo(it,nsnb).eq.0.or.it.eq.1) )call nblistupdate()
+!!    PRO PARALELNI IMPLEMENTACI JE TREBA  vztvorit wrapper pro update nblistu
+!!$   if ((modulo(it,nsnb).eq.0.or.it.eq.1) )call nblistupdate()
 
 !!$OMP PARALLEL DO PRIVATE(energy,pom,xyz,grad,idum4,dummy1,dummy2,dummy3) REDUCTION(+:eclas) !(asi neni bezpecne volat!gradhess paralelne)
       do iw=1,nwalk
@@ -173,8 +177,9 @@
        enddo
       endif
 
-!CORRECTION FOR QMMM, COMPUTING ONLY QM PART and SUBSTRACTING FROM THE WHOLE SYSTEM
-!PBC NOT SUPPORTED!
+!     CORRECTION FOR QMMM, COMPUTING ONLY QM PART and SUBSTRACTING FROM THE WHOLE SYSTEM
+!     currently does not work!!!
+!     PBC NOT SUPPORTED!
       if(iqmmm.eq.1)then
 
         if(idebug.eq.1)then
@@ -209,9 +214,8 @@
 
 !convert energies to au units
       en_ewald=en_ewald/autoKK ! K to a.u.
-!      write(*,*)'en_ewald:',en_ewald
       energy=energy/autokcal
-!      write(*,*)energy
+
       eclas=eclas+energy+en_ewald
       enddo
 !!$OMP END PARALLEL DO

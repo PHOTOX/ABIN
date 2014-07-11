@@ -67,7 +67,7 @@
         write(*,*)'Energy difference',(tempIS-tempGS),indexSPEC,de
         write(*,*)'Problem with indexSPEC'
         IndexSPEC=1
-!       stop
+!       call abinerror('analyze_ext')
        endif
       enddo
       

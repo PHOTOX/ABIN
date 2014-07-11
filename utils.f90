@@ -1,7 +1,7 @@
 ! Various small utilities, that may be used throughout the program
 ! Daniel Hollas         2014
 module mod_utils
-   implicit none
+  implicit none
    private :: PrintHelp
    contains
    elemental function UpperToLower(string) result (return_string)

@@ -6,48 +6,48 @@
 
 
 
-!-----mod_array_size contains various array limits. Modify here if you need larger arrays (for big systems)
 !-----It also contains some physical constants.
       ! Exact values for ANG,AUTOKCAL and AUTODEBYE,me,AUTOM,AUTOFS,AMU: 
       ! Mohr, Taylor, Newell, Rev. Mod. Phys. 80 (2008) 633-730
       ! and using the thermochemical calorie (1 cal = 4.184 J):'
+      module mod_const
+      implicit none
+      INTEGER, PARAMETER :: DP = KIND(1.0d0)
+      real(DP), parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
+      real(DP), parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
+      real(DP), parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
+      real(DP), parameter :: AUTOM=5.2917720859d-11 ! atomic length
+      real(DP), parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
+      real(DP), parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0
+      real(DP), parameter :: AUTODEBYE =  2.54174623d0
+      real(DP), parameter :: KBinAU = 0.9999999748284666d0  !boltzmann units in au,not used
+      save
+      end module  
+
+!-----mod_array_size contains various array limits. Modify here if you need larger arrays (for big systems)
       module mod_array_size
+      use mod_const, only: DP !TODO oddelat
       implicit none
       integer,parameter :: NPARTMAX=3000,NWALKMAX=200,MAXCHAIN=10,NSHAKEMAX=6000
       integer,parameter :: NBINMAX=2000,NDISTMAX=30
       integer,parameter :: NSTMAX=15,NTRAJMAX=1
-      real*8, parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
-      real*8, parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
-      real*8, parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
-      real*8, parameter :: AUTOM=5.2917720859d-11 ! atomic length
-      real*8, parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
-      real*8, parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0 
-      real*8, parameter :: AUTODEBYE =  2.54174623d0
-      real*8, parameter :: KBinAU = 0.9999999748284666d0  !boltzmann units in au,not used
-      INTEGER, PARAMETER :: DP = KIND(1.0d0)
+      real(DP), parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
+      real(DP), parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
+      real(DP), parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
+      real(DP), parameter :: AUTOM=5.2917720859d-11 ! atomic length
+      real(DP), parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
+      real(DP), parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0 
+      real(DP), parameter :: AUTODEBYE =  2.54174623d0
+      real(DP), parameter :: KBinAU = 0.9999999748284666d0  !boltzmann units in au,not used
       save
       end module  
 
-      module mod_const
-      implicit none
-      real*8, parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
-      real*8, parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
-      real*8, parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
-      real*8, parameter :: AUTOM=5.2917720859d-11 ! atomic length
-      real*8, parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
-      real*8, parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0
-      real*8, parameter :: AUTODEBYE =  2.54174623d0
-      real*8, parameter :: KBinAU = 0.9999999748284666d0  !boltzmann units in au,not used
-      INTEGER, PARAMETER :: DP = KIND(1.0d0)
-      !example of use
-      !REAL(KIND=DP) :: x
-      save
-      end module  
 !------------------------------------------------------
 !------------------------------------------------------
 
 !--General simulation parameters      
 module mod_general
+   use mod_const, only: DP
    implicit none
    integer :: it=0,ipimd=0,istage=0,nwalk=1,ihess=0,md=1  
    character(len=10) :: pot='default'
@@ -57,8 +57,9 @@ module mod_general
    integer :: irandom=156873,natom=0,pid
    integer :: isbc=0,ibag=0  !spherical boundary conditions,elastic bag
    integer :: iqmmm=0
-   real*8  :: gamm=20.d0, gammthr=1d-10 !minthr=1e-15
    integer :: parrespa=0 
+   !TODO: move to minimize
+   real(DP)  :: gamm=20.d0, gammthr=1d-10 !minthr=1e-15
    save
 end module
       
@@ -67,9 +68,10 @@ end module
 
 !-----Some information about simulated system, especially for distributions and shake
       module mod_system
+      use mod_const, only: DP
       use mod_array_size
       implicit none
-      real*8  :: am(npartmax)
+      real(DP)  :: am(npartmax)
       character(len=2) :: names(npartmax)
       integer :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani 
       integer :: inames(npartmax),imass_init=1,conatom=0
@@ -260,7 +262,8 @@ end module
         am(i)=91.224d0
        else 
         write(*,*)'Unknown atom.',names(i),'Exiting..'
-        stop
+!        call abinerror('mass_init') !TODO: would have to move mod_system to different file
+        stop 1
        endif
       enddo
       end subroutine
@@ -268,7 +271,7 @@ end module
    subroutine constrainP (px,py,pz)
       use mod_array_size, only: npartmax,nwalkmax
       use mod_general, only: nwalk
-      real*8,intent(inout)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      real(DP),intent(inout)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
       integer               :: iw,iat
       do iw=1,nwalk
          do iat=1,conatom

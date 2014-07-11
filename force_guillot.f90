@@ -238,7 +238,6 @@ module mod_guillot
       voh=voh/AUTOKCAL
 !      write(*,*)'voh',r,voh
 !      enddo
-!      stop
 !      return
       end function voh
 
