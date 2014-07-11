@@ -1,6 +1,20 @@
-NAN pro inose=1 a teplotu 1K, probelm v yosh
 
-NAN if initnhc=1
+Restart for SH might be wrong due to different overlap between old and new NACM.
+We should somehow include NACM in some other restart file and read it if present.
+But what about the failed and restarted runs?
+Maybe, we could check the absolute values from restart and calculated,
+but this is getting somehow quite complicated.
+Ooor, better, we should not read it if it\=0
+Currently, restart for SH is forbidden, unless it=0.
 
+bug: floating point exception when inose=1 and temp=1.0(or even 10)
+present in alpha version as well
+file nosehoover.f90:356
+356           Gx(inh+1)=pnhx(iat,iw,inh)**2/Qm(iw)-temp
+maybe just wrong default thermostat parameters?
+see hollas@as67-1:~/TEST/PIMD.g09new
+works with tau0>0.002, we should test this value for cases when NHC drifts
 
-entot_cumul....restart if ipimd=0, correct?
+I think that hop is wrong, we should not use vx_int
+and also, after hop, in vx_int arrays will suddenly change...
+maybe it would be easiest to just hop once per big time step??

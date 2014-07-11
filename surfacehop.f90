@@ -173,10 +173,82 @@ module mod_sh
    endif
    end subroutine set_tocalc
 
+   !currently not in use
+   !would be needed if we wanted to support proper restart for SH
+   subroutine Write_nacm_rest()
+   use mod_qmmm, only:natqm
+   integer :: iost,ist1,ist2,iat,itrj
+
+   open(600,file='nacmrest.dat')
+   do itrj=1, ntraj
+
+   do ist1=1,nstate-1
+      do ist2=ist1+1,nstate
+   
+!         if(tocalc(ist1,ist2).eq.1)then
+   
+            write(600,*)'NACM between states',ist1,ist2
+            do iat=1,natqm              ! reading only for QM atoms
+               write(600,*)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+            enddo
+   
+   !--------if tocalc 
+!         endif
+   
+      enddo
+   enddo
+
+   end do
+
+   close(600)
+
+   end subroutine write_nacm_rest
+
+   !currently not in use
+   !would be needed if we wanted to support proper restart for SH
+   subroutine read_nacm_rest()
+   use mod_qmmm, only:natqm
+   integer :: iost,ist1,ist2,iat,itrj
+   logical :: file_exists
+   inquire(file='nacmrest.dat',EXIST=file_exists)
+   if(.not.file_exists)then
+      write(*,*)'File nacmrest.dat does not exist. Will take 0th NACM from calculation.'
+      return
+   end if
+
+   open(600,file='nacmrest.dat')
+   do itrj=1, ntraj
+
+   do ist1=1,nstate-1
+      do ist2=ist1+1,nstate
+   
+!         if(tocalc(ist1,ist2).eq.1)then
+   
+            read(600,*)
+            do iat=1,natqm              ! reading only for QM atoms
+               read(600,*)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+               if (iost.ne.0)then
+                  write(*,*)'Error reading NACM from file nacmrest.'
+                  write(*,*)'Maybe you forgot to delete it from previous run?'
+                  call abinerror('write_nacm_rest')
+               end if
+            enddo
+   
+   !--------if tocalc 
+!         endif
+   
+      enddo
+   enddo
+
+   end do
+
+   close(600)
+
+   end subroutine read_nacm_rest
+
 
    integer function readnacm(itrj)
    use mod_qmmm,only:natqm
-   implicit none
    integer :: iost,ist1,ist2,iat,itrj
    iost=0  ! needed if each tocalc=0
    open(127,file='nacm.dat')
@@ -351,11 +423,7 @@ module mod_sh
       t_tot=0.0d0
 
       popsum=0.0d0
-!DEBUG
-!      if(idebug.eq.1)then
-!       call printf(vx_old,vy_old,vz_old)
-!       write(*,*)(en_array_old(ist1,itrj),ist1=1,nstate)
-!      endif
+
 !-------READING NACM-----------------------     
      if(inac.eq.0)then
 
@@ -611,7 +679,6 @@ module mod_sh
       
       ekin_mom=ekin_v(vx_int,vy_int,vz_int)
 
-      if(idebug.eq.3) write(*,*)'ekin_mom=',ekin_mom
       if(ekin_mom.gt.1.0d-4)then !TODO: why this number?
 
       do ist1=1,nstate
@@ -995,24 +1062,18 @@ module mod_sh
        y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/2
        y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/2
       enddo
-      write(*,*)( y_re(ist1),ist1=1,nstate )
-      write(*,*)( y_im(ist1),ist1=1,nstate )
       call integstep(k2_re,k2_im,en2,y_re,y_im,dotprod2)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k2_re(ist1)/2
        y_im(ist1)=cel_im(ist1,itrj)+k2_im(ist1)/2
       enddo
-      write(*,*)( y_re(ist1),ist1=1,nstate )
-      write(*,*)( y_im(ist1),ist1=1,nstate )
       call integstep(k3_re,k3_im,en2,y_re,y_im,dotprod2)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k3_re(ist1)
        y_im(ist1)=cel_im(ist1,itrj)+k3_im(ist1)
       enddo
-      write(*,*)( y_re(ist1),ist1=1,nstate )
-      write(*,*)( y_im(ist1),ist1=1,nstate )
       call integstep(k4_re,k4_im,en1,y_re,y_im,dotprod1)
 
       do ist1=1,nstate

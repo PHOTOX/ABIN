@@ -1,6 +1,7 @@
 !-----Input and Initialization                         by Daniel Hollas,9.2.2012
 !- ---some comment
       subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
+!      use mod_const
       use mod_array_size
       use mod_general
       use mod_system
@@ -21,19 +22,19 @@
       use mod_shake
       use mod_kinetic, only: entot_cumul, est_temp_cumul
       implicit none
-      real*8,intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-      real*8,intent(out) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-      real*8,intent(out) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8,intent(out) :: dt
-      real*8  :: rans(10)
+      real(DP),intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+      real(DP),intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+      real(DP),intent(out) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
+      real(DP),intent(out) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real(DP),intent(out) :: dt
+      real(DP)  :: rans(10)
       integer :: iw,iat,inh,natom1,itrj,ist1,imol,shiftdihed=1
       integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0, is
       character(len=2)  :: shit
       character(len=10) :: chaccess
       character(len=200)  :: chinput, chcoords
       LOGICAL :: file_exists,prngread
-      real*8  :: wnw=5.0d-5
+      real(DP)  :: wnw=5.0d-5
 !$    integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
       REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
@@ -209,6 +210,11 @@
        write(*,*)'integ must be "euler","rk4" or "butcher".'
        error=1
       endif
+      if(integ.ne.'butcher')then
+         write(*,*)'WARNING: variable integ is not "butcher", which is the default and most accurate.'
+         write(*,*)'If you really want to proceed, set iknow=1.'
+         if(iknow.ne.1) error=1
+      end if
       if(deltae.lt.0)then
        write(*,*)'Parameter deltae must be non-negative number.'
        error=1
@@ -374,8 +380,8 @@
        write(*,*)'Variable nrespnose must be positive integer'
        error=1
       endif
-      if(irest.eq.1.and.irest.eq.0)then
-      write(*,*)'irest has to be 1 or zero'
+      if(irest.ne.1.and.irest.ne.0)then
+      write(*,*)'ERROR:irest has to be 1 or 0'
        error=1
       endif
       if(nshake.gt.0.and.ipimd.eq.1)then
@@ -562,6 +568,14 @@
       enddo
 
       if(ipimd.eq.2)then
+       if(it.ne.0)then
+          write(*,*)'ERROR when reading restart.xyz'
+          write(*,*)'You probably tried to restart SH run,'
+          write(*,*)'which is not supported at this moment.'
+          write(*,*)'Please, consult the manual.'
+          write(*,*)'If you really want to proceed, set iknow=1.'
+          if (iknow.ne.1) call abinerror('init')
+       end if
        read(111,*)
        do itrj=1,ntraj
         read(111,*)istate(itrj)
