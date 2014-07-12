@@ -3,22 +3,20 @@
 !Bertrand Guillot and Yves Guissani,J. Chem. Phys. 108, 10162 (1998);  
 
 module mod_guillot
-   use mod_array_size, ONLY: ANG,AUTOKCAL
+   use mod_const, ONLY: DP, ANG, AUTOKCAL
    private
    public :: force_guillot,inames_guillot
 
    CONTAINS
       subroutine force_guillot(x,y,z,fx,fy,fz,eclas)
-      use mod_array_size
       use mod_general
       use mod_utils, ONLY: abinerror
       use mod_system, ONLY: inames
-      implicit real*8(a-h,o-z)
-      real*8,intent(in)  :: x(:,:),y(:,:),z(:,:)
-      real*8,intent(out) :: fx(:,:),fy(:,:),fz(:,:)
-      real*8,intent(out) :: eclas
-      real*8 :: temp1,r,fr
-!     integer :: inames(npartmax)
+      implicit real(DP)(a-h,o-z)
+      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out) :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(out) :: eclas
+      real(DP) :: temp1,r,fr
 
       eclas=0.0d0
 
@@ -95,9 +93,9 @@ module mod_guillot
    
       end subroutine force_guillot
                                         
-      real*8 function vocl(r)
+      real(DP) function vocl(r)
       use mod_array_size
-      implicit real*8(a-h,o-z)
+      implicit real(DP)(a-h,o-z)
       r=r/ang
       qo=0.66d0
       vocl=(AUTOKCAL*qo/ANG)/r
@@ -111,8 +109,8 @@ module mod_guillot
       return
    end function vocl
 
-      real*8 function voclIS(r)
-      implicit real*8(a-h,o-z)
+      real(DP) function voclIS(r)
+      implicit real(DP)(a-h,o-z)
       r=r/ANG
       voclIS=0.0d0
       sigma=3.6835677d0
@@ -126,8 +124,8 @@ module mod_guillot
       return
    end function voclIS
 
-      real*8 function frocl(r)
-      implicit real*8(a-h,o-z)
+      real(DP) function frocl(r)
+      implicit real(DP)(a-h,o-z)
 
       r=r/ANG
       qo=0.66d0
@@ -143,9 +141,9 @@ module mod_guillot
       return
    end function frocl
 
-      real*8 function vhcl(r)
-      implicit real*8(a-h,o-z)
-      real*8 :: vocl
+      real(DP) function vhcl(r)
+      implicit real(DP)(a-h,o-z)
+      real(DP) :: vocl
       vocl=0.0d0
       r=r/ANG
       qh=0.66d0/2.0d0
@@ -159,8 +157,8 @@ module mod_guillot
       return
    end function vhcl
 
-      real*8 function vhclIS(r)
-      implicit real*8(a-h,o-z)
+      real(DP) function vhclIS(r)
+      implicit real(DP)(a-h,o-z)
       r=r/ANG
       vhclIS=0.0d0
       sigma=2.0000000d0
@@ -173,8 +171,8 @@ module mod_guillot
    end function vhclIS
 
 
-      real*8 function frhcl(r)
-      implicit real*8(a-h,o-z)
+      real(DP) function frhcl(r)
+      implicit real(DP)(a-h,o-z)
       r=r/ANG
       qh=0.66d0/2.0d0
       frhcl=(AUTOKCAL*qh/ANG)/(r**2)
@@ -189,14 +187,14 @@ module mod_guillot
       end function frhcl
 
                                                     
-      real*8 function voo(r)
-      implicit real*8(a-h,o-z)
+      real(DP) function voo(r)
+      implicit real(DP)(a-h,o-z)
       r=r/ANG
 
       voo=144.358d0/r
       sigma=3.74d0
       rred=sigma/r
-      voo=voo+0.5d0*(rred**8-rred**6)
+      voo=voo+0.5d0*(rred*(DP)-rred**6)
 
       r=r*ANG
       voo=voo/AUTOKCAL
@@ -204,8 +202,8 @@ module mod_guillot
       return
       end function voo
 
-      real*8 function froo(r)
-      implicit real*8(a-h,o-z)
+      real(DP) function froo(r)
+      implicit real(DP)(a-h,o-z)
       r=r/ANG
 
       froo=-144.358d0/(r**2)
@@ -220,8 +218,8 @@ module mod_guillot
       return
    end function froo
 
-      real*8 function voh(r)
-      implicit real*8(a-h,o-z)
+      real(DP) function voh(r)
+      implicit real(DP)(a-h,o-z)
       r=r/ANG
 
 !      do i=1,100
@@ -241,8 +239,8 @@ module mod_guillot
 !      return
       end function voh
 
-      real*8 function froh(r)
-      implicit real*8(a-h,o-z)
+      real(DP) function froh(r)
+      implicit real(DP)(a-h,o-z)
       r=r/ANG
 
       c=72.269d0
@@ -259,8 +257,8 @@ module mod_guillot
       return
    end function froh
 
-   real*8 function vhh(r)
-      implicit real*8(a-h,o-z)
+   real(DP) function vhh(r)
+      implicit real(DP)(a-h,o-z)
       r=r/ANG
 
       c=36.1345d0
@@ -276,8 +274,8 @@ module mod_guillot
       return
    end function vhh
 
-   real*8 function frhh(r)
-      implicit real*8(a-h,o-z)
+   real(DP) function frhh(r)
+      implicit real(DP)(a-h,o-z)
       r=r/ANG
 !      write(*,*)'r in frhh',r
 

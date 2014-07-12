@@ -49,6 +49,8 @@ module mod_density
       write(*,*)'WARNING: Problems with distribution function.'
       write(*,*)'This may mean that your system is falling apart.'
       write(*,*)'Or maybe you should set xmin and xmax differently.'
+      write(*,*)'Ignoring and setting ipom=1'
+      ipom=1
    endif
 
    dist(ipom,idist)=dist(ipom,idist)+1.0d0

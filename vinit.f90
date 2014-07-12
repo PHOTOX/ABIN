@@ -28,7 +28,7 @@ module mod_vinit
 ! NATOM     number of atoms
 ! NOUT      FORTRAN output channel
 !
-! Adapted (real*8, no angular velocities, mass)   B. Schmidt, Apr 6, 1995
+! Adapted (real(DP), no angular velocities, mass)   B. Schmidt, Apr 6, 1995
 !
 !------------------------------------------------------------------------
 SUBROUTINE vinit(TEMP, MASS, vx, vy, vz)
@@ -149,12 +149,12 @@ end subroutine ScaleVelocities
 !--------------------------------------------------------------------
    FUNCTION GAUSSabin ( IDUM )
       INTEGER,intent(in)  ::   IDUM
-      REAL*8 :: gaussabin
-      REAL*8,parameter :: A1 = 3.949846138d0, A3 = 0.252408784d0 
-      real*8,parameter :: A5 = 0.076542912d0, A7 = 0.008355968d0 
-      real*8,PARAMETER :: A9 = 0.029899776
-      REAL*8 :: SUM, R, R2
-      REAL*8 :: RAN1
+      REAL(DP) :: gaussabin
+      REAL(DP),parameter :: A1 = 3.949846138d0, A3 = 0.252408784d0 
+      real(DP),parameter :: A5 = 0.076542912d0, A7 = 0.008355968d0 
+      real(DP),PARAMETER :: A9 = 0.029899776
+      REAL(DP) :: SUM, R, R2
+      REAL(DP) :: RAN1
       INTEGER     I
 !    *******************************************************************
       SUM = 0.0d0
@@ -183,16 +183,16 @@ end subroutine ScaleVelocities
 ! FROM "NUMERICAL RECIPES"                                            
 !
 ! SAVE statement for IFF, R, IXn      B. Schmidt, May  31, 1992
-! RAN1 returned as REAL*8             B. Schmidt, May  31, 1992
+! RAN1 returned as REAL(DP)             B. Schmidt, May  31, 1992
 !
 !-------------------------------------------------------------------
-      REAL*8 FUNCTION RAN1(IDUM)    
+      REAL(DP) FUNCTION RAN1(IDUM)    
 
-      real*8 r(97)
+      real(DP) r(97)
       integer ix1,ix2,ix3
       integer idum,j,iff
 
-      real*8, parameter  :: RM1=3.8580247D-6, RM2=7.4373773D-6 
+      real(DP), parameter  :: RM1=3.8580247D-6, RM2=7.4373773D-6 
       integer, parameter :: M1=259200,IA1=7141,IC1=54773
       integer, parameter :: M2=134456,IA2=8121,IC2=28411
       integer, parameter :: M3=243000,IA3=4561,IC3=51349                    

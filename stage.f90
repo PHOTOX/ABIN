@@ -43,7 +43,7 @@ module mod_fftw3
 
       call fftw_destroy_plan(plan_xtou)
       call fftw_destroy_plan(plan_utox)
-   end subroutine
+   end subroutine fftw_end
 end module mod_fftw3
 
 !---mod_transform                  P.Slavicek and D.Hollas, 9.2.2012

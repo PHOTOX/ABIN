@@ -55,11 +55,8 @@ module mod_general
    integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0
    integer :: icv=0,irest=0,anal_ext=0,idebug=0
    integer :: irandom=156873,natom=0,pid
-   integer :: isbc=0,ibag=0  !spherical boundary conditions,elastic bag
    integer :: iqmmm=0
    integer :: parrespa=0 
-   !TODO: move to minimize
-   real(DP)  :: gamm=20.d0, gammthr=1d-10 !minthr=1e-15
    save
 end module
       
@@ -269,9 +266,8 @@ end module
       end subroutine
 
    subroutine constrainP (px,py,pz)
-      use mod_array_size, only: npartmax,nwalkmax
       use mod_general, only: nwalk
-      real(DP),intent(inout)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+      real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
       integer               :: iw,iat
       do iw=1,nwalk
          do iat=1,conatom

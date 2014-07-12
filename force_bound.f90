@@ -1,19 +1,28 @@
 !---                    by Daniel Hollas,15.3.2012
 !--- contains spherical potential SBC and elastig bag(TO DO)
-      MODULE mod_sbc
-      use mod_array_size
-      real*8  :: xcm=0.0d0,ycm=0.0d0,zcm=0.0d0,mass_total=0.0d0
-      real*8  :: rmax=0.0d0
-      real*8  :: rb_sbc=-1,kb_sbc=0.02d0,rho=-1
-      real*8  :: fact=autom**3/me
-      save
-      CONTAINS
-      SUBROUTINE sbc_init(x,y,z)
-      use mod_general, ONLY:natom !,nwalk
-      use mod_system, ONLY:am,names
+MODULE mod_sbc
+   use mod_const, only: DP, AUtoM, ME, PI
+   implicit none
+   private 
+   public    :: isbc, rb_sbc, kb_sbc, rho
+   public    :: force_sbc, sbc_init
+   !TODO: this is a bug!!!!!
+   real(DP)  :: xcm=0.0d0,ycm=0.0d0,zcm=0.0d0,mass_total=0.0d0
+   integer   :: isbc=0  !spherical boundary conditions
+   integer, parameter :: ibag=0  !elastic bag
+   real(DP)  :: rmax=0.0d0
+   real(DP)  :: rb_sbc=-1,kb_sbc=0.02d0,rho=-1
+   real(DP),parameter  :: fact=autom**3/me
+   save
+   CONTAINS
+
+   SUBROUTINE sbc_init(x,y,z)
+      use mod_const,    only: ANG
+      use mod_general,  only: natom !,nwalk
+      use mod_system,   only: am, names
       implicit none
-      real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 r
+      real(DP),intent(in) :: x(:,:), y(:,:), z(:,:)
+      real(DP) r
       integer :: iw,iat
 
       rb_sbc=rb_sbc*ang
@@ -52,7 +61,7 @@
       if (rho.gt.0)then
        write(*,*)'Calculating cluster radius from given densty.'
        rho=rho*fact !conversion from g/L to atomic units
-       rb_sbc=mass_total/rho*3/4/pi
+       rb_sbc=mass_total/rho*3/4/PI
        rb_sbc=rb_sbc**(1/3.)
       endif
 
@@ -70,10 +79,9 @@
       SUBROUTINE force_sbc(x,y,z,fx,fy,fz)
       use mod_general
       use mod_system, ONLY:am,names 
-      implicit none
-      real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8  :: r,frb
+      real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP)  :: r,frb
       integer :: iat,iw
 
       rmax=0.0d0
@@ -113,15 +121,15 @@
 !      endif
 
       return
-      end subroutine
+   end subroutine
 
-      END MODULE mod_sbc
+END MODULE mod_sbc
 
 
 !      MODULE mod_bag
 !      use mod_array_size
-!      real*8,allocatable :: neigh1(:),neigh2(:),neigh3(:)
-!      real*8 :: some_parameters
+!      real(DP),allocatable :: neigh1(:),neigh2(:),neigh3(:)
+!      real(DP) :: some_parameters
 !      save
  !     CONTAINS
  !
@@ -133,9 +141,9 @@
 !      use mod_general
 !      use mod_system, ONLY:am,names 
 !      implicit none
-!      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-!      real*8 fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-!      real*8  :: r,frb
+!      real(DP) x(:,:),y(:,:),z(:,:)
+!      real(DP) fx(:,:),fy(:,:),fz(:,:)
+!      real(DP)  :: r,frb
 !      integer :: iat,iw
 !
 !

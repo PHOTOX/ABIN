@@ -12,7 +12,7 @@
       use mod_qmmm
       use mod_gle
       use mod_nab
-      use mod_sbc
+      use mod_sbc,    only: sbc_init, rb_sbc, kb_sbc, isbc, rho
       use mod_fftw3  ,only: fftw_init
       use mod_random
       use mod_guillot,ONLY: inames_guillot
@@ -21,11 +21,12 @@
       use mod_density
       use mod_shake
       use mod_kinetic, only: entot_cumul, est_temp_cumul
+      use mod_minimize, only: gamm, gammthr
       implicit none
-      real(DP),intent(out) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real(DP),intent(out) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-      real(DP),intent(out) :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-      real(DP),intent(out) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real(DP),intent(out) :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out) :: fxc(:,:),fyc(:,:),fzc(:,:)
+      real(DP),intent(out) :: fxq(:,:),fyq(:,:),fzq(:,:)
+      real(DP),intent(out) :: vx(:,:),vy(:,:),vz(:,:)
       real(DP),intent(out) :: dt
       real(DP)  :: rans(10)
       integer :: iw,iat,inh,natom1,itrj,ist1,imol,shiftdihed=1
@@ -42,7 +43,7 @@
       REAL, POINTER  :: REALPTR => NULL ()
 
       namelist /general/pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
-               nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,ibag,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
+               nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
                parrespa,dime,ncalc,idebug,enmini,rho,iknow
 
       namelist /nhcopt/ inose,temp,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,scaleveloc,readNHC,initNHC,nmolt,natmolt,nshakemol
@@ -60,6 +61,7 @@
       write(*,*)'Will read parameters from input file ',chinput
       write(*,*)'Will read xyz coordinates from file ',chcoords
 
+      !TODO:na konci vyhodit, az se zbavime npartmax
       do iat=1,npartmax
        am(iat)=0.0d0
        names(iat)=''
@@ -511,8 +513,19 @@
 !-----conversion of temperature from K to au
       write(*,*)'Target temperature in Kelvins =',temp
       temp=temp/autok
+
+      if (ihess.eq.1)then 
+       allocate ( hess(natom*3,natom*3,nwalk) )
+       allocate ( cvhess_cumul(nwalk) )
+       cvhess_cumul=0.0d0
+       if (pot.eq.'nab')then
+!!$OMP PARALLEL
+        allocate ( h(natom*natom*9) )
+!!$OMP END PARALLEL
+       endif
+      endif
+
 !-----ZEROING some arrays
-      cvhess_cumul=0.0d0
       fxq=0.0d0 
       fyq=0.0d0 
       fzq=0.0d0 
@@ -766,15 +779,6 @@ endif
          call ABr_init()
        endif
        write(*,nml=qmmm)
-      endif
-
-      if (ihess.eq.1)then 
-       allocate ( hess(natom*3,natom*3,nwalk) )
-       if (pot.eq.'nab')then
-!!$OMP PARALLEL
-        allocate ( h(natom*natom*9) )
-!!$OMP END PARALLEL
-       endif
       endif
 
       if (pot.eq."nab".or.qmmmtype.eq."nab")then

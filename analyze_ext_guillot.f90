@@ -3,9 +3,13 @@
 !Bertrand Guillot and Yves Guissani,J. Chem. Phys. 108, 10162 (1998);  
 
       module mod_analyze_ext
-      use mod_array_size
-      real*8  :: spec(nbinmax)
-      real*8  :: emin=0,emax=0.35
+      use mod_const, only: DP
+      use mod_array_size, only: nbinmax
+      implicit none
+      private
+      public :: analyze_ext
+      real(DP)  :: spec(nbinmax)
+      real(DP)  :: emin=0,emax=0.35
       integer :: nbinen=400
       save
       contains
@@ -13,10 +17,10 @@
       use mod_array_size
       use mod_general
       use mod_system, ONLY: inames
-      implicit real*8(a-h,o-z)
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-      real*8 amt(npartmax,nwalkmax)
+      implicit real(DP)(a-h,o-z)
+      real(DP) x(:,:),y(:,:),z(:,:)
+      real(DP) vx(:,:),vy(:,:),vz(:,:)
+      real(DP) amt(:,:)
 
       de=(emax-emin)/nbinen
       

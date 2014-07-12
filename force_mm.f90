@@ -3,8 +3,8 @@
 !------------------------------------------------------
 module mod_qmmm
    use mod_const, only: DP
-   use mod_array_size, only:npartmax, nwalkmax
    use mod_utils, only: abinerror
+   use mod_array_size , only: npartmax
    implicit none
    character(len=2) :: attypes(npartmax)
    integer          :: natqm,natmm
@@ -40,7 +40,7 @@ module mod_qmmm
    use mod_const,    ONLY: ANG
    use mod_general,  ONLY:natom
    use mod_system,   ONLY:inames
-   integer :: iat1,iat2,i1,i2
+   integer   :: iat1,iat2,i1,i2
    real(DP)  :: epsij,rij
    allocate(AIJ(natom,natom))
    allocate(BIJ(natom,natom))
@@ -63,8 +63,8 @@ module mod_qmmm
    use mod_general
    use mod_system, ONLY:inames 
    implicit none
-   real(DP),intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real(DP),intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
+   real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout) :: eclas
    integer :: iw,iat1,iat2,i1,i2
    real(DP)  :: r,kLJ,kC

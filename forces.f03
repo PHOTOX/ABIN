@@ -1,24 +1,34 @@
-      subroutine force_clas(fx,fy,fz,x,y,z,energy)
-      use mod_array_size
+
+module mod_forces
+   use mod_const, only: DP
+   implicit none
+   private 
+   public :: force_clas, force_quantum
+   contains
+
+   subroutine force_clas(fx,fy,fz,x,y,z,energy)
       use mod_general
-      use mod_qmmm, ONLY: qmmmtype,force_LJCoul
-      use mod_nab, ONLY: ipbc,wrap,nsnb,force_nab
-      use mod_sbc
-      use mod_system, only: conatom
-      use mod_nhc, ONLY: inose
-      use mod_harmon, ONLY: force_harmon,force_2dho,force_morse
-      use mod_interfaces,only:force_abin
-      use mod_guillot, ONLY: force_guillot
-      use mod_utils, only: printf
+      use mod_qmmm,     only: qmmmtype,force_LJCoul
+      use mod_nab,      only: ipbc,wrap,nsnb,force_nab
+      use mod_sbc,      only: force_sbc, isbc !,ibag
+      use mod_system,   only: conatom
+      use mod_nhc,      only: inose
+      use mod_harmon,   only: force_harmon,force_2dho,force_morse
+      use mod_guillot,  only: force_guillot
+      use mod_utils,    only: printf
       use mod_transform
-      implicit none
-      real*8,intent(inout) ::  x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(inout) ::  fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8,intent(out)   ::  energy
-      real*8  :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-      real*8  :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
-      integer :: iat,iw
-      real *8 :: eclas
+      use mod_interfaces, only: force_abin
+      real(DP),intent(inout) ::  x(:,:),y(:,:),z(:,:)
+      real(DP),intent(inout) ::  fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(out)   ::  energy
+      real(DP)  :: transx(size(x,1),size(x,2))
+      real(DP)  :: transy(size(x,1),size(x,2))
+      real(DP)  :: transz(size(x,1),size(x,2))
+      real(DP)  :: fxab(size(x,1),size(x,2))
+      real(DP)  :: fyab(size(x,1),size(x,2))
+      real(DP)  :: fzab(size(x,1),size(x,2))
+      integer   :: iat,iw
+      real (DP) :: eclas
 
 ! Initialization
       do iw=1,nwalk
@@ -79,7 +89,6 @@
 
       if (isbc.eq.1) call force_sbc(transx,transy,transz,fxab,fyab,fzab)
 !      if (ibag.eq.1) call force_bag(transx,transy,transz,fxab,fyab,fzab)
-      if (ibag.eq.1) write(*,*) 'Warning,bag not supported yet. Ignoring...'
 
 !---------QMMM SECTION-----------------
      if(iqmmm.eq.1)then
@@ -157,5 +166,93 @@
 
       endif
 
-      end
+   end subroutine force_clas
+
+   subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
+      use mod_array_size
+      use mod_general
+      use mod_nhc, ONLY: temp,inose
+      implicit none
+      real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(in) :: amg(:,:)
+      real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(out) :: energy
+      real(DP) :: ak(size(x,1),size(x,2))
+      real(DP) :: equant
+      integer  :: iat,iw,i,j,kplus,kminus
+
+      do iat=1,natom
+       do iw=1,nwalk
+        fx(iat,iw)=0.0d0
+        fy(iat,iw)=0.0d0
+        fz(iat,iw)=0.0d0
+       enddo
+      enddo
+
+! TODO: ak parametry se nemuseji pocitat pokazde znova
+! Setting the quantum force constants
+! ak is defined is m*P/(beta^2*hbar^2)
+        do iw=1,nwalk
+         do i=1,natom
+          ak(i,iw)=nwalk*amg(i,iw)*TEMP**2
+         enddo
+        enddo
+! for PI+GLE we have different hamiltonian
+       if(inose.eq.2)then
+        do iw=1,nwalk
+         do i=1,natom
+          ak(i,iw)=nwalk*ak(i,iw)
+         enddo
+        enddo
+       endif
+
+      equant=0.0d0
+
+
+! If the staging transformation is not used
+      if(istage.eq.0)then
+       do j=1,natom 
+        do i=1,nwalk 
+         kplus=i+1
+         kminus=i-1
+         if(i.eq.1)then
+          kminus=nwalk
+         endif
+         if(i.eq.nwalk)then
+          kplus=1
+         endif
+         fx(j,i)=(x(j,i)-x(j,kplus))
+         fx(j,i)=fx(j,i)+(x(j,i)-x(j,kminus))
+         fx(j,i)=-fx(j,i)*ak(j,i)
+         fy(j,i)=(y(j,i)-y(j,kplus))
+         fy(j,i)=fy(j,i)+(y(j,i)-y(j,kminus))
+         fy(j,i)=-fy(j,i)*ak(j,i)
+         fz(j,i)=(z(j,i)-z(j,kplus))
+         fz(j,i)=fz(j,i)+(z(j,i)-z(j,kminus))
+         fz(j,i)=-fz(j,i)*ak(j,i)
+         equant=equant+0.5*ak(j,i)*(x(j,i)-x(j,kplus))**2
+         equant=equant+0.5*ak(j,i)*(y(j,i)-y(j,kplus))**2
+         equant=equant+0.5*ak(j,i)*(z(j,i)-z(j,kplus))**2
+        enddo
+       enddo
+      endif
+
+! If the staging transformation is used
+       if(istage.eq.1.or.istage.eq.2)then
+        do j=1,natom 
+         do i=1,nwalk 
+          fx(j,i)=-ak(j,i)*x(j,i)   
+          fy(j,i)=-ak(j,i)*y(j,i)       
+          fz(j,i)=-ak(j,i)*z(j,i) 
+          equant=equant+0.5d0*ak(j,i)*x(j,i)**2
+          equant=equant+0.5d0*ak(j,i)*y(j,i)**2
+          equant=equant+0.5d0*ak(j,i)*z(j,i)**2
+         enddo
+        enddo
+       endif 
+
+      energy=equant
+      
+   end subroutine force_quantum
                                         
+end module mod_forces

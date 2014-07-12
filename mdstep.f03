@@ -4,7 +4,6 @@ module mod_mdstep
    use mod_system,   only: conatom, constrainP
    use mod_kinetic,  only: ekin_p
    use mod_transform
-   use mod_interfaces, ONLY:force_clas, force_quantum
    implicit none
    private
    public :: verletstep,respastep,respashake
@@ -33,7 +32,7 @@ module mod_mdstep
       !RZ = RZ + dt * PZ/MASS
 
    RETURN
-   END
+   END subroutine shiftX
 
    SUBROUTINE shiftP (px,py,pz,fx,fy,fz,dt)
    use mod_general,only: nwalk,natom
@@ -56,7 +55,7 @@ module mod_mdstep
 !      PZ = PZ + dt*FZ
 
    RETURN
-   END
+   END subroutine shiftP
 
 !--Velocity verlet ALGORITHM                              Daniel Hollas,2012
 !  At this moment it does not contain shake routines,
@@ -65,6 +64,7 @@ module mod_mdstep
    subroutine verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
    use mod_nhc, ONLY:inose, imasst, shiftNHC_yosh, shiftNHC_yosh_mass
    use mod_gle, ONLY:langham, gle_step, wn_step
+   use mod_forces, only: force_clas
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
    real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
@@ -125,7 +125,7 @@ module mod_mdstep
    endif
    
    
-   end
+   end subroutine verletstep
    
    !----- RESPA ALGORITHM                                              10.12.2012
    ! General algorithm of the propagation:
@@ -133,9 +133,10 @@ module mod_mdstep
    ! further info is before subroutine respa_shake
    subroutine respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
               fxc,fyc,fzc,fxq,fyq,fzq)
-   use mod_general, ONLY: istage, nabin
-   use mod_nhc, ONLY:inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
-   use mod_gle, ONLY:langham, gle_step
+   use mod_general,  only: istage, nabin
+   use mod_nhc,      only: inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
+   use mod_gle,      only: langham, gle_step
+   use mod_forces,   only: force_clas, force_quantum
    real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)  :: fxc(:,:),fyc(:,:),fzc(:,:)
    real(DP),intent(inout)  :: fxq(:,:),fyq(:,:),fzq(:,:)
@@ -252,7 +253,7 @@ module mod_mdstep
    endif
    
    
-   end
+   end subroutine respastep
    
    
 !----- RESPA ALGORITHM WITH RATTLE                                            10.12.2012
@@ -286,6 +287,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
       use mod_general, ONLY: nabin
       use mod_nhc, ONLY:inose,shiftNHC_yosh,shiftNHC_yosh_mass
       use mod_shake, only: shake, nshake
+      use mod_forces,   only: force_clas, force_quantum
       real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
       real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
       real(DP),intent(in)    :: amg(:,:),amt(:,:)
@@ -358,6 +360,6 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
    endif
 
 
-   end
+   end subroutine respashake
 
 end module mod_mdstep

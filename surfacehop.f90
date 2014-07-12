@@ -29,8 +29,8 @@ module mod_sh
    contains
 
    subroutine sh_init(x, y, z, vx_old, vy_old, vz_old, dt)
-   use mod_general,ONLY:irest, natom
-   use mod_interfaces,only:force_clas
+   use mod_general,  only: irest, natom
+   use mod_forces,   only: force_clas
    implicit none
    real(DP),intent(inout):: x(:,:),y(:,:),z(:,:)
    real(DP),intent(out)  :: vx_old(:,:),vy_old(:,:),vz_old(:,:)

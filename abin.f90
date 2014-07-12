@@ -17,6 +17,7 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program in the file LICENSE. If not, see <http://www.gnu.org/licenses/>.
 program abin_dyn
+   use mod_const, only: DP
    use mod_array_size
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
@@ -26,18 +27,21 @@ program abin_dyn
    use mod_shake, only: nshake
    use mod_transform
    use mod_mdstep
+   use mod_minimize, only: minimize
+   use mod_analysis, only: analysis, restout
+   use mod_forces,   only: force_clas, force_quantum
    implicit none
-   real*8  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real*8  :: amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)
-   real*8  :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-   real*8  :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-   real*8  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-   real*8  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-   real*8  :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-   real*8  :: transfxc(npartmax,nwalkmax),transfyc(npartmax,nwalkmax),transfzc(npartmax,nwalkmax)
-   real*8  :: transxv(npartmax,nwalkmax),transyv(npartmax,nwalkmax),transzv(npartmax,nwalkmax)
-   real*8  :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-   real*8  :: dt,eclas,equant
+   real(DP)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+   real(DP)  :: amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)
+   real(DP)  :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
+   real(DP)  :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
+   real(DP)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+   real(DP)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
+   real(DP)  :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
+   real(DP)  :: transfxc(npartmax,nwalkmax),transfyc(npartmax,nwalkmax),transfzc(npartmax,nwalkmax)
+   real(DP)  :: transxv(npartmax,nwalkmax),transyv(npartmax,nwalkmax),transzv(npartmax,nwalkmax)
+   real(DP)  :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
+   real(DP)  :: dt,eclas,equant
    integer :: iat, iw, itrj
    integer,dimension(8) :: values2,values1
    LOGICAL :: file_exists
@@ -314,7 +318,7 @@ subroutine finish(values1,values2)
    implicit none
    integer,dimension(8),intent(in)  :: values1
    integer,dimension(8),intent(out) :: values2
-   real*8 :: TIME
+   real(DP) :: TIME
 !   integer :: iter=-3
 
    close(1)

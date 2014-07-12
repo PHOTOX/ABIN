@@ -1,26 +1,26 @@
       subroutine force_abin(x,y,z,fx,fy,fz,eclas)
-      use mod_array_size
+      use mod_const,    only: DP, ANG
       use mod_general
-      use mod_system, ONLY: names
-      use mod_harmon, ONLY: hess
-      use mod_sh
-      use mod_qmmm, ONLY:natqm
-      use mod_utils,  only: abinerror
+      use mod_system,   only: names
+      use mod_harmon,   only: hess
+      use mod_sh,       only: nac_accu1, tocalc, en_array, istate, nstate
+      use mod_qmmm,     only: natqm
+      use mod_utils,    only: abinerror
       implicit none
-      real*8,intent(in)    :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(out)   :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8,intent(out)   :: eclas
-      real*8  :: temp1
-      integer :: iat,iw,iat1,iat2,itest !,nthreads=1, ithread
+      real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out)   :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(out)   :: eclas
+      real(DP)  :: temp1
       character(len=100) :: chsystem
       character(len=20) :: chgeom,chforce,chhess,fgeom
       logical :: file_exists
+      integer :: iat,iw,iat1,iat2,itest !,nthreads=1, ithread
       integer :: ist1,ist2,iost
 !!$    integer :: omp_get_max_threads,OMP_get_thread_num
 
 !!$    nthreads=omp_get_max_threads()
 
-      eclas=0.0d0
+     eclas=0.0d0
 !     ithread=1
 !----Format for geom.dat; needed,so that Molpro can read it
      fgeom='(A2,3E25.17E2)'

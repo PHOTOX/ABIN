@@ -1,17 +1,32 @@
-!TODO: module, move some vars from mod_general
-      subroutine minimize(x,y,z,fx,fy,fz,eclas)
+! Simple steepest descent gradient minimization
+! gamm = coefficient, by which we multiply forces
+! gamm_thr = threshold for gamm, which ends the minimization
+! when we overshoot and energy gets higher, we divide gamm by 2 and try again
+
+module mod_minimize
+   use mod_const, only: DP
+   private
+   public    :: minimize, gamm, gammthr
+   real(DP)  :: gamm=20.d0, gammthr=1d-10 !minthr=1e-15
+   save
+   contains
+
+   subroutine minimize(x,y,z,fx,fy,fz,eclas)
       use mod_array_size
-      use mod_general, only: gamm, gammthr, natom, nwrite, nwritex, imini
-      use mod_system, ONLY: names, conatom
-      use mod_interfaces, ONLY: force_clas,trajout
+      use mod_general,  only: natom, nwrite, nwritex, imini
+      use mod_system,   only: names, conatom
+      use mod_analysis, only: trajout
+      use mod_forces,   only: force_clas
       implicit none
-      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(inout) :: fx(npartmax,nwalkmax),fy(npartmax,nwalkmax),fz(npartmax,nwalkmax)
-      real*8,intent(inout) :: eclas
-      real*8  :: x_new(npartmax,nwalkmax),y_new(npartmax,nwalkmax),z_new(npartmax,nwalkmax)
-      real*8  :: fx_new(npartmax,nwalkmax),fy_new(npartmax,nwalkmax),fz_new(npartmax,nwalkmax)
-      integer :: iat,iw,iter
-      real*8  :: eclas_new
+      real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(inout) :: eclas
+      real(DP)  :: x_new(size(x,1),size(x,2)),y_new(size(x,1), &
+         size(x,2)),z_new(size(x,1),size(x,2))
+      real(DP)  :: fx_new(size(x,1),size(x,2)),fy_new(size(x,1),&
+         size(x,2)),fz_new(size(x,1),size(x,2))
+      real(DP)  :: eclas_new
+      integer   :: iat,iw,iter
 
       iw=1
       open(100,file='minimize.dat')
@@ -82,4 +97,6 @@
       enddo
       close(100)
 
-      end
+   end subroutine minimize
+
+end module mod_minimize

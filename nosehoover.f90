@@ -1,26 +1,27 @@
 !initial version                         D. Hollas 10.3.2013
 !-----Variables and arrays connected with nose-hoover thermostat     
-      module mod_nhc
-      use mod_array_size
-      implicit none
-      real*8  :: ams=-1,temp=0.0d0,nhcham=0.0d0,tau0=-1,tau !v ps
-      integer :: inose=-1,nchain=4,initNHC=-1
-      integer :: imasst=1  ! switch for massive thermostatting
-      integer :: nrespnose=3,nyosh=7,nmolt=1
-      integer,allocatable :: natmolt(:)
-      integer :: scaleveloc, readNHC
-      real*8,allocatable :: pnhx(:,:,:),pnhy(:,:,:),pnhz(:,:,:)
-      real*8,allocatable :: xi_x(:,:,:), xi_y(:,:,:),xi_z(:,:,:)
-      real*8,allocatable :: w(:),ms(:,:),Qm(:)
-      integer,allocatable :: nshakemol(:)
-      save
-      CONTAINS
-      subroutine calc_nhcham()
-      use mod_array_size
-      use mod_general, only:natom,nwalk
+module mod_nhc
+   use mod_const, only: DP
+   use mod_array_size, only: maxchain
+   implicit none
+   real(DP)  :: ams=-1,temp=0.0d0,nhcham=0.0d0,tau0=-1,tau !v ps
+   integer :: inose=-1,nchain=4,initNHC=-1
+   integer :: imasst=1  ! switch for massive thermostatting
+   integer :: nrespnose=3,nyosh=7,nmolt=1
+   integer,allocatable :: natmolt(:)
+   integer :: scaleveloc, readNHC
+   real(DP),allocatable :: pnhx(:,:,:),pnhy(:,:,:),pnhz(:,:,:)
+   real(DP),allocatable :: xi_x(:,:,:), xi_y(:,:,:),xi_z(:,:,:)
+   real(DP),allocatable :: w(:),ms(:,:),Qm(:)
+   integer,allocatable :: nshakemol(:)
+   save
+   CONTAINS
+
+   subroutine calc_nhcham()
+      use mod_general, only: natom,nwalk
       use mod_system, only: dime
-      implicit none
       integer iat,inh,iw
+
       nhcham=0.0d0
       if (imasst.eq.1)then
        do inh=1,nchain
@@ -46,12 +47,12 @@
       end subroutine
 
       subroutine nhc_init() 
-      use mod_array_size
-      use mod_general
+      use mod_const,    only: AMU, AUtoFS
+      use mod_general, only: ipimd, nwalk, natom
       use mod_system, ONLY: dime
-      use mod_random
+      use mod_random, only: gautrg
       implicit none
-      real*8,allocatable  :: ran(:)
+      real(DP),allocatable  :: ran(:)
       integer :: inh,iw,iat,ipom,imol
       if (imasst.eq.1)then
        allocate( pnhx(natom,nwalk,nchain) )
@@ -124,6 +125,7 @@
         if (iw.eq.1) write(*,*)'Initializing NHC momenta.'
         call gautrg(ran,natom*3,0,6)
          ipom=1
+         !TODO: should be temp*QM
          do iat=1,natom 
          pnhx(iat,iw,inh)=ran(ipom)*sqrt(temp/Qm(iw))
          pnhy(iat,iw,inh)=ran(ipom+1)*sqrt(temp/Qm(iw))
@@ -145,7 +147,7 @@
         if(initNHC.eq.1)then  
          write(*,*)'Initializing NHC momenta.'
          call gautrg(ran,nmolt,0,6)
-         do imol=1,nmolt !TODO nefunguje
+         do imol=1,nmolt !TODO nefunguje, and should be temp*ms
           pnhx(imol,iw,inh)=ran(imol)*sqrt(temp/ms(imol,inh))
          enddo
         endif
@@ -182,7 +184,7 @@
       use mod_general, ONLY:nwalk,natom
       implicit none
       integer :: iw,iat
-      real*8  :: ekin_mom=0.0d0,temp1=0.0d0
+      real(DP)  :: ekin_mom=0.0d0,temp1=0.0d0
       do iw=1,nwalk
        do iat=1,natom
         temp1=pnhx(iat,iw,1)**2+pnhy(iat,iw,1)**2+pnhz(iat,iw,1)**2
@@ -203,10 +205,10 @@
       use mod_general
       use mod_system, only: dime
       implicit none
-      real*8  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-      real*8  :: amt(npartmax,nwalkmax),G(maxchain)
-      real*8  :: dt,ekin2,AA
-      real*8  :: wdt,wdt2,wdt4,pscale
+      real(DP)  :: px(:,:),py(:,:),pz(:,:)
+      real(DP)  :: amt(:,:),G(maxchain)
+      real(DP)  :: dt,ekin2,AA
+      real(DP)  :: wdt,wdt2,wdt4,pscale
       integer :: iw,iat,inh
       integer :: nf,iresp,iyosh
       integer :: iat1,iat2,sumat,imol
@@ -277,23 +279,23 @@
       enddo
 
       ! imol enddo
-enddo
+   enddo
 
-      return
-      end subroutine shiftNHC_yosh
+   return
+   end subroutine shiftNHC_yosh
 
-      SUBROUTINE shiftNHC_yosh_mass (px,py,pz,amt,dt)
+   SUBROUTINE shiftNHC_yosh_mass (px,py,pz,amt,dt)
       use mod_array_size
       use mod_general
       use mod_shake,only:nshake
       implicit none
-      real*8 px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-      real*8 amt(npartmax,nwalkmax)
-      real*8 Gx(maxchain),Gy(maxchain),Gz(maxchain)
-      real*8 :: dt,AA
-      real*8 :: wdt,wdt2,wdt4
-      integer :: iw,iat,inh,istart
-      integer :: iresp,iyosh
+      real(DP) :: px(:,:),py(:,:),pz(:,:)
+      real(DP) :: amt(:,:)
+      real(DP) :: Gx(maxchain),Gy(maxchain),Gz(maxchain)
+      real(DP) :: dt,AA
+      real(DP) :: wdt,wdt2,wdt4
+      integer  :: iw,iat,inh,istart
+      integer  :: iresp,iyosh
 
 
       istart=1 !will be different with normal modes and shake
@@ -374,9 +376,9 @@ enddo
 !iat enddo
       enddo
 !iw enddo
-      enddo
+   enddo
 
-      return
+   return
    end subroutine shiftNHC_yosh_mass
 
 end module mod_nhc

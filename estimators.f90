@@ -3,18 +3,15 @@
       module mod_estimators
       use mod_array_size
       implicit none
-      real*8  :: est_prim_cumul=0.0d0,est_vir_cumul=0.0d0
-      real*8  :: est_prim2_cumul=0.0d0,est_prim_vir=0.0d0,est_vir2_cumul=0.0d0
-      real*8  :: cv_prim_cumul=0.0d0,cv_vir_cumul=0.0d0,cv_dcv_cumul=0.0d0
-      real*8  :: cvhess_cumul(nwalkmax)
-      real*8,allocatable :: h(:)
+      real(DP)  :: est_prim_cumul=0.0d0,est_vir_cumul=0.0d0
+      real(DP)  :: est_prim2_cumul=0.0d0,est_prim_vir=0.0d0,est_vir2_cumul=0.0d0
+      real(DP)  :: cv_prim_cumul=0.0d0,cv_vir_cumul=0.0d0,cv_dcv_cumul=0.0d0
+      real(DP),allocatable :: cvhess_cumul(:)
+      real(DP),allocatable :: h(:)
 !!$OMP threadprivate(h)   
-      !following is for projected cv_pcv estimator, not properly implemented yet!
-      real*8  :: cv_pcv=0.0d0,f_cumul=0.0d0,ex_cumul=0.0d0,fj=0.0d0,f2=0.0d0,rj_cumul=0.0d0
       integer :: enmini=100
       save
       contains
-
 !---- Predavame kartezske souradnice i sily!!!!
       subroutine estimators(x,y,z,fxab,fyab,fzab,eclas,dt)
       use mod_array_size
@@ -23,15 +20,14 @@
       use mod_system, ONLY:am,dime
       use mod_harmon, ONLY:hess_harmon,hess_morse,hess_2dho,hess
       use mod_shake, only: nshake
-      implicit none
-      real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(in) :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
-      real*8,intent(in) :: dt,eclas
-      real*8  :: xc(npartmax),yc(npartmax),zc(npartmax)
-      real*8  :: cvhess(nwalkmax),dc(npartmax*3,nwalkmax)
-      real*8  :: est_vir,est_prim,cv_prim,cv_vir,cv_dcv
+      real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(in) :: fxab(:,:),fyab(:,:),fzab(:,:)
+      real(DP),intent(in) :: dt,eclas
+      real(DP)  :: xc(size(x,1)), yc(size(x,1)), zc(size(x,1))
+      real(DP)  :: cvhess( size(x,2) ), dc( size(x,1)*3, size(x,2) )
+      real(DP)  :: est_vir,est_prim,cv_prim,cv_vir,cv_dcv
       integer :: iat,iw,ipom,iat1,iat2,nf
-      real*8  :: it2,itnc
+      real(DP)  :: it2,itnc
       
 !fxab array is classical force in cartesian coordinates
 
@@ -119,11 +115,8 @@
       cv_vir_cumul=cv_vir_cumul+cv_vir
 
 !   PROJECTED CENTROID VIRIAL CV ESTIMATOR
-
 !      if(it.gt.imini)then
-!        call est_cvpcv(temp,npartmax,n,it2,
-!     &   est_vir_cumul,cv_vir,eclas,xc,yc,zc,
-!     &   cv_pcv,f_cumul,ex_cumul,fj,f2,rj_cumul)
+!        call est_cvpcv()
 !      endif
 
 
@@ -203,9 +196,7 @@
        est_prim2_cumul=0.0d0
        est_prim_vir=0.0d0
        est_vir2_cumul=0.0d0
-       do iw=1,nwalk
-        cvhess_cumul(iw)=0.0d0
-       enddo
+       if(ihess.eq.1) cvhess_cumul=0.0d0
 !      dirty hack to avoid NaN when it.eq.enmin
        itnc=1
       endif
@@ -251,8 +242,8 @@ end module
 !        cv_pcv,f_cumul,ex_cumul,fj,f2,rj_cumul)
 !      use mod_array_size
 !      use mod_general 
-!      implicit real*8(a-h,o-z)
-!      real*8 xc(npartmax),yc(npartmax),zc(npartmax)
+!      implicit real(DP)(a-h,o-z)
+!      real(DP) xc(:),yc(:),zc(:)
 !
 !      G=(9*natom*natom+6*natom)*0.25d0*temp**2
 !

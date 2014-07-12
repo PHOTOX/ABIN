@@ -33,7 +33,6 @@ module mod_shake
    end subroutine shake_init
 
    subroutine shake(x,y,z,px,py,pz,amt,iq,iv) 
-!      use mod_array_size, only: nwalkmax, npartmax
       use mod_general, only: natom, nwalk, istage
       use mod_system, ONLY: am
       real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)

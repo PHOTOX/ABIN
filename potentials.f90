@@ -5,28 +5,26 @@
 !------------------------------------------------------
 !some constanst for analytical potentials      
       module mod_harmon
-      use mod_array_size
+      use mod_const, only: DP
       implicit none
 !---constants for 3DHO
-      real*8 :: k1=0.0d0,k2=0.0d0,k3=0.0d0
+      real(DP) :: k1=0.0d0,k2=0.0d0,k3=0.0d0
 !---constants for 1D 2-particle harmonic oscillator
-      real*8 :: k=0.000d0, r0=0.0d0
+      real(DP) :: k=0.000d0, r0=0.0d0
 !----   CONSTANTS for morse potential ccc
 !            V=De*(1-exp(-a(r-r0)))^2
-      real*8 :: De=0.059167d0,a=-1.0d0
-      real*8,allocatable :: hess(:,:,:)
+      real(DP) :: De=0.059167d0,a=-1.0d0
+      real(DP),allocatable :: hess(:,:,:)
       save
       contains
 
 !------3D Harmonic Oscillator---only 1 particle!!
    subroutine force_2dho(x,y,z,fxab,fyab,fzab,eclas)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(out) :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
-      real*8,intent(out) :: eclas
-      real*8             :: energy
+      use mod_general, only: nwalk
+      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out) :: fxab(:,:),fyab(:,:),fzab(:,:)
+      real(DP),intent(out) :: eclas
+      real(DP)             :: energy
       integer            :: iw
 
       eclas=0.0d0
@@ -47,13 +45,11 @@
 
 !ccccccccHARMONIC OSCILLATOR--diatomic molecules--ccccccccccccccccccccc
    subroutine force_harmon(x,y,z,fxab,fyab,fzab,eclas)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(out) :: fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
-      real*8,intent(out) :: eclas
-      real*8             :: dx,dy,dz,r,fac
+      use mod_general, only: nwalk
+      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out) :: fxab(:,:),fyab(:,:),fzab(:,:)
+      real(DP),intent(out) :: eclas
+      real(DP)             :: dx,dy,dz,r,fac
       integer            :: i
 
         eclas=0.0d0
@@ -79,11 +75,9 @@
 
 
    subroutine hess_harmon(x,y,z)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8,intent(in) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8            :: dx,dy,dz,r,fac
+      use mod_general, only: nwalk
+      real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
+      real(DP)            :: dx,dy,dz,r,fac
       integer           :: i,ipom1,ipom2
 
         do i=1,nwalk
@@ -127,14 +121,12 @@
     end subroutine hess_harmon
 
 
-      subroutine force_morse(x,y,z,fxab,fyab,fzab,eclas)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8,intent(in)  ::  x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8,intent(out) ::  fxab(npartmax,nwalkmax),fyab(npartmax,nwalkmax),fzab(npartmax,nwalkmax)
-      real*8,intent(out) :: eclas
-      real*8 :: dx,dy,dz,r,fac,ex
+    subroutine force_morse(x,y,z,fxab,fyab,fzab,eclas)
+      use mod_general, only: nwalk
+      real(DP),intent(in)  ::  x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out) ::  fxab(:,:),fyab(:,:),fzab(:,:)
+      real(DP),intent(out) :: eclas
+      real(DP) :: dx,dy,dz,r,fac,ex
       integer :: i
 
 !cccccccc  V=De*(1-exp(-a(r-r0)))^2
@@ -161,15 +153,12 @@
          eclas=eclas+De*(1-ex)**2/nwalk
         enddo
 
-     end subroutine force_morse
+   end subroutine force_morse
 
-
-      subroutine hess_morse(x,y,z)
-      use mod_array_size
-      use mod_general
-      implicit none
-      real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8             ::  dx,dy,dz,r,fac,ex,fac2
+   subroutine hess_morse(x,y,z)
+      use mod_general, only: nwalk
+      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
+      real(DP)             ::  dx,dy,dz,r,fac,ex,fac2
       integer            :: i,ipom1,ipom2
 
 !NOT REALLY SURE about a
@@ -226,9 +215,7 @@
 
    !theoretically only needs to be called once, but nah
    subroutine hess_2dho()
-   use mod_array_size
-   use mod_general
-   implicit none
+   use mod_general, only: nwalk
    integer :: i
 
    do i=1,nwalk

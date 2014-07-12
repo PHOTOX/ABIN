@@ -1,7 +1,13 @@
 !----Initial version                    by Daniel Hollas,9.2.2012
 
+module mod_analysis
+   use mod_const, only: DP
+   private 
+   public :: trajout, restout, analysis
+   contains
+
 !----Contains all analysis stuff
-    subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
+   subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
      use mod_array_size
      use mod_analyze_ext, only:analyze_ext
      use mod_estimators ,only:estimators
@@ -10,12 +16,12 @@
      use mod_density
      implicit none
      !intent inout because of estimators, writing to nwalk+1
-     real*8,intent(inout) :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-     real*8,intent(in) :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-     real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-     real*8,intent(in) :: amt(npartmax,nwalkmax)
-     real*8,intent(in) :: eclas,equant
-     real*8 :: dt  !,energy
+     real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
+     real(DP),intent(in) :: fxc(:,:),fyc(:,:),fzc(:,:)
+     real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
+     real(DP),intent(in) :: amt(:,:)
+     real(DP),intent(in) :: eclas,equant
+     real(DP) :: dt  !,energy
 
 !     eclas comes from force_clas,equant from force_quantum
 !     energy=eclas+equant
@@ -55,16 +61,14 @@
       endif
       
 
-       end
+   end subroutine analysis
 
-
-
-     subroutine trajout(x,y,z,it)
+   subroutine trajout(x,y,z,it)
      use mod_array_size
      use mod_general, only: imini,nwalk,natom
      use mod_system, ONLY: names
      implicit none
-     real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
+     real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
      integer,intent(in) :: it
      integer            :: iat,iw
      character(len=20)  :: fgeom
@@ -88,13 +92,13 @@
      close(101)
 
 
-     end
+   end subroutine trajout
 
-     subroutine velout(vx,vy,vz)
+   subroutine velout(vx,vy,vz)
      use mod_array_size
      use mod_general
      implicit none
-     real*8,intent(in) :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+     real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
      integer :: iat,iw
      
 
@@ -106,9 +110,9 @@
      enddo
 
 
-     end
+   end subroutine velout
 
-     subroutine restout(x,y,z,vx,vy,vz,it)
+   subroutine restout(x,y,z,vx,vy,vz,it)
      use mod_array_size
      use mod_general,only:icv,ihess,nwalk,ipimd,natom
      use mod_nhc
@@ -118,8 +122,8 @@
      use mod_gle
      use mod_random
      implicit none
-     real*8,intent(in)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-     real*8,intent(in)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+     real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
+     real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
      integer,intent(in) :: it
      integer :: iat,iw,inh,itrj,ist1,is
      LOGICAL :: file_exists
@@ -220,6 +224,8 @@
 
      close(102)
 
-     end
+   end subroutine restout
+
+end module mod_analysis
 
 

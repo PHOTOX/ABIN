@@ -3,30 +3,32 @@
 !---Should the user need something more then coordinates(velocities,forces),
 ! he/she must also modify  analysis.f90 and possibly abin.f90
       module mod_analyze_ext
-      use mod_array_size
+      use mod_const, only: DP
+      use mod_array_size, only: nbinmax
+      implicit none
+      private 
+      public :: analyze_ext
 !----force constants for displaced oscillator      
-      real*8  :: k1p=0.334d0,k2p=0.00334d0
+      real(DP)  :: k1p=0.334d0,k2p=0.00334d0
 !----displacement
-      real*8  :: dd1=0.5d0,dd2=5.00d0
+      real(DP)  :: dd1=0.5d0,dd2=5.00d0
 !----v0 is adiabatic excitation energy 
-      real*8  :: v0=0.1d0
-      real*8  :: abs(nbinmax)
-      real*8  :: emin=-0.9d0,emax=0.9d0
+      real(DP)  :: v0=0.1d0
+      real(DP)  :: abs(nbinmax)
+      real(DP)  :: emin=-0.9d0,emax=0.9d0
       integer :: nbinen=400
       save
       contains
 !---- Absorption spectrum via reflection principle
       subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
-      use mod_array_size
       use mod_general
       use mod_system, ONLY: names
       use mod_harmon
-      implicit none
-      real*8 x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-      real*8 vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
+      real(DP) x(:,:),y(:,:),z(:,:)
+      real(DP) vx(:,:),vy(:,:),vz(:,:)
+      real(DP) amt(:,:)
       integer :: ibinn,iw
-      real*8 dbin,anorm,dev,abs_mean,v1,v2,xx1,yy1
-      real*8 amt(npartmax,nwalkmax)
+      real(DP) dbin,anorm,dev,abs_mean,v1,v2,xx1,yy1
 
        dbin=(emax-emin)/nbinen
 

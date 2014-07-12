@@ -1,26 +1,31 @@
-!---This is a template file for user-defined analysis function.
-!---This function will be called if anal_ext=1 in input(section general).
-!---Should the user need something more then coordinates(velocities,forces),
+!-This is a template file for user-defined analysis function.
+!-This function will be called if anal_ext=1 in input(section general).
+!-Should the user need something more then coordinates(velocities,forces),
 ! he/she must also modify  analysis.f90 and possibly also  abin.f90
-      module mod_analyze_ext
-      use mod_const, only: DP
-      use mod_array_size, only: nbinmax, nwalkmax
-      real(DP)  :: xmin=-20.0d0,xmax=20.0d0
-      integer,parameter :: nbin=500
-      real(DP)  dist(nbinmax,nwalkmax)
-      save
-      contains
-      subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
+module mod_analyze_ext
+   use mod_const, only: DP
+   use mod_array_size, only: nbinmax
+   implicit none
+   private
+   public :: analyze_ext
+   real(DP)  :: xmin=-20.0d0,xmax=20.0d0
+   integer,parameter :: nbin=500
+   real(DP), allocatable :: dist(:,:)
+   save
+   contains
+
+   subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
       use mod_general,  only: it, natom, nwalk, pot, nwrite
       use mod_system,   only: names, am, dime
       use mod_utils,    only: abinerror
-      implicit none
       real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
       real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
       real(DP),intent(in) :: amt(:,:)
       real(DP)  :: p(size(vx,1),size(vx,2))
       real(DP)  :: anorm,dx,dbin
       integer :: iw,ipom,ian,iat
+
+      if (.not.allocated( dist )) allocate( dist(nbinmax, nwalk) )
 
       iat=1
 
@@ -65,9 +70,9 @@
         close(128)
       endif
    
-     end subroutine analyze_ext
+   end subroutine analyze_ext
 
-     end module
+end module
                                         
 
 

@@ -41,13 +41,11 @@ contains
 
   ! white-noise propagator. time-step has been set in wn_init
   subroutine wn_step(px,py,pz,m)
-    use mod_array_size
-    use mod_general
-    implicit none
-    real*8, intent(inout)  :: px(npartmax,nwalkmax)
-    real*8, intent(inout)  :: py(npartmax,nwalkmax)
-    real*8, intent(inout)  :: pz(npartmax,nwalkmax)
-    real*8, intent(in)     :: m(npartmax,nwalkmax)
+    use mod_general, only: natom
+    real*8, intent(inout)  :: px(:,:)
+    real*8, intent(inout)  :: py(:,:)
+    real*8, intent(inout)  :: pz(:,:)
+    real*8, intent(in)     :: m(:,:)
     integer :: iat,iw,pom
     iw=1
     pom=1
@@ -61,7 +59,7 @@ contains
   end subroutine
   
   subroutine gle_init(dt)
-    use mod_array_size
+    use mod_const, only: AUtoEV
     use mod_general,only: natom,nwalk
     use mod_nhc,only: temp,inose
     implicit none
@@ -201,13 +199,11 @@ contains
   ! momentum/velocity (as used by the calling code) by scaling with the mass the white-noise
   ! random numbers. 
   subroutine gle_step(px,py,pz,m)
-    use mod_array_size,only:npartmax,nwalkmax
     use mod_general,only:natom,nwalk
-    implicit none
-    real(DP), intent(inout)  :: px(npartmax,nwalkmax)
-    real(DP), intent(inout)  :: py(npartmax,nwalkmax)
-    real(DP), intent(inout)  :: pz(npartmax,nwalkmax)
-    real(DP), intent(in)     :: m(npartmax,nwalkmax)
+    real(DP), intent(inout)  :: px(:,:)
+    real(DP), intent(inout)  :: py(:,:)
+    real(DP), intent(inout)  :: pz(:,:)
+    real(DP), intent(in)     :: m(:,:)
     integer                :: i, j, iat, iw
 
 !    call printf(px,py,pz)
