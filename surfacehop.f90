@@ -29,7 +29,7 @@ module mod_sh
    contains
 
    subroutine sh_init(x, y, z, vx_old, vy_old, vz_old, dt)
-   use mod_general,  only: irest, natom
+   use mod_general,  only: irest, natom, it
    use mod_forces,   only: force_clas
    implicit none
    real(DP),intent(inout):: x(:,:),y(:,:),z(:,:)
@@ -106,6 +106,8 @@ module mod_sh
    dum_eclas=0.0d0
    dum_fx=0.0d0   ; dum_fy=0.0d0    ;dum_fz=0.0d0
 
+   !restarting the SH, reading NACM
+
    call force_clas(dum_fx,dum_fy,dum_fz,x,y,z,dum_eclas)
    eshift=-en_array(1, 1)
 
@@ -116,6 +118,7 @@ module mod_sh
 !      call GetNacm(itrj) 
 !      call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
    end do
+   if(it.ne.0.and.irest.eq.1) call read_nacmrest()
 
    end subroutine sh_init
 
@@ -178,14 +181,13 @@ module mod_sh
    subroutine Write_nacmrest()
    use mod_qmmm, only:natqm
    integer :: ist1,ist2,iat,itrj
-
    open(600,file='nacmrest.dat')
    do itrj=1, ntraj
 
    do ist1=1,nstate-1
       do ist2=ist1+1,nstate
    
-!         if(tocalc(ist1,ist2).eq.1)then
+         if(tocalc(ist1,ist2).eq.1)then
    
             write(600,*)'NACM between states',ist1,ist2
             do iat=1,natqm              ! reading only for QM atoms
@@ -193,7 +195,7 @@ module mod_sh
             enddo
    
    !--------if tocalc 
-!         endif
+         endif
    
       enddo
    enddo
@@ -204,31 +206,38 @@ module mod_sh
 
    end subroutine write_nacmrest
 
-   !currently not in use
-   !would be needed if we wanted to support proper restart for SH
    subroutine read_nacmrest()
+   use mod_general, only: it
    use mod_qmmm, only:natqm
    integer :: iost,ist1,ist2,iat,itrj
+   character(len=200) :: chmsg
+   character(len=20) :: chit
+   character(len=60) :: chrestart
 
+   write(*,*)'Reading NACM from nacmrest.dat'
    open(600,file='nacmrest.dat')
    do itrj=1, ntraj
 
    do ist1=1,nstate-1
       do ist2=ist1+1,nstate
    
-!         if(tocalc(ist1,ist2).eq.1)then
+         if(tocalc(ist1,ist2).eq.1)then
    
             read(600,*, iostat=iost)
             do iat=1,natqm              ! reading only for QM atoms
-               read(600,*)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+               read(600,*,iomsg=chmsg)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                if (iost.ne.0)then
                   write(*,*)'Error reading NACM from file nacmrest.'
+                  write(*,*)chmsg
                   call abinerror('write_nacm_rest')
                end if
+               nacx(iat,itrj,ist2,ist1)=-nacx(iat,itrj,ist1,ist2)
+               nacy(iat,itrj,ist2,ist1)=-nacy(iat,itrj,ist1,ist2)
+               nacz(iat,itrj,ist2,ist1)=-nacz(iat,itrj,ist1,ist2)
             enddo
    
    !--------if tocalc 
-!         endif
+         endif
    
       enddo
    enddo
@@ -236,6 +245,12 @@ module mod_sh
    end do
 
    close(600)
+
+   write (chit,*)it
+   chrestart='cp nacmrest.dat nacmrest.dat.'//adjustl(chit)
+   write(*,*)'Making backup of the nacmrest.dat'
+   write(*,*)chrestart
+   call system(chrestart)  
 
    end subroutine read_nacmrest
 

@@ -126,7 +126,7 @@ endif
 !----setting initial values for surface hoping
    if(ipimd.eq.2)then
       do itrj=1, ntraj
-         call get_nacm(itrj)
+         if (it.eq.0) call get_nacm(itrj)
          call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
       end do
    end if

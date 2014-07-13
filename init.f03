@@ -272,14 +272,6 @@ subroutine init(dt)
       enddo
 
       if(ipimd.eq.2)then
-       if(it.ne.0)then
-          write(*,*)'ERROR when reading restart.xyz'
-          write(*,*)'You probably tried to restart SH run,'
-          write(*,*)'which is not supported at this moment.'
-          write(*,*)'Please, consult the manual.'
-          write(*,*)'If you really want to proceed, set iknow=1.'
-          if (iknow.ne.1) call abinerror('init')
-       end if
        read(111,*)
        do itrj=1,ntraj
         read(111,*)istate(itrj)

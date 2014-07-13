@@ -115,7 +115,7 @@ module mod_analysis
      use mod_nhc,    only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
      use mod_estimators
      use mod_kinetic,only: entot_cumul, est_temp_cumul
-     use mod_sh,     only: cel_re,cel_im,ntraj,nstate,istate
+     use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
      use mod_gle
      use mod_random
      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
@@ -152,6 +152,7 @@ module mod_analysis
      enddo
 
      if(ipimd.eq.2)then
+     call write_nacmrest()
      write(102,*)'Coefficients for SH'
       do itrj=1,ntraj
        write(102,*)istate(itrj)
@@ -219,6 +220,7 @@ module mod_analysis
      call rsavef(102)
 
      close(102)
+
 
    end subroutine restout
 

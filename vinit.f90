@@ -224,6 +224,6 @@ end subroutine ScaleVelocities
 
 
       RETURN                             
-      END                               
+      END function ran1
 
 end module mod_vinit

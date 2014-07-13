@@ -1,26 +1,41 @@
-FATAL BUG for ISBC=0
-xcm is not initialized
 
-INCORRECT INITIALIZATION FOR PNHX in inithnc
-we should check whether it solves the bug with floating point exception first
-
-
+---------------------------------------------------
 Restart for SH might be wrong due to different overlap between old and new NACM.
 We should somehow include NACM in some other restart file and read it if present.
-But what about the failed and restarted runs?
-Maybe, we could check the absolute values from restart and calculated,
-but this is getting somehow quite complicated.
-Ooor, better, we should not read it if it\=0
-Currently, restart for SH is forbidden, unless it=0.
+Present since version/commit: always
+Affected: surface hopping
+Status:   unresolved, pop.dat ok, but restarts still differ
+---------------------------------------------------
 
-bug: floating point exception when inose=1 and temp=1.0(or even 10)
-present in alpha version as well
-file nosehoover.f90:356
-356           Gx(inh+1)=pnhx(iat,iw,inh)**2/Qm(iw)-temp
-maybe just wrong default thermostat parameters?
-see hollas@as67-1:~/TEST/PIMD.g09new
-works with tau0>0.002, we should test this value for cases when NHC drifts
+---------------------------------------------------
+CRITICAL:::: Do we do correctly inac=1??
+what if sign of dotproduct changes???
+Present since version/commit: always
+Affected: surface hopping
+Status:   unresolved
+---------------------------------------------------
 
+---------------------------------------------------
 I think that hop is wrong, we should not use vx_int
 and also, after hop, in vx_int arrays will suddenly change...
 maybe it would be easiest to just hop once per big time step??
+Present since version/commit: always
+Affected: surface hopping
+Status:   unresolved
+---------------------------------------------------
+
+--------------------------------------------------
+INCORRECT INITIALIZATION FOR PNH arrays in inithnc,
+causing floating point exception when inose=1 and temp=1.0
+Affected routines: Nose-Hoover
+Present since version/commit: always
+Status: FIXED in this commit: needs further testing
+---------------------------------------------------
+
+---------------------------------------------------
+FATAL bug for isbc=0,noninitialized variable xcm,
+causing drift in center-of-mass and therefore wrong dynamics
+Present since version/commit: v1.0.alpha
+Affected: periodic boundary conditions
+Status:   FIXED, commit: 1c962be 
+---------------------------------------------------

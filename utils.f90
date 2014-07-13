@@ -103,7 +103,7 @@ module mod_utils
     print '(a)', ''
     print '(a)', 'cmdline options:'
     print '(a)', ''
-    print '(a)', '  -h, --help        print usage information and exit'
+    print '(a)', '  -h, --help             print help and exit'
     print '(a)', '  -i <input_parameters>    default: input.in'
     print '(a)', '  -x <input_coordinates>   default: mini.dat'
    end subroutine PrintHelp
