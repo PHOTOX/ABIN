@@ -88,20 +88,17 @@ subroutine init(dt)
        scaleveloc=1
       endif
 
-      !we have to initialize here, becaouse we read them from input
+      !we have to initialize here, because we read them from input
       allocate( names(natom)     )
-      allocate( attypes(natom)   )
-      allocate( massnames(natom) )
+      names     = ''
+      attypes   = names
+      massnames = names
       allocate( masses(natom)    )
+      masses = -1.0d0
       allocate( ishake1(natom*3-6) )
-      allocate( ishake2(natom*3-6) )
+      ishake1 = 0
+      ishake2 = ishake1
 
-      do iat=1,natom
-       names(iat)=''
-       attypes(iat)=''
-       massnames(iat)=''
-       masses(iat)=-1.0d0
-      enddo
 
       ! the namelist system does not need to be present
       read(150,system,iostat=iost,iomsg=chiomsg)
@@ -118,7 +115,8 @@ subroutine init(dt)
       end if
 
       allocate ( natmolt(natom)  )
-      allocate ( nshakemol(natom))
+      natmolt=0
+      nshakemol=natmolt
       read(150,nhcopt)
       rewind(150)
 
@@ -149,6 +147,9 @@ subroutine init(dt)
 !$    call OMP_set_num_threads(nproc)
 !$    nthreads=omp_get_max_threads()
 
+!-----HERE WE CHECK FOR ERRORS IN INPUT-----------------------------------------------
+      call check_inputsanity()
+
 !     resetting number of walkers to 1 in case of classical simulation      
       if(ipimd.eq.0)then
               write(*,*)'ipimd=0,Resetting number of walkers to 1.'
@@ -178,332 +179,8 @@ subroutine init(dt)
 !-------------------------INITIALIZATION OF FFTW ROUTINES-------
       if(istage.eq.2) call fftw_init(nwalk)
 
-!-----HERE WE CHECK FOR ERRORS IN INPUT-----------------------------------------------
-!$    if(nthreads.gt.1.and.ipimd.ne.1)then
-!$     write(*,*)'Parallel execution is currently only supported with PIMD (ipimd=1)'
-!$     call abinerror('init')
-!$    endif
 
-      !-----Check,whether input variables don't exceeds array limits
-      if(ntraj.gt.ntrajmax)then
-       write(*,*)'Maximum number of trajectories is:'
-       write(*,*)ntrajmax
-       write(*,*)'Adjust variable ntrajmax in modules.f90'
-       error=1
-      endif
-      if(nstate.gt.nstmax)then
-       write(*,*)'Maximum number of states is:'
-       write(*,*)nstmax
-       write(*,*)'Adjust variable nstmax in modules.f90'
-       error=1
-      endif
-      if(nchain.gt.maxchain)then
-       write(*,*)'Maximum number of Nose-Hoover chains is:'
-       write(*,*)maxchain
-       write(*,*)'Adjust variable maxchain in modules.f90'
-       error=1
-      endif
-      if(ndist.ge.ndistmax)then
-       write(*,*)'Maximum number of bonds for binning is:'
-       write(*,*)ndistmax
-       write(*,*)'Adjust variable ndistmax in modules.f90'
-       error=1
-      endif
-      if(nbin.gt.nbinmax)then
-       write(*,*)'Maximum number of bins for densities is:'
-       write(*,*)nbinmax
-       write(*,*)'Adjust variable nbinmax in modules.f90'
-       error=1
-      endif
-!----------HERE we check for errors in input.      
-      if(ipimd.eq.1.and.nwalk.le.1)then
-       write(*,*)'Number of walkers for PIMD (nwalk) <=1 !'
-       write(*,*)'Either set ipimd=0 for classical simulation or'
-       write(*,*)'set nwalk > 1'
-       error=1
-      endif
-      if(ipbc.eq.1.and.nmol.le.1)then
-       write(*,*)'You have to specify number of molecules(nmol=x) for PBC!'
-       write(*,*)'Also dont forget to specify number of atoms in molecules(array natmol)'
-       write(*,*)'These are used to wrap molecules back to the box'
-       error=1
-      endif
-      if(iqmmm.eq.1.and.qmmmtype.ne.'nab'.and.qmmmtype.ne.'abin')then
-       write(*,*)'Set qmmmtype to "abin" or "nab"(using Amber ff)'
-       error=1
-      endif
-      if(iqmmm.eq.1.and.ipbc.eq.1)then
-       write(*,*)'QM/MM with PBC not supported !'
-       error=1
-      endif
-      if(integ.ne.'euler'.and.integ.ne.'rk4'.and.integ.ne.'butcher')then
-       write(*,*)'integ must be "euler","rk4" or "butcher".'
-       error=1
-      endif
-      if(integ.ne.'butcher')then
-         write(*,*)'WARNING: variable integ is not "butcher", which is the default and most accurate.'
-         write(*,*)'If you really want to proceed, set iknow=1.'
-         if(iknow.ne.1) error=1
-      end if
-      if(deltae.lt.0)then
-       write(*,*)'Parameter deltae must be non-negative number.'
-       error=1
-      endif
-      if(shiftdihed.ne.0.and.shiftdihed.ne.1)then
-       write(*,*)'Shiftdihed must be either 0 (for dihedrals -180:180) or 1 (for dihedrals 0:360)'
-       error=1
-      endif
-
-      if(shiftdihed.eq.0) shiftdih=0.0d0
-      if(shiftdihed.eq.1) shiftdih=360.0d0
-
-      if(imini.lt.0)then
-              write(*,*)'Input error: imini must be positiv or zero.'
-              error=1
-      endif
-      if(nstep.lt.0)then
-              write(*,*)'Input error: nstep must be positive.'
-              error=1
-      endif
-      if(nwrite.le.0)then
-              write(*,*)'Input error: nwrite must be positive.'
-              error=1
-      endif
-      if(nwritex.le.0)then
-              write(*,*)'Input error: nwritex must be positive.'
-              error=1
-      endif
-      if(nrest.le.0)then
-              write(*,*)'Input error: nrest must be positive.'
-              error=1
-      endif
-      if(nabin.le.0)then
-              write(*,*)'Input error: nabin must be positive.'
-              error=1
-      endif
-      if(icv.ne.0.and.icv.ne.1)then
-              write(*,*)'Input error: icv must be 1 or zero.'
-              error=1
-      endif
-      if(temp.lt.0)then
-              write(*,*)'Input error: temp must be positive.'
-              error=1
-      endif
-      if(dt.le.0)then
-              write(*,*)'Time step negative or undefined!'
-              write(*,*)'Modify variable "dt" in input the general input section.'
-              error=1
-      endif
-      if(ncalc.le.0)then
-              write(*,*)'Ncalc must be positive integer number!'
-              error=1
-      endif
-      if(ncalc.gt.nwrite)then
-              write(*,*)'Ncalc greater than nwrite.Setting nwrite=ncalc'
-              nwrite=ncalc
-      endif
-
-      if(ipimd.eq.1.and.inose.ne.1.and.inose.ne.2)then
-       write(*,*)'You have to use Nosé-Hoover or quantum thermostat with PIMD!(inose=1 or 2)'
-       error=1
-      endif
-      if(ipimd.lt.0.or.ipimd.gt.3)then
-       write(*,*)'ipimd has to be 0,1,2 or 3.'
-       error=1
-      endif
-      if(istage.ne.1.and.istage.ne.0.and.istage.ne.2)then
-       write(*,*)'istage has to be 0,1 or 2'
-       error=1 
-      endif
-      if(readnhc.eq.1.and.initNHC.eq.1.and.irest.eq.1)then
-       write(*,*)'Warning: Conflicting keywords readnhc and initNHC set to 1.'
-       write(*,*)'Momenta from restart.xyz will be used.'
-      endif
-      if(readnhc.eq.1.and.irest.eq.0)then
-       write(*,*)'Ignoring readnhc=1 since irest=0.'
-      endif
-      if(inac.gt.2.or.inac.lt.0)then
-       write(*,*)'Parameter "inac" must be 0,1 or 2.'   !be very carefull if you change this!
-       if(iknow.ne.1) error=1
-      endif
-      if(irest.eq.1.and.scaleveloc.eq.1)then
-       write(*,*)'irest=1 AND scaleveloc=1.'
-       write(*,*)'You are trying to scale the velocities read from restart.xyz.'
-       write(*,*)'I assume this is an error in input. Exiting...'
-       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
-       if(iknow.ne.1) error=1
-      endif
-      if(inose.eq.1.and.ipimd.eq.2)then
-       write(*,*)'Thermostating not meaningful for surface hopping simulation.Exiting.'
-       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
-       if(iknow.ne.1) error=1
-      endif
-      if(istate_init.gt.nstate)then
-       write(*,*)'Error:Initial state > number of computed states. Exiting...'
-       error=1
-      endif
-      if(nac_accu1.le.0.or.nac_accu2.lt.0)then
-       write(*,*)'Input error:NACME precision must be a positive integer.'
-       write(*,*)'The treshold is then 10^-(nac_accu).'
-       error=1
-      endif
-      if(nac_accu1.le.nac_accu2)then
-       write(*,*)'nac_accu1 < nac_accu2'
-       write(*,*)'I will compute NACME only with default accuracy:',nac_accu1
-      endif
-      if(imasst.ne.0.and.imasst.ne.1)then
-              write(*,*)'Input error: imasst must be 1 or zero.'
-              error=1
-      endif
-      if(imasst.eq.0.and.ipimd.eq.1)then
-              write(*,*)'PIMD simulations must use massive thermostat ( imasst=1)! '
-              error=1
-      endif
-      if(imasst.eq.0.and.nmolt.le.0)then
-              write(*,*)'Number of molecules coupled to separate NH chains not specified!Set nmolt > 0.'
-              error=1
-      endif
-      if(imasst.eq.0)then
-       do imol=1,nmolt
-        if(natmolt(imol).le.0)then
-         write(*,*)'Number of atoms in molecules not specified!Set array natmolt properly.'
-         error=1
-        endif
-       enddo
-      endif
-      if(inose.lt.0.and.inose.gt.3)then
-       write(*,*)'inose has to be 0,1,2 or 3.'
-       error=1
-      endif
-      if(istage.eq.1.and.ipimd.ne.1)then
-      write(*,*)'The staging transformation is only meaningful for PIMD'
-       error=1
-      endif
-      if(istage.eq.2.and.ipimd.ne.1)then
-      write(*,*)'The normal mode transformation is only meaningful for PIMD. Exiting...'
-       error=1
-      endif
-      if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2)then
-       write(*,*)'PIMD should be done with staging or normal mode transformation! Exiting...'
-       write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
-       if (iknow.ne.1) error=1
-      endif
-      if(istage.eq.1.and.inose.eq.2)then
-       write(*,*)'The staging transformation is not compatible with GLE thermostat.'
-       error=1
-      endif
-      if(nyosh.ne.1.and.nyosh.ne.3.and.nyosh.ne.7)then
-       write(*,*)'Variable nyosh(order of Suzuki-Yoshiga scheme) must be 1,3 or 7'
-       error=1
-      endif
-      if(nyosh.le.1.and.inose.eq.1)then
-       write(*,*)'It is strongly reccomended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh 3 or 7).'
-       write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
-       if (iknow.ne.1)error=1
-      endif
-      if(nrespnose.lt.3.and.inose.eq.1)then
-       write(*,*)'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
-       write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
-       if (iknow.ne.1)error=1
-      endif
-      if(nrespnose.le.0)then
-       write(*,*)'Variable nrespnose must be positive integer'
-       error=1
-      endif
-      if(irest.ne.1.and.irest.ne.0)then
-      write(*,*)'ERROR:irest has to be 1 or 0'
-       error=1
-      endif
-      if(nshake.gt.0.and.ipimd.eq.1)then
-       write(*,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
-       write(*,*)'PIMD with SHAKE cannot use massive thermostating!Exiting... !'
-       error=1
-      endif
-      if(nshake.gt.0.and.imasst.eq.1)then
-       write(*,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
-       write(*,*)'SHAKE cannot use massive thermostating!'
-       write(*,*)'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
-       error=1
-      endif
-
-      if(pot.eq.'2dho'.and.natom.gt.1)then
-       write(*,*)'Only 1 particle is allowed for 2D harmonic oscillator!'
-       error=1
-      endif
-      if(pot.eq.'mm'.and.iqmmm.gt.1)then
-       write(*,*)'Pot="mm"is not compatible with iqmmm=1!'
-       error=1
-      endif
-      if((natmm+natqm.ne.natom).and.iqmmm.eq.1)then
-       write(*,*)'Natmm+natqm not equal to natom!'
-       error=1
-      endif
-
-      if(isbc.eq.1.and.ipbc.eq.1)then
-       write(*,*)'Spherical boundary conditions not compatible with periodic boundary conditions!'
-       error=1
-      endif
-
-      if(ipbc.eq.1)then
-       ipom=0
-       do iat=1,nmol
-        ipom=ipom+natmol(iat)
-       enddo
-       if(ipom.ne.natom)then
-        write(*,*)'Number of atoms in molecules(natmol) doesnt match with natom.'
-        error=1
-       endif
-      endif
-
-      if(inose.eq.1.and.imasst.eq.0)then
-       ipom=0
-       do iat=1,nmolt
-        ipom=ipom+natmolt(iat)
-       enddo
-       if(ipom.ne.natom)then
-        write(*,*)'Number of atoms in thermostated molecules(natmol) doesnt match with natom.'
-        write(*,*)'This is probably mistake in input.Exiting...'
-       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
-        if(iknow.ne.1) error=1
-       endif
-      endif
-
-      if(temp.lt.1.and.inose.ge.1)then
-       write(*,*)'WARNING!:Temperature below 1K. Are you sure?'
-       write(*,*)'This is probably mistake in input.Exiting...'
-       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
-       if(iknow.ne.1) error=1
-      endif
-
-      INQUIRE(FILE="movie.xyz", EXIST=file_exists)
-      if(file_exists)then
-       if(irest.eq.0)then
-        write(*,*)'File "movie.xyz" exists.Please (re)move it or set irest=1.'
-        error=1
-       else
-        write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
-       endif
-      endif
-
-      INQUIRE(FILE="restart.xyz", EXIST=file_exists)
-      if(file_exists)then
-       if(irest.eq.0)then
-        write(*,*)'File "restart.xyz" exists. Please (re)move it or set irest=1.'
-        error=1
-       endif
-      else
-       if(irest.eq.1)then
-         write(*,*)'File restart.xyz not found.' 
-         error=1
-       endif 
-      endif
-
-      if(error.eq.1)then
-         write(*,*)'Input errors were found! Exiting now...'
-         call abinerror('init')
-      endif
-!-----END OF ERROR CHECKING
-
+!     allocate all basic arrays and set them to 0.0d0
       call allocate_arrays( natom, nwalk+1 )
 
 !-----READING GEOMETRY
@@ -823,7 +500,337 @@ endif
 
 !--------END OF INITIALIZATION-------------------
 
-      call flush()
+   call flush()
+
+   contains
+
+   subroutine check_inputsanity()
+!$    if(nthreads.gt.1.and.ipimd.ne.1)then
+!$     write(*,*)'Parallel execution is currently only supported with PIMD (ipimd=1)'
+!$     call abinerror('init')
+!$    endif
+      !-----Check,whether input variables don't exceeds array limits
+      if(ntraj.gt.ntrajmax)then
+       write(*,*)'Maximum number of trajectories is:'
+       write(*,*)ntrajmax
+       write(*,*)'Adjust variable ntrajmax in modules.f90'
+       error=1
+      endif
+      if(nstate.gt.nstmax)then
+       write(*,*)'Maximum number of states is:'
+       write(*,*)nstmax
+       write(*,*)'Adjust variable nstmax in modules.f90'
+       error=1
+      endif
+      if(nchain.gt.maxchain)then
+       write(*,*)'Maximum number of Nose-Hoover chains is:'
+       write(*,*)maxchain
+       write(*,*)'Adjust variable maxchain in modules.f90'
+       error=1
+      endif
+      if(ndist.ge.ndistmax)then
+       write(*,*)'Maximum number of bonds for binning is:'
+       write(*,*)ndistmax
+       write(*,*)'Adjust variable ndistmax in modules.f90'
+       error=1
+      endif
+      if(nbin.gt.nbinmax)then
+       write(*,*)'Maximum number of bins for densities is:'
+       write(*,*)nbinmax
+       write(*,*)'Adjust variable nbinmax in modules.f90'
+       error=1
+      endif
+!----------HERE we check for errors in input.      
+      if(ipimd.eq.1.and.nwalk.le.1)then
+       write(*,*)'Number of walkers for PIMD (nwalk) <=1 !'
+       write(*,*)'Either set ipimd=0 for classical simulation or'
+       write(*,*)'set nwalk > 1'
+       error=1
+      endif
+      if(ipbc.eq.1.and.nmol.le.1)then
+       write(*,*)'You have to specify number of molecules(nmol=x) for PBC!'
+       write(*,*)'Also dont forget to specify number of atoms in molecules(array natmol)'
+       write(*,*)'These are used to wrap molecules back to the box'
+       error=1
+      endif
+      if(iqmmm.eq.1.and.qmmmtype.ne.'nab'.and.qmmmtype.ne.'abin')then
+       write(*,*)'Set qmmmtype to "abin" or "nab"(using Amber ff)'
+       error=1
+      endif
+      if(iqmmm.eq.1.and.ipbc.eq.1)then
+       write(*,*)'QM/MM with PBC not supported !'
+       error=1
+      endif
+      if(integ.ne.'euler'.and.integ.ne.'rk4'.and.integ.ne.'butcher')then
+       write(*,*)'integ must be "euler","rk4" or "butcher".'
+       error=1
+      endif
+      if(integ.ne.'butcher')then
+         write(*,*)'WARNING: variable integ is not "butcher", which is the default and most accurate.'
+         write(*,*)'If you really want to proceed, set iknow=1.'
+         if(iknow.ne.1) error=1
+      end if
+      if(deltae.lt.0)then
+       write(*,*)'Parameter deltae must be non-negative number.'
+       error=1
+      endif
+      if(shiftdihed.ne.0.and.shiftdihed.ne.1)then
+       write(*,*)'Shiftdihed must be either 0 (for dihedrals -180:180) or 1 (for dihedrals 0:360)'
+       error=1
+      endif
+
+      if(shiftdihed.eq.0) shiftdih=0.0d0
+      if(shiftdihed.eq.1) shiftdih=360.0d0
+
+      if(imini.lt.0)then
+              write(*,*)'Input error: imini must be positiv or zero.'
+              error=1
+      endif
+      if(nstep.lt.0)then
+              write(*,*)'Input error: nstep must be positive.'
+              error=1
+      endif
+      if(nwrite.le.0)then
+              write(*,*)'Input error: nwrite must be positive.'
+              error=1
+      endif
+      if(nwritex.le.0)then
+              write(*,*)'Input error: nwritex must be positive.'
+              error=1
+      endif
+      if(nrest.le.0)then
+              write(*,*)'Input error: nrest must be positive.'
+              error=1
+      endif
+      if(nabin.le.0)then
+              write(*,*)'Input error: nabin must be positive.'
+              error=1
+      endif
+      if(icv.ne.0.and.icv.ne.1)then
+              write(*,*)'Input error: icv must be 1 or zero.'
+              error=1
+      endif
+      if(temp.lt.0)then
+              write(*,*)'Input error: temp must be positive.'
+              error=1
+      endif
+      if(dt.le.0)then
+              write(*,*)'Time step negative or undefined!'
+              write(*,*)'Modify variable "dt" in input the general input section.'
+              error=1
+      endif
+      if(ncalc.le.0)then
+              write(*,*)'Ncalc must be positive integer number!'
+              error=1
+      endif
+      if(ncalc.gt.nwrite)then
+              write(*,*)'Ncalc greater than nwrite.Setting nwrite=ncalc'
+              nwrite=ncalc
+      endif
+
+      if(ipimd.eq.1.and.inose.ne.1.and.inose.ne.2)then
+       write(*,*)'You have to use Nosé-Hoover or quantum thermostat with PIMD!(inose=1 or 2)'
+       error=1
+      endif
+      if(ipimd.lt.0.or.ipimd.gt.3)then
+       write(*,*)'ipimd has to be 0,1,2 or 3.'
+       error=1
+      endif
+      if(istage.ne.1.and.istage.ne.0.and.istage.ne.2)then
+       write(*,*)'istage has to be 0,1 or 2'
+       error=1 
+      endif
+      if(readnhc.eq.1.and.initNHC.eq.1.and.irest.eq.1)then
+       write(*,*)'Warning: Conflicting keywords readnhc and initNHC set to 1.'
+       write(*,*)'Momenta from restart.xyz will be used.'
+      endif
+      if(readnhc.eq.1.and.irest.eq.0)then
+       write(*,*)'Ignoring readnhc=1 since irest=0.'
+      endif
+      if(inac.gt.2.or.inac.lt.0)then
+       write(*,*)'Parameter "inac" must be 0,1 or 2.'   !be very carefull if you change this!
+       if(iknow.ne.1) error=1
+      endif
+      if(irest.eq.1.and.scaleveloc.eq.1)then
+       write(*,*)'irest=1 AND scaleveloc=1.'
+       write(*,*)'You are trying to scale the velocities read from restart.xyz.'
+       write(*,*)'I assume this is an error in input. Exiting...'
+       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
+       if(iknow.ne.1) error=1
+      endif
+      if(inose.eq.1.and.ipimd.eq.2)then
+       write(*,*)'Thermostating not meaningful for surface hopping simulation.Exiting.'
+       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
+       if(iknow.ne.1) error=1
+      endif
+      if(istate_init.gt.nstate)then
+       write(*,*)'Error:Initial state > number of computed states. Exiting...'
+       error=1
+      endif
+      if(nac_accu1.le.0.or.nac_accu2.lt.0)then
+       write(*,*)'Input error:NACME precision must be a positive integer.'
+       write(*,*)'The treshold is then 10^-(nac_accu).'
+       error=1
+      endif
+      if(nac_accu1.le.nac_accu2)then
+       write(*,*)'nac_accu1 < nac_accu2'
+       write(*,*)'I will compute NACME only with default accuracy:',nac_accu1
+      endif
+      if(imasst.ne.0.and.imasst.ne.1)then
+              write(*,*)'Input error: imasst must be 1 or zero.'
+              error=1
+      endif
+      if(imasst.eq.0.and.ipimd.eq.1)then
+              write(*,*)'PIMD simulations must use massive thermostat ( imasst=1)! '
+              error=1
+      endif
+      if(imasst.eq.0.and.nmolt.le.0)then
+              write(*,*)'Number of molecules coupled to separate NH chains not specified!Set nmolt > 0.'
+              error=1
+      endif
+      if(imasst.eq.0)then
+       do imol=1,nmolt
+        if(natmolt(imol).le.0)then
+         write(*,*)'Number of atoms in molecules not specified!Set array natmolt properly.'
+         error=1
+        endif
+       enddo
+      endif
+      if(inose.lt.0.and.inose.gt.3)then
+       write(*,*)'inose has to be 0,1,2 or 3.'
+       error=1
+      endif
+      if(istage.eq.1.and.ipimd.ne.1)then
+      write(*,*)'The staging transformation is only meaningful for PIMD'
+       error=1
+      endif
+      if(istage.eq.2.and.ipimd.ne.1)then
+      write(*,*)'The normal mode transformation is only meaningful for PIMD. Exiting...'
+       error=1
+      endif
+      if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2)then
+       write(*,*)'PIMD should be done with staging or normal mode transformation! Exiting...'
+       write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
+       if (iknow.ne.1) error=1
+      endif
+      if(istage.eq.1.and.inose.eq.2)then
+       write(*,*)'The staging transformation is not compatible with GLE thermostat.'
+       error=1
+      endif
+      if(nyosh.ne.1.and.nyosh.ne.3.and.nyosh.ne.7)then
+       write(*,*)'Variable nyosh(order of Suzuki-Yoshiga scheme) must be 1,3 or 7'
+       error=1
+      endif
+      if(nyosh.le.1.and.inose.eq.1)then
+       write(*,*)'It is strongly reccomended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh 3 or 7).'
+       write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
+       if (iknow.ne.1)error=1
+      endif
+      if(nrespnose.lt.3.and.inose.eq.1)then
+       write(*,*)'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
+       write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
+       if (iknow.ne.1)error=1
+      endif
+      if(nrespnose.le.0)then
+       write(*,*)'Variable nrespnose must be positive integer'
+       error=1
+      endif
+      if(irest.ne.1.and.irest.ne.0)then
+      write(*,*)'ERROR:irest has to be 1 or 0'
+       error=1
+      endif
+      if(nshake.gt.0.and.ipimd.eq.1)then
+       write(*,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
+       write(*,*)'PIMD with SHAKE cannot use massive thermostating!Exiting... !'
+       error=1
+      endif
+      if(nshake.gt.0.and.imasst.eq.1)then
+       write(*,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
+       write(*,*)'SHAKE cannot use massive thermostating!'
+       write(*,*)'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
+       error=1
+      endif
+
+      if(pot.eq.'2dho'.and.natom.gt.1)then
+       write(*,*)'Only 1 particle is allowed for 2D harmonic oscillator!'
+       error=1
+      endif
+      if(pot.eq.'mm'.and.iqmmm.gt.1)then
+       write(*,*)'Pot="mm"is not compatible with iqmmm=1!'
+       error=1
+      endif
+      if((natmm+natqm.ne.natom).and.iqmmm.eq.1)then
+       write(*,*)'Natmm+natqm not equal to natom!'
+       error=1
+      endif
+
+      if(isbc.eq.1.and.ipbc.eq.1)then
+       write(*,*)'Spherical boundary conditions not compatible with periodic boundary conditions!'
+       error=1
+      endif
+
+      if(ipbc.eq.1)then
+       ipom=0
+       do iat=1,nmol
+        ipom=ipom+natmol(iat)
+       enddo
+       if(ipom.ne.natom)then
+        write(*,*)'Number of atoms in molecules(natmol) doesnt match with natom.'
+        error=1
+       endif
+      endif
+
+      if(inose.eq.1.and.imasst.eq.0)then
+       ipom=0
+       do iat=1,nmolt
+        ipom=ipom+natmolt(iat)
+       enddo
+       if(ipom.ne.natom)then
+        write(*,*)'Number of atoms in thermostated molecules(natmol) doesnt match with natom.'
+        write(*,*)'This is probably mistake in input.Exiting...'
+       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
+        if(iknow.ne.1) error=1
+       endif
+      endif
+
+      if(temp.lt.1.and.inose.ge.1)then
+       write(*,*)'WARNING!:Temperature below 1K. Are you sure?'
+       write(*,*)'This is probably mistake in input.Exiting...'
+       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
+       if(iknow.ne.1) error=1
+      endif
+
+      INQUIRE(FILE="movie.xyz", EXIST=file_exists)
+      if(file_exists)then
+       if(irest.eq.0)then
+        write(*,*)'File "movie.xyz" exists.Please (re)move it or set irest=1.'
+        error=1
+       else
+        write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
+       endif
+      endif
+
+      INQUIRE(FILE="restart.xyz", EXIST=file_exists)
+      if(file_exists)then
+       if(irest.eq.0)then
+        write(*,*)'File "restart.xyz" exists. Please (re)move it or set irest=1.'
+        error=1
+       endif
+      else
+       if(irest.eq.1)then
+         write(*,*)'File restart.xyz not found.' 
+         error=1
+       endif 
+      endif
+
+      if(error.eq.1)then
+         write(*,*)'Input errors were found! Exiting now...'
+         call abinerror('init')
+      endif
+
+
+   end subroutine check_inputsanity
 
 end subroutine init
+
 

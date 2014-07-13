@@ -26,7 +26,7 @@
 
 !-----mod_array_size contains various array limits. Modify here if you need larger arrays (for big systems)
       module mod_array_size
-      use mod_const, only: DP !TODO oddelat
+      use mod_const, only: DP 
       implicit none
       integer,parameter   :: MAXCHAIN=10
       integer,parameter   :: NBINMAX=2000, NDISTMAX=30
@@ -270,10 +270,12 @@ end module
         end if
       end do
 
-      print *,'These are the atom names I found:'
-      write(*,*)(names(i),i=1,natom)
-      print *,'The corresponding relative atomic masses are:'
-      write(*,*)(am(i),i=1,natom)
+      if (natom.le.100)then
+         print *,'These are the atom names I found:'
+         write(*,*)(names(i),i=1,natom)
+         print *,'The corresponding relative atomic masses are:'
+         write(*,*)(am(i),i=1,natom)
+      end if
       print *,'----------------------------------------------------------'
       print *,''
 
@@ -284,7 +286,6 @@ end module
          subroutine init_usermass()
          integer :: iat, j
             
-         !        TODO: does this work?
          do i=1,size(massnames)
             do j=i+1,size(massnames)
                if (massnames(i).eq.massnames(j))then

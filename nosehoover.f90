@@ -101,12 +101,14 @@ module mod_nhc
        if(tau0.gt.0) Qm(1)=ams  ! see tuckermann,stat.mech.
       endif
 
-      write(*,*)'Thermostat masses'
-      if(imasst.eq.1) write(*,*)(Qm(iw),iw=1,nwalk)
-      if(imasst.eq.0)then 
-       do imol=1,nmolt
-        write(*,*)(ms(imol,inh),inh=1,nchain)
-       enddo
+      if(nmolt.le.50)then
+         write(*,*)'Thermostat masses'
+         if(imasst.eq.1) write(*,*)(Qm(iw),iw=1,nwalk)
+         if(imasst.eq.0)then 
+            do imol=1,nmolt
+               write(*,*)(ms(imol,inh),inh=1,nchain)
+            enddo
+         endif
       endif
 
 !---NOW INITIALIZE thermostat POSITION AND MOMENTA---

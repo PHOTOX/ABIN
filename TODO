@@ -4,12 +4,6 @@ also test inac=1 (LUKAS code)
 when tests are availabel, check whether  following options change program behaviour
 see this page: https://gcc.gnu.org/onlinedocs/gcc-3.3.5/g77/Overly-Convenient-Options.html#Overly-Convenient-Options
 
-allocate arrays..must be in modules(why?,probably not since 2003)...use automatic arrays for local arrays where needed
-will need to move variable natom to section general to allocate arrays from section system in advance
-allocatable positions, velocities and momenta in modules, forces probably not?
-probably not in modules, no wide scope, this simplyfies things
-dont forget to allocate nwalk+1
-
 todo: MPI version for terachem
 
 todo: projit vsechna TODO v kodu

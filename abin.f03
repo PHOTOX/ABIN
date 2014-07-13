@@ -233,7 +233,7 @@ endif
       
 
       if(modulo(it,nwrite).eq.0)then
-        write(*,'(I20,F15.2)')it,it*dt*autofs
+        write(*,'(I20,F15.2)')it,it*dt*AUtoFS
         call flush(6)
       endif
 
