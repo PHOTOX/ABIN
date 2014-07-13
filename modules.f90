@@ -12,7 +12,7 @@
       ! and using the thermochemical calorie (1 cal = 4.184 J):'
       module mod_const
       implicit none
-      INTEGER, PARAMETER :: DP = KIND(1.0d0)
+      INTEGER, PARAMETER  :: DP = KIND(1.0d0)
       real(DP), parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
       real(DP), parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
       real(DP), parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
@@ -28,17 +28,9 @@
       module mod_array_size
       use mod_const, only: DP !TODO oddelat
       implicit none
-      integer,parameter :: NPARTMAX=3000,NWALKMAX=200,MAXCHAIN=10,NSHAKEMAX=6000
-      integer,parameter :: NBINMAX=2000,NDISTMAX=30
-      integer,parameter :: NSTMAX=15,NTRAJMAX=1
-      real(DP), parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
-      real(DP), parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
-      real(DP), parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
-      real(DP), parameter :: AUTOM=5.2917720859d-11 ! atomic length
-      real(DP), parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
-      real(DP), parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0 
-      real(DP), parameter :: AUTODEBYE =  2.54174623d0
-      real(DP), parameter :: KBinAU = 0.9999999748284666d0  !boltzmann units in au,not used
+      integer,parameter   :: MAXCHAIN=10
+      integer,parameter   :: NBINMAX=2000, NDISTMAX=30
+      integer,parameter   :: NSTMAX=20, NTRAJMAX=1
       save
       end module  
 
@@ -66,7 +58,6 @@ end module
 !-----Some information about simulated system, especially for distributions and shake
       module mod_system
       use mod_const, only: DP
-      use mod_array_size, only: npartmax
       implicit none
       real(DP),allocatable  :: am(:)
       character(len=2), allocatable :: names(:)

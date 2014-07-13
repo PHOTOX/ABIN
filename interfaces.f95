@@ -3,12 +3,8 @@ module mod_interfaces
    use mod_const, only: DP
    INTERFACE
 
-   subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
+   subroutine init(dt)
    IMPORT :: DP
-   real(DP),intent(out) :: x(:,:),y(:,:),z(:,:)
-   real(DP),intent(out) :: vx(:,:),vy(:,:),vz(:,:)
-   real(DP),intent(out) :: fxc(:,:),fyc(:,:),fzc(:,:)
-   real(DP),intent(out) :: fxq(:,:),fyq(:,:),fzq(:,:)
    real(DP),intent(out) :: dt
    end subroutine init
 

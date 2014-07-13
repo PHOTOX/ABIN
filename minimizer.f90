@@ -12,7 +12,7 @@ module mod_minimize
    contains
 
    subroutine minimize(x,y,z,fx,fy,fz,eclas)
-      use mod_array_size
+      use mod_const,    only: ANG
       use mod_general,  only: natom, nwrite, nwritex, imini
       use mod_system,   only: names, conatom
       use mod_analysis, only: trajout

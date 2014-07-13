@@ -17,9 +17,8 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program in the file LICENSE. If not, see <http://www.gnu.org/licenses/>.
 program abin_dyn
-   use mod_const, only: DP
-!   use mod_arrays
-   use mod_array_size
+   use mod_const, only: DP, AUtoFS
+   use mod_arrays
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_interfaces
@@ -32,22 +31,12 @@ program abin_dyn
    use mod_analysis, only: analysis, restout
    use mod_forces,   only: force_clas, force_quantum
    implicit none
-   real(DP)  :: x(npartmax,nwalkmax),y(npartmax,nwalkmax),z(npartmax,nwalkmax)
-   real(DP)  :: amt(npartmax,nwalkmax),amg(npartmax,nwalkmax)
-   real(DP)  :: fxc(npartmax,nwalkmax),fyc(npartmax,nwalkmax),fzc(npartmax,nwalkmax)
-   real(DP)  :: fxq(npartmax,nwalkmax),fyq(npartmax,nwalkmax),fzq(npartmax,nwalkmax)
-   real(DP)  :: vx(npartmax,nwalkmax),vy(npartmax,nwalkmax),vz(npartmax,nwalkmax)
-   real(DP)  :: px(npartmax,nwalkmax),py(npartmax,nwalkmax),pz(npartmax,nwalkmax)
-   real(DP)  :: transx(npartmax,nwalkmax),transy(npartmax,nwalkmax),transz(npartmax,nwalkmax)
-   real(DP)  :: transfxc(npartmax,nwalkmax),transfyc(npartmax,nwalkmax),transfzc(npartmax,nwalkmax)
-   real(DP)  :: transxv(npartmax,nwalkmax),transyv(npartmax,nwalkmax),transzv(npartmax,nwalkmax)
-   real(DP)  :: vx_old(npartmax,nwalkmax),vy_old(npartmax,nwalkmax),vz_old(npartmax,nwalkmax)
-   real(DP)  :: dt,eclas,equant
-   integer :: iat, iw, itrj
-   integer,dimension(8) :: values2,values1
-   LOGICAL :: file_exists
+   real(DP)    :: dt,eclas,equant
+   integer     :: iat, iw, itrj
+   LOGICAL     :: file_exists
    character(len=20) :: chit
    character(len=40) :: chrestart
+   integer,dimension(8) :: values2,values1
 !$ integer :: nthreads,omp_get_max_threads
 
      call PrintLogo(values1)
@@ -55,7 +44,7 @@ program abin_dyn
 
 
 !-   INPUT AND INITIALIZATION SECTION      
-     call init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt) 
+     call init(dt) 
      if(irest.eq.1)then
         write (chit,*)it
         chrestart='cp restart.xyz restart.xyz.'//adjustl(chit)
@@ -316,6 +305,7 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
 end subroutine PrintLogo
 
 subroutine finish(values1,values2)
+   use mod_arrays, only: deallocate_arrays
    use mod_general
    use mod_nhc
    use mod_estimators, only: h
@@ -326,6 +316,8 @@ subroutine finish(values1,values2)
    integer,dimension(8),intent(out) :: values2
    real(DP) :: TIME
 !   integer :: iter=-3
+
+   call deallocate_arrays( )
 
    close(1)
    close(2)

@@ -4,13 +4,12 @@
 module mod_qmmm
    use mod_const, only: DP
    use mod_utils, only: abinerror
-   use mod_array_size , only: npartmax
    implicit none
    character(len=2), allocatable :: attypes(:)
    integer          :: natqm,natmm
    character(len=10),parameter :: LJcomb='LB' !no other option for now
    character(len=10) :: qmmmtype='NA'
-   real(DP)  :: q(npartmax),rmin(npartmax),eps(npartmax)
+   real(DP),allocatable  :: q(:),rmin(:),eps(:)
    real(DP),allocatable  :: AIJ(:,:),BIJ(:,:)
    save
    CONTAINS

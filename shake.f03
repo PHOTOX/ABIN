@@ -1,15 +1,13 @@
 
 module mod_shake
-   use mod_array_size, only: nshakemax
    use mod_const, only: DP
    use mod_utils, only: abinerror
    implicit none
    private
    public   :: shake_init, shake_tol, nshake, shake, ishake1, ishake2
-   real(DP) :: shake_tol=0.001d0
    real(DP), allocatable :: dshake(:)
-   !we can't alloce these, because we read them through namelist
-   integer  :: ishake1(nshakemax),ishake2(nshakemax)
+   integer, allocatable  :: ishake1(:),ishake2(:)
+   real(DP) :: shake_tol=0.001d0
    integer  :: nshake=0
    save
    contains

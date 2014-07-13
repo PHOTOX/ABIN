@@ -9,8 +9,9 @@
 ! Surface hopping is NOT initialized here.
 ! Daniel Hollas,9.2.2012 
 
-subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
-!      use mod_const
+subroutine init(dt)
+      use mod_const
+      use mod_arrays
       use mod_array_size
       use mod_general
       use mod_system
@@ -21,21 +22,17 @@ subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
       use mod_qmmm
       use mod_gle
       use mod_nab
-      use mod_sbc,    only: sbc_init, rb_sbc, kb_sbc, isbc, rho
-      use mod_fftw3  ,only: fftw_init
+      use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
+      use mod_fftw3,    only: fftw_init
       use mod_random
-      use mod_guillot,ONLY: inames_guillot
+      use mod_guillot,  only: inames_guillot
       use mod_utils
-      use mod_vinit, only: vinit, scalevelocities
+      use mod_vinit,    only: vinit, scalevelocities
       use mod_density
       use mod_shake
-      use mod_kinetic, only: entot_cumul, est_temp_cumul
+      use mod_kinetic,  only: entot_cumul, est_temp_cumul
       use mod_minimize, only: gamm, gammthr
       implicit none
-      real(DP),intent(out) :: x(:,:),y(:,:),z(:,:)
-      real(DP),intent(out) :: fxc(:,:),fyc(:,:),fzc(:,:)
-      real(DP),intent(out) :: fxq(:,:),fyq(:,:),fzq(:,:)
-      real(DP),intent(out) :: vx(:,:),vy(:,:),vz(:,:)
       real(DP),intent(out) :: dt
       real(DP), allocatable  :: masses(:)
       real(DP)  :: rans(10)
@@ -69,8 +66,8 @@ subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
       chcoords='mini.dat'
       chinput='input.in'
       call Get_cmdline(chinput, chcoords)
-      write(*,*)'Will read parameters from input file ',chinput
-      write(*,*)'Will read xyz coordinates from file ',chcoords
+      write(*,*)'I will read parameters from input file ',chinput
+      write(*,*)'I will read xyz coordinates from file ',chcoords
 
       dt=-1  
       prngread=.false.
@@ -91,10 +88,14 @@ subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
        scaleveloc=1
       endif
 
+      !we have to initialize here, becaouse we read them from input
       allocate( names(natom)     )
       allocate( attypes(natom)   )
       allocate( massnames(natom) )
       allocate( masses(natom)    )
+      allocate( ishake1(natom*3-6) )
+      allocate( ishake2(natom*3-6) )
+
       do iat=1,natom
        names(iat)=''
        attypes(iat)=''
@@ -102,6 +103,7 @@ subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
        masses(iat)=-1.0d0
       enddo
 
+      ! the namelist system does not need to be present
       read(150,system,iostat=iost,iomsg=chiomsg)
       rewind(150)
       !check, whether we hit End-Of-File or other error
@@ -126,15 +128,21 @@ subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
          rewind(150)
          integ=UpperToLower(integ)
       end if
+
       if(iqmmm.eq.1.or.pot.eq.'mm')then
+         allocate( q(natom) )
+         allocate( rmin(natom) )
+         allocate( eps(natom) )
          read(150,qmmm)
          rewind(150)
       end if
+
       if(qmmmtype.eq."nab".or.pot.eq.'nab')then
          allocate ( natmol(natom) )
          read(150,nab)
          rewind(150)
       end if
+
       close(150)
 !-----END OF READING INPUT----------------------------------------- 
 
@@ -181,49 +189,31 @@ subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
        write(*,*)'Maximum number of trajectories is:'
        write(*,*)ntrajmax
        write(*,*)'Adjust variable ntrajmax in modules.f90'
-       stop
+       error=1
       endif
       if(nstate.gt.nstmax)then
        write(*,*)'Maximum number of states is:'
        write(*,*)nstmax
        write(*,*)'Adjust variable nstmax in modules.f90'
-       stop
-      endif
-      if(nwalk.ge.nwalkmax)then
-       write(*,*)'Maximum number of random walkers is:'
-       write(*,*)nwalkmax-1  !because we write passed that in estimators.dat
-       write(*,*)'Adjust variable nwalkmax in modules.f90'
-       stop
-      endif
-      if(natom.gt.npartmax)then
-       write(*,*)'Maximum number of atoms is:'
-       write(*,*)npartmax
-       write(*,*)'Adjust variable npartmax in modules.f90'
-       stop
+       error=1
       endif
       if(nchain.gt.maxchain)then
        write(*,*)'Maximum number of Nose-Hoover chains is:'
        write(*,*)maxchain
        write(*,*)'Adjust variable maxchain in modules.f90'
-       stop
-      endif
-      if(nshake.gt.nshakemax)then
-       write(*,*)'Maximum number of bonds with SHAKE is:'
-       write(*,*)nshakemax
-       write(*,*)'Adjust variable nshakemax in modules.f90'
-       stop
+       error=1
       endif
       if(ndist.ge.ndistmax)then
        write(*,*)'Maximum number of bonds for binning is:'
        write(*,*)ndistmax
        write(*,*)'Adjust variable ndistmax in modules.f90'
-       stop
+       error=1
       endif
       if(nbin.gt.nbinmax)then
        write(*,*)'Maximum number of bins for densities is:'
        write(*,*)nbinmax
        write(*,*)'Adjust variable nbinmax in modules.f90'
-       stop
+       error=1
       endif
 !----------HERE we check for errors in input.      
       if(ipimd.eq.1.and.nwalk.le.1)then
@@ -429,6 +419,12 @@ subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
        write(*,*)'PIMD with SHAKE cannot use massive thermostating!Exiting... !'
        error=1
       endif
+      if(nshake.gt.0.and.imasst.eq.1)then
+       write(*,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
+       write(*,*)'SHAKE cannot use massive thermostating!'
+       write(*,*)'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
+       error=1
+      endif
 
       if(pot.eq.'2dho'.and.natom.gt.1)then
        write(*,*)'Only 1 particle is allowed for 2D harmonic oscillator!'
@@ -508,6 +504,8 @@ subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
       endif
 !-----END OF ERROR CHECKING
 
+      call allocate_arrays( natom, nwalk+1 )
+
 !-----READING GEOMETRY
       open(111,file=chcoords,status = "old", action = "read") 
       read(111,*)natom1
@@ -551,16 +549,6 @@ subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
        endif
       endif
 
-!-----ZEROING some arrays
-      fxq=0.0d0 
-      fyq=0.0d0 
-      fzq=0.0d0 
-      fxc=0.0d0 
-      fyc=0.0d0 
-      fzc=0.0d0 
-      vx=0.0d0 
-      vy=0.0d0 
-      vz=0.0d0 
 !----SHAKE initialization,determining the constrained bond lenghts
       if(nshake.ge.1)then
        write(*,*)'Setting distances for SHAKE from mini.dat'

@@ -2,13 +2,13 @@
 
 module mod_analysis
    use mod_const, only: DP
+   implicit none
    private 
    public :: trajout, restout, analysis
    contains
 
 !----Contains all analysis stuff
    subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
-     use mod_array_size
      use mod_analyze_ext, only:analyze_ext
      use mod_estimators ,only:estimators
      use mod_general
@@ -64,7 +64,7 @@ module mod_analysis
    end subroutine analysis
 
    subroutine trajout(x,y,z,it)
-     use mod_array_size
+     use mod_const, only: ANG
      use mod_general, only: imini,nwalk,natom
      use mod_system, ONLY: names
      implicit none
@@ -95,9 +95,7 @@ module mod_analysis
    end subroutine trajout
 
    subroutine velout(vx,vy,vz)
-     use mod_array_size
-     use mod_general
-     implicit none
+     use mod_general, only: nwalk, natom, it
      real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
      integer :: iat,iw
      
@@ -113,15 +111,13 @@ module mod_analysis
    end subroutine velout
 
    subroutine restout(x,y,z,vx,vy,vz,it)
-     use mod_array_size
-     use mod_general,only:icv,ihess,nwalk,ipimd,natom
-     use mod_nhc
+     use mod_general,only:icv, ihess, nwalk, ipimd, natom
+     use mod_nhc,    only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
      use mod_estimators
-     use mod_kinetic, only: entot_cumul, est_temp_cumul
-     use mod_sh,only:cel_re,cel_im,ntraj,nstate,istate
+     use mod_kinetic,only: entot_cumul, est_temp_cumul
+     use mod_sh,     only: cel_re,cel_im,ntraj,nstate,istate
      use mod_gle
      use mod_random
-     implicit none
      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
      real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
      integer,intent(in) :: it

@@ -2,19 +2,19 @@
 !Quantum effects in simulated water by the Feynman&Hibbs approach,
 !Bertrand Guillot and Yves Guissani,J. Chem. Phys. 108, 10162 (1998);  
 
-      module mod_analyze_ext
-      use mod_const, only: DP
-      use mod_array_size, only: nbinmax
-      implicit none
-      private
-      public :: analyze_ext
-      real(DP)  :: spec(nbinmax)
-      real(DP)  :: emin=0,emax=0.35
-      integer :: nbinen=400
-      save
-      contains
-      subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
-      use mod_array_size
+module mod_analyze_ext
+   use mod_const, only: DP
+   use mod_array_size, only: nbinmax
+   implicit none
+   private
+   public :: analyze_ext
+   real(DP)  :: spec(nbinmax)
+   real(DP)  :: emin=0,emax=0.35
+   integer :: nbinen=400
+   save
+   contains
+
+   subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
       use mod_general
       use mod_system, ONLY: inames
       implicit real(DP)(a-h,o-z)

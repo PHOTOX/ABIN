@@ -9,7 +9,7 @@ module mod_sh
    private
    public :: istate_init,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 
    public :: surfacehop, sh_init, istate, ntraj, nstate, cel_re, cel_im, tocalc, en_array
-   public :: move_vars, get_nacm
+   public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
 
    integer,parameter :: ntraj=ntrajmax
    integer :: istate_init=1,nstate=1,substep=10000
@@ -175,9 +175,9 @@ module mod_sh
 
    !currently not in use
    !would be needed if we wanted to support proper restart for SH
-   subroutine Write_nacm_rest()
+   subroutine Write_nacmrest()
    use mod_qmmm, only:natqm
-   integer :: iost,ist1,ist2,iat,itrj
+   integer :: ist1,ist2,iat,itrj
 
    open(600,file='nacmrest.dat')
    do itrj=1, ntraj
@@ -202,19 +202,13 @@ module mod_sh
 
    close(600)
 
-   end subroutine write_nacm_rest
+   end subroutine write_nacmrest
 
    !currently not in use
    !would be needed if we wanted to support proper restart for SH
-   subroutine read_nacm_rest()
+   subroutine read_nacmrest()
    use mod_qmmm, only:natqm
    integer :: iost,ist1,ist2,iat,itrj
-   logical :: file_exists
-   inquire(file='nacmrest.dat',EXIST=file_exists)
-   if(.not.file_exists)then
-      write(*,*)'File nacmrest.dat does not exist. Will take 0th NACM from calculation.'
-      return
-   end if
 
    open(600,file='nacmrest.dat')
    do itrj=1, ntraj
@@ -224,12 +218,11 @@ module mod_sh
    
 !         if(tocalc(ist1,ist2).eq.1)then
    
-            read(600,*)
+            read(600,*, iostat=iost)
             do iat=1,natqm              ! reading only for QM atoms
                read(600,*)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                if (iost.ne.0)then
                   write(*,*)'Error reading NACM from file nacmrest.'
-                  write(*,*)'Maybe you forgot to delete it from previous run?'
                   call abinerror('write_nacm_rest')
                end if
             enddo
@@ -244,7 +237,7 @@ module mod_sh
 
    close(600)
 
-   end subroutine read_nacm_rest
+   end subroutine read_nacmrest
 
 
    integer function readnacm(itrj)
@@ -770,7 +763,6 @@ module mod_sh
 
 !  TODO: rename instate to statein and outstate to stateout
    subroutine hop(vx,vy,vz,vx_int,vy_int,vz_int,nacx_int,nacy_int,nacz_int,en_array_int,instate,outstate,itrj)
-      use mod_array_size
       use mod_general, ONLY:natom
       use mod_system, ONLY: am
       real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
@@ -869,7 +861,6 @@ module mod_sh
 
 
    subroutine hop_dot(vx,vy,vz,instate,outstate,itrj)
-      use mod_array_size
       use mod_general, ONLY:natom,idebug
       use mod_kinetic ,ONLY: ekin_v
       real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)

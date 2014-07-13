@@ -94,7 +94,6 @@ module mod_guillot
       end subroutine force_guillot
                                         
       real(DP) function vocl(r)
-      use mod_array_size
       implicit real(DP)(a-h,o-z)
       r=r/ang
       qo=0.66d0

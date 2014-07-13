@@ -127,7 +127,6 @@ END MODULE mod_sbc
 
 
 !      MODULE mod_bag
-!      use mod_array_size
 !      real(DP),allocatable :: neigh1(:),neigh2(:),neigh3(:)
 !      real(DP) :: some_parameters
 !      save

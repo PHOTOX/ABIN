@@ -1,20 +1,19 @@
 
 !-----Special module only for subroutine estimators
-      module mod_estimators
-      use mod_array_size
-      implicit none
-      real(DP)  :: est_prim_cumul=0.0d0,est_vir_cumul=0.0d0
-      real(DP)  :: est_prim2_cumul=0.0d0,est_prim_vir=0.0d0,est_vir2_cumul=0.0d0
-      real(DP)  :: cv_prim_cumul=0.0d0,cv_vir_cumul=0.0d0,cv_dcv_cumul=0.0d0
-      real(DP),allocatable :: cvhess_cumul(:)
-      real(DP),allocatable :: h(:)
+module mod_estimators
+   use mod_const, only: DP, AUtoFS
+   implicit none
+   real(DP)  :: est_prim_cumul=0.0d0,est_vir_cumul=0.0d0
+   real(DP)  :: est_prim2_cumul=0.0d0,est_prim_vir=0.0d0,est_vir2_cumul=0.0d0
+   real(DP)  :: cv_prim_cumul=0.0d0,cv_vir_cumul=0.0d0,cv_dcv_cumul=0.0d0
+   real(DP),allocatable :: cvhess_cumul(:)
+   real(DP),allocatable :: h(:)
 !!$OMP threadprivate(h)   
-      integer :: enmini=100
-      save
-      contains
+   integer :: enmini=100
+   save
+   contains
 !---- Predavame kartezske souradnice i sily!!!!
-      subroutine estimators(x,y,z,fxab,fyab,fzab,eclas,dt)
-      use mod_array_size
+   subroutine estimators(x,y,z,fxab,fyab,fzab,eclas,dt)
       use mod_general
       use mod_nhc, ONLY:temp,inose
       use mod_system, ONLY:am,dime
@@ -228,7 +227,9 @@
       endif
         
       return
-      end subroutine estimators
+
+   end subroutine estimators
+
 end module
        
       
