@@ -1,6 +1,15 @@
-!-----Input and Initialization                         by Daniel Hollas,9.2.2012
-!- ---some comment
-      subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
+!-----This messy function performs many thing, among others:
+! 1. Read input
+! 2. Input sanity check
+! 3. Allocation of arrays
+! 4. Reading restart OR reading input geometry
+! 5. Initialize velocities
+! 6. Initialize everything else
+! At this moment, coordinate and velocity transformations are NOT performed here
+! Surface hopping is NOT initialized here.
+! Daniel Hollas,9.2.2012 
+
+subroutine init(x,y,z,vx,vy,vz,fxc,fyc,fzc,fxq,fyq,fzq,dt)
 !      use mod_const
       use mod_array_size
       use mod_general
@@ -28,12 +37,14 @@
       real(DP),intent(out) :: fxq(:,:),fyq(:,:),fzq(:,:)
       real(DP),intent(out) :: vx(:,:),vy(:,:),vz(:,:)
       real(DP),intent(out) :: dt
+      real(DP), allocatable  :: masses(:)
       real(DP)  :: rans(10)
-      integer :: iw,iat,inh,natom1,itrj,ist1,imol,shiftdihed=1
+      integer :: iw,iat,inh,natom1,itrj,ist1,imol,shiftdihed=1, iost
       integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0, is
-      character(len=2)  :: shit
-      character(len=10) :: chaccess
+      character(len=2), allocatable :: massnames(:)
+      character(len=10)   :: chaccess
       character(len=200)  :: chinput, chcoords
+      character(len=200)  :: chiomsg
       LOGICAL :: file_exists,prngread
       real(DP)  :: wnw=5.0d-5
 !$    integer :: nthreads,omp_get_max_threads
@@ -42,15 +53,15 @@
 !      REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
       REAL, POINTER  :: REALPTR => NULL ()
 
-      namelist /general/pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
+      namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
                parrespa,dime,ncalc,idebug,enmini,rho,iknow
 
       namelist /nhcopt/ inose,temp,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,scaleveloc,readNHC,initNHC,nmolt,natmolt,nshakemol
-      namelist /system/ natom,am,imass_init,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax, &
+      namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax, &
                         nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
                         k,r0,k1,k2,k3,De,a, &
-                        Nshake,ishake1,ishake2,shake_tol,names
+                        Nshake,ishake1,ishake2,shake_tol
       namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 !TODO: some checking for accu1/2
       namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,inames,qmmmtype
       namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
@@ -61,18 +72,15 @@
       write(*,*)'Will read parameters from input file ',chinput
       write(*,*)'Will read xyz coordinates from file ',chcoords
 
-      !TODO:na konci vyhodit, az se zbavime npartmax
-      do iat=1,npartmax
-       am(iat)=0.0d0
-       names(iat)=''
-       attypes(iat)=''
-      enddo
       dt=-1  
       prngread=.false.
       error=0
+      !-READING INPUT----------------------------------------- 
 
       open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
       read(150,general)
+      rewind(150)
+
       if(irest.eq.1)then
        readnhc=1   !readnhc has precedence before initNHC
        initNHC=0   !i.e. if(readnhc.eq.1.and.initNHC.eq.1)
@@ -82,23 +90,53 @@
        initNHC=1
        scaleveloc=1
       endif
-      read(150,system)
-      !HACK, need to allocate before we read
-      allocate ( natmolt(natom) )
-      allocate ( nshakemol(natom) )
+
+      allocate( names(natom)     )
+      allocate( attypes(natom)   )
+      allocate( massnames(natom) )
+      allocate( masses(natom)    )
+      do iat=1,natom
+       names(iat)=''
+       attypes(iat)=''
+       massnames(iat)=''
+       masses(iat)=-1.0d0
+      enddo
+
+      read(150,system,iostat=iost,iomsg=chiomsg)
+      rewind(150)
+      !check, whether we hit End-Of-File or other error
+      if(IS_IOSTAT_END(iost))then  !fortran intrinsic for EOF
+         write(*,*)'Namelist "system" not found.Ignoring...'
+      else if (iost.ne.0)then
+         write(*,*)'ERROR when reading namelist "system"'
+         write(*,*)chiomsg
+         call abinerror('init')
+      else
+         massnames=LowerToUpper(massnames)
+      end if
+
+      allocate ( natmolt(natom)  )
+      allocate ( nshakemol(natom))
       read(150,nhcopt)
+      rewind(150)
 
       pot=UpperToLower(pot)
       if(ipimd.eq.2)then
          read(150,sh)
+         rewind(150)
          integ=UpperToLower(integ)
       end if
-      if(iqmmm.eq.1.or.pot.eq.'mm') read(150,qmmm)
+      if(iqmmm.eq.1.or.pot.eq.'mm')then
+         read(150,qmmm)
+         rewind(150)
+      end if
       if(qmmmtype.eq."nab".or.pot.eq.'nab')then
          allocate ( natmol(natom) )
          read(150,nab)
+         rewind(150)
       end if
       close(150)
+!-----END OF READING INPUT----------------------------------------- 
 
 !$    call OMP_set_num_threads(nproc)
 !$    nthreads=omp_get_max_threads()
@@ -480,24 +518,12 @@
       read(111,*)
       do iat=1,natom
 
-        read(111,*)shit,x(iat,1),y(iat,1),z(iat,1)
-
-        if(imass_init.eq.0)then
-         if(am(iat).le.0)then
-          write(*,*)'Error on input:Mass array do not match names array.'
-         endif
-         if(LowerToUpper(shit).ne.LowerToUpper(names(iat)))then
-          write(*,*)'Names of atoms in mini.dat and input.in do not match!'
-          call abinerror('init')
-         endif
-        else
-         names(iat)=shit
-        endif
-
+        read(111,*)names(iat),x(iat,1),y(iat,1),z(iat,1)
         names(iat)=LowerToUpper(names(iat))
         x(iat,1)=x(iat,1)*ang
         y(iat,1)=y(iat,1)*ang
         z(iat,1)=z(iat,1)*ang
+
       enddo 
       close(111)
 
@@ -549,7 +575,7 @@
 
 !----In case of big systems, we don't want to manually set am and names arrays.
 !----Currently supported for most of the elements
-     if (imass_init.eq.1) call mass_init()
+     call mass_init(masses, massnames)
 
 !-----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORERESTART DUE TO ARRAY ALOCATION
@@ -735,14 +761,9 @@ endif
 
 !------------------------------------------------------
 
-      am=am*amu
-
       pid=GetPID()
       write(*,*)'Pid of the current proccess is:',pid
 
-!-----inames initialization, currently only for guillot. 
-!-----we do this because string comparison is very costly
-      if(pot.eq.'guillot') call inames_guillot()
 
 
       if(pot.eq.'2dho')then
@@ -763,14 +784,17 @@ endif
       endif
 
       ! If scaleveloc=1, scale initial velocitites
-      ! Otherwise, just get the temperature.
+      ! Otherwise, just print the temperature.
       call ScaleVelocities(vx, vy, vz)
 
        
 !----some stuff for spherical boundary onditions
-      if(isbc.eq.1)then
-       call sbc_init(x,y,z)
-      endif
+      if(isbc.eq.1) call sbc_init(x,y,z)
+
+!-----inames initialization for guillot rm MM part. 
+!-----We do this also because string comparison is very costly
+      if(iqmmm.eq.1.or.pot.eq.'mm'.or.pot=='guillot') allocate( inames(natom) )
+      if(pot.eq.'guillot') call inames_guillot()
 
       if(iqmmm.eq.1.or.pot.eq.'mm')then
        if(qmmmtype.ne.'nab')then

@@ -10,12 +10,6 @@ allocatable positions, velocities and momenta in modules, forces probably not?
 probably not in modules, no wide scope, this simplyfies things
 dont forget to allocate nwalk+1
 
-convert real*8 to real(DP), 
-and check also other things here:
-http://www.fortran90.org/src/best-practices.html
-
-better initialization of masses, only initialize types provided by to user.
-
 todo: MPI version for terachem
 
 todo: projit vsechna TODO v kodu
@@ -23,8 +17,6 @@ todo: projit vsechna TODO v kodu
 udelat r.molpro pro caspt2/casscf-nacm
 
 zkontrolovat omezeni pro molpro12 na cpmscf na jeden multi
-
-
 
 ###----UTILS
 spectra from movies

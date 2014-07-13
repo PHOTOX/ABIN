@@ -1,8 +1,11 @@
 This is a sample input file for ABIN 
-NOTE: Order of input sections matters!!
+The order of input namelists does not matter.
 
 &general
 pot='mm'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho 
+natom=27,		!number of atoms
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
+
 ipimd=3,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
 nwalk=1,		! number of random walkers 
 imini=0,		! equilibration period (should be at least 2000), or number of steps for minimization
@@ -11,7 +14,6 @@ nstep=5000,		! number of steps
 dt=20.,			! timestep [au]
 irandom=111313,  	! random seed
 nabin=50,		! what is the gap between ab initio calculations?(RESPA ONLY)
-irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
 iqmmm=0,		! 0 - QM/MM OFF, 1 - QM/MM ON
 
 nwrite=10,		! how often some output should be printed (estimators etc.)
@@ -21,15 +23,13 @@ nwritev=0,		! how often we print velocities?
 /
 
 &system
-natom=27,		!number of atoms
-imass_init=1,		! automatic determination of names and masses from mini.dat
-am=35.45,5*15.999,10*1.00,		! atom masses 
-names='O',2*'H'		! names of atoms
+massnames='X','Y'
+masses=16,13
 nbin=2000,		! number of bins for densities
-ndist=0,		! number of bonds for which we calculate density
+ndist=1,		! number of bonds for which we calculate density
 dist1=1,		! first atoms for binning
 dist2=2,		! second atoms for binning (i.e. bond between natfirst[1] and natsecond[1])
-xmin=1.0,		! minimum values for analyzed bonds 
+xmin=0.5,		! minimum values for analyzed bonds 
 xmax=2.5,		! maximum values for analyzed bonds
 /
 
@@ -63,13 +63,13 @@ eps=0.0002423919,0.0,0.00037954	! L-J well depth [au]
 /
 
 &nab
-ipbc=1,		! turns on periodic boundary conditions
-cutoff=20.0,	! non-bonded cutoff (both LJ and coulomb)
-nsnb=10,	!update non-bonded list every nsnb steps	
-ips=0,		!isotropic periodic sum 1-both LJ and coul, 2-coul 3- LJ
+cutoff=100.0,	! non-bonded cutoff (both LJ and coulomb)
+nsnb=10,	! update non-bonded list every nsnb steps	
 
+ipbc=0,		! turns on periodic boundary conditions
 alpha_pme=0,	! parameter for ewald(TO DO)
 kappa_pme=0,	! parameter for ewald(TO DO)
+ips=0,		! isotropic periodic sum 1-both LJ and coul, 2-coul 3- LJ
 /
 
 ----------------------END OF INPUT---------------------------------------------
@@ -77,22 +77,21 @@ kappa_pme=0,	! parameter for ewald(TO DO)
 
 
 
-------------------OTHER OPTIONS (if needed, move them to their sections)------- 
+------------------OTHER OPTIONS (if needed, move them to their namelists)------- 
 
 GENERAL
 gamm=100,		! first coefficient for minimization
+gammthr=1e-11,		! lowest gamma for minimization
 conatom=0,		! number of constrained atoms
-gammthr=1e-11,		! lowest gamma
 idebug=0,		! printing out some debugging info
 isbc=0,			! spherical boundary conditions
 rb_sbc=27.5d0,          ! radius of the cluster for sbc
 kb_sbc=0.2d0,		! force constant for spherical potential [au]
-conatom=2,		! number of constrained atoms
 anal_ext=0,		! do we call user-defined function analyze_ext?
-nproc=1,		! number of processors, only for NAB and Guillot
+nproc=1,		! number of processors, only for PIMD
 icv=0,			! do we compute heat capacities? 
-ihess=0,		! do we have hessian?
-enmini=0,		! number ogf steps for which we do not cumulate energy
+ihess=0,		! do we calculate hessian for heat capacities?
+enmini=0,		! number of steps for which we do not cumulate energy(PIMD only)
 END GENERAL
 
 SYSTEM
@@ -123,5 +122,5 @@ END SYSTEM
 NHCOPT
 ams=0.02,		! Nose-Hoove mass (this is rewritten anyway if ipimd=1)
 imasst=0,		! 1 - Massive thermostating , 0- Global thermostatt
-wnw=0.01,		! for langevin, not tested
 END NHCOPT
+

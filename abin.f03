@@ -18,6 +18,7 @@
 !  along with this program in the file LICENSE. If not, see <http://www.gnu.org/licenses/>.
 program abin_dyn
    use mod_const, only: DP
+!   use mod_arrays
    use mod_array_size
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
@@ -277,6 +278,7 @@ end
 
 
 subroutine PrintLogo(values1)
+use iso_fortran_env
 include 'date.inc'
 integer,dimension(8),intent(out) :: values1
 call date_and_time(VALUES=values1)
@@ -294,13 +296,17 @@ print '(a)',' / /            \ \  |       /   | |     | |      \| |'
 print '(a)','/_/              \_\ |______/    |_|     |_|       |_|'
 print '(a)',' '
 print '(a)','     version 1.0'
-print '(a)','D. Hollas, O.Svoboda, M. Oncak, P. Slavicek       2014'
+print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek       2014'
 print '(a)',' '
 
 print *,'Compiled at  ',date
 print *,commit
 !$ print *,'Compiled with parallel OpenMP support for PIMD.'
-print '(a)',' '
+print *,' '
+!COMMENT THIS IF YOU DON'T HAVE FORTRAN 2008
+print *, 'This file was compiled by ', &
+             compiler_version(), ' using the options: '
+print *,     compiler_options()
 
 write(*,*)'Job started at:'
 write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
@@ -357,16 +363,16 @@ subroutine finish(values1,values2)
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
 
    write(*,*)''
-   write(*,*)'Job finished!'
+   write(*,*)' Job finished!'
    write(*,*)''
 
    write(*,*)''
 
 !---------TIMING-------------------------------
    call cpu_time(TIME)
-   write(*,*)'Total cpu time [s] (does not include ab initio calculations)'
+   write(*,*)' Total cpu time [s] (does not include ab initio calculations)'
    write(*,*)TIME
-   write(*,*)'Total cpu time [hours] (does not include ab initio calculations)'
+   write(*,*)' Total cpu time [hours] (does not include ab initio calculations)'
    write(*,*)TIME/3600.
 
    call date_and_time(VALUES=values2)

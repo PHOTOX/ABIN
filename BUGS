@@ -2,6 +2,7 @@ FATAL BUG for ISBC=0
 xcm is not initialized
 
 INCORRECT INITIALIZATION FOR PNHX in inithnc
+we should check whether it solves the bug with floating point exception first
 
 
 Restart for SH might be wrong due to different overlap between old and new NACM.

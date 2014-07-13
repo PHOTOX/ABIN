@@ -66,24 +66,31 @@ end module
 !-----Some information about simulated system, especially for distributions and shake
       module mod_system
       use mod_const, only: DP
-      use mod_array_size
+      use mod_array_size, only: npartmax
       implicit none
-      real(DP)  :: am(npartmax)
-      character(len=2) :: names(npartmax)
-      integer :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani 
-      integer :: inames(npartmax),imass_init=1,conatom=0
+      real(DP),allocatable  :: am(:)
+      character(len=2), allocatable :: names(:)
+      integer,allocatable  :: inames(:)
+      integer              :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani 
+      integer              :: conatom=0
 !---distributions (distance,angle,dihedral)
 !SHAKE stuff
       save
       CONTAINS
-      subroutine mass_init()
-      use mod_general, ONLY: natom
-      implicit none
-      integer :: i
+      subroutine mass_init(masses, massnames)
+      use mod_const,    only: AMU
+      use mod_general,  only: natom
+      real(DP) :: masses(:)
+      character(len=2) :: massnames(:)
+      integer  :: i
       ! Accurate values for H1 and H2 taken from: 
       ! Mohr, Taylor, Newell, Rev. Mod. Phys. 80 (2008) 633-730
       ! Other atomic weights taken from Handbook of Chemistry and Physics, 2013
       ! Original citation: Wieser, M. E., et al., Pure Appl. Chem. 85, 1047, 2013
+      allocate( am(natom) )
+      am=-1.0d0
+      print *,''
+      print *,'-----------------ATOMIC MASSES----------------------------'
       do i=1,natom
        if(names(i).eq.'H')then
         am(i)=1.008d0
@@ -258,12 +265,64 @@ end module
        else if (names(i).eq.'ZR')then
         am(i)=91.224d0
        else 
-        write(*,*)'Unknown atom.',names(i),'Exiting..'
-!        call abinerror('mass_init') !TODO: would have to move mod_system to different file
-        stop 1
+          print *,'Atom name ',names(i),' was not found in the library.'
+          print *,'I hope you specified the mass in namelist "system"'
        endif
       enddo
-      end subroutine
+
+      call init_usermass()
+
+      do i=1,natom
+        if(am(i).le.0)then
+           write(*,*)'ERROR: Some masses were not specified. Exiting...'
+           stop 1
+        end if
+      end do
+
+      print *,'These are the atom names I found:'
+      write(*,*)(names(i),i=1,natom)
+      print *,'The corresponding relative atomic masses are:'
+      write(*,*)(am(i),i=1,natom)
+      print *,'----------------------------------------------------------'
+      print *,''
+
+      am=am*AMU
+
+      contains
+
+         subroutine init_usermass()
+         integer :: iat, j
+            
+         !        TODO: does this work?
+         do i=1,size(massnames)
+            do j=i+1,size(massnames)
+               if (massnames(i).eq.massnames(j))then
+                  if((masses(i).gt.0.or.masses(j).gt.0))then
+                     write(*,*)'ERROR: ambiguous user input for masses.'
+                     write(*,*)'Please, take a hard look at the input arrays "masses" and "massnames"'
+                     stop 1
+                  end if
+               end if
+             end do
+         end do
+
+         do iat=1,natom
+            do j=1,size(massnames)
+            if (names(iat).eq.massnames(j))then
+
+               if (masses(j)>0)then
+                  write(*,*)'Defining new atom ',names(iat),'with mass=',masses(j)
+                  am(iat)=masses(j)
+               else
+                  write(*,*)'Mass cannot be negative. Please, fix arrays "masses" or "mass_names" in your input.'
+               end if
+
+            end if
+            end do
+         end do
+
+      end subroutine init_usermass
+   end subroutine
 
    subroutine constrainP (px,py,pz)
       use mod_general, only: nwalk
