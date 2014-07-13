@@ -127,11 +127,11 @@ module mod_nhc
         if (iw.eq.1) write(*,*)'Initializing NHC momenta.'
         call gautrg(ran,natom*3,0,6)
          ipom=1
-         !TODO: should be temp*QM
+!TODO: check, whether initialization is actually better than nothing
          do iat=1,natom 
-         pnhx(iat,iw,inh)=ran(ipom)*sqrt(temp/Qm(iw))
-         pnhy(iat,iw,inh)=ran(ipom+1)*sqrt(temp/Qm(iw))
-         pnhz(iat,iw,inh)=ran(ipom+2)*sqrt(temp/Qm(iw))
+         pnhx(iat,iw,inh)=ran(ipom)*sqrt(temp*Qm(iw))
+         pnhy(iat,iw,inh)=ran(ipom+1)*sqrt(temp*Qm(iw))
+         pnhz(iat,iw,inh)=ran(ipom+2)*sqrt(temp*Qm(iw))
         enddo
          ipom=ipom+3
         endif
@@ -149,8 +149,8 @@ module mod_nhc
         if(initNHC.eq.1)then  
          write(*,*)'Initializing NHC momenta.'
          call gautrg(ran,nmolt,0,6)
-         do imol=1,nmolt !TODO nefunguje, and should be temp*ms
-          pnhx(imol,iw,inh)=ran(imol)*sqrt(temp/ms(imol,inh))
+         do imol=1,nmolt !TODO nefunguje?! - uz nevim proc, otestovat...
+          pnhx(imol,iw,inh)=ran(imol)*sqrt(temp*ms(imol,inh))
          enddo
         endif
        enddo
