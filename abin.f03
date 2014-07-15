@@ -191,7 +191,7 @@ endif
 !-------SURFACE HOPPING SECTION----------------------------      
       if(ipimd.eq.2)then
 
-      call surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt)
+      call surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt, eclas)
       px=amt*vx
       py=amt*vy
       pz=amt*vz

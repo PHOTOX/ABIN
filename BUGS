@@ -24,6 +24,14 @@ Affected: surface hopping
 Status:   unresolved
 ---------------------------------------------------
 
+---------------------------------------------------
+BUG in SH after hop, we did not update eclas,
+which results in weird peaks in energies.dat
+Present since version/commit: always
+Affected: surface hopping
+Status:   FIXED in this commit
+---------------------------------------------------
+
 --------------------------------------------------
 INCORRECT INITIALIZATION FOR PNH arrays in inithnc,
 causing floating point exception when inose=1 and temp=1.0
@@ -35,7 +43,7 @@ Status: FIXED in this commit: needs further testing
 ---------------------------------------------------
 FATAL bug for isbc=0,noninitialized variable xcm,
 causing drift in center-of-mass and therefore wrong dynamics
-Present since version/commit: v1.0.alpha
+Present since version/commit: initial commit, not in alpha version
 Affected: periodic boundary conditions
 Status:   FIXED, commit: 1c962be 
 ---------------------------------------------------

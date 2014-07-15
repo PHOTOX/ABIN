@@ -383,8 +383,7 @@ module mod_sh
    end subroutine check_popsum
 
 
-!TODO: Move vx_old, but where? probably mod_sh
-   subroutine surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt)
+   subroutine surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt,eclas)
       use mod_const,   only: ANG, AUTOFS
       use mod_general, only: natom, nwrite, idebug, it
       use mod_system,  ONLY: names
@@ -394,6 +393,7 @@ module mod_sh
       real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
       real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
       real(DP),intent(inout) :: vx_old(:,:),vy_old(:,:),vz_old(:,:)
+      real(DP),intent(inout) :: eclas
       real(DP),intent(in)    :: dt
       real(DP)  :: vx_int(size(vx,1),size(vx,2))
       real(DP)  :: vy_int(size(vy,1),size(vy,2))
@@ -660,8 +660,8 @@ module mod_sh
 
 !-------does HOP occured???-----------------
       if(ihop.ne.0)then
-         if(inac.eq.0) call hop(vx,vy,vz,vx_int,vy_int,vz_int,nacx_int,nacy_int,nacz_int,en_array_int,ist,ihop,itrj)
-         if(inac.eq.1) call hop_dot(vx,vy,vz,ist,ihop,itrj)
+         if(inac.eq.0) call hop(vx,vy,vz,vx_int,vy_int,vz_int,nacx_int,nacy_int,nacz_int,en_array_int,ist,ihop,itrj,eclas)
+         if(inac.eq.1) call hop_dot(vx,vy,vz,ist,ihop,itrj,eclas)
          write(formt,'(A8,I3,A7)')'(A1,I10,',nstate+1,'E20.10)'
          write(3,*)'#Substep   RandomNum   Probabilities'
          write(3,fmt=formt)'#',itp,cn,(t(ist,ist1),ist1=1,nstate)
@@ -777,23 +777,28 @@ module mod_sh
    end subroutine surfacehop
 
 !  TODO: rename instate to statein and outstate to stateout
-   subroutine hop(vx,vy,vz,vx_int,vy_int,vz_int,nacx_int,nacy_int,nacz_int,en_array_int,instate,outstate,itrj)
+   subroutine hop(vx,vy,vz,vx_int,vy_int,vz_int,nacx_int,nacy_int,nacz_int,en_array_int,instate,outstate,itrj,eclas)
       use mod_general, ONLY:natom
       use mod_system, ONLY: am
+      use mod_kinetic, only: ekin_v
       real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
       real(DP),intent(in)    :: vx_int(:,:),vy_int(:,:),vz_int(:,:)
       real(DP),intent(in)    :: en_array_int(:,:)
       real(DP),intent(in)    :: nacx_int(:,:,:,:)
       real(DP),intent(in)    :: nacy_int(:,:,:,:)
       real(DP),intent(in)    :: nacz_int(:,:,:,:)
+      real(DP),intent(inout)    :: eclas
       integer, intent(in)    :: itrj,instate,outstate
       real(DP)  :: a_temp,b_temp,c_temp,g_temp
+      real(DP)  :: ekin, ekin_new
       integer   :: iat
 
 !  Checking for frustrated hop
 
       a_temp=0.d0
       b_temp=0.d0
+
+      ekin=ekin_v(vx,vy,vz)
 
       ! isnt b_temp simply dot product??
       do iat=1,natom
@@ -808,12 +813,15 @@ module mod_sh
       c_temp=b_temp**2+4*a_temp*(en_array_int(instate,itrj)-en_array_int(outstate,itrj))
 
       if(c_temp.lt.0)then
-         write(3,'(A35,I3,A10,I3)')'#Frustrated Hop occured from state ',instate,' to state ',outstate
+         write(3,'(A35,I3,A10,I3)')'#Frustrated Hop "occured" from state ',instate,' to state ',outstate
+         write(3,'(A31,2E20.10)')'deltaE_potential     Ekin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
          return
       endif
 
       istate(itrj)=outstate
+      eclas=en_array(outstate,itrj)
       write(3,'(A24,I3,A10,I3)')'#Hop occured from state ',instate,' to state ',outstate
+
 
 !------------- Rescaling the velocities------------------------
 
@@ -835,6 +843,9 @@ module mod_sh
          vy(iat,itrj)=vy(iat,itrj)-g_temp*nacy_int(iat,itrj,instate,outstate)/am(iat)
          vz(iat,itrj)=vz(iat,itrj)-g_temp*nacz_int(iat,itrj,instate,outstate)/am(iat)
       enddo
+      ekin_new=ekin_v(vx,vy,vz)
+
+      write(3,'(A,2E20.10)')'#TOT_Energy_old   TOT_Energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
    end subroutine hop
 
@@ -875,10 +886,11 @@ module mod_sh
     end subroutine interpolate
 
 
-   subroutine hop_dot(vx,vy,vz,instate,outstate,itrj)
+   subroutine hop_dot(vx,vy,vz,instate,outstate,itrj,eclas)
       use mod_general, ONLY:natom,idebug
       use mod_kinetic ,ONLY: ekin_v
       real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
+      real(DP),intent(inout) :: eclas
       integer,intent(in)     :: itrj,instate,outstate
       integer   :: iat
       real(DP)  :: de,ekin,alfa,ekin_new
@@ -899,15 +911,16 @@ module mod_sh
          vz(iat,itrj)=alfa*vz(iat,itrj) 
         enddo
         istate(itrj)=outstate
+        eclas=en_array(outstate,itrj)
         ekin_new=ekin_v(vx,vy,vz)
 
-        write(3,'(A24,I3,A10,I3)')'#Hop occured from state ',instate,' to state ',outstate
+        write(3,'(A24,I3,A10,I3)')'#Hop occured from state ', instate, ' to state ', outstate
         write(3,'(A,2E20.10)')'#TOT_Energy_old   TOT_Energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
       else
 
        write(3,'(A35,I3,A10,I3)')'#Frustrated Hop occured from state ',instate,' to state ',outstate
-       write(3,'(A31,2E20.10)')'deltaE-potential     Ekin-total',dE,ekin
+       write(3,'(A31,2E20.10)')'deltaE_potential     Ekin-total',dE,ekin
        return
 
       endif
