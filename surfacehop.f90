@@ -9,7 +9,7 @@ module mod_sh
    private
    public :: istate_init,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 
    public :: surfacehop, sh_init, istate, ntraj, nstate, cel_re, cel_im, tocalc, en_array
-   public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
+   public :: move_vars, get_nacm, write_nacmrest, read_nacmrest, energythr
 
    integer,parameter :: ntraj=ntrajmax
    integer :: istate_init=1,nstate=1,substep=10000
@@ -17,7 +17,7 @@ module mod_sh
    integer :: nac_accu1=7,nac_accu2=5 !7 is MOLPRO default
    character(len=10) :: integ='butcher'
    real(DP)  :: wfthresh=0.001d0
-   real(DP)  :: dtp,alpha=0.1d0,eshift,deltae=100.d0,popthr=-1
+   real(DP)  :: dtp,alpha=0.1d0,eshift,deltae=100.d0,popthr=-1, energythr=1.0d0 !eV
    real(DP),allocatable :: nacx(:,:,:,:), nacy(:,:,:,:), nacz(:,:,:,:)
    real(DP),allocatable :: nacx_old(:,:,:,:), nacy_old(:,:,:,:), nacz_old(:,:,:,:)
    real(DP),allocatable :: dotproduct(:,:,:), dotproduct_old(:,:,:) !for inac=1
@@ -425,12 +425,13 @@ module mod_sh
       integer :: iost
 
 
-     do itrj=1,ntraj
+      do itrj=1,ntraj
 
+         call check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
 
-      t_tot=0.0d0
+         t_tot=0.0d0
 
-      popsum=0.0d0
+         popsum=0.0d0
 
 !-------READING NACM-----------------------     
      if(inac.eq.0)then
@@ -1239,6 +1240,29 @@ module mod_sh
         enddo
        enddo
 
-    end subroutine  interpolate_new
+   end subroutine  interpolate_new
 
-   end module mod_sh
+   subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
+      use mod_const, only: AUtoEV
+      use mod_kinetic, only: ekin_v
+      real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
+      real(DP),intent(in) :: vx_old(:,:),vy_old(:,:),vz_old(:,:)
+      integer, intent(in) :: itrj
+      real(DP)            :: ekin, ekin_old, entot, entot_old
+
+      ekin=ekin_v(vx, vy, vz)
+      ekin_old=ekin_v(vx_old, vy_old, vz_old)
+
+      entot=(ekin+en_array(istate(itrj), itrj) )*AUtoEV
+      entot_old=(ekin_old+en_array_old(istate(itrj), itrj) )*AUtoEV
+
+      if (abs(entot-entot_old).gt.energythr)then
+         write(*,*)'ERROR:Poor energy conservation. Exiting...'
+         write(*,*)'Total energy difference [eV] is:', entot-entot_old
+         write(*,*)'The threshold was:',energythr
+         call abinerror('check_energy')
+      end if
+
+   end subroutine check_energy
+
+end module mod_sh

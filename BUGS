@@ -12,7 +12,7 @@ Restart for SH might be wrong due to different overlap between old and new NACM.
 We should somehow include NACM in some other restart file and read it if present.
 Present since version/commit: always
 Affected: surface hopping
-Status:   unresolved, pop.dat ok, but restarts still differ
+Status:   partially resolved in commit c5b9862,  pop.dat ok, but restarts still differ
 ---------------------------------------------------
 
 ---------------------------------------------------
@@ -31,7 +31,7 @@ UPDATE: relatively small correction (0.02eV)
 when not using _int, coservation is perfect
 Present since version/commit: always
 Affected: surface hopping
-Status:   partially resolved in this commit, we should test it!!
+Status:   partially resolved in commit 8ff3835, we should test it!!
 ---------------------------------------------------
 
 ---------------------------------------------------
