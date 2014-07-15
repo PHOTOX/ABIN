@@ -802,15 +802,15 @@ module mod_sh
 
       ! isnt b_temp simply dot product??
       do iat=1,natom
-         a_temp=a_temp+nacx_int(iat,itrj,instate,outstate)**2/am(iat)
-         a_temp=a_temp+nacy_int(iat,itrj,instate,outstate)**2/am(iat)
-         a_temp=a_temp+nacz_int(iat,itrj,instate,outstate)**2/am(iat)
-         b_temp=b_temp+nacx_int(iat,itrj,instate,outstate)*vx_int(iat,itrj)
-         b_temp=b_temp+nacy_int(iat,itrj,instate,outstate)*vy_int(iat,itrj)
-         b_temp=b_temp+nacz_int(iat,itrj,instate,outstate)*vz_int(iat,itrj)
+         a_temp=a_temp+nacx(iat,itrj,instate,outstate)**2/am(iat)
+         a_temp=a_temp+nacy(iat,itrj,instate,outstate)**2/am(iat)
+         a_temp=a_temp+nacz(iat,itrj,instate,outstate)**2/am(iat)
+         b_temp=b_temp+nacx(iat,itrj,instate,outstate)*vx(iat,itrj)
+         b_temp=b_temp+nacy(iat,itrj,instate,outstate)*vy(iat,itrj)
+         b_temp=b_temp+nacz(iat,itrj,instate,outstate)*vz(iat,itrj)
       enddo
       a_temp=0.5d0*a_temp
-      c_temp=b_temp**2+4*a_temp*(en_array_int(instate,itrj)-en_array_int(outstate,itrj))
+      c_temp=b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))
 
       if(c_temp.lt.0)then
          write(3,'(A35,I3,A10,I3)')'#Frustrated Hop "occured" from state ',instate,' to state ',outstate
@@ -827,11 +827,11 @@ module mod_sh
 
 !     TODO use c_temp here
       if(b_temp.lt.0) then
-         g_temp=(b_temp+sqrt(b_temp**2+4*a_temp*(en_array_int(instate,itrj)-en_array_int(outstate,itrj))))/2.0d0/a_temp
+         g_temp=(b_temp+sqrt(b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))))/2.0d0/a_temp
       endif
 
       if(b_temp.ge.0) then
-         g_temp=(b_temp-sqrt(b_temp**2+4*a_temp*(en_array_int(instate,itrj)-en_array_int(outstate,itrj))))/2.0d0/a_temp
+         g_temp=(b_temp-sqrt(b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))))/2.0d0/a_temp
       endif
 
 !      write(*,*)a_temp,b_temp,c_temp,g_temp
@@ -839,9 +839,9 @@ module mod_sh
       !TODO: tohle asi neni uplne spravne..mame pouzit vx_int nebo vx?
       !asi VX, bo to potom budeme menit,vxint s timto nema nic spolecneho
       do iat=1,natom
-         vx(iat,itrj)=vx(iat,itrj)-g_temp*nacx_int(iat,itrj,instate,outstate)/am(iat)
-         vy(iat,itrj)=vy(iat,itrj)-g_temp*nacy_int(iat,itrj,instate,outstate)/am(iat)
-         vz(iat,itrj)=vz(iat,itrj)-g_temp*nacz_int(iat,itrj,instate,outstate)/am(iat)
+         vx(iat,itrj)=vx(iat,itrj)-g_temp*nacx(iat,itrj,instate,outstate)/am(iat)
+         vy(iat,itrj)=vy(iat,itrj)-g_temp*nacy(iat,itrj,instate,outstate)/am(iat)
+         vz(iat,itrj)=vz(iat,itrj)-g_temp*nacz(iat,itrj,instate,outstate)/am(iat)
       enddo
       ekin_new=ekin_v(vx,vy,vz)
 

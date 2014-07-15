@@ -1,3 +1,11 @@
+--------------------------------------------------
+type: enhancement
+what should be the default value of tau0,
+to achieve best energy conservation?
+Affected routines: Nose-Hoover
+Present since version/commit: always
+Status: unresolved
+---------------------------------------------------
 
 ---------------------------------------------------
 Restart for SH might be wrong due to different overlap between old and new NACM.
@@ -12,16 +20,18 @@ CRITICAL:::: Do we do correctly inac=1??
 what if sign of dotproduct changes???
 Present since version/commit: always
 Affected: surface hopping
-Status:   unresolved
+Status:   unresolved, lukas thinks it is dealt with in his TDC code
 ---------------------------------------------------
 
 ---------------------------------------------------
 I think that hop is wrong, we should not use vx_int
 and also, after hop, in vx_int arrays will suddenly change...
 maybe it would be easiest to just hop once per big time step??
+UPDATE: relatively small correction (0.02eV)
+when not using _int, coservation is perfect
 Present since version/commit: always
 Affected: surface hopping
-Status:   unresolved
+Status:   partially resolved in this commit, we should test it!!
 ---------------------------------------------------
 
 ---------------------------------------------------
@@ -29,7 +39,7 @@ BUG in SH after hop, we did not update eclas,
 which results in weird peaks in energies.dat
 Present since version/commit: always
 Affected: surface hopping
-Status:   FIXED in this commit
+Status:   FIXED in commit 66a5092e29b0e7004bc94d591d5cdb93ddf085df
 ---------------------------------------------------
 
 --------------------------------------------------
@@ -37,7 +47,7 @@ INCORRECT INITIALIZATION FOR PNH arrays in inithnc,
 causing floating point exception when inose=1 and temp=1.0
 Affected routines: Nose-Hoover
 Present since version/commit: always
-Status: FIXED in this commit: needs further testing
+Status: FIXED in commit c0cf32c2b65e7248ccc622a363ecc6cba60c93a7
 ---------------------------------------------------
 
 ---------------------------------------------------
