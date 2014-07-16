@@ -1,0 +1,45 @@
+This is a sample input file for ABIN 
+NOTE: order of input sections matters!!
+
+&general
+nstep=10,
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+idebug=0
+iknow=0
+
+pot='nab'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
+ipimd=1,		!classical simulation 0, quantum simulation 1
+nwalk=10,		!number of random walkers 
+imini=10000,		!equilibration period,!not properly implemented yet
+istage=1,		!staging transformation (1), without staging (0)
+
+dt=20.,			!number of steps and timestep
+irandom=131313,  	!random seed
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=1,		! how often should we print coordinates?
+nrest=1,		! how often we print restart files?
+
+isbc=0,			! spherical boundary conditions
+rb_sbc=10.9d0,              ! radius of the cluster for sbc
+kb_sbc=0.1d0,		! force constant for spherical potential,in A
+natom=3,		!number of atoms
+/
+
+
+&nhcopt
+inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+tau0=0.0015
+nrespnose=3
+nyosh=7
+/
+
+&nab
+ipbc=0,         ! turns on periodic boundary conditions
+cutoff=20.0,    ! non-bonded cutoff (both LJ and coulomb)
+nsnb=100000,        !update non-bonded list every nsnb steps
+ips=0,          !isotropic periodic sum 1-both LJ and coul, 2-coul 3- LJ
+
+alpha_pme=0,    ! parameter for ewald(TO DO)
+/

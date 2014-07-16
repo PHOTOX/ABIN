@@ -1,0 +1,46 @@
+This is a sample input file for ABIN 
+NOTE: order of input sections matters!!
+
+&general
+nstep=10,
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+idebug=0
+iknow=0
+
+pot='2dho'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
+ipimd=1,		!classical simulation 0, quantum simulation 1
+nwalk=10,		!number of random walkers 
+imini=0,		!equilibration period,!not properly implemented yet
+enmini=0,
+istage=1,		!staging transformation (1), without staging (0)
+
+dt=20.,			!number of steps and timestep
+irandom=131313,  	!random seed
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=1,		! how often should we print coordinates?
+nrest=1,		! how often we print restart files?
+
+icv=1
+ihess=1
+natom=1,		!number of atoms
+/
+
+&system
+massnames='ki'
+masses=50.
+k1=0.01
+ndist=1
+dist1=1
+dist2=1
+xmin=-5.0
+/
+
+&nhcopt
+inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+temp=50.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+tau0=0.0015
+nrespnose=3
+nyosh=7
+/
+

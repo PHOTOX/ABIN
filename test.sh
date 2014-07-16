@@ -55,12 +55,12 @@ fi
 cd TESTS
 err=0
 
-files=( nacmrest.dat minimize.dat geom.mini.xyz temper.dat r.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? ORCA/input* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie_mini.xyz restart.xyz.old restart.xyz restart.xyz.?? restart.xyz.? )
+files=( nacmrest.dat nacmrest.dat.?? minimize.dat geom.mini.xyz temper.dat r.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? ORCA/input* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie_mini.xyz restart.xyz.old restart.xyz restart.xyz.?? restart.xyz.? )
 #EULER should check wf_thresh conditions
 if [[ $2 == "sh" ]];then
 folders=( SH_EULER SH_RK4 SH_BUTCHER )
 else
-folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_TDC PIGLE PIMD ABINITIO SHAKE HARMON MINI )
+folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_TDC PIGLE GLE PIMD ABINITIO SHAKE HARMON MINI )
 #folders=( SHAKE )
 fi
 

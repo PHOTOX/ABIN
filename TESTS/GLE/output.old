@@ -1,0 +1,348 @@
+                      _ _ _       _       _         _ 
+         /\          |      \    | |     | |\      | |
+        /  \         |   _   \   | |     | | \     | |
+       / /\ \        |  |_|  |   | |     | |\ \    | |
+      / /  \ \       |       /   | |     | | \ \   | |
+     / /    \ \      |------/    | |     | |  \ \  | |
+    / /------\ \     |------\    | |     | |   \ \ | |
+   / /--------\ \    |   _   \   | |     | |    \ \| |
+  / /          \ \   |  |_|  |   | |     | |     \ | |
+ / /            \ \  |       /   | |     | |      \| |
+/_/              \_\ |______/    |_|     |_|       |_|
+ 
+     version 1.0
+ D. Hollas, O.Svoboda, M. Oncak, P. Slavicek       2014
+ 
+ Compiled at  18:05:08 16.7.2014
+ commit c0af0032e1008c65818589743392cc0a517df92c
+ Compiled with parallel OpenMP support for PIMD.
+  
+ This file was compiled by GCC version 4.8.2 using the options: 
+ -mtune=generic -march=x86-64 -g -Og -Wall -Wextra -fopenmp -fbounds-check -ffpe-trap=invalid,zero,overflow
+ Job started at:
+18:44:54  16. 7.2014
+ I will read parameters from input file input.in                                                                                                                                                                                                
+ I will read xyz coordinates from file mini.dat                                                                                                                                                                                                
+ Namelist "system" not found.Ignoring...
+ ipimd=0,Resetting number of walkers to 1.
+ ipimd=0,Using velocity Verlet integrator
+ Target temperature in Kelvins =   100.15000000000001     
+ 
+ -----------------ATOMIC MASSES----------------------------
+ These are the atom names I found:
+ O H H 
+ The corresponding relative atomic masses are:
+   15.999000000000001        1.0080000000000000        1.0080000000000000     
+ ----------------------------------------------------------
+ 
+ # Initialization of GLE thermostat.                           
+ # Please cite the relevant works among:                       
+ #                                                             
+ # M. Ceriotti, G. Bussi and M. Parrinello                     
+ # Phy. Rev. Lett. 102, 020601 (2009)                          
+ #                                                             
+ # M. Ceriotti, G. Bussi and M. Parrinello                     
+ # Phy. Rev. Lett. 103, 030603 (2009)                          
+ #                                                             
+ # Reading A-matrix. Expecting a.u. units!!!!
+ # Reading specialized Cp matrix.
+ # Expecting eV units!!!
+
+ -------SIMULATION PARAMETERS---------------
+&GENERAL
+ NATOM=          3,
+ POT="nab       ",
+ IPIMD=          0,
+ ISTAGE=          0,
+ NWALK=          1,
+ NSTEP=         10,
+ ICV=          0,
+ IHESS=          0,
+ IMINI=      10000,
+ NPROC=          1,
+ IQMMM=          0,
+ NWRITE=          1,
+ NWRITEX=          1,
+ NWRITEV=          0,
+ DT=  20.000000000000000     ,
+ IRANDOM=     131313,
+ NABIN=          1,
+ IREST=          0,
+ NREST=          1,
+ ANAL_EXT=          0,
+ ISBC=          0,
+ RB_SBC=  10.900000000000000     ,
+ KB_SBC= 0.10000000000000001     ,
+ GAMM=  20.000000000000000     ,
+ GAMMTHR=  1.0000000000000000E-010,
+ CONATOM=          0,
+ PARRESPA=          0,
+ DIME=          3,
+ NCALC=          1,
+ IDEBUG=          0,
+ ENMINI=        100,
+ RHO= -1.0000000000000000     ,
+ IKNOW=          0,
+ /
+
+&SYSTEM
+ MASSES= 3*-1.0000000000000000      ,
+ MASSNAMES= 3*"  ",
+ NBIN=       1000,
+ NBIN_ANG=        180,
+ NDIST=          0,
+ DIST1= 30*0          ,
+ DIST2= 30*0          ,
+ XMIN= 0.50000000000000000     ,
+ XMAX=  5.0000000000000000     ,
+ NANG=          0,
+ ANG1= 30*0          ,
+ ANG2= 30*0          ,
+ ANG3= 30*0          ,
+ NDIH=          0,
+ DIH1= 30*0          ,
+ DIH2= 30*0          ,
+ DIH3= 30*0          ,
+ DIH4= 30*0          ,
+ SHIFTDIHED=          1,
+ K=  0.0000000000000000     ,
+ R0=  0.0000000000000000     ,
+ K1=  0.0000000000000000     ,
+ K2=  0.0000000000000000     ,
+ K3=  0.0000000000000000     ,
+ DE=  5.9166999999999997E-002,
+ A= -1.0000000000000000     ,
+ NSHAKE=          0,
+ ISHAKE1= 3*0          ,
+ ISHAKE2= 3*0          ,
+ SHAKE_TOL=  1.0000000000000000E-003,
+ /
+&NHCOPT
+ INOSE=          2,
+ TEMP=  3.1715656456769297E-004,
+ NCHAIN=          4,
+ AMS= -1.0000000000000000     ,
+ TAU0= -1.0000000000000000     ,
+ IMASST=          1,
+ WNW=  5.0000000000000002E-005,
+ NRESPNOSE=          3,
+ NYOSH=          7,
+ SCALEVELOC=          1,
+ READNHC=          0,
+ INITNHC=          1,
+ NMOLT=          1,
+ NATMOLT= 3*0          ,
+ NSHAKEMOL= 3*0          ,
+ /
+
+ Pid of the current proccess is:       26727
+ Removing center of mass velocity
+ Initial temperature [K]:   26.122629109005612     
+ Scaling velocities to correct temperature.
+ Temperature after scaling [K]:   100.15000000000002     
+Reading parm file (input.top)
+title:
+                                                                                
+     Parameter topology includes 10-12 terms:
+     These are assumed to be zero here (e.g. from TIP3P water)
+      iter    Total       bad      vdW     elect   nonpolar   genBorn      frms
+ff:     0      2.43      2.43      0.00      0.00      0.00      0.00  2.38e+01
+ 
+ Number of threads used =            1
+ 
+ #      Step     Time [fs]
+                   1           0.48
+                   2           0.97
+                   3           1.45
+                   4           1.94
+                   5           2.42
+                   6           2.90
+                   7           3.39
+                   8           3.87
+                   9           4.35
+                  10           4.84
+ 
+  Job finished!
+ 
+ 
+  Total cpu time [s] (does not include ab initio calculations)
+   3.5958999999999998E-002
+  Total cpu time [hours] (does not include ab initio calculations)
+   9.9886111111111101E-006
+ Job started at:
+18:44:54  16. 7.2014
+ Job finished at:
+18:44:54  16. 7.2014
+                      _ _ _       _       _         _ 
+         /\          |      \    | |     | |\      | |
+        /  \         |   _   \   | |     | | \     | |
+       / /\ \        |  |_|  |   | |     | |\ \    | |
+      / /  \ \       |       /   | |     | | \ \   | |
+     / /    \ \      |------/    | |     | |  \ \  | |
+    / /------\ \     |------\    | |     | |   \ \ | |
+   / /--------\ \    |   _   \   | |     | |    \ \| |
+  / /          \ \   |  |_|  |   | |     | |     \ | |
+ / /            \ \  |       /   | |     | |      \| |
+/_/              \_\ |______/    |_|     |_|       |_|
+ 
+     version 1.0
+ D. Hollas, O.Svoboda, M. Oncak, P. Slavicek       2014
+ 
+ Compiled at  18:05:08 16.7.2014
+ commit c0af0032e1008c65818589743392cc0a517df92c
+ Compiled with parallel OpenMP support for PIMD.
+  
+ This file was compiled by GCC version 4.8.2 using the options: 
+ -mtune=generic -march=x86-64 -g -Og -Wall -Wextra -fopenmp -fbounds-check -ffpe-trap=invalid,zero,overflow
+ Job started at:
+18:44:54  16. 7.2014
+ I will read parameters from input file input.in2                                                                                                                                                                                               
+ I will read xyz coordinates from file mini.dat                                                                                                                                                                                                
+ Namelist "system" not found.Ignoring...
+ ipimd=0,Resetting number of walkers to 1.
+ ipimd=0,Using velocity Verlet integrator
+ Target temperature in Kelvins =   100.15000000000001     
+ 
+ -----------------ATOMIC MASSES----------------------------
+ These are the atom names I found:
+ O H H 
+ The corresponding relative atomic masses are:
+   15.999000000000001        1.0080000000000000        1.0080000000000000     
+ ----------------------------------------------------------
+ 
+ # Initialization of GLE thermostat.                           
+ # Please cite the relevant works among:                       
+ #                                                             
+ # M. Ceriotti, G. Bussi and M. Parrinello                     
+ # Phy. Rev. Lett. 102, 020601 (2009)                          
+ #                                                             
+ # M. Ceriotti, G. Bussi and M. Parrinello                     
+ # Phy. Rev. Lett. 103, 030603 (2009)                          
+ #                                                             
+ # Reading A-matrix. Expecting a.u. units!!!!
+ # Reading specialized Cp matrix.
+ # Expecting eV units!!!
+ irest=1,Reading geometry,velocities and NHC momenta from restart.xyz
+
+ -------SIMULATION PARAMETERS---------------
+&GENERAL
+ NATOM=          3,
+ POT="nab       ",
+ IPIMD=          0,
+ ISTAGE=          0,
+ NWALK=          1,
+ NSTEP=         20,
+ ICV=          0,
+ IHESS=          0,
+ IMINI=      10000,
+ NPROC=          1,
+ IQMMM=          0,
+ NWRITE=          1,
+ NWRITEX=          1,
+ NWRITEV=          0,
+ DT=  20.000000000000000     ,
+ IRANDOM=     131313,
+ NABIN=          1,
+ IREST=          1,
+ NREST=          1,
+ ANAL_EXT=          0,
+ ISBC=          0,
+ RB_SBC=  10.900000000000000     ,
+ KB_SBC= 0.10000000000000001     ,
+ GAMM=  20.000000000000000     ,
+ GAMMTHR=  1.0000000000000000E-010,
+ CONATOM=          0,
+ PARRESPA=          0,
+ DIME=          3,
+ NCALC=          1,
+ IDEBUG=          0,
+ ENMINI=        100,
+ RHO= -1.0000000000000000     ,
+ IKNOW=          0,
+ /
+
+&SYSTEM
+ MASSES= 3*-1.0000000000000000      ,
+ MASSNAMES= 3*"  ",
+ NBIN=       1000,
+ NBIN_ANG=        180,
+ NDIST=          0,
+ DIST1= 30*0          ,
+ DIST2= 30*0          ,
+ XMIN= 0.50000000000000000     ,
+ XMAX=  5.0000000000000000     ,
+ NANG=          0,
+ ANG1= 30*0          ,
+ ANG2= 30*0          ,
+ ANG3= 30*0          ,
+ NDIH=          0,
+ DIH1= 30*0          ,
+ DIH2= 30*0          ,
+ DIH3= 30*0          ,
+ DIH4= 30*0          ,
+ SHIFTDIHED=          1,
+ K=  0.0000000000000000     ,
+ R0=  0.0000000000000000     ,
+ K1=  0.0000000000000000     ,
+ K2=  0.0000000000000000     ,
+ K3=  0.0000000000000000     ,
+ DE=  5.9166999999999997E-002,
+ A= -1.0000000000000000     ,
+ NSHAKE=          0,
+ ISHAKE1= 3*0          ,
+ ISHAKE2= 3*0          ,
+ SHAKE_TOL=  1.0000000000000000E-003,
+ /
+&NHCOPT
+ INOSE=          2,
+ TEMP=  3.1715656456769297E-004,
+ NCHAIN=          4,
+ AMS= -1.0000000000000000     ,
+ TAU0= -1.0000000000000000     ,
+ IMASST=          1,
+ WNW=  5.0000000000000002E-005,
+ NRESPNOSE=          3,
+ NYOSH=          7,
+ SCALEVELOC=          0,
+ READNHC=          1,
+ INITNHC=          0,
+ NMOLT=          1,
+ NATMOLT= 3*0          ,
+ NSHAKEMOL= 3*0          ,
+ /
+
+ Pid of the current proccess is:       26750
+ Initial temperature [K]:   142.11037319917628     
+Reading parm file (input.top)
+title:
+                                                                                
+     Parameter topology includes 10-12 terms:
+     These are assumed to be zero here (e.g. from TIP3P water)
+ Making backup of the current restart file.
+ cp restart.xyz restart.xyz.10           
+ 
+ Number of threads used =            1
+ 
+ #      Step     Time [fs]
+                  11           5.32
+                  12           5.81
+                  13           6.29
+                  14           6.77
+                  15           7.26
+                  16           7.74
+                  17           8.22
+                  18           8.71
+                  19           9.19
+                  20           9.68
+ 
+  Job finished!
+ 
+ 
+  Total cpu time [s] (does not include ab initio calculations)
+   3.7529000000000000E-002
+  Total cpu time [hours] (does not include ab initio calculations)
+   1.0424722222222221E-005
+ Job started at:
+18:44:54  16. 7.2014
+ Job finished at:
+18:44:54  16. 7.2014

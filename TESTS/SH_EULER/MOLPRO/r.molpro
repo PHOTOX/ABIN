@@ -1,0 +1,18 @@
+#!/bin/bash
+# TODO: have to treat state.dat and adjust nacline accordingly
+cd MOLPRO
+timestep=$1
+ibead=$2
+
+#echo $timestep >> time.dat
+
+let fline=9*timestep+9
+let nacline=6*3*timestep+18 #we dont need it on 0th step
+
+head -n $fline allforces.dat | tail -n 9 > ../engrad.dat.$ibead
+head -n $nacline allnacm.dat | tail -n 18 > ../nacm.dat
+
+#cat ../engrad.dat.001 >> o
+#cat ../nacm.dat >> oo
+
+#cat ../state.dat >> ../stateall.dat

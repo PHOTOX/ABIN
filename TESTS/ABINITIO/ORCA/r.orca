@@ -1,0 +1,38 @@
+#!/bin/bash
+cd ORCA
+ORCAEXE=orca
+
+timestep=$1
+ibead=$2
+input=input$ibead
+
+natom=`awk '{print $1;exit}' ../mini.dat`
+
+cat > $input << EOF
+# in the following line, specify basis sets and method,
+# basis sets for RI approximations are basis/J
+# PAL2
+# ! RI BP86 SVP SVP/J
+! PM3
+! ENGRAD AUTOSTART TightSCF
+* xyz 0 1
+EOF
+########END OF USE MODIFICATIONS###################
+
+cat ../geom.dat.$ibead >> $input
+echo '*' >>$input
+
+$ORCAEXE $input &> $input.out
+################################
+cp $input.out $input.out.old
+
+### EXTRACTING ENERGY AND FORCES
+awk -v natom="$natom" '{if ($5=="energy") {getline;getline;print $1}
+if ($4=="gradient") {getline;
+	for(i=1;i<=natom;i++) {
+		getline; x=$1;getline;y=$1;getline;print x,y,$1
+ }}}' $input.engrad > ../engrad.dat.$ibead
+
+# awk '{if(NR==1) next;print (-$1,-$2,-$3)}' ../engrad.dat.$ibead > ../forces.dat
+
+

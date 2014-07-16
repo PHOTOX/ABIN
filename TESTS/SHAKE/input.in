@@ -1,0 +1,69 @@
+This is a sample input file for ABIN 
+NOTE: order of input sections matters!!
+
+&general
+pot='nab'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
+ipimd=0,		!classical simulation 0, quantum simulation 1
+nwalk=1,		!number of random walkers 
+imini=0,		!equilibration period,!not properly implemented yet
+istage=0,		!staging transformation (1), without staging (0)
+nstep=10,		!
+dt=20.,			!number of steps and timestep
+irandom=131313,  	!random seed
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=1,		! how often should we print coordinates?
+nwritev=1,
+nrest=1,		! how often we print restart files?
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+
+isbc=1,			! spherical boundary conditions
+!rb_sbc=10.0d0,              ! radius of the cluster for sbc
+kb_sbc=0.01d0,		! force constant for spherical potential,in A
+natom=159,		!number of atoms
+/
+
+&system
+nbin=2000,		! number of bins for densities
+ndist=6,		! of bonds for which we calculate density
+dist1=1,1,4,4,7,7		! first atoms for binning
+dist2=2,3,5,6,8,9		! second atoms for binning (i.e. bond between natfirst[1] and natsecond[1])
+nang=1
+ang1=1
+ang2=2
+ang3=3
+ndih=1
+dih1=1
+dih2=2
+dih3=3
+dih4=4
+xmin=0.5,			! 
+xmax=2.5,		!
+nshake=8,		! Number of bond constrains
+shake_tol=0.0001	! Shake tolerance
+ishake1=1,1,4,4,8,8,11,11,		! list of bond constraints
+ishake2=2,3,5,6,9,10,12,13,
+/
+
+&nhcopt
+nmolt=53
+natmolt=53*3
+nshakemol=2,2,0,2,2,3*0,            ! number of constraints in molecules
+imasst=0
+inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0
+nchain=4,		! number of nose-hoover chains
+temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+nyosh=7,
+nrespnose=3
+/
+
+&nab
+ipbc=0,		! turns on periodic boundary conditions
+cutoff=100.0,	! non-bonded cutoff (both LJ and coulomb)
+nsnb=100,	!update non-bonded list every nsnb steps	
+ips=0,		!isotropic periodic sum 1-both LJ and coul, 2-coul 3- LJ
+
+alpha_pme=0,	! parameter for ewald(TO DO)
+kappa_pme=0,	! parameter for ewald(TO DO)
+/
+
