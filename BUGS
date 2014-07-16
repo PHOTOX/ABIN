@@ -4,7 +4,7 @@ what should be the default value of tau0,
 to achieve best energy conservation?
 Affected routines: Nose-Hoover
 Present since version/commit: always
-Status: unresolved
+Status: UNRESOLVED
 ---------------------------------------------------
 
 ---------------------------------------------------
@@ -12,7 +12,7 @@ Restart for SH might be wrong due to different overlap between old and new NACM.
 We should somehow include NACM in some other restart file and read it if present.
 Present since version/commit: always
 Affected: surface hopping
-Status:   partially resolved in commit c5b9862,  pop.dat ok, but restarts still differ
+Status:   PARTIALLY RESOLVED in commit c5b9862,  pop.dat ok, but restarts still differ
 ---------------------------------------------------
 
 ---------------------------------------------------
@@ -20,7 +20,7 @@ CRITICAL:::: Do we do correctly inac=1??
 what if sign of dotproduct changes???
 Present since version/commit: always
 Affected: surface hopping
-Status:   unresolved, lukas thinks it is dealt with in his TDC code
+Status:   UNRESOLVED, lukas thinks it is dealt with in his TDC code
 ---------------------------------------------------
 
 ---------------------------------------------------
@@ -28,10 +28,10 @@ I think that hop is wrong, we should not use vx_int
 and also, after hop, in vx_int arrays will suddenly change...
 maybe it would be easiest to just hop once per big time step??
 UPDATE: relatively small correction (0.02eV)
-when not using _int, coservation is perfect
+when not using _int, conservation is perfect
 Present since version/commit: always
 Affected: surface hopping
-Status:   partially resolved in commit 8ff3835, we should test it!!
+Status:   PARTIALLY RESOLVED in commit 8ff3835, we should test it!!
 ---------------------------------------------------
 
 ---------------------------------------------------

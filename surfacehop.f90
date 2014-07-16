@@ -1,6 +1,6 @@
 ! modules and routines for Surface hopping dynamics
 ! D. Hollas, O. Svoboda, P. Slavíček, M. Ončák
-!TODO: refactor everything
+
 module mod_sh
    use mod_const, only: DP
    use mod_array_size, only: nstmax, ntrajmax
@@ -9,15 +9,17 @@ module mod_sh
    private
    public :: istate_init,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 
    public :: surfacehop, sh_init, istate, ntraj, nstate, cel_re, cel_im, tocalc, en_array
-   public :: move_vars, get_nacm, write_nacmrest, read_nacmrest, energythr
+   public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
+   public :: energydifthr, energydriftthr, popsumthr
 
    integer,parameter :: ntraj=ntrajmax
-   integer :: istate_init=1,nstate=1,substep=10000
-   integer :: inac=0,nohop=0
-   integer :: nac_accu1=7,nac_accu2=5 !7 is MOLPRO default
+   integer   :: istate_init=1, nstate=1, substep=1000
+   integer   :: inac=0, nohop=0
+   integer   :: nac_accu1=7, nac_accu2=5 !7 is MOLPRO default
+   real(DP)  :: dtp, alpha=0.1d0
+   real(DP)  :: deltae=100.d0, popthr=0.001
+   real(DP)  :: popsumthr=0.001d0, energydifthr=0.5d0, energydriftthr=0.5d0 !eV
    character(len=10) :: integ='butcher'
-   real(DP)  :: wfthresh=0.001d0
-   real(DP)  :: dtp,alpha=0.1d0,eshift,deltae=100.d0,popthr=-1, energythr=1.0d0 !eV
    real(DP),allocatable :: nacx(:,:,:,:), nacy(:,:,:,:), nacz(:,:,:,:)
    real(DP),allocatable :: nacx_old(:,:,:,:), nacy_old(:,:,:,:), nacz_old(:,:,:,:)
    real(DP),allocatable :: dotproduct(:,:,:), dotproduct_old(:,:,:) !for inac=1
@@ -25,19 +27,21 @@ module mod_sh
    real(DP) :: cel_re(nstmax,ntrajmax),cel_im(nstmax,ntrajmax)
    integer, allocatable :: tocalc(:,:)
    integer :: istate(ntrajmax)
+   real(DP)  :: eshift, entot0
    save
    contains
 
-   subroutine sh_init(x, y, z, vx_old, vy_old, vz_old, dt)
+   subroutine sh_init(x, y, z, vx, vy, vz, dt)
+   use mod_const,    only: AUtoEV
    use mod_general,  only: irest, natom, it
    use mod_forces,   only: force_clas
-   implicit none
-   real(DP),intent(inout):: x(:,:),y(:,:),z(:,:)
-   real(DP),intent(out)  :: vx_old(:,:),vy_old(:,:),vz_old(:,:)
-   real(DP),intent(out)  :: dt
-   real(DP)  :: dum_fx(size(vx_old,1),size(vx_old,2))
-   real(DP)  :: dum_fy(size(vy_old,1),size(vy_old,2))
-   real(DP)  :: dum_fz(size(vz_old,1),size(vz_old,2))
+   use mod_kinetic,  only: ekin_v
+   real(DP),intent(inout)  :: x(:,:), y(:,:), z(:,:)
+   real(DP),intent(in)     :: vx(:,:), vy(:,:), vz(:,:)
+   real(DP),intent(in)     :: dt
+   real(DP)  :: dum_fx(size(x,1),size(x,2))
+   real(DP)  :: dum_fy(size(y,1),size(y,2))
+   real(DP)  :: dum_fz(size(z,1),size(z,2))
    real(DP)  :: dum_eclas
    integer   :: itrj,ist1
    real(DP)  :: pom=0.0d0,maxosc=0.0d0
@@ -62,8 +66,6 @@ module mod_sh
    allocate( en_array(nstate, ntraj) )
    en_array=0.0d0
    en_array_old=en_array
-
-   vx_old=0.0d0   ; vy_old=0.0d0     ; vz_old=0.0d0
 
 !--Determining the initial WF coefficients
    if(irest.ne.1)then
@@ -109,14 +111,14 @@ module mod_sh
    !restarting the SH, reading NACM
 
    call force_clas(dum_fx,dum_fy,dum_fz,x,y,z,dum_eclas)
-   eshift=-en_array(1, 1)
+   !WARNING: itrj hack
+   itrj=1
+   eshift = -en_array(1, itrj)
+   entot0 = en_array(istate(itrj), itrj)+ekin_v(vx, vy, vz)
+   entot0 = entot0 * AUtoEV
 
    do itrj=1,ntraj
       call set_tocalc(itrj)
-   !Getting NACM for the 0th step
-      !for now still in abin.f90 due to velocities transformations
-!      call GetNacm(itrj) 
-!      call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
    end do
    if(it.ne.0.and.irest.eq.1) call read_nacmrest()
 
@@ -374,9 +376,9 @@ module mod_sh
          end do
       end if
 
-      if (abs(popsum-1.0d0).gt.wfthresh)then
+      if (abs(popsum-1.0d0).gt.popsumthr)then
          write(*,*)'ERROR:Sum of populations=',popsum, &
-          'which differs from 1.0 by more than wfthresh=',wfthresh
+          'which differs from 1.0 by more than popsumthr=',popsumthr
          write(*,*)'Increase number of substeps or use more accurate integrator.'
          call abinerror('surfacehop')
       end if
@@ -428,6 +430,7 @@ module mod_sh
       do itrj=1,ntraj
 
          call check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
+         call check_energydrift(vx, vy, vz, itrj)
 
          t_tot=0.0d0
 
@@ -713,7 +716,7 @@ module mod_sh
          endif
       enddo
       fact=sum_norm/(cel_re(istate(itrj),itrj)**2+cel_im(istate(itrj),itrj)**2+1.0d-7) !TODO:smaller number
-      !Following should never happen as we check for wfthresh later in this subroutine
+      !Following should never happen as we check for popsumthr later in this subroutine
       if(fact.lt.0.0d0)then
          write(*,*)'Fatal error in surfacehop during decoherence renormalization.'
          write(*,*)'fact=',fact,'but should be > 0'
@@ -1256,13 +1259,33 @@ module mod_sh
       entot=(ekin+en_array(istate(itrj), itrj) )*AUtoEV
       entot_old=(ekin_old+en_array_old(istate(itrj), itrj) )*AUtoEV
 
-      if (abs(entot-entot_old).gt.energythr)then
+      if (abs(entot-entot_old).gt.energydifthr)then
          write(*,*)'ERROR:Poor energy conservation. Exiting...'
          write(*,*)'Total energy difference [eV] is:', entot-entot_old
-         write(*,*)'The threshold was:',energythr
+         write(*,*)'The threshold was:',energydifthr
          call abinerror('check_energy')
       end if
 
    end subroutine check_energy
+
+   subroutine check_energydrift(vx, vy, vz, itrj)
+      use mod_const, only: AUtoEV
+      use mod_kinetic, only: ekin_v
+      real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
+      integer, intent(in) :: itrj
+      real(DP)            :: ekin, entot
+
+      ekin=ekin_v(vx, vy, vz)
+
+      entot=(ekin+en_array(istate(itrj), itrj) )*AUtoEV
+
+      if (abs(entot-entot0).gt.energydriftthr)then
+         write(*,*)'ERROR: Energy drift exceeded threshold value. Exiting...'
+         write(*,*)'Total energy difference [eV] is:', entot-entot0
+         write(*,*)'The threshold was:',energydriftthr
+         call abinerror('check_energy')
+      end if
+
+   end subroutine check_energydrift
 
 end module mod_sh
