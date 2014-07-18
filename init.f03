@@ -106,9 +106,9 @@ subroutine init(dt)
       rewind(150)
       !check, whether we hit End-Of-File or other error
       if(IS_IOSTAT_END(iost))then  !fortran intrinsic for EOF
-         write(*,*)'Namelist "system" not found.Ignoring...'
+         write(*,*)'Namelist "system" not found. Ignoring...'
       else if (iost.ne.0)then
-         write(*,*)'ERROR when reading namelist "system"'
+         write(*,*)'ERROR when reading namelist "system".'
          write(*,*)chiomsg
          call abinerror('init')
       else
@@ -213,7 +213,7 @@ subroutine init(dt)
 !-----END OF READING GEOMETRY      
 
 !-----conversion of temperature from K to au
-      write(*,*)'Target temperature in Kelvins =',temp
+      if (inose.ne.0) write(*,*)'Target temperature in Kelvins =',temp
       temp=temp/autok
 
       if (ihess.eq.1)then 
@@ -242,6 +242,12 @@ subroutine init(dt)
 !----In case of big systems, we don't want to manually set am and names arrays.
 !----Currently supported for most of the elements
      call mass_init(masses, massnames)
+     !lower the second character of atom name
+     !this is because of terachem
+      do iat=1,natom
+         names(iat)(2:2)=UpperToLower(names(iat)(2:2))
+      end do
+
 
 !-----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORERESTART DUE TO ARRAY ALOCATION
@@ -704,6 +710,11 @@ endif
       if(inose.lt.0.and.inose.gt.3)then
        write(*,*)'inose has to be 0,1,2 or 3.'
        error=1
+      endif
+      if(inose.eq.3)then
+       write(*,*)'Langevin thermostat was not tested.'
+       write(*,*)'Set iknow=1 if you know what youre doing.'
+       if (iknow.ne.1) error=1
       endif
       if(istage.eq.1.and.ipimd.ne.1)then
       write(*,*)'The staging transformation is only meaningful for PIMD'

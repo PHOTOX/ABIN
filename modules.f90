@@ -272,7 +272,10 @@ end module
 
       if (natom.le.100)then
          print *,'These are the atom names I found:'
-         write(*,*)(names(i),i=1,natom)
+         do i=1,natom
+            write(*,'(A2, A1)',advance='no')names(i),' '
+         end do
+         write(*,*)
          print *,'The corresponding relative atomic masses are:'
          write(*,*)(am(i),i=1,natom)
       end if

@@ -1,16 +1,10 @@
-we should first make all the TESTS and comit them, then we can play around
-also test inac=1 (LUKAS code)
-
-when tests are availabel, check whether  following options change program behaviour
-see this page: https://gcc.gnu.org/onlinedocs/gcc-3.3.5/g77/Overly-Convenient-Options.html#Overly-Convenient-Options
+We need different atom names for terachem
+what about other programs???
+g09 and orca fine
 
 todo: MPI version for terachem
 
-todo: projit vsechna TODO v kodu
-
 udelat r.molpro pro caspt2/casscf-nacm
-
-zkontrolovat omezeni pro molpro12 na cpmscf na jeden multi
 
 ###----UTILS
 spectra from movies
@@ -37,7 +31,6 @@ u PBC simulace se mirne lisi sily mme a mme2...nevime proc
 
 --------------FOR TESTING------------------------
 globalni termostat
-spojit ams_init a nhc_init...inicializovat hybnosti
 podivat se v gdb,zda jsme omezili pocatecni oscilace
 
 pro pripadne PME je potreba modifikovat nbond_box!

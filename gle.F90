@@ -159,7 +159,7 @@ contains
     ! could then use it to initialize the momentum in the calling code
 
     ! DH: ps or gp rewritten in init.f90 if irest.eq.1
-    ! TODO: asi pro jistotu inicializovat vzdy a restart to prepise
+    ! Pro jistotu inicializovat vzdy a restart to prepise
     gA=gC   
     call cholesky(gA, gC, ns+1)
     

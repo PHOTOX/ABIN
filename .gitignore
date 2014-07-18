@@ -3,3 +3,13 @@ abin.dev*
 *.o
 date.inc
 *temp
+TESTS/*/*diff
+TESTS/*/*dat
+TESTS/*/*xyz
+TESTS/*/geom.dat.00*
+TESTS/ABINITIO/ORCA/input*
+TESTS/*/output
+TESTS/*/restart.xyz
+TESTS/*/restart.xyz.old
+TESTS/*/restart.xyz.10
+TESTS/*/debug.nacm

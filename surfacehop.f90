@@ -691,7 +691,7 @@ module mod_sh
       
       ekin_mom=ekin_v(vx_int,vy_int,vz_int)
 
-      if(ekin_mom.gt.1.0d-4)then !TODO: why this number?
+      if(ekin_mom.gt.1.0d-4)then !Why this number?In almost all cases it won't matter
 
       do ist1=1,nstate
        if(ist1.ne.istate(itrj)) then
@@ -780,7 +780,6 @@ module mod_sh
 
    end subroutine surfacehop
 
-!  TODO: rename instate to statein and outstate to stateout
    subroutine hop(vx,vy,vz,vx_int,vy_int,vz_int,nacx_int,nacy_int,nacz_int,en_array_int,instate,outstate,itrj,eclas)
       use mod_general, ONLY:natom
       use mod_system, ONLY: am
@@ -804,7 +803,6 @@ module mod_sh
 
       ekin=ekin_v(vx,vy,vz)
 
-      ! isnt b_temp simply dot product??
       do iat=1,natom
          a_temp=a_temp+nacx(iat,itrj,instate,outstate)**2/am(iat)
          a_temp=a_temp+nacy(iat,itrj,instate,outstate)**2/am(iat)
@@ -829,19 +827,15 @@ module mod_sh
 
 !------------- Rescaling the velocities------------------------
 
-!     TODO use c_temp here
       if(b_temp.lt.0) then
-         g_temp=(b_temp+sqrt(b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))))/2.0d0/a_temp
+         g_temp=( b_temp + sqrt(c_temp) )/2.0d0/a_temp
       endif
 
       if(b_temp.ge.0) then
-         g_temp=(b_temp-sqrt(b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))))/2.0d0/a_temp
+         g_temp=(b_temp-sqrt(c_temp))/2.0d0/a_temp
       endif
 
-!      write(*,*)a_temp,b_temp,c_temp,g_temp
 
-      !TODO: tohle asi neni uplne spravne..mame pouzit vx_int nebo vx?
-      !asi VX, bo to potom budeme menit,vxint s timto nema nic spolecneho
       do iat=1,natom
          vx(iat,itrj)=vx(iat,itrj)-g_temp*nacx(iat,itrj,instate,outstate)/am(iat)
          vy(iat,itrj)=vy(iat,itrj)-g_temp*nacy(iat,itrj,instate,outstate)/am(iat)

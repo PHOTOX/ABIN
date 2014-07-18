@@ -36,8 +36,8 @@ module mod_guillot
        enddo
       enddo
 
-!TODO: IS OMP really working here?
-!disabled for safety
+! IS OMP really working here?
+! disabled for safety
 !!$OMP PARALLEL DO PRIVATE(temp1,r,frb,fr)
       do k=1,nwalk
        temp1=0.0d0
@@ -297,7 +297,6 @@ module mod_guillot
 
 !---potentially useful for guillot and other empirical force fields, because string
 !---comparison is very cpu demanding!!
-!--TODO:move to guillot
    subroutine inames_guillot()
       use mod_general, ONLY:natom
       use mod_system, ONLY:inames,names
