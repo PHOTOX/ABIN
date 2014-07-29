@@ -405,6 +405,9 @@ if(ipimd.eq.2)then
   write(4,*)'#    Time[fs] CurrentState   Probabilities'
   open(8,file='PES.dat',access=chaccess,action='write')
   write(8,*)'#    Time[fs] Potential energies'
+  open(14,file='nacm_all.dat',access=chaccess,action='write')
+  open(15,file='dotprod.dat',access=chaccess,action='write')
+  write(15,*)'#    Time[fs] dotproduct(i,j) [i=1,nstate-1 j=i+1,nstate]'
 endif
 
 if(isbc.eq.1)then

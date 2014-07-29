@@ -99,7 +99,7 @@ module mod_utils
    subroutine PrintHelp()
    implicit none
     print '(a)', 'ABIN: Multipurpose ab initio BOMD program.'
-    print '(a)', 'Without cmdline options, the program use sensible default values.'
+    print '(a)', 'Without cmdline options, the program uses sensible default values.'
     print '(a)', ''
     print '(a)', 'cmdline options:'
     print '(a)', ''

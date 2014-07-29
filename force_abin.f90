@@ -110,7 +110,7 @@
 !-------READING ENERGY from engrad.dat
       read(20+iw,*,IOSTAT=iost)temp1
       if(iost.ne.0)then
-              write(*,*)'Fatal problem with reading energy from engrad.dat'
+              write(*,*)'Fatal problem with reading energy from file', chforce
               write(*,*)'This usually means, that the ab initio program failed.'
               write(*,*)'See the appropriate output files.'
               call abinerror('force_abin')

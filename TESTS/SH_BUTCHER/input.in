@@ -1,6 +1,6 @@
 &general
 irandom=   729375542,         ! random seed
-idebug=1
+idebug=0
 pot='molpro'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,nab,harm,morse,guillot,2dho 
 ipimd=2,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
 nwalk=1,		! number of random walkers 

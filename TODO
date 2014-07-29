@@ -1,6 +1,8 @@
-We need different atom names for terachem
-what about other programs???
-g09 and orca fine
+for ab initio, orca gives slightly different results between 
+403-a130a-9 and as67-1. Maybe try newer version
+
+probably make module for restart and check for correct strings
+for everything
 
 todo: MPI version for terachem
 

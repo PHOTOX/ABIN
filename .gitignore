@@ -10,6 +10,8 @@ TESTS/*/geom.dat.00*
 TESTS/ABINITIO/ORCA/input*
 TESTS/*/output
 TESTS/*/restart.xyz
+TESTS/*/restart.xyz.0
 TESTS/*/restart.xyz.old
 TESTS/*/restart.xyz.10
 TESTS/*/debug.nacm
+TESTS/*/nacmrest.dat.10

@@ -46,7 +46,7 @@ module mod_sh
    integer   :: itrj,ist1
    real(DP)  :: pom=0.0d0,maxosc=0.0d0
 
-   deltaE=deltaE/27.2114
+   deltaE=deltaE/AUtoEV
    dtp=dt/substep
 
    allocate( nacx(natom, ntrajmax, nstate, nstate) )
@@ -407,24 +407,23 @@ module mod_sh
       real(DP)  :: nacx_int(size(vx,1),ntrajmax,nstmax,nstmax)  
       real(DP)  :: nacy_int(size(vx,1),ntrajmax,nstmax,nstmax)
       real(DP)  :: nacz_int(size(vx,1),ntrajmax,nstmax,nstmax)
-      real(DP)  :: nacx_newint(size(vx,1),ntraj,nstmax,nstmax)
-      real(DP)  :: nacy_newint(size(vx,1),ntraj,nstmax,nstmax)
-      real(DP)  :: nacz_newint(size(vx,1),ntraj,nstmax,nstmax)
+      real(DP)  :: nacx_newint(size(vx,1),ntrajmax,nstmax,nstmax)
+      real(DP)  :: nacy_newint(size(vx,1),ntrajmax,nstmax,nstmax)
+      real(DP)  :: nacz_newint(size(vx,1),ntrajmax,nstmax,nstmax)
       real(DP)  :: dotproduct_int(nstmax,nstmax,ntrajmax),dotproduct_newint(nstmax,nstmax,ntrajmax) !rename dotproduct_int
       real(DP)  :: t(nstmax,nstmax)           !switching probabilities
       real(DP)  :: t_tot(nstmax,nstmax)       !cumulative switching probabilities
       real(DP)  :: ran(10)
       real(DP)  :: pop(size(tocalc,1),ntrajmax),popsum !populations
-      integer :: itp
-      integer :: iat,ist1,ist2,itrj     !iteration counters
+      integer :: iat,ist1,ist2,itrj,itp     !iteration counters
       integer :: ist                    ! =istate(itrj)
       real(DP)  :: vect_olap,fr,frd
       real(DP)  :: ekin_mom,apom,edif,tau,fact,sum_norm
       integer :: ihop,ijunk
-      real(DP)  :: a_re,prob(nstate),cn
+      real(DP)  :: a_re,prob(nstmax),cn,stepfs
       character(len=500) :: formt
       character(len=20) :: chist,chihop,chit
-      integer :: iost
+      integer :: iost, iunit
 
 
       do itrj=1,ntraj
@@ -505,19 +504,6 @@ module mod_sh
 
         enddo
        enddo
-
-      if(idebug.eq.1)then
-      open(19,file='debug.nacm',access='append')
-      write(19,*)'Time step:',it
-        do ist1=1,nstate
-         do ist2=1,nstate
-          do iat=1,natom
-          write(19,'(3I3,3E20.8)')iat,ist1,ist2,nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
-         enddo
-         enddo
-        enddo
-      close(19)
-      endif
 
 !----------- INAC=1  endif
      endif
@@ -746,16 +732,16 @@ module mod_sh
      call set_tocalc(itrj)
 
      if(idebug.eq.1)then
-      if(it.eq.1)then
-       open(150,file='dotprod.dat')
-      else
-       open(150,file='dotprod.dat',access='append')
-      endif
-      write(150,*)'Step: ',it
+       if(it.eq.1)then
+         open(newunit=iunit,file='dotprodmatrix.dat')
+       else
+         open(newunit=iunit,file='dotprodmatrix.dat',access='append')
+       endif
+      write(iunit,*)'Step: ',it
       do ist1=1,nstate
-       write(150,*)(dotproduct_int(ist1,ist2,itrj),ist2=1,nstate)
+       write(iunit,*)(dotproduct_int(ist1,ist2,itrj),ist2=1,nstate)
       enddo
-      close(150)
+      close(iunit)
      endif
 
 
@@ -766,14 +752,36 @@ module mod_sh
      call check_popsum(itrj,popsum)
      call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
 
-      if(modulo(it,nwrite).eq.0)then
-       write(formt,'(A10,I3,A13)')'(F15.2,I3,',nstate,'F10.5,1F10.7)'
-       write(3,fmt=formt)it*dt*autofs,istate(itrj),(pop(ist1,itrj), ist1=1,nstate),popsum
-       write(formt,'(A10,I3,A6)')'(F15.2,I3,',nstate,'F10.5)'
-       write(4,fmt=formt)it*dt*autofs,istate(itrj),(t_tot(ist,ist1),ist1=1,nstate)
-       write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
-       write(8,fmt=formt)it*dt*autofs,(en_array(ist1,itrj),ist1=1,nstate)
-      endif
+   if(modulo(it,nwrite).eq.0)then
+      stepfs=it*dt*AUtoFS
+      write(formt,'(A10,I3,A13)')'(F15.2,I3,',nstate,'F10.5,1F10.7)'
+      write(3,fmt=formt)stepfs,istate(itrj),(pop(ist1,itrj), ist1=1,nstate),popsum
+      write(formt,'(A10,I3,A6)')'(F15.2,I3,',nstate,'F10.5)'
+      write(4,fmt=formt)stepfs,istate(itrj),(t_tot(ist,ist1),ist1=1,nstate)
+      write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
+      write(8,fmt=formt)stepfs,(en_array(ist1,itrj),ist1=1,nstate)
+      if (inac.eq.0)  write(14,*)'Time step:',it
+      do ist1=1,nstate-1
+         do ist2=ist1+1,nstate
+
+            if (ist1.eq.1.and.ist2.eq.2)then
+               write(15,'(F15.2,E20.10)',advance='no')stepfs,dotproduct_int(ist1,ist2,itrj)
+            else
+               write(15,'(E20.10)',advance='no')dotproduct_int(ist1,ist2,itrj)
+            end if
+
+            if (inac.eq.0)then
+               write(14,*)'NACME between states:',ist1,ist2
+               do iat=1,natom
+                  write(14,'(3E20.10)')nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+               enddo
+            endif
+
+         end do
+      end do
+      write(15,*)''
+
+   endif
 
    ! ntraj enddo       
    enddo
