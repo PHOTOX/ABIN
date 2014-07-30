@@ -10,24 +10,24 @@ module mod_sh
    public :: istate_init,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 
    public :: surfacehop, sh_init, istate, ntraj, nstate, cel_re, cel_im, tocalc, en_array
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
-   public :: energydifthr, energydriftthr, popsumthr
+   public :: energydifthr, energydriftthr, popsumthr, phase
 
-   integer,parameter :: ntraj=ntrajmax
+   integer,parameter :: ntraj = ntrajmax
    integer   :: istate_init=1, nstate=1, substep=1000
-   integer   :: inac=0, nohop=0
+   integer   :: inac=0, nohop=0, phase=0
    integer   :: nac_accu1=7, nac_accu2=5 !7 is MOLPRO default
    real(DP)  :: dtp, alpha=0.1d0
    real(DP)  :: deltae=100.d0, popthr=0.001
    real(DP)  :: popsumthr=0.001d0, energydifthr=0.5d0, energydriftthr=0.5d0 !eV
-   character(len=10) :: integ='butcher'
+   character(len=10)    :: integ='butcher'
    real(DP),allocatable :: nacx(:,:,:,:), nacy(:,:,:,:), nacz(:,:,:,:)
    real(DP),allocatable :: nacx_old(:,:,:,:), nacy_old(:,:,:,:), nacz_old(:,:,:,:)
    real(DP),allocatable :: dotproduct(:,:,:), dotproduct_old(:,:,:) !for inac=1
    real(DP),allocatable :: en_array(:,:), en_array_old(:,:)
-   real(DP) :: cel_re(nstmax,ntrajmax),cel_im(nstmax,ntrajmax)
+   real(DP)  :: cel_re(nstmax,ntrajmax), cel_im(nstmax,ntrajmax)
+   real(DP)  :: eshift, entot0, gama(nstmax,nstmax,ntrajmax)
    integer, allocatable :: tocalc(:,:)
-   integer :: istate(ntrajmax)
-   real(DP)  :: eshift, entot0
+   integer   :: istate(ntrajmax)
    save
    contains
 
@@ -48,6 +48,7 @@ module mod_sh
 
    deltaE=deltaE/AUtoEV
    dtp=dt/substep
+   gama=0.0d0
 
    allocate( nacx(natom, ntrajmax, nstate, nstate) )
    nacx=0.0d0
@@ -145,7 +146,7 @@ module mod_sh
 
    subroutine set_tocalc(itrj)
    integer,intent(in) :: itrj 
-   integer :: ist1,ist2
+   integer   :: ist1,ist2
    real(DP)  :: pop,pop2
    
    do ist1=1,nstate-1
@@ -178,33 +179,42 @@ module mod_sh
    endif
    end subroutine set_tocalc
 
-   !currently not in use
-   !would be needed if we wanted to support proper restart for SH
    subroutine Write_nacmrest()
    use mod_qmmm, only:natqm
    integer :: ist1,ist2,iat,itrj
-   open(600,file='nacmrest.dat')
+   integer :: iunit1, iunit2
+   open(newunit=iunit1,file='nacmrest.dat',action="write")
+   if (phase.eq.1) open(newunit=iunit2,file='phaserest.dat',action="write")
    do itrj=1, ntraj
 
    do ist1=1,nstate-1
+
       do ist2=ist1+1,nstate
    
          if(tocalc(ist1,ist2).eq.1)then
    
-            write(600,*)'NACM between states',ist1,ist2
+            write(iunit1,*)'NACM between states',ist1,ist2
             do iat=1,natqm              ! reading only for QM atoms
-               write(600,*)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+               write(iunit1,*)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
             enddo
    
    !--------if tocalc 
          endif
+
    
       enddo
    enddo
 
+   if(phase.eq.1)then
+      do ist1=1,nstate
+         write(iunit2,*)(gama(ist1,ist2,itrj),ist2=1,nstate)
+      end do
+   end if
+
    end do
 
-   close(600)
+   close(iunit1)
+   if(phase.eq.1) close(iunit2)
 
    end subroutine write_nacmrest
 
@@ -212,22 +222,29 @@ module mod_sh
    use mod_general, only: it
    use mod_qmmm, only:natqm
    integer :: iost,ist1,ist2,iat,itrj
+   integer :: iunit1, iunit2
    character(len=200) :: chmsg
    character(len=20) :: chit
    character(len=60) :: chrestart
 
    write(*,*)'Reading NACM from nacmrest.dat'
-   open(600,file='nacmrest.dat')
+   open(newunit=iunit1,file='nacmrest.dat',action="read")
+   if (phase.eq.1)then
+      write(*,*)'Reading phase from phaserest.dat'
+      open(newunit=iunit2,file='phaserest.dat',action="read")
+   end if
+
    do itrj=1, ntraj
 
    do ist1=1,nstate-1
+
       do ist2=ist1+1,nstate
    
          if(tocalc(ist1,ist2).eq.1)then
    
-            read(600,*, iostat=iost)
+            read(iunit1,*, iostat=iost)
             do iat=1,natqm              ! reading only for QM atoms
-               read(600,*,iomsg=chmsg)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+               read(iunit1,*,iomsg=chmsg)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                if (iost.ne.0)then
                   write(*,*)'Error reading NACM from file nacmrest.'
                   write(*,*)chmsg
@@ -244,15 +261,29 @@ module mod_sh
       enddo
    enddo
 
+   if(phase.eq.1)then
+      do ist1=1,nstate
+         read(iunit2,*)(gama(ist1,ist2,itrj),ist2=1,nstate)
+      end do
+   end if
+
    end do
 
-   close(600)
+   close(iunit1)
 
    write (chit,*)it
    chrestart='cp nacmrest.dat nacmrest.dat.'//adjustl(chit)
    write(*,*)'Making backup of the nacmrest.dat'
    write(*,*)chrestart
    call system(chrestart)  
+
+   if (phase.eq.1)then
+      close(iunit2)
+      chrestart='cp phaserest.dat phaserest.dat.'//adjustl(chit)
+      write(*,*)'Making backup of the phaserest.dat'
+      write(*,*)chrestart
+      call system(chrestart)  
+   end if
 
    end subroutine read_nacmrest
 
@@ -551,11 +582,10 @@ module mod_sh
 !-----------------INTERPOLACE--------------------------------------------------
 
 
-      if(integ.ne.'euler')then 
-        fr=real(itp,DP)/real(substep,DP)
-        frd=1.0d0-fr
+       fr=real(itp,DP)/real(substep,DP)
+       frd=1.0d0-fr
 
-        call interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_newint,vy_newint,vz_newint, &
+       call interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_newint,vy_newint,vz_newint, &
                       nacx_newint,nacy_newint,nacz_newint,en_array_newint, &
                       dotproduct_newint,fr,frd,itrj)
 
@@ -563,7 +593,6 @@ module mod_sh
         call interpolate_dot(dotproduct_newint,fr,frd,itrj)
        endif
 
-      endif
 
        fr=real(itp-1,DP)/real(substep,DP)
        frd=1.0d0-fr
@@ -587,7 +616,7 @@ module mod_sh
 
       if(integ.eq.'butcher') call butcherstep(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
 
-      if(integ.eq.'euler') call eulerstep(en_array_int,dotproduct_int,itrj)
+      if(integ.eq.'euler') call eulerstep(en_array_int, en_array_newint, dotproduct_int, itrj)
 
       call check_popsum(itrj)
 
@@ -933,12 +962,14 @@ module mod_sh
 
    end subroutine hop_dot
 
-   subroutine integstep(k_re,k_im,en,y_re,y_im,dotprod)
-      real(DP),intent(out) :: k_re(nstmax),k_im(nstmax)
-      real(DP),intent(in)  :: dotprod(nstmax,nstmax)
-      real(DP),intent(in)  :: en(nstmax),y_im(nstmax),y_re(nstmax)
-      integer  :: ist1,ist2
+   subroutine integstep(k_re,k_im,en,y_re,y_im,dotprod,gam)
+   real(DP),intent(out) :: k_re(nstmax),k_im(nstmax)
+   real(DP),intent(in)  :: dotprod(nstmax,nstmax), gam(nstmax,nstmax)
+   real(DP),intent(in)  :: en(nstmax),y_im(nstmax),y_re(nstmax)
+   real(DP) :: g
+   integer  :: ist1,ist2
 
+   if (phase.eq.0)then
       do ist1=1,nstate
          k_re(ist1)=en(ist1)*y_im(ist1)
          k_im(ist1)=-en(ist1)*y_re(ist1)
@@ -949,106 +980,70 @@ module mod_sh
          k_re(ist1)=dtp*k_re(ist1)
          k_im(ist1)=dtp*k_im(ist1)
       enddo
+   end if
 
+   if (phase.eq.1)then
+      do ist1=1,nstate
+         k_re(ist1)=0.0_DP
+         k_im(ist1)=0.0_DP
+         do ist2=1,nstate
+            g=gam(ist1,ist2)
+            k_re(ist1)=k_re(ist1)+(y_re(ist2)*cos(g)-y_im(ist2)*sin(g))*dotprod(ist1,ist2)
+            k_im(ist1)=k_im(ist1)+(y_im(ist2)*cos(g)+y_re(ist2)*sin(g))*dotprod(ist1,ist2)
+         end do
+         k_re(ist1)=dtp*k_re(ist1)
+         k_im(ist1)=dtp*k_im(ist1)
+      end do
+   end if
    end subroutine integstep
 
-   !currently not in use
-   subroutine  rk4step_new(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint, &
-         vx_int,vy_int,vz_int,vx_newint,vy_newint,vz_newint,                     &
-         nacx_int,nacy_int,nacz_int,nacx_newint,nacy_newint,nacz_newint,itrj)
-      real(DP),intent(in) :: vx_newint(:,:),vy_newint(:,:),vz_newint(:,:)
-      real(DP),intent(in) :: vx_int(:,:),vy_int(:,:),vz_int(:,:)
-      real(DP),intent(in) :: nacx_newint(:,:,:,:)
-      real(DP),intent(in) :: nacy_newint(:,:,:,:)
-      real(DP),intent(in) :: nacz_newint(:,:,:,:)
-      real(DP),intent(in) :: nacx_int(:,:,:,:)
-      real(DP),intent(in) :: nacy_int(:,:,:,:)
-      real(DP),intent(in) :: nacz_int(:,:,:,:)
+   subroutine integ_gama(en_array_int, en_array_newint, itrj)
+   real(DP),intent(in) :: en_array_int(:,:)
+   real(DP),intent(in) :: en_array_newint(:,:)
+   integer, intent(in) :: itrj
+   real(DP) :: g
+   integer  :: ist1, ist2
+
+   do ist1=1,nstate
+      do ist2=1,nstate
+      if (ist1.ne.ist2)then
+         g=(en_array_int(ist1,itrj)+en_array_newint(ist1,itrj))/2
+         g=g-(en_array_int(ist2,itrj)+en_array_newint(ist2,itrj))/2
+         gama(ist1,ist2,itrj)=gama(ist1,ist2,itrj)+g*dtp
+      end if
+      end do
+   end do
+   end subroutine integ_gama
+
+   subroutine eulerstep(en_array_int, en_array_newint, dotproduct_int,itrj)
       real(DP),intent(in) :: en_array_int(:,:)
       real(DP),intent(in) :: en_array_newint(:,:)
       real(DP),intent(in) :: dotproduct_int(:,:,:)
-      real(DP),intent(in) :: dotproduct_newint(:,:,:)
-      real(DP) :: dotprod2(nstmax,nstmax)
-      real(DP) :: dotprod0(nstmax,nstmax),dotprod1(nstmax,nstmax)
-      real(DP) :: k1_re(nstmax),k1_im(nstmax)
-      real(DP) :: k2_re(nstmax),k2_im(nstmax)
-      real(DP) :: k3_re(nstmax),k3_im(nstmax)
-      real(DP) :: k4_re(nstmax),k4_im(nstmax)
-      real(DP) :: y_im(nstmax),y_re(nstmax)
-      real(DP) :: en0(nstmax),en1(nstmax),en2(nstmax)
-      integer  :: ist1,ist2,itrj     !iteration counters
-
-!pripravne interpolace....
-      do ist1=1,nstate
-       en0(ist1)=en_array_int(ist1,itrj)+eshift
-       en1(ist1)=en_array_newint(ist1,itrj)+eshift
-       y_re(ist1)=cel_re(ist1,itrj)
-       y_im(ist1)=cel_im(ist1,itrj)
-       do ist2=1,nstate
-       dotprod0(ist1,ist2)=dotproduct_int(ist1,ist2,itrj)
-       dotprod1(ist1,ist2)=dotproduct_newint(ist1,ist2,itrj)
-       enddo
-      enddo
-
-      call interpolate_new(vx_int,vy_int,vz_int,vx_newint,vy_newint,vz_newint, &
-                      nacx_int,nacy_int,nacz_int,nacx_newint,nacy_newint,nacz_newint,en0,en1,en2, &
-                      dotprod2,0.5d0,0.5d0,itrj)
-
-      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0)
-
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/2
-       y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/2
-      enddo
-      call integstep(k2_re,k2_im,en2,y_re,y_im,dotprod2)
-
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)+k2_re(ist1)/2
-       y_im(ist1)=cel_im(ist1,itrj)+k2_im(ist1)/2
-      enddo
-      call integstep(k3_re,k3_im,en2,y_re,y_im,dotprod2)
-
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)+k3_re(ist1)
-       y_im(ist1)=cel_im(ist1,itrj)+k3_im(ist1)
-      enddo
-      call integstep(k4_re,k4_im,en1,y_re,y_im,dotprod1)
-
-      do ist1=1,nstate
-       cel_re(ist1,itrj)=cel_re(ist1,itrj)+k1_re(ist1)/6+k2_re(ist1)/3+k3_re(ist1)/3+k4_re(ist1)/6
-       cel_im(ist1,itrj)=cel_im(ist1,itrj)+k1_im(ist1)/6+k2_im(ist1)/3+k3_im(ist1)/3+k4_im(ist1)/6
-      enddo
-
-   end subroutine rk4step_new
-
-   subroutine eulerstep(en_array_int,dotproduct_int,itrj)
-      real(DP),intent(in) :: en_array_int(:,:)
-      real(DP),intent(in) :: dotproduct_int(:,:,:)
       integer,intent(in)  :: itrj
-      real(DP)  :: dcel_re(size(en_array_int,1),size(en_array_int,2))
-      real(DP)  :: dcel_im(size(en_array_int,1),size(en_array_int,2))
+      real(DP) :: dotprod0(nstmax,nstmax), gam0(nstmax, nstmax)
+      real(DP) :: k1_re(nstmax),k1_im(nstmax)
+      real(DP) :: y_im(nstmax),y_re(nstmax)
+      real(DP) :: en0(nstmax)
       integer   :: ist1, ist2
 
       do ist1=1,nstate
-
-      dcel_re(ist1,itrj)=(en_array_int(ist1,itrj)+eshift)*cel_im(ist1,itrj)
-      dcel_im(ist1,itrj)=-(en_array_int(ist1,itrj)+eshift)*cel_re(ist1,itrj)
-      
+       en0(ist1)=en_array_int(ist1,itrj)+eshift
+       y_re(ist1)=cel_re(ist1,itrj)
+       y_im(ist1)=cel_im(ist1,itrj)
        do ist2=1,nstate
-
-       ! dotprodukt pro stejne stavy by mel byt nulovy, but anyway...       
-         if(ist1.ne.ist2)then
-            dcel_re(ist1,itrj)=dcel_re(ist1,itrj)-cel_re(ist2,itrj)*dotproduct_int(ist1,ist2,itrj)
-            dcel_im(ist1,itrj)=dcel_im(ist1,itrj)-cel_im(ist2,itrj)*dotproduct_int(ist1,ist2,itrj)
-         endif
-  
+         dotprod0(ist1,ist2)=dotproduct_int(ist1,ist2,itrj)
+         gam0(ist1,ist2)=gama(ist1,ist2,itrj)
        enddo
-      enddo
+      end do
+
+      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0, gam0)
 
       do ist1=1,nstate
-         cel_re(ist1,itrj)=cel_re(ist1,itrj)+dcel_re(ist1,itrj)*dtp
-         cel_im(ist1,itrj)=cel_im(ist1,itrj)+dcel_im(ist1,itrj)*dtp
+       cel_re(ist1,itrj)=cel_re(ist1,itrj)+k1_re(ist1)
+       cel_im(ist1,itrj)=cel_im(ist1,itrj)+k1_im(ist1)
       enddo
+
+      call integ_gama(en_array_int, en_array_newint, itrj)
    end subroutine eulerstep
 
    subroutine rk4step(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
@@ -1065,6 +1060,7 @@ module mod_sh
       real(DP) :: k4_re(nstmax),k4_im(nstmax)
       real(DP) :: y_im(nstmax),y_re(nstmax)
       real(DP) :: en0(nstmax),en1(nstmax),en2(nstmax)
+      real(DP) :: gam0(nstmax,nstmax),gam1(nstmax,nstmax),gam2(nstmax,nstmax)
       integer :: ist1,ist2     
 
 !     initial interpolations
@@ -1078,28 +1074,39 @@ module mod_sh
        dotprod0(ist1,ist2)=dotproduct_int(ist1,ist2,itrj)
        dotprod1(ist1,ist2)=dotproduct_newint(ist1,ist2,itrj)
        dotprod2(ist1,ist2)=(dotprod0(ist1,ist2)+dotprod1(ist1,ist2))/2
+       if(phase.eq.1) gam0(ist1,ist2)=gama(ist1,ist2,itrj)
        enddo
       enddo
 
-      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0)
+      if (phase.eq.1)then
+         call integ_gama(en_array_int, en_array_newint, itrj)
+         do ist1=1,nstate
+            do ist2=1,nstate
+               gam1(ist1,ist2)=gama(ist1,ist2,itrj)
+               gam2(ist1,ist2)=(gam0(ist1,ist2)+gam1(ist1,ist2))/2
+            end do
+         end do 
+      end if
+
+      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0,gam0)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/2
        y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/2
       enddo
-      call integstep(k2_re,k2_im,en2,y_re,y_im,dotprod2)
+      call integstep(k2_re,k2_im,en2,y_re,y_im,dotprod2,gam2)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k2_re(ist1)/2
        y_im(ist1)=cel_im(ist1,itrj)+k2_im(ist1)/2
       enddo
-      call integstep(k3_re,k3_im,en2,y_re,y_im,dotprod2)
+      call integstep(k3_re,k3_im,en2,y_re,y_im,dotprod2,gam2)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k3_re(ist1)
        y_im(ist1)=cel_im(ist1,itrj)+k3_im(ist1)
       enddo
-      call integstep(k4_re,k4_im,en1,y_re,y_im,dotprod1)
+      call integstep(k4_re,k4_im,en1,y_re,y_im,dotprod1,gam1)
 
       do ist1=1,nstate
        cel_re(ist1,itrj)=cel_re(ist1,itrj)+k1_re(ist1)/6+k2_re(ist1)/3+k3_re(ist1)/3+k4_re(ist1)/6
@@ -1109,11 +1116,11 @@ module mod_sh
    end subroutine rk4step
 
 
-   subroutine butcherstep(en_array,en_array_new,dotproduct,dotproduct_new,itrj)
-      real(DP),intent(in) :: en_array(nstmax,ntrajmax)
-      real(DP),intent(in) :: en_array_new(nstmax,ntrajmax)
-      real(DP),intent(in) :: dotproduct(nstmax,nstmax,ntrajmax)
-      real(DP),intent(in) :: dotproduct_new(nstmax,nstmax,ntrajmax)
+   subroutine butcherstep(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
+      real(DP),intent(in) :: en_array_int(nstmax,ntrajmax)
+      real(DP),intent(in) :: en_array_newint(nstmax,ntrajmax)
+      real(DP),intent(in) :: dotproduct_int(nstmax,nstmax,ntrajmax)
+      real(DP),intent(in) :: dotproduct_newint(nstmax,nstmax,ntrajmax)
       real(DP) :: dotprod2(nstmax,nstmax),dotprod4(nstmax,nstmax),dotprod34(nstmax,nstmax)
       real(DP) :: dotprod0(nstmax,nstmax),dotprod1(nstmax,nstmax)
       real(DP) :: k1_re(nstmax),k1_im(nstmax)
@@ -1124,51 +1131,66 @@ module mod_sh
       real(DP) :: k6_re(nstmax),k6_im(nstmax)
       real(DP) :: y_im(nstmax),y_re(nstmax)
       real(DP) :: en0(nstmax),en1(nstmax),en2(nstmax),en4(nstmax),en34(nstmax)
+      real(DP) :: gam0(nstmax,nstmax),gam1(nstmax,nstmax),gam2(nstmax,nstmax)
+      real(DP) :: gam4(nstmax,nstmax),gam34(nstmax,nstmax)
       integer :: ist1,ist2,itrj     !iteration counters
 
 !pripravne interpolace....
       do ist1=1,nstate
-       en0(ist1)=en_array(ist1,itrj)+eshift
-       en1(ist1)=en_array_new(ist1,itrj)+eshift
+       en0(ist1)=en_array_int(ist1,itrj)+eshift
+       en1(ist1)=en_array_newint(ist1,itrj)+eshift
        en2(ist1)=(en0(ist1)+en1(ist1))/2
        en4(ist1)=(en0(ist1)+en2(ist1))/2
        en34(ist1)=(en2(ist1)+en1(ist1))/2
        y_re(ist1)=cel_re(ist1,itrj)
        y_im(ist1)=cel_im(ist1,itrj)
        do ist2=1,nstate
-        dotprod0(ist1,ist2)=dotproduct(ist1,ist2,itrj)
-        dotprod1(ist1,ist2)=dotproduct_new(ist1,ist2,itrj)
+        dotprod0(ist1,ist2)=dotproduct_int(ist1,ist2,itrj)
+        dotprod1(ist1,ist2)=dotproduct_newint(ist1,ist2,itrj)
         dotprod2(ist1,ist2)=(dotprod0(ist1,ist2)+dotprod1(ist1,ist2))/2
         dotprod4(ist1,ist2)=(dotprod0(ist1,ist2)+dotprod2(ist1,ist2))/2
         dotprod34(ist1,ist2)=(dotprod2(ist1,ist2)+dotprod1(ist1,ist2))/2
+        if (phase.eq.1) gam0(ist1,ist2)=gama(ist1,ist2,itrj)
        enddo
       enddo
 
-      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0)
+      if (phase.eq.1)then
+         call integ_gama(en_array_int, en_array_newint, itrj)
+         do ist1=1,nstate
+            do ist2=1,nstate
+               gam1(ist1,ist2)=gama(ist1,ist2,itrj)
+               gam2(ist1,ist2)=(gam0(ist1,ist2)+gam1(ist1,ist2))/2
+               gam4(ist1,ist2)=(gam0(ist1,ist2)+gam2(ist1,ist2))/2
+               gam34(ist1,ist2)=(gam2(ist1,ist2)+gam1(ist1,ist2))/2
+            end do
+         end do 
+      end if
+
+      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0,gam0)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/4
        y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/4
       enddo
-      call integstep(k2_re,k2_im,en4,y_re,y_im,dotprod4)
+      call integstep(k2_re,k2_im,en4,y_re,y_im,dotprod4,gam4)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/8+k2_re(ist1)/8
        y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/8+k2_im(ist1)/8
       enddo
-      call integstep(k3_re,k3_im,en4,y_re,y_im,dotprod4)
+      call integstep(k3_re,k3_im,en4,y_re,y_im,dotprod4,gam4)
       
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)-k2_re(ist1)/2+k3_re(ist1)
        y_im(ist1)=cel_im(ist1,itrj)-k2_im(ist1)/2+k3_im(ist1)
       enddo
-      call integstep(k4_re,k4_im,en2,y_re,y_im,dotprod2)
+      call integstep(k4_re,k4_im,en2,y_re,y_im,dotprod2,gam2)
       
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+3*k1_re(ist1)/16+9*k4_re(ist1)/16
        y_im(ist1)=cel_im(ist1,itrj)+3*k1_im(ist1)/16+9*k4_im(ist1)/16
       enddo
-      call integstep(k5_re,k5_im,en34,y_re,y_im,dotprod34)
+      call integstep(k5_re,k5_im,en34,y_re,y_im,dotprod34,gam34)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)-3*k1_re(ist1)/7+2*k2_re(ist1)/7+12*k3_re(ist1)/7 &
@@ -1176,7 +1198,7 @@ module mod_sh
        y_im(ist1)=cel_im(ist1,itrj)-3*k1_im(ist1)/7+2*k2_im(ist1)/7+12*k3_im(ist1)/7 &
                   -12*k4_im(ist1)/7+8*k5_im(ist1)/7
       enddo
-      call integstep(k6_re,k6_im,en1,y_re,y_im,dotprod1)
+      call integstep(k6_re,k6_im,en1,y_re,y_im,dotprod1,gam1)
 
 
       do ist1=1,nstate
@@ -1201,51 +1223,7 @@ module mod_sh
        enddo
       enddo
 
-    end subroutine interpolate_dot
-
-    subroutine interpolate_new(vx_old,vy_old,vz_old,vx,vy,vz, &
-                      nacx_old,nacy_old,nacz_old,nacx_new,nacy_new,nacz_new,en_array_old,en_array_new,en_array_int, &
-                      dotprod,fr,frd,itrj)
-      use mod_general,only:natom
-      real(DP),intent(out):: dotprod(:,:)
-      real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
-      real(DP),intent(in) :: vx_old(:,:),vy_old(:,:),vz_old(:,:)
-      real(DP),intent(in) :: nacx_old(:,:,:,:)
-      real(DP),intent(in) :: nacy_old(:,:,:,:)
-      real(DP),intent(in) :: nacz_old(:,:,:,:)
-      real(DP),intent(in) :: nacx_new(:,:,:,:)
-      real(DP),intent(in) :: nacy_new(:,:,:,:)
-      real(DP),intent(in) :: nacz_new(:,:,:,:)
-      real(DP),intent(in) :: en_array_old(:)
-      real(DP),intent(in) :: en_array_new(:)
-      real(DP) vx_int(size(vx,1),size(vx,2)),vy_int(size(vx,1),size(vx,2)),vz_int(size(vx,1),size(vx,2))
-      real(DP) nacx_int(size(vx,1),ntrajmax,nstmax,nstmax)
-      real(DP) nacy_int(size(vx,1),ntrajmax,nstmax,nstmax)
-      real(DP) nacz_int(size(vx,1),ntrajmax,nstmax,nstmax)
-      real(DP) en_array_int(nstmax)
-      integer :: iat,ist1,ist2,itrj     !iteration counters
-      real(DP) :: fr,frd
-      
-      do ist1=1,nstate
-
-        en_array_int(ist1)=en_array_new(ist1)*fr+en_array_old(ist1)*frd
-        do ist2=1,nstate
-         dotprod(ist1,ist2)=0.0d0
-         do iat=1,natom
-         nacx_int(iat,itrj,ist1,ist2)=nacx_new(iat,itrj,ist1,ist2)*fr+nacx_old(iat,itrj,ist1,ist2)*frd
-         nacy_int(iat,itrj,ist1,ist2)=nacy_new(iat,itrj,ist1,ist2)*fr+nacy_old(iat,itrj,ist1,ist2)*frd
-         nacz_int(iat,itrj,ist1,ist2)=nacz_new(iat,itrj,ist1,ist2)*fr+nacz_old(iat,itrj,ist1,ist2)*frd
-         vx_int(iat,itrj)=vx(iat,itrj)*fr+vx_old(iat,itrj)*frd
-         vy_int(iat,itrj)=vy(iat,itrj)*fr+vy_old(iat,itrj)*frd
-         vz_int(iat,itrj)=vz(iat,itrj)*fr+vz_old(iat,itrj)*frd
-         dotprod(ist1,ist2)=dotprod(ist1,ist2)+vx_int(iat,itrj)*nacx_int(iat,itrj,ist1,ist2)
-         dotprod(ist1,ist2)=dotprod(ist1,ist2)+vy_int(iat,itrj)*nacy_int(iat,itrj,ist1,ist2)
-         dotprod(ist1,ist2)=dotprod(ist1,ist2)+vz_int(iat,itrj)*nacz_int(iat,itrj,ist1,ist2)
-         enddo
-        enddo
-       enddo
-
-   end subroutine  interpolate_new
+   end subroutine interpolate_dot
 
    subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
       use mod_const, only: AUtoEV

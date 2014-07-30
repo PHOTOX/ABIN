@@ -1,0 +1,75 @@
+&general
+iknow=1
+idebug=1
+irandom=   729375542,         ! random seed
+pot='molpro'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,nab,harm,morse,guillot,2dho 
+ipimd=2,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
+nwalk=1,		! number of random walkers 
+imini=0,		! equilibration period (should be at least 2000), or number of steps for minimization
+istage=0,		! staging transformation (1), without staging (0)
+nstep=10,		! number of steps
+dt=20.6697,			! timestep [au]
+irest=1,		! should we restart from restart.xyz? (ignoring mini.dat)
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=1,		! how often should we print coordinates?
+nrest=1,		! how often we print restart files?
+nwritev=0,		! how often we print velocities?
+natom=6,		!number of atoms
+/
+
+&nhcopt
+temp=0.0,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
+inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2
+nchain=4,		! number of nose-hoover chains
+/
+
+&sh
+phase=1
+istate_init=3,		! initial electronic state
+nstate=3,		! number of electronic states
+substep=100,		! number of substeps for solving ESCH
+deltae=1.5,		! maximum energy difference [eV], for which we calculate NA coupling
+integ='rk4',	! integrator for ESCHE:euler,butcher or rk4
+inac=0,			! non-adiabatic coupling terms 0 - NAC vector; 1 - HST model
+nohop=1,		! 1 - hopping not allowed (default=0)
+alpha=0.1		! parameter for decoherence correction
+/
+
+----------------------END OF INPUT---------------------------------------------
+!!!!!EVERYTHING BELOW IS IGNORED!!!!
+
+
+
+
+------------------OTHER OPTIONS (if needed, move them to their sections)------- 
+
+GENERAL
+isbc=0,			! spherical boundary conditions
+rb_sbc=27.5d0,          ! radius of the cluster for sbc
+kb_sbc=0.2d0,		! force constant for spherical potential [au]
+END 
+
+SYSTEM
+!---------SHAKE OPTIONS  (see manual for complete description)
+nshake=0,		! Number of bond constraints
+shake_tol=0.0001	! Shake tolerance
+ishake1=2,2		! list of bond constraints
+ishake2=7,8		!
+nmol=1,			! number of "molecules"
+nshakemol=0,            ! number of constraints in molecules
+
+!---ANGLE and Dihedral analysis
+nang=2,			! number of analyzed angles
+ang1=1,		! angle definition: first atoms
+ang2=1,		! angle definition: second atoms
+ang3=1,		! angle definition: third  atoms
+ndih=2,			! number of analyzed dihedrals
+dih1=1,		! dihedral def: first atoms
+dih2=2,		! dihedral def: second atoms
+dih3=3,		! dihedral def: third atoms
+dih4=4,		! dihedral def: fourth atoms
+nbin_ang=700,		! number of bins for angles and dihedrals
+shiftdih=360.0d0 	! 0 for dihs between (-180,180); 360 for (0,360)
+
+END SYSTEM
