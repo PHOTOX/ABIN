@@ -8,20 +8,11 @@ Status: UNRESOLVED
 ---------------------------------------------------
 
 ---------------------------------------------------
-Restart for SH might be wrong due to different overlap between old and new NACM.
-We should somehow include NACM in some other restart file and read it if present.
-Present since version/commit: always
-Affected: surface hopping
-Status:   RESOLVED in commit c5b9862,  pop.dat ok,
-restart.xyz still differ due to different eshift after restart
----------------------------------------------------
-
----------------------------------------------------
 CRITICAL: Do we do correctly inac=1??
 what if sign of dotproduct changes???
 Present since version/commit: always
 Affected: surface hopping
-Status:   UNRESOLVED, lukas thinks it is dealt with in his TDC code
+Status:   PROBABLY RESOLVED, lukas thinks it is dealt with in his TDC code,we should test
 ---------------------------------------------------
 
 ---------------------------------------------------
@@ -33,6 +24,15 @@ when not using _int, conservation is perfect
 Present since version/commit: always
 Affected: surface hopping
 Status:   PARTIALLY RESOLVED in commit 8ff3835, we should test it!!
+---------------------------------------------------
+
+---------------------------------------------------
+Restart for SH might be wrong due to different overlap between old and new NACM.
+We should somehow include NACM in some other restart file and read it if present.
+Present since version/commit: always
+Affected: surface hopping
+Status:   FIXED in commit c5b9862,  pop.dat ok,
+restart.xyz still differ due to different eshift after restart
 ---------------------------------------------------
 
 ---------------------------------------------------

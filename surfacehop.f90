@@ -451,10 +451,10 @@ module mod_sh
       real(DP)  :: vect_olap,fr,frd
       real(DP)  :: ekin_mom,apom,edif,tau,fact,sum_norm
       integer :: ihop,ijunk
-      real(DP)  :: a_re,prob(nstmax),cn,stepfs
+      real(DP)  :: pop0, a_re, a_im, prob(nstmax), cn, stepfs
       character(len=500) :: formt
       character(len=20) :: chist,chihop,chit
-      integer :: iost, iunit
+      integer :: iost, iunit, iunit1, iunit2
 
 
       do itrj=1,ntraj
@@ -578,6 +578,8 @@ module mod_sh
    do itp=1,substep      
 
       ist=istate(itrj)
+      !pop0 is later used for tully's fewest switches
+      pop0=cel_re(ist,itrj)**2+cel_im(ist,itrj)**2
 
 !-----------------INTERPOLACE--------------------------------------------------
 
@@ -608,11 +610,7 @@ module mod_sh
 
       !------END-OF-INTERPOLATIONS-------------------------------------
        
-       if(integ.eq.'rk4') call rk4step(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
-        !interpolujeme dotprodukt poctive i uvnitr integratoru...
-!        call rk4step_new(en_array_int,en_array_newint,dotproduct,dotproduct_newint, &
-!                      vx_int,vy_int,vz_int,vx_newint,vy_newint,vz_newint,  &
-!                      nacx_int,nacy_int,nacz_int,nacx_newint,nacy_newint,nacz_newint,itrj)
+      if(integ.eq.'rk4') call rk4step(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
 
       if(integ.eq.'butcher') call butcherstep(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
 
@@ -625,12 +623,41 @@ module mod_sh
 !- t array could be one dimensional but whatever
       do ist2=1,nstate 
         pop(ist2,itrj)=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
-        a_re=(cel_re(ist,itrj)*cel_re(ist2,itrj)+cel_im(ist,itrj)*cel_im(ist2,itrj))
-        t(ist,ist2)=2*a_re*dotproduct_int(ist,ist2,itrj)
+        a_re=( cel_re(ist,itrj)*cel_re(ist2,itrj)+cel_im(ist,itrj)*cel_im(ist2,itrj) )
+        if (phase.eq.1)then
+!        if (phase.eq.2)then
+         a_im=( cel_im(ist,itrj)*cel_re(ist2,itrj) - cel_re(ist, itrj)*cel_im(ist2, itrj) )
+         t(ist, ist2)=a_re*cos(gama(ist, ist2, itrj))-sin(gama(ist, ist2, itrj))*a_im
+         t(ist,ist2)=t(ist,ist2)*(dotproduct_int(ist,ist2,itrj) + dotproduct_newint(ist,ist2,itrj) )
+        else
+!         t(ist,ist2)=2*a_re*dotproduct_int(ist,ist2,itrj)
+          t(ist,ist2)=a_re*(dotproduct_int(ist,ist2,itrj)+dotproduct_newint(ist,ist2,itrj) )
+        endif
+        t(ist,ist2)=t(ist,ist2)*dtp/(pop0+1d-20)
       enddo        
 
+      if(idebug.gt.1)then
+         if(it.eq.1)then
+            open(newunit=iunit1,file='bkl.dat')
+            open(newunit=iunit2,file='coef.dat')
+         else
+            open(newunit=iunit1,file='bkl.dat',access='append')
+            open(newunit=iunit2,file='coef.dat',access='append')
+         endif
+         stepfs=(it*substep+itp-substep)*dt*AUtoFS/substep
+         write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
+         write(iunit1,fmt=formt)stepfs,(t(ist,ist1),ist1=1,nstate)
+         write(iunit2,'(F15.2,2E20.10)',advance="no")stepfs,cel_re(1,itrj),cel_im(1,itrj)
+         do ist1=2,nstate
+            write(iunit2,'(2E20.10)',advance="no")cel_re(ist1,itrj),cel_im(ist1,itrj)
+         end do
+         write(iunit2,*)''
+
+         close(iunit1);close(iunit2)
+
+      end if
+
       do ist2=1,nstate 
-         t(ist,ist2)=t(ist,ist2)*dtp/(pop(ist,itrj)+1d-20)
          if(t(ist,ist2).lt.0.0d0)  t(ist,ist2)=0.0d0
          !cumulative probability over whole big step
          t_tot(ist,ist2)=t_tot(ist,ist2)+t(ist,ist2)
@@ -655,8 +682,9 @@ module mod_sh
        endif
       enddo
 
-      !TODO:should we hop before decoherence?????
+      !should we hop before decoherence?????
       ! every article says something different
+      ! newton-X hops before decoherence
 ! HOPPING      
    if (nohop.ne.1)then
 
