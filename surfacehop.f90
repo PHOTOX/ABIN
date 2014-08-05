@@ -10,14 +10,14 @@ module mod_sh
    public :: istate_init,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 
    public :: surfacehop, sh_init, istate, ntraj, nstate, cel_re, cel_im, tocalc, en_array
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
-   public :: energydifthr, energydriftthr, popsumthr, phase
+   public :: energydifthr, energydriftthr, popsumthr, phase, adjmom
 
    integer,parameter :: ntraj = ntrajmax
    integer   :: istate_init=1, nstate=1, substep=1000
-   integer   :: inac=0, nohop=0, phase=0
+   integer   :: inac=0, nohop=0, phase=0, adjmom=0
    integer   :: nac_accu1=7, nac_accu2=5 !7 is MOLPRO default
    real(DP)  :: dtp, alpha=0.1d0
-   real(DP)  :: deltae=100.d0, popthr=0.001
+   real(DP)  :: deltae=100.d0, popthr=0.001d0
    real(DP)  :: popsumthr=0.001d0, energydifthr=0.5d0, energydriftthr=0.5d0 !eV
    character(len=10)    :: integ='butcher'
    real(DP),allocatable :: nacx(:,:,:,:), nacy(:,:,:,:), nacz(:,:,:,:)
@@ -62,6 +62,7 @@ module mod_sh
       allocate( dotproduct_old(nstate, nstate, ntrajmax) )
       dotproduct_old=0.0d0
       dotproduct=dotproduct_old
+      adjmom=1
    end if
 
    allocate( en_array(nstate, ntraj) )
@@ -454,7 +455,7 @@ module mod_sh
       real(DP)  :: pop0, a_re, a_im, prob(nstmax), cn, stepfs
       character(len=500) :: formt
       character(len=20) :: chist,chihop,chit
-      integer :: iost, iunit, iunit1, iunit2
+      integer :: iost, iunit=1, iunit1=1, iunit2=1, iunit3=1
 
 
       do itrj=1,ntraj
@@ -462,7 +463,7 @@ module mod_sh
          call check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
          call check_energydrift(vx, vy, vz, itrj)
 
-         t_tot=0.0d0
+         t_tot=1.0d0
 
          popsum=0.0d0
 
@@ -625,9 +626,8 @@ module mod_sh
         pop(ist2,itrj)=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
         a_re=( cel_re(ist,itrj)*cel_re(ist2,itrj)+cel_im(ist,itrj)*cel_im(ist2,itrj) )
         if (phase.eq.1)then
-!        if (phase.eq.2)then
-         a_im=( cel_im(ist,itrj)*cel_re(ist2,itrj) - cel_re(ist, itrj)*cel_im(ist2, itrj) )
-         t(ist, ist2)=a_re*cos(gama(ist, ist2, itrj))-sin(gama(ist, ist2, itrj))*a_im
+         a_im=(- cel_im(ist,itrj)*cel_re(ist2,itrj) + cel_re(ist, itrj)*cel_im(ist2, itrj) )
+         t(ist,ist2)=a_re*cos(gama(ist, ist2, itrj))-sin(gama(ist, ist2, itrj))*a_im
          t(ist,ist2)=t(ist,ist2)*(dotproduct_int(ist,ist2,itrj) + dotproduct_newint(ist,ist2,itrj) )
         else
 !         t(ist,ist2)=2*a_re*dotproduct_int(ist,ist2,itrj)
@@ -637,30 +637,37 @@ module mod_sh
       enddo        
 
       if(idebug.gt.1)then
-         if(it.eq.1)then
+         if(iunit1.gt.0)then
             open(newunit=iunit1,file='bkl.dat')
             open(newunit=iunit2,file='coef.dat')
-         else
-            open(newunit=iunit1,file='bkl.dat',access='append')
-            open(newunit=iunit2,file='coef.dat',access='append')
+            open(newunit=iunit3,file='phase.dat')
          endif
          stepfs=(it*substep+itp-substep)*dt*AUtoFS/substep
          write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
          write(iunit1,fmt=formt)stepfs,(t(ist,ist1),ist1=1,nstate)
-         write(iunit2,'(F15.2,2E20.10)',advance="no")stepfs,cel_re(1,itrj),cel_im(1,itrj)
-         do ist1=2,nstate
-            write(iunit2,'(2E20.10)',advance="no")cel_re(ist1,itrj),cel_im(ist1,itrj)
-         end do
+
+         write(iunit2,fmt=formt,advance="no")stepfs,(cel_re(ist1,itrj),ist1=1,nstate)
+         write(formt,'(A1,I3,A7)')'(',nstate,'E20.10)'
+         write(iunit2,fmt=formt,advance="no")(cel_im(ist1,itrj),ist1=1,nstate)
          write(iunit2,*)''
 
-         close(iunit1);close(iunit2)
+         write(iunit3,'(F15.2,E20.10)',advance="no")stepfs,gama(2,1,itrj)
+         do ist1=3,nstate
+            write(formt,'(A1,I3,A7)')'(',ist1-1,'E20.10)'
+            write(iunit3,fmt=formt,advance="no")(gama(ist1,ist2,itrj),ist2=1,ist1-1)
+         end do
+         write(iunit3,*)''
 
       end if
 
       do ist2=1,nstate 
+         if(t(ist,ist2).gt.1.0_DP)then
+            write(*,*)'ERROR: Hopping probability greater than 1.'
+            call abinerror('surfacehop')
+         end if
          if(t(ist,ist2).lt.0.0d0)  t(ist,ist2)=0.0d0
          !cumulative probability over whole big step
-         t_tot(ist,ist2)=t_tot(ist,ist2)+t(ist,ist2)
+         t_tot(ist,ist2)=t_tot(ist,ist2)*(1-t(ist,ist2))
       enddo
 
 
@@ -707,8 +714,8 @@ module mod_sh
 
 !-------does HOP occured???-----------------
       if(ihop.ne.0)then
-         if(inac.eq.0) call hop(vx,vy,vz,vx_int,vy_int,vz_int,nacx_int,nacy_int,nacz_int,en_array_int,ist,ihop,itrj,eclas)
-         if(inac.eq.1) call hop_dot(vx,vy,vz,ist,ihop,itrj,eclas)
+         if(adjmom.eq.0) call hop(vx,vy,vz,ist,ihop,itrj,eclas)
+         if(adjmom.eq.1) call hop_dot(vx,vy,vz,ist,ihop,itrj,eclas)
          write(formt,'(A8,I3,A7)')'(A1,I10,',nstate+1,'E20.10)'
          write(3,*)'#Substep   RandomNum   Probabilities'
          write(3,fmt=formt)'#',itp,cn,(t(ist,ist1),ist1=1,nstate)
@@ -813,6 +820,8 @@ module mod_sh
       stepfs=it*dt*AUtoFS
       write(formt,'(A10,I3,A13)')'(F15.2,I3,',nstate,'F10.5,1F10.7)'
       write(3,fmt=formt)stepfs,istate(itrj),(pop(ist1,itrj), ist1=1,nstate),popsum
+
+      t_tot=1-t_tot !up to know, t_tot is the probability of not hopping
       write(formt,'(A10,I3,A6)')'(F15.2,I3,',nstate,'F10.5)'
       write(4,fmt=formt)stepfs,istate(itrj),(t_tot(ist,ist1),ist1=1,nstate)
       write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
@@ -845,17 +854,12 @@ module mod_sh
 
    end subroutine surfacehop
 
-   subroutine hop(vx,vy,vz,vx_int,vy_int,vz_int,nacx_int,nacy_int,nacz_int,en_array_int,instate,outstate,itrj,eclas)
+   subroutine hop(vx,vy,vz,instate,outstate,itrj,eclas)
       use mod_general, ONLY:natom
       use mod_system, ONLY: am
       use mod_kinetic, only: ekin_v
       real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
-      real(DP),intent(in)    :: vx_int(:,:),vy_int(:,:),vz_int(:,:)
-      real(DP),intent(in)    :: en_array_int(:,:)
-      real(DP),intent(in)    :: nacx_int(:,:,:,:)
-      real(DP),intent(in)    :: nacy_int(:,:,:,:)
-      real(DP),intent(in)    :: nacz_int(:,:,:,:)
-      real(DP),intent(inout)    :: eclas
+      real(DP),intent(inout) :: eclas
       integer, intent(in)    :: itrj,instate,outstate
       real(DP)  :: a_temp,b_temp,c_temp,g_temp
       real(DP)  :: ekin, ekin_new
@@ -880,7 +884,7 @@ module mod_sh
       c_temp=b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))
 
       if(c_temp.lt.0)then
-         write(3,'(A35,I3,A10,I3)')'#Frustrated Hop "occured" from state ',instate,' to state ',outstate
+         write(3,'(A37,I3,A10,I3)')'#Frustrated Hop "occured" from state ',instate,' to state ',outstate
          write(3,'(A31,2E20.10)')'deltaE_potential     Ekin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
          return
       endif
@@ -997,13 +1001,16 @@ module mod_sh
    real(DP) :: g
    integer  :: ist1,ist2
 
+
    if (phase.eq.0)then
       do ist1=1,nstate
          k_re(ist1)=en(ist1)*y_im(ist1)
          k_im(ist1)=-en(ist1)*y_re(ist1)
          do ist2=1,nstate
-            k_re(ist1)=k_re(ist1)-y_re(ist2)*dotprod(ist1,ist2)
-            k_im(ist1)=k_im(ist1)-y_im(ist2)*dotprod(ist1,ist2)
+            if(ist1.ne.ist2)then
+               k_re(ist1)=k_re(ist1)-y_re(ist2)*dotprod(ist1,ist2)
+               k_im(ist1)=k_im(ist1)-y_im(ist2)*dotprod(ist1,ist2)
+            end if
          enddo
          k_re(ist1)=dtp*k_re(ist1)
          k_im(ist1)=dtp*k_im(ist1)
@@ -1015,9 +1022,11 @@ module mod_sh
          k_re(ist1)=0.0_DP
          k_im(ist1)=0.0_DP
          do ist2=1,nstate
-            g=gam(ist1,ist2)
-            k_re(ist1)=k_re(ist1)+(y_re(ist2)*cos(g)-y_im(ist2)*sin(g))*dotprod(ist1,ist2)
-            k_im(ist1)=k_im(ist1)+(y_im(ist2)*cos(g)+y_re(ist2)*sin(g))*dotprod(ist1,ist2)
+            if(ist1.ne.ist2)then
+               g=gam(ist1,ist2)
+               k_re(ist1)=k_re(ist1)-(y_re(ist2)*cos(g)-y_im(ist2)*sin(g))*dotprod(ist1,ist2)
+               k_im(ist1)=k_im(ist1)-(y_im(ist2)*cos(g)+y_re(ist2)*sin(g))*dotprod(ist1,ist2)
+            end if
          end do
          k_re(ist1)=dtp*k_re(ist1)
          k_im(ist1)=dtp*k_im(ist1)
