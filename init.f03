@@ -60,7 +60,7 @@ subroutine init(dt)
                         k,r0,k1,k2,k3,De,a, &
                         Nshake,ishake1,ishake2,shake_tol
       namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
-                        nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr
+                        nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
       namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,inames,qmmmtype
       namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
 
@@ -407,7 +407,17 @@ if(ipimd.eq.2)then
   write(8,*)'#    Time[fs] Potential energies'
   open(14,file='nacm_all.dat',access=chaccess,action='write')
   open(15,file='dotprod.dat',access=chaccess,action='write')
-  write(15,*)'#    Time[fs] dotproduct(i,j) [i=1,nstate-1 j=i+1,nstate]'
+  write(15,*)'#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'
+  if(idebug.gt.1)then
+   open(16,file='bkl.dat',access=chaccess,action='write')
+   write(16,*)'# Hopping probabilities - bkl(i) [i=1,nstate]'
+   open(17,file='coef.dat',access=chaccess,action='write')
+   write(17,*)'# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
+   if(phase.eq.1)then
+      open(18,file='phase.dat',access=chaccess,action='write')
+      write(18,*)'# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
+   end if
+  endif
 endif
 
 if(isbc.eq.1)then

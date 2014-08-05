@@ -10,11 +10,11 @@ module mod_sh
    public :: istate_init,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 
    public :: surfacehop, sh_init, istate, ntraj, nstate, cel_re, cel_im, tocalc, en_array
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
-   public :: energydifthr, energydriftthr, popsumthr, phase, adjmom
+   public :: energydifthr, energydriftthr, popsumthr, phase, adjmom, revmom
 
    integer,parameter :: ntraj = ntrajmax
    integer   :: istate_init=1, nstate=1, substep=1000
-   integer   :: inac=0, nohop=0, phase=0, adjmom=0
+   integer   :: inac=0, nohop=0, phase=0, adjmom=0, revmom=0
    integer   :: nac_accu1=7, nac_accu2=5 !7 is MOLPRO default
    real(DP)  :: dtp, alpha=0.1d0
    real(DP)  :: deltae=100.d0, popthr=0.001d0
@@ -637,27 +637,23 @@ module mod_sh
       enddo        
 
       if(idebug.gt.1)then
-         if(iunit1.gt.0)then
-            open(newunit=iunit1,file='bkl.dat')
-            open(newunit=iunit2,file='coef.dat')
-            open(newunit=iunit3,file='phase.dat')
-         endif
          stepfs=(it*substep+itp-substep)*dt*AUtoFS/substep
          write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
-         write(iunit1,fmt=formt)stepfs,(t(ist,ist1),ist1=1,nstate)
+         write(16,fmt=formt)stepfs,(t(ist,ist1),ist1=1,nstate)
 
-         write(iunit2,fmt=formt,advance="no")stepfs,(cel_re(ist1,itrj),ist1=1,nstate)
+         write(17,fmt=formt,advance="no")stepfs,(cel_re(ist1,itrj),ist1=1,nstate)
          write(formt,'(A1,I3,A7)')'(',nstate,'E20.10)'
-         write(iunit2,fmt=formt,advance="no")(cel_im(ist1,itrj),ist1=1,nstate)
-         write(iunit2,*)''
+         write(17,fmt=formt,advance="no")(cel_im(ist1,itrj),ist1=1,nstate)
+         write(17,*)''
 
-         write(iunit3,'(F15.2,E20.10)',advance="no")stepfs,gama(2,1,itrj)
-         do ist1=3,nstate
-            write(formt,'(A1,I3,A7)')'(',ist1-1,'E20.10)'
-            write(iunit3,fmt=formt,advance="no")(gama(ist1,ist2,itrj),ist2=1,ist1-1)
-         end do
-         write(iunit3,*)''
-
+         if(phase.eq.1)then
+            write(18,'(F15.2,E20.10)',advance="no")stepfs,gama(2,1,itrj)
+            do ist1=3,nstate
+               write(formt,'(A1,I3,A7)')'(',ist1-1,'E20.10)'
+               write(18,fmt=formt,advance="no")(gama(ist1,ist2,itrj),ist2=1,ist1-1)
+            end do
+            write(18,*)''
+         end if
       end if
 
       do ist2=1,nstate 
@@ -884,8 +880,11 @@ module mod_sh
       c_temp=b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))
 
       if(c_temp.lt.0)then
-         write(3,'(A37,I3,A10,I3)')'#Frustrated Hop "occured" from state ',instate,' to state ',outstate
-         write(3,'(A31,2E20.10)')'deltaE_potential     Ekin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
+         !write(3,'(A37,I3,A10,I3)')'#Frustrated Hop "occured" from state ',instate,' to state ',outstate
+         !         write(3,'(A31,2E20.10)')'deltaE_potential     Ekin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
+         write(3,*)'Not enough momentum in the direction of NAC vector.'
+         ! Try, whether there is enough total kinetic energy and scale velocities.
+         call hop_dot(vx,vy,vz,instate,outstate,itrj,eclas)
          return
       endif
 
@@ -982,12 +981,19 @@ module mod_sh
         ekin_new=ekin_v(vx,vy,vz)
 
         write(3,'(A24,I3,A10,I3)')'#Hop occured from state ', instate, ' to state ', outstate
+        write(3,*)'Adjusting velocities by simple scaling.'
         write(3,'(A,2E20.10)')'#TOT_Energy_old   TOT_Energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
       else
 
        write(3,'(A35,I3,A10,I3)')'#Frustrated Hop occured from state ',instate,' to state ',outstate
        write(3,'(A31,2E20.10)')'deltaE_potential     Ekin-total',dE,ekin
+       if(revmom.eq.1)then
+          write(3,*)'Reversing momentum direction.'
+          vx=-vx
+          vy=-vy
+          vz=-vz
+       end if
        return
 
       endif

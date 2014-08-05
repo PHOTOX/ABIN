@@ -315,21 +315,18 @@ subroutine finish(values1,values2)
    integer,dimension(8),intent(in)  :: values1
    integer,dimension(8),intent(out) :: values2
    real(DP) :: TIME
+   integer  :: i
+   logical  :: lopen
 !   integer :: iter=-3
 
    call deallocate_arrays( )
 
-   close(1)
-   close(2)
-   if(ipimd.eq.1.or.icv.eq.1)then
-    close(7)
-   endif
-   if(ipimd.eq.2)then
-    close(3)
-    close(4)
-    close(5)
-   endif
-   if(nwritev.gt.0) close(13)
+   close(1);close(2);close(3)
+   do i=7,20
+      inquire(unit=i,opened=lopen)
+      if (lopen.and.i.ne.5.and.i.ne.6) close(i)
+   end do
+
 !--------------CLEANING-------------------------
    if (ihess.eq.1) deallocate ( hess )
    if (ihess.eq.1.and.pot.eq.'nab') deallocate ( h )

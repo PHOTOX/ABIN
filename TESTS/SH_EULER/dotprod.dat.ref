@@ -1,2 +1,2 @@
- #    Time[fs] dotproduct(i,j) [i=1,nstate-1 j=i+1,nstate]
+ #    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]
            0.50   -0.5565712158E-04    0.2749151206E-03   -0.1179543002E-02 
