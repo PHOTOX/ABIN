@@ -4,7 +4,7 @@ or any later version, except for parts noted below.
 A copy of this license is given later in this file. 
 
 ABIN uses Ewald summation routines kindly provided by J. Kolafa
-from the MACSIMUS packages. See http://www.vscht.cz/fch/software/macsimus/.
+from the MACSIMUS package. See http://www.vscht.cz/fch/software/macsimus/.
 This code is provided under the GNU GPL license.
 
 The source code and libraries in the folder NAB were copied 

@@ -1,6 +1,8 @@
 for ab initio, orca gives slightly different results between 
 403-a130a-9 and as67-1. Maybe try newer version
 
+make shake user friendly----automatically determine bonds to hydrogens and water
+
 probably make module for restart and check for correct strings
 for everything
 

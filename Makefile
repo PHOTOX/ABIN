@@ -2,8 +2,8 @@
 # Simply type "make" and you should get the binary named $OUT
 # Before recompiling, it is wise to clean up by "make clean"
 #
-# WARNING:dependecies on *.mod files are hidden!
-# if you change modules, you should recompile the whole thing i.e. make clean;make
+# WARNING: dependecies on *.mod files are hidden!
+# If you change modules, you should recompile the whole thing i.e. make clean;make
 #
 OUT = abin.dev
 # You actually have to use gfortran, becouse of precompiled LIBS

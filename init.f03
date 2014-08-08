@@ -30,19 +30,19 @@ subroutine init(dt)
       use mod_vinit,    only: vinit, scalevelocities
       use mod_density
       use mod_shake
-      use mod_kinetic,  only: entot_cumul, est_temp_cumul
       use mod_minimize, only: gamm, gammthr
+      use mod_analysis, only: restin
       implicit none
       real(DP),intent(out) :: dt
       real(DP), allocatable  :: masses(:)
       real(DP)  :: rans(10)
-      integer :: iw,iat,inh,natom1,itrj,ist1,imol,shiftdihed=1, iost
-      integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0, is
+      integer :: iw,iat,natom1,imol,shiftdihed=1, iost
+      integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
       character(len=2), allocatable :: massnames(:)
       character(len=10)   :: chaccess
       character(len=200)  :: chinput, chcoords
       character(len=200)  :: chiomsg
-      LOGICAL :: file_exists,prngread
+      LOGICAL :: file_exists
       real(DP)  :: wnw=5.0d-5
 !$    integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
@@ -54,7 +54,8 @@ subroutine init(dt)
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
                parrespa,dime,ncalc,idebug,enmini,rho,iknow
 
-      namelist /nhcopt/ inose,temp,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,scaleveloc,readNHC,initNHC,nmolt,natmolt,nshakemol
+      namelist /nhcopt/ inose,temp,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
+                        scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
       namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax, &
                         nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
                         k,r0,k1,k2,k3,De,a, &
@@ -71,7 +72,6 @@ subroutine init(dt)
       write(*,*)'I will read xyz coordinates from file ',chcoords
 
       dt=-1  
-      prngread=.false.
       error=0
       !-READING INPUT----------------------------------------- 
 
@@ -81,10 +81,12 @@ subroutine init(dt)
 
       if(irest.eq.1)then
        readnhc=1   !readnhc has precedence before initNHC
+       readQT=1
        initNHC=0   !i.e. if(readnhc.eq.1.and.initNHC.eq.1)
        scaleveloc=0  !do not scale velocities when restarting a job
       else         !then nhc momenta from restart.xyz will be used
        readnhc=0
+       readQT=0
        initNHC=1
        scaleveloc=1
       endif
@@ -250,8 +252,8 @@ subroutine init(dt)
 
 
 !-----THERMOSTAT INITIALIZATION------------------ 
-!----MUST BE BEFORERESTART DUE TO ARRAY ALOCATION
-!     call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
+!----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
+!    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      if (inose.eq.1) call nhc_init()
      if (inose.eq.2) call gle_init(dt*0.5/nabin) !nabin is set to 1 unless ipimd=1
@@ -259,111 +261,16 @@ subroutine init(dt)
 
 
 !----performing RESTART from restart.xyz
-     if(irest.eq.1)then
-      write(*,*)'irest=1,Reading geometry,velocities and NHC momenta from restart.xyz'
+     if(irest.eq.1) call restin(x,y,z,vx,vy,vz,it)
 
-      open(111,file='restart.xyz',status = "OLD", action = "READ")
-      read(111,*)it
-      read(111,*)
-      do iw=1,nwalk
-       do iat=1,natom
-        read(111,*)x(iat,iw),y(iat,iw),z(iat,iw)
-       enddo
-      enddo
-
-      read(111,*)
-      do iw=1,nwalk
-       do iat=1,natom
-        read(111,*)vx(iat,iw),vy(iat,iw),vz(iat,iw)
-       enddo
-      enddo
-
-      if(ipimd.eq.2)then
-       read(111,*)
-       do itrj=1,ntraj
-        read(111,*)istate(itrj)
-        do ist1=1,nstate
-         read(111,*)cel_re(ist1,itrj),cel_im(ist1,itrj)
-        enddo
-       enddo
-      endif
-
-      if(inose.eq.1.and.readNHC.eq.1)then
-       read(111,*)
-      if(imasst.eq.1)then
-       do inh=1,nchain
-        do iw=1,nwalk
-         do iat=1,natom
-          read(111,*)pnhx(iat,iw,inh),pnhy(iat,iw,inh),pnhz(iat,iw,inh)
-         enddo
-        enddo
-       enddo
-
-     else
-
-      do inh=1,nchain
-       do iw=1,nwalk
-        do iat=1,nmolt
-          read(111,*)pnhx(iat,iw,inh)
-        enddo
-       enddo
-      enddo
-     endif
-
-     endif
-
-     if(inose.eq.2.and.readNHC.eq.1)then
-      read(111,*)
-      if(nwalk.eq.1)then
-       do iat=1,natom*3
-        read(111,*)(gp(iat,is),is=2,ns+1)
-       enddo
-      else
-       do iw=1,nwalk
-        do iat=1,natom*3
-         read(111,*)(ps(iat,is,iw),is=1,ns)
-        enddo
-       enddo
-     endif
-      read(111,*)langham
-     endif
-
-!reading cumulative averages of various estimators
-       read(111,*)
-       read(111,*)est_temp_cumul
-       read(111,*)est_prim_cumul,est_vir_cumul
-       read(111,*)entot_cumul
-      
-       if(icv.eq.1)then
-        read(111,*)est_prim2_cumul,est_prim_vir,est_vir2_cumul
-        read(111,*)cv_prim_cumul,cv_vir_cumul
-        if(ihess.eq.1)then 
-         read(111,*)cv_dcv_cumul
-         do iw=1,nwalk
-          read(111,*)cvhess_cumul(iw)
-         enddo
-        endif
-       endif
-!     trying to restart PRNG
-      !prngread is optional argument determining, whether we write or read
-      call rsavef(111,prngread) 
-      !currently,prngread is not used, since vranf is initialize before restart
-
-      
-      close(111)
-     endif
-
-!!!!! END OF RESTART 
-
-
-      write(*,*)
-      write(*,*)'-------SIMULATION PARAMETERS---------------'
-      write(*,nml=general)
-      write(*,*)
-      write(*,nml=system)
-      if ( inose.ge.1 ) write(*,nml=nhcopt)
-      if ( ipimd.eq.2 ) write(*,nml=sh)
-      write(*,*)
+     write(*,*)
+     write(*,*)'-------SIMULATION PARAMETERS---------------'
+     write(*,nml=general)
+     write(*,*)
+     write(*,nml=system)
+     if ( inose.ge.1 ) write(*,nml=nhcopt)
+     if ( ipimd.eq.2 ) write(*,nml=sh)
+     write(*,*)
 
 !------------END OF INPUT SECTION---------------------
 

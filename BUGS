@@ -18,12 +18,11 @@ Status:   PROBABLY RESOLVED, lukas thinks it is dealt with in his TDC code,we sh
 ---------------------------------------------------
 I think that hop is wrong, we should not use vx_int
 and also, after hop, in vx_int arrays will suddenly change...
-maybe it would be easiest to just hop once per big time step??
 UPDATE: relatively small correction (0.02eV)
-when not using _int, conservation is perfect
+When not using _int, conservation is perfect
 Present since version/commit: always
 Affected: surface hopping
-Status:   PARTIALLY RESOLVED in commit 8ff3835, we should test it!!
+Status:   PARTIALLY RESOLVED in commit 8ff3835
 ---------------------------------------------------
 
 ---------------------------------------------------

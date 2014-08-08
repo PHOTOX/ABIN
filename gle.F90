@@ -15,12 +15,13 @@ module mod_gle
   use mod_random, only: gautrg
   implicit none
   private
-  public :: ns, gp, ps, langham,gle_step,wn_init,gle_init,wn_step
-  real(DP), allocatable,save :: gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
-  real(DP), allocatable,save :: ran(:)
-  real(DP), allocatable,save :: ps(:,:,:)
-  real(DP), save       :: wnt, wns, langham
-  integer,save       :: ns
+  public :: readQT, ns, gp, ps, langham,gle_step,wn_init,gle_init,wn_step
+  real(DP), allocatable :: gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
+  real(DP), allocatable :: ran(:)
+  real(DP), allocatable :: ps(:,:,:)
+  real(DP)         :: wnt, wns, langham
+  integer          :: ns, readQT=1
+  save
 contains
 
   ! initialize white-noise thermostat. 

@@ -4,7 +4,11 @@ module mod_analysis
    use mod_const, only: DP
    implicit none
    private 
-   public :: trajout, restout, analysis
+   public :: trajout, restout, analysis, restin
+   character(len=*),parameter :: chnose='NHC momenta',chQT='Quantum Thermostat', &
+            chSH='Coefficients for SH', chAVG='Cumulative averages of various estimators', &
+            chcoords='Cartesian Coordinates [au]', chvel='Cartesian Velocities [au]'
+
    contains
 
 !----Contains all analysis stuff
@@ -124,10 +128,6 @@ module mod_analysis
      integer :: iat,iw,inh,itrj,ist1,is
      LOGICAL :: file_exists
 
-!---NOTE: trajectories after restart are not precisely the same as without
-!restart, since we don't pass fxc and fxq. Therefore,first step after
-!restart is incorrect (see respa.f90).
-! I think the above argument is invalid, as we now always do the zero step forces
 
      INQUIRE(FILE='restart.xyz', EXIST=file_exists)
      if(file_exists) call system('cp restart.xyz restart.xyz.old')
@@ -136,14 +136,14 @@ module mod_analysis
 
      write(102,*)it
 
-     write(102,*)'Cartesian Coordinates [au]'
+     write(102,*)chcoords
      do iw=1,nwalk
       do iat=1,natom
        write(102,*)x(iat,iw),y(iat,iw),z(iat,iw)
       enddo
      enddo
 
-     write(102,*)'Cartesian Velocities [au]'
+     write(102,*)chvel
 
      do iw=1,nwalk
       do iat=1,natom
@@ -153,7 +153,7 @@ module mod_analysis
 
      if(ipimd.eq.2)then
      call write_nacmrest()
-     write(102,*)'Coefficients for SH'
+     write(102,*)chSH
       do itrj=1,ntraj
        write(102,*)istate(itrj)
        do ist1=1,nstate
@@ -163,7 +163,7 @@ module mod_analysis
      endif
 
      if(inose.eq.1)then
-      write(102,*)'NHC momenta'
+      write(102,*)chnose
      if(imasst.eq.1)then
       do inh=1,nchain
        do iw=1,nwalk
@@ -187,7 +187,7 @@ module mod_analysis
      endif
 
      if(inose.eq.2)then
-      write(102,*)'Quantum Thermostat'
+      write(102,*)chQT
       if(nwalk.eq.1)then
        do iat=1,natom*3
         write(102,*)(gp(iat,is),is=2,ns+1)
@@ -202,7 +202,7 @@ module mod_analysis
      write(102,*)langham
      endif
 
-     write(102,*)'Cumulative averages of various estimators'
+     write(102,*)chAVG
      write(102,*)est_temp_cumul
      write(102,*)est_prim_cumul,est_vir_cumul
      write(102,*)entot_cumul
@@ -223,6 +223,139 @@ module mod_analysis
 
 
    end subroutine restout
+
+   subroutine restin(x,y,z,vx,vy,vz,it)
+     use mod_general,only:icv, ihess, nwalk, ipimd, natom
+     use mod_nhc,    only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
+     use mod_estimators
+     use mod_kinetic,only: entot_cumul, est_temp_cumul
+     use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
+     use mod_gle
+     use mod_random
+     real(DP),intent(out)  :: x(:,:),y(:,:),z(:,:)
+     real(DP),intent(out)  :: vx(:,:),vy(:,:),vz(:,:)
+     integer,intent(out)   :: it
+     integer :: iat,iw,inh,itrj,ist1,is
+     character(len=100) :: chtemp
+     logical :: prngread
+
+     prngread=.false. 
+
+     write(*,*)'irest=1,Reading geometry,velocities and NHC momenta from restart.xyz'
+
+     open(111,file='restart.xyz',status = "OLD", action = "READ")
+     read(111,*)it
+     read(111,'(A)')chtemp
+     call checkchar(chtemp, chcoords)
+     do iw=1,nwalk
+      do iat=1,natom
+       read(111,*)x(iat,iw),y(iat,iw),z(iat,iw)
+      enddo
+     enddo
+
+     read(111,'(A)')chtemp
+     call checkchar(chtemp, chvel)
+     do iw=1,nwalk
+      do iat=1,natom
+       read(111,*)vx(iat,iw),vy(iat,iw),vz(iat,iw)
+      enddo
+     enddo
+
+     if(ipimd.eq.2)then
+      read(111,'(A)')chtemp
+     call checkchar(chtemp, chsh)
+      do itrj=1,ntraj
+       read(111,*)istate(itrj)
+       do ist1=1,nstate
+        read(111,*)cel_re(ist1,itrj),cel_im(ist1,itrj)
+       enddo
+      enddo
+     endif
+
+     if(inose.eq.1.and.readNHC.eq.1)then
+      read(111,'(A)')chtemp
+      call checkchar(chtemp, chnose)
+      if(imasst.eq.1)then
+         do inh=1,nchain
+            do iw=1,nwalk
+               do iat=1,natom
+                  read(111,*)pnhx(iat,iw,inh),pnhy(iat,iw,inh),pnhz(iat,iw,inh)
+               enddo
+            enddo
+         enddo
+
+      else
+
+         do inh=1,nchain
+            do iw=1,nwalk
+               do iat=1,nmolt
+                  read(111,*)pnhx(iat,iw,inh)
+               enddo
+            enddo
+         enddo
+
+      endif
+
+     endif
+
+     if(inose.eq.2.and.readQT.eq.1)then
+      read(111,'(A)')chtemp
+      call checkchar(chtemp, chqt)
+      if(nwalk.eq.1)then
+       do iat=1,natom*3
+        read(111,*)(gp(iat,is),is=2,ns+1)
+       enddo
+      else
+       do iw=1,nwalk
+        do iat=1,natom*3
+         read(111,*)(ps(iat,is,iw),is=1,ns)
+        enddo
+       enddo
+     endif
+      read(111,*)langham
+     endif
+
+!-   reading cumulative averages of various estimators
+     read(111,'(A)')chtemp
+     call checkchar(chtemp, chavg)
+     read(111,*)est_temp_cumul
+     read(111,*)est_prim_cumul,est_vir_cumul
+     read(111,*)entot_cumul
+     
+     if(icv.eq.1)then
+      read(111,*)est_prim2_cumul,est_prim_vir,est_vir2_cumul
+      read(111,*)cv_prim_cumul,cv_vir_cumul
+      if(ihess.eq.1)then 
+       read(111,*)cv_dcv_cumul
+       do iw=1,nwalk
+        read(111,*)cvhess_cumul(iw)
+       enddo
+      endif
+     endif
+
+!-   trying to restart PRNG
+!-   prngread is optional argument determining, whether we write or read
+!-   currently,prngread is not used, since vranf is initialize before restart
+     call rsavef(111,prngread) 
+      
+     close(111)
+
+     contains
+
+     subroutine checkchar(chin,chref)
+        use mod_utils,  only: abinerror
+        character(len=*) :: chin, chref
+
+        if(trim(adjustl(chin)).ne.trim(chref))then
+           write(*,*)'ERROR while reading from restart.xyz'
+           write(*,*)'I read ',chin
+           write(*,*)'but expected ',chref
+           call abinerror('restin')
+        end if
+
+     end subroutine checkchar
+
+   end subroutine restin
 
 end module mod_analysis
 

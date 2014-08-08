@@ -9,7 +9,7 @@ module mod_nhc
    integer :: imasst=1  ! switch for massive thermostatting
    integer :: nrespnose=3,nyosh=7,nmolt=1
    integer,allocatable :: natmolt(:)
-   integer :: scaleveloc, readNHC
+   integer :: scaleveloc, readNHC=1
    real(DP),allocatable :: pnhx(:,:,:),pnhy(:,:,:),pnhz(:,:,:)
    real(DP),allocatable :: xi_x(:,:,:), xi_y(:,:,:),xi_z(:,:,:)
    real(DP),allocatable :: w(:),ms(:,:),Qm(:)

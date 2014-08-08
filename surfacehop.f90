@@ -455,7 +455,7 @@ module mod_sh
       real(DP)  :: pop0, a_re, a_im, prob(nstmax), cn, stepfs
       character(len=500) :: formt
       character(len=20) :: chist,chihop,chit
-      integer :: iost, iunit=1, iunit1=1, iunit2=1, iunit3=1
+      integer :: iost, iunit=1
 
 
       do itrj=1,ntraj
@@ -880,9 +880,7 @@ module mod_sh
       c_temp=b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))
 
       if(c_temp.lt.0)then
-         !write(3,'(A37,I3,A10,I3)')'#Frustrated Hop "occured" from state ',instate,' to state ',outstate
-         !         write(3,'(A31,2E20.10)')'deltaE_potential     Ekin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
-         write(3,*)'Not enough momentum in the direction of NAC vector.'
+         write(3,*)'#Not enough momentum in the direction of NAC vector.'
          ! Try, whether there is enough total kinetic energy and scale velocities.
          call hop_dot(vx,vy,vz,instate,outstate,itrj,eclas)
          return
@@ -911,7 +909,8 @@ module mod_sh
       enddo
       ekin_new=ekin_v(vx,vy,vz)
 
-      write(3,'(A,2E20.10)')'#TOT_Energy_old   TOT_Energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
+      write(3,'(A31,2E20.10)')'#deltaE_pot     E_kin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
+      write(3,'(A,2E20.10)')'#Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
    end subroutine hop
 
@@ -964,7 +963,7 @@ module mod_sh
       ekin=0.0d0
       ekin_new=0.0d0
 
-      de=en_array(outstate,itrj)-en_array(instate,itrj)
+      dE=en_array(outstate,itrj)-en_array(instate,itrj)
       ekin=ekin_v(vx,vy,vz)
 
       if(ekin.ge.de)then
@@ -981,22 +980,22 @@ module mod_sh
         ekin_new=ekin_v(vx,vy,vz)
 
         write(3,'(A24,I3,A10,I3)')'#Hop occured from state ', instate, ' to state ', outstate
-        write(3,*)'Adjusting velocities by simple scaling.'
-        write(3,'(A,2E20.10)')'#TOT_Energy_old   TOT_Energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
+        write(3,*)'#Adjusting velocities by simple scaling.'
+        write(3,'(A,2E20.10)')'#Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
       else
 
        write(3,'(A35,I3,A10,I3)')'#Frustrated Hop occured from state ',instate,' to state ',outstate
-       write(3,'(A31,2E20.10)')'deltaE_potential     Ekin-total',dE,ekin
        if(revmom.eq.1)then
-          write(3,*)'Reversing momentum direction.'
+          write(3,*)'#Reversing momentum direction.'
           vx=-vx
           vy=-vy
           vz=-vz
        end if
-       return
 
       endif
+
+      write(3,'(A31,2E20.10)')'#deltaE_pot  E_kin-total',dE,ekin
 
    end subroutine hop_dot
 
