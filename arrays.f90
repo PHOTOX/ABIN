@@ -1,4 +1,5 @@
-
+!- Module for all dynamic arrays.
+!- Contains routines for allocation and deallocation.
 module mod_arrays
    use mod_const, only: DP
    implicit none

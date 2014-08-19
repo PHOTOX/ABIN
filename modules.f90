@@ -42,7 +42,7 @@ module mod_general
    use mod_const, only: DP
    implicit none
    integer :: it=0,ipimd=0,istage=0,nwalk=1,ihess=0,md=1  
-   character(len=10) :: pot='default'
+   character(len=10) :: pot='none'
    integer :: imini=0,nstep=1,nabin=50
    integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0
    integer :: icv=0,irest=0,anal_ext=0,idebug=0
@@ -65,7 +65,6 @@ end module
       integer              :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani 
       integer              :: conatom=0
 !---distributions (distance,angle,dihedral)
-!SHAKE stuff
       save
       CONTAINS
       subroutine mass_init(masses, massnames)

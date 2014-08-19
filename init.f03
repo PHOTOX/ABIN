@@ -56,7 +56,7 @@ subroutine init(dt)
 
       namelist /nhcopt/ inose,temp,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
                         scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
-      namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax, &
+      namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
                         nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
                         k,r0,k1,k2,k3,De,a, &
                         Nshake,ishake1,ishake2,shake_tol
@@ -460,6 +460,10 @@ endif
        error=1
       endif
 !----------HERE we check for errors in input.      
+      if(pot.eq.'none')then
+       write(*,*)'FATAL: Variable "pot" not specified.Exiting now...'
+       stop 1
+      endif
       if(ipimd.eq.1.and.nwalk.le.1)then
        write(*,*)'Number of walkers for PIMD (nwalk) <=1 !'
        write(*,*)'Either set ipimd=0 for classical simulation or'

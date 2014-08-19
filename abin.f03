@@ -31,7 +31,7 @@ program abin_dyn
    use mod_analysis, only: analysis, restout
    use mod_forces,   only: force_clas, force_quantum
    implicit none
-   real(DP)    :: dt,eclas,equant
+   real(DP)    :: dt=20.0d0,eclas,equant
    integer     :: iat, iw, itrj
    LOGICAL     :: file_exists
    character(len=20) :: chit

@@ -3,8 +3,8 @@ The order of input namelists does not matter.
 
 &general
 pot='mm'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho 
-natom=27,		!number of atoms
-irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
+natom=27,		! number of atoms
+irest=0,		! Should we restart from restart.xyz? (ignoring mini.dat)
 
 ipimd=3,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
 nwalk=1,		! number of random walkers 

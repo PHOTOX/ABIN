@@ -1,9 +1,22 @@
-! Various small utilities, that may be used throughout the program
+! Various small functions and subroutines, that may be used throughout the program.
 ! Daniel Hollas         2014
 module mod_utils
-  implicit none
+   use mod_const, only: DP
+   implicit none
    private :: PrintHelp
    contains
+
+   real(DP) function get_distance(x,y,z,at1,at2,iw)
+   real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
+   integer,intent(in)  :: at1, at2, iw
+   real(DP) :: r
+   r=(x(at1,iw)-x(at2,iw))**2
+   r=r+(y(at1,iw)-y(at2,iw))**2
+   r=r+(z(at1,iw)-z(at2,iw))**2
+   r=sqrt(r)
+   get_distance=r
+   end function get_distance
+
    elemental function UpperToLower(string) result (return_string)
       character(len=*),intent(in) :: string
       character(len=len(string))  :: return_string

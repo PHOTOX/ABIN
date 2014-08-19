@@ -6,8 +6,9 @@ module mod_density
    private
    public  :: ndist, nbin, nbin_ang, nang, ndih, xmin, xmax, shiftdih
    public  :: dist1, dist2, ang1, ang2, ang3, dih1, dih2, dih3, dih4
-   public  :: dist_init, density, density_ang, density_dih
-   integer :: ndist=0,nbin=1000, nbin_ang=180
+   public  :: dist_init, density, density_ang, density_dih, disterror
+
+   integer :: ndist=0,nbin=1000, nbin_ang=180, disterror=0
    integer :: dist1(ndistmax),dist2(ndistmax)
    integer :: nang=0,ang1(ndistmax),ang2(ndistmax),ang3(ndistmax)
    integer :: ndih=0,dih1(ndistmax),dih2(ndistmax),dih3(ndistmax),dih4(ndistmax)
@@ -24,57 +25,56 @@ module mod_density
    end subroutine dist_init
 
    subroutine density(x,y,z)
-   use mod_general, only: it, nwalk, nwrite, pot
-   use mod_system, only: dime
-   implicit none
+   use mod_general,  only: it, nwalk, nwrite, pot
+   use mod_system,   only: dime
+   use mod_utils,    only: get_distance, abinerror
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
    real(DP)  :: r,anorm,dx,dbin
-   integer :: idist,iw,ipom,ian
+   integer :: idist,iw,ipom,ian,unit1
 
    
    do idist=1,ndist
       do iw=1,nwalk
    
-      r=(x(dist1(idist),iw)-x(dist2(idist),iw))**2
-      r=r+(y(dist1(idist),iw)-y(dist2(idist),iw))**2
-      r=r+(z(dist1(idist),iw)-z(dist2(idist),iw))**2
-   r=sqrt(r)
+         r=get_distance(x, y, z, dist1(idist), dist2(idist), iw)
 
-   if(dime.eq.1.and.pot.eq.'2dho') r=x(1,iw)
+         if(dime.eq.1.and.pot.eq.'2dho') r=x(1,iw)
 
-   dbin=(xmax-xmin)/nbin
+         dbin=(xmax-xmin)/nbin
 
-   ipom=ceiling(( (r/ang)-xmin )/dbin)
-   if(ipom.gt.nbin.or.ipom.le.0)then
-      write(*,*)'WARNING: Problems with distribution function.'
-      write(*,*)'This may mean that your system is falling apart.'
-      write(*,*)'Or maybe you should set xmin and xmax differently.'
-      write(*,*)'Ignoring and setting ipom=1'
-      ipom=1
-   endif
+         ipom=ceiling(( (r/ang)-xmin )/dbin)
+         if(ipom.gt.nbin.or.ipom.le.0)then
+            write(*,*)'WARNING: Problems with distribution function.'
+            write(*,*)'This may mean that your system is falling apart.'
+            write(*,*)'Or maybe you should set xmin and xmax differently.'
+            if(disterror.eq.1) call abinerror('density')
+            write(*,*)'Ignoring and setting ipom=1'
+            ipom=1
+         endif
 
-   dist(ipom,idist)=dist(ipom,idist)+1.0d0
-   enddo
+         dist(ipom,idist)=dist(ipom,idist)+1.0d0
+      enddo
    enddo
    
    if(modulo(it,nwrite).eq.0)then
-     open(128,file='dist.dat')
-     do idist=1,ndist
-     anorm=0.0d0
-     dx=(xmax-xmin)/nbin
+      open(newunit=unit1,file='dist.dat')
+      do idist=1,ndist
+
+         anorm=0.0d0
+         dx=(xmax-xmin)/nbin
    
-     do ian=1,nbin
-      anorm=anorm+dist(ian,idist)
-     enddo
+         do ian=1,nbin
+            anorm=anorm+dist(ian,idist)
+         enddo
      
-     do ian=1,nbin
-      write(128,*)ian*dx+xmin+dx/2,dist(ian,idist)/(anorm*dx)
-     enddo
-        write(128,*)
+         do ian=1,nbin
+            write(unit1,*)ian*dx+xmin+dx/2,dist(ian,idist)/(anorm*dx)
+         enddo
+         write(unit1,*)
    
-     enddo
+      enddo
    
-     close(128)
+      close(unit1)
    endif
    
    end subroutine density

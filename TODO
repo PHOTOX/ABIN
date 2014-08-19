@@ -1,10 +1,9 @@
 for ab initio, orca gives slightly different results between 
 403-a130a-9 and as67-1. Maybe try newer version
+! version 3.0.2 works the same on 403-a130a-p and as67-1.
 
 make shake user friendly----automatically determine bonds to hydrogens and water
-
-probably make module for restart and check for correct strings
-for everything
+also, test  shake, see p. 416 in Understanding mol. simulations 
 
 todo: MPI version for terachem
 
