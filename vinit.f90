@@ -56,6 +56,11 @@ SUBROUTINE vinit(TEMP, MASS, vx, vy, vz)
          VZ(iat,iw) = sigma * rans(pom+2)
          pom=pom+3
 
+         if(abs(vx(iat,iw)).gt.1d-2.or.abs(vy(iat,iw)).gt.1d-2.or.abs(vz(iat,iw)).gt.1d-2)then
+            write(*,*)'WARNING: The initial velocity of atom',iat,'is very large.'
+            write(*,*)'Your system might blow up. Maybe try different random seed.'
+         end if
+
       end do
 
 ! Momentum vector of center of mass
@@ -147,32 +152,32 @@ end subroutine ScaleVelocities
 !     ADDISON-WESLEY), 1978                                      
 !                                                                
 !--------------------------------------------------------------------
-   FUNCTION GAUSSabin ( IDUM )
-      INTEGER,intent(in)  ::   IDUM
-      REAL(DP) :: gaussabin
-      REAL(DP),parameter :: A1 = 3.949846138d0, A3 = 0.252408784d0 
-      real(DP),parameter :: A5 = 0.076542912d0, A7 = 0.008355968d0 
-      real(DP),PARAMETER :: A9 = 0.029899776
-      REAL(DP) :: SUM, R, R2
-      REAL(DP) :: RAN1
-      INTEGER     I
-!    *******************************************************************
-      SUM = 0.0d0
- 
-      DO I = 1, 12
-         SUM = SUM + RAN1 ( IDUM )
-      END DO
- 
-      R  = ( SUM - 6.0d0 ) / 4.0d0
-      R2 = R * R
- 
-      GAUSSabin = (((( A9 * R2 + A7 ) * R2 + A5 ) * R2 + A3 ) * R2 +A1 ) * R
- 
-      RETURN
-   end function gaussabin
-
-!-------------------------------------------------------------------
-!     
+ !  FUNCTION GAUSSabin ( IDUM )
+ !     INTEGER,intent(in)  ::   IDUM
+ !     REAL(DP) :: gaussabin
+ !     REAL(DP),parameter :: A1 = 3.949846138d0, A3 = 0.252408784d0 
+ !     real(DP),parameter :: A5 = 0.076542912d0, A7 = 0.008355968d0 
+ !     real(DP),PARAMETER :: A9 = 0.029899776
+ !     REAL(DP) :: SUM, R, R2
+ !     REAL(DP) :: RAN1
+ !     INTEGER     I
+!!    *******************************************************************
+ !     SUM = 0.0d0
+ !
+ !     DO I = 1, 12
+ !        SUM = SUM + RAN1 ( IDUM )
+ !     END DO
+ !
+ !     R  = ( SUM - 6.0d0 ) / 4.0d0
+ !     R2 = R * R
+ !
+ !     GAUSSabin = (((( A9 * R2 + A7 ) * R2 + A5 ) * R2 + A3 ) * R2 +A1 ) * R
+ !
+ !     RETURN
+ !  end function gaussabin
+ !
+!!-------------------------------------------------------------------
+!!     
 ! (PSEUDO) RANDOM NUMBER GENERATOR     
 ! ================================
 !                            
@@ -186,44 +191,44 @@ end subroutine ScaleVelocities
 ! RAN1 returned as REAL(DP)             B. Schmidt, May  31, 1992
 !
 !-------------------------------------------------------------------
-      REAL(DP) FUNCTION RAN1(IDUM)    
-
-      real(DP) r(97)
-      integer ix1,ix2,ix3
-      integer idum,j,iff
-
-      real(DP), parameter  :: RM1=3.8580247D-6, RM2=7.4373773D-6 
-      integer, parameter :: M1=259200,IA1=7141,IC1=54773
-      integer, parameter :: M2=134456,IA2=8121,IC2=28411
-      integer, parameter :: M3=243000,IA3=4561,IC3=51349                    
-
-      SAVE IFF, R, IX1,IX2,IX3    !?????????
-      DATA IFF /0/                                               
-
-      IF (IDUM.LT.0.OR.IFF.EQ.0) THEN                           
-         IFF=1                                      
-         IX1=MOD(IC1-IDUM,M1)                      
-         IX1=MOD(IA1*IX1+IC1,M1)                  
-         IX2=MOD(IX1,M2)                         
-         IX1=MOD(IA1*IX1+IC1,M1)                
-         IX3=MOD(IX1,M3)                       
-         DO 11 J=1,97                         
-            IX1=MOD(IA1*IX1+IC1,M1)           
-            IX2=MOD(IA2*IX2+IC2,M2)          
-            R(J)=(dble(IX1)+dble(IX2)*RM2)*RM1
- 11      CONTINUE                              
-         IDUM=1                               
-      ENDIF                                 
-      IX1=MOD(IA1*IX1+IC1,M1)              
-      IX2=MOD(IA2*IX2+IC2,M2)             
-      IX3=MOD(IA3*IX3+IC3,M3)            
-      J=1+(97*IX3)/M3                   
-      IF(J.GT.97.OR.J.LT.1)STOP      
-      RAN1=  R(J) 
-      R(J)=(dble(IX1)+dble(IX2)*RM2)*RM1
-
-
-      RETURN                             
-      END function ran1
+ !     REAL(DP) FUNCTION RAN1(IDUM)    
+ !
+ !     real(DP) r(97)
+ !     integer ix1,ix2,ix3
+ !     integer idum,j,iff
+ !
+ !     real(DP), parameter  :: RM1=3.8580247D-6, RM2=7.4373773D-6 
+ !     integer, parameter :: M1=259200,IA1=7141,IC1=54773
+ !     integer, parameter :: M2=134456,IA2=8121,IC2=28411
+ !     integer, parameter :: M3=243000,IA3=4561,IC3=51349                    
+ !
+ !     SAVE IFF, R, IX1,IX2,IX3    !?????????
+ !     DATA IFF /0/                                               
+!
+!      IF (IDUM.LT.0.OR.IFF.EQ.0) THEN                           
+!         IFF=1                                      
+!         IX1=MOD(IC1-IDUM,M1)                      
+!         IX1=MOD(IA1*IX1+IC1,M1)                  
+!         IX2=MOD(IX1,M2)                         
+!         IX1=MOD(IA1*IX1+IC1,M1)                
+!         IX3=MOD(IX1,M3)                       
+!         DO 11 J=1,97                         
+!            IX1=MOD(IA1*IX1+IC1,M1)           
+!            IX2=MOD(IA2*IX2+IC2,M2)          
+!            R(J)=(dble(IX1)+dble(IX2)*RM2)*RM1
+! 11      CONTINUE                              
+ !        IDUM=1                               
+ !     ENDIF                                 
+ !     IX1=MOD(IA1*IX1+IC1,M1)              
+ !     IX2=MOD(IA2*IX2+IC2,M2)             
+ !     IX3=MOD(IA3*IX3+IC3,M3)            
+ !     J=1+(97*IX3)/M3                   
+ !     IF(J.GT.97.OR.J.LT.1)STOP      
+ !     RAN1=  R(J) 
+ !     R(J)=(dble(IX1)+dble(IX2)*RM2)*RM1
+ !
+ !
+ !     RETURN                             
+ !     END function ran1
 
 end module mod_vinit

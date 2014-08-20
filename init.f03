@@ -54,7 +54,7 @@ subroutine init(dt)
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
                parrespa,dime,ncalc,idebug,enmini,rho,iknow
 
-      namelist /nhcopt/ inose,temp,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
+      namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
                         scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
       namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
                         nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
@@ -360,7 +360,13 @@ endif
 
 !-----SETTING initial velocities according to the Maxwell-Boltzmann distribution
 !     TODO: odstraneni rotace
-      if(irest.eq.0) call vinit(TEMP,am,vx,vy,vz)
+      if(irest.eq.0)then
+         if (temp0.ge.0)then
+            call vinit(TEMP0,am,vx,vy,vz)
+         else
+            call vinit(TEMP,am,vx,vy,vz)
+         end if
+      end if
 
       if(conatom.gt.0)then
          write(*,*)'Removing initial velocity of constrained atoms.'
@@ -424,6 +430,8 @@ endif
    contains
 
    subroutine check_inputsanity()
+   character(len=*),parameter :: chknow='If you know what you are doing, &
+    &  set  iknow=1 (namelist general) to proceed.'
 !$    if(nthreads.gt.1.and.ipimd.ne.1)then
 !$     write(*,*)'Parallel execution is currently only supported with PIMD (ipimd=1)'
 !$     call abinerror('init')
@@ -490,7 +498,7 @@ endif
       endif
       if(integ.ne.'butcher')then
          write(*,*)'WARNING: variable integ is not "butcher", which is the default and most accurate.'
-         write(*,*)'If you really want to proceed, set iknow=1.'
+         write(*,*)chknow
          if(iknow.ne.1) error=1
       end if
       if(deltae.lt.0)then
@@ -584,18 +592,27 @@ endif
       endif
       if(inac.gt.2.or.inac.lt.0)then
        write(*,*)'Parameter "inac" must be 0,1 or 2.'   !be very carefull if you change this!
-       if(iknow.ne.1) error=1
+       error=1
+      endif
+      if(adjmom.gt.1.or.adjmom.lt.0)then
+       write(*,*)'Parameter "adjmom" must be 0 or 1.' 
+       error=1
+      endif
+      if(adjmom.eq.0.and.inac.eq.1)then
+       write(*,*)'Combination of adjmom=0 and inac=1 is not possible.' 
+       write(*,*)'We dont have NAC vector if inac=1.' 
+       error=1
       endif
       if(irest.eq.1.and.scaleveloc.eq.1)then
        write(*,*)'irest=1 AND scaleveloc=1.'
        write(*,*)'You are trying to scale the velocities read from restart.xyz.'
-       write(*,*)'I assume this is an error in input. Exiting...'
-       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
+       write(*,*)'I assume this is an error in input. (set scaleveloc=0)'
+       write(*,*)chknow
        if(iknow.ne.1) error=1
       endif
       if(inose.eq.1.and.ipimd.eq.2)then
-       write(*,*)'Thermostating not meaningful for surface hopping simulation.Exiting.'
-       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
+       write(*,*)'Thermostating is not meaningful for surface hopping simulation.'
+       write(*,*)chknow
        if(iknow.ne.1) error=1
       endif
       if(istate_init.gt.nstate)then
@@ -636,8 +653,8 @@ endif
        error=1
       endif
       if(inose.eq.3)then
-       write(*,*)'Langevin thermostat was not tested.'
-       write(*,*)'Set iknow=1 if you know what youre doing.'
+       write(*,*)'Langevin thermostat was not extensively tested.'
+       write(*,*)chknow
        if (iknow.ne.1) error=1
       endif
       if(istage.eq.1.and.ipimd.ne.1)then
@@ -650,7 +667,7 @@ endif
       endif
       if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2)then
        write(*,*)'PIMD should be done with staging or normal mode transformation! Exiting...'
-       write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
+       write(*,*)chknow
        if (iknow.ne.1) error=1
       endif
       if(istage.eq.1.and.inose.eq.2)then
@@ -662,13 +679,14 @@ endif
        error=1
       endif
       if(nyosh.le.1.and.inose.eq.1)then
-       write(*,*)'It is strongly reccomended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh 3 or 7).'
-       write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
+       write(*,*)'It is strongly reccommended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh=3 or 7).'
+       write(*,*)chknow
        if (iknow.ne.1)error=1
       endif
       if(nrespnose.lt.3.and.inose.eq.1)then
        write(*,*)'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
-       write(*,*)'If you know, what you are doing, set iknow=1 (section general) to proceed.'
+       write(*,*)'Such low value would probably not produce stable results.'
+       write(*,*)chknow
        if (iknow.ne.1)error=1
       endif
       if(nrespnose.le.0)then
@@ -695,9 +713,14 @@ endif
        write(*,*)'Only 1 particle is allowed for 2D harmonic oscillator!'
        error=1
       endif
-      if(pot.eq.'mm'.and.iqmmm.gt.1)then
+      if(pot.eq.'mm'.and.iqmmm.eq.1)then
        write(*,*)'Pot="mm"is not compatible with iqmmm=1!'
        error=1
+      endif
+      if(iqmmm.eq.1)then
+       write(*,*)'WARNING: QMMM is higly experimental at this point. Use with care!'
+       write(*,*)chknow
+       if (iknow.ne.1) error=1
       endif
       if((natmm+natqm.ne.natom).and.iqmmm.eq.1)then
        write(*,*)'Natmm+natqm not equal to natom!'
@@ -728,7 +751,7 @@ endif
        if(ipom.ne.natom)then
         write(*,*)'Number of atoms in thermostated molecules(natmol) doesnt match with natom.'
         write(*,*)'This is probably mistake in input.Exiting...'
-       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
+       write(*,*)chknow
         if(iknow.ne.1) error=1
        endif
       endif
@@ -736,7 +759,7 @@ endif
       if(temp.lt.1.and.inose.ge.1)then
        write(*,*)'WARNING!:Temperature below 1K. Are you sure?'
        write(*,*)'This is probably mistake in input.Exiting...'
-       write(*,*)'If you know, what you are doing, set  iknow=1 (section general) to proceed.'
+       write(*,*)chknow
        if(iknow.ne.1) error=1
       endif
 

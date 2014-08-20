@@ -13,12 +13,12 @@ module mod_sh
    public :: energydifthr, energydriftthr, popsumthr, phase, adjmom, revmom
 
    integer,parameter :: ntraj = ntrajmax
-   integer   :: istate_init=1, nstate=1, substep=1000
+   integer   :: istate_init=1, nstate=1, substep=100
    integer   :: inac=0, nohop=0, phase=0, adjmom=0, revmom=0
    integer   :: nac_accu1=7, nac_accu2=5 !7 is MOLPRO default
    real(DP)  :: dtp, alpha=0.1d0
-   real(DP)  :: deltae=100.d0, popthr=0.001d0
-   real(DP)  :: popsumthr=0.001d0, energydifthr=0.5d0, energydriftthr=0.5d0 !eV
+   real(DP)  :: deltae=5.0d0, popthr=0.001d0
+   real(DP)  :: popsumthr=0.001d0, energydifthr=1.0d0, energydriftthr=1.0d0 !eV
    character(len=10)    :: integ='butcher'
    real(DP),allocatable :: nacx(:,:,:,:), nacy(:,:,:,:), nacz(:,:,:,:)
    real(DP),allocatable :: nacx_old(:,:,:,:), nacy_old(:,:,:,:), nacz_old(:,:,:,:)

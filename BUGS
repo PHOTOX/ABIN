@@ -57,3 +57,12 @@ Present since version/commit: initial commit, not in alpha version
 Affected: periodic boundary conditions
 Status:   FIXED, commit: 1c962be 
 ---------------------------------------------------
+
+---------------------------------------------------
+OLD BUGS BEFORE ALPHA VERSION:
+Corrected segfault when npartmaxx.gt.nwalkmax in routine FXtoFQ
+
+Correct integration of NHC,using Suzuki-Yoshida and RESPA scheme,
+the conserved value is now really conserved
+
+forces,energies and NACM are now calculated at zero step....i.e. now we start correctly

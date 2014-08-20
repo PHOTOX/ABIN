@@ -1,19 +1,26 @@
-!initial version                         D. Hollas 10.3.2013
-!-----Variables and arrays connected with nose-hoover thermostat     
+!- initial version                         D. Hollas 10.3.2013
+
+!- This module contains both massive and global version of the Nosé-Hoover chain thermostat.
+!- It also contains all necessary variables and initialization routines.
 module mod_nhc
    use mod_const, only: DP
    use mod_array_size, only: maxchain
    implicit none
-   real(DP)  :: ams=-1,temp=0.0d0,nhcham=0.0d0,tau0=-1,tau !v ps
+   public  :: ams, tau0, nhcham, inose, nchain, temp, temp0
+   public  :: nrespnose, nyosh, scaleveloc, readNHC, initNHC
+   public  :: imasst, nmolt, natmolt, nshakemol
+
+   real(DP)  :: ams=-1,nhcham=0.0d0,tau0=-1,tau !in picoseconds
+   real(DP)  :: temp0=-1, temp=0.0d0
    integer :: inose=-1,nchain=4,initNHC=-1
    integer :: imasst=1  ! switch for massive thermostatting
    integer :: nrespnose=3,nyosh=7,nmolt=1
-   integer,allocatable :: natmolt(:)
    integer :: scaleveloc, readNHC=1
+   integer,allocatable :: natmolt(:)
+   integer,allocatable :: nshakemol(:)
    real(DP),allocatable :: pnhx(:,:,:),pnhy(:,:,:),pnhz(:,:,:)
    real(DP),allocatable :: xi_x(:,:,:), xi_y(:,:,:),xi_z(:,:,:)
    real(DP),allocatable :: w(:),ms(:,:),Qm(:)
-   integer,allocatable :: nshakemol(:)
    save
    CONTAINS
 
@@ -127,7 +134,7 @@ module mod_nhc
         if (iw.eq.1) write(*,*)'Initializing NHC momenta.'
         call gautrg(ran,natom*3,0,6)
          ipom=1
-!TODO: check, whether initialization is actually better than nothing
+
          do iat=1,natom 
          pnhx(iat,iw,inh)=ran(ipom)*sqrt(temp*Qm(iw))
          pnhy(iat,iw,inh)=ran(ipom+1)*sqrt(temp*Qm(iw))

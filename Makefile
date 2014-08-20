@@ -6,16 +6,16 @@
 # If you change modules, you should recompile the whole thing i.e. make clean;make
 #
 OUT = abin.dev
-# You actually have to use gfortran, becouse of precompiled LIBS
+# You actually have to use gfortran and gcc, becouse of precompiled LIBS
 FC = gfortran
 CC = gcc
 
-#CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
 FFLAGS =  -g -fopenmp  -Wall -Wextra -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
+#CFLAGS="-pg -O2 -pthread"  #PARALLEL VERSION
+
 LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a
 LDLIBS = -lfftw3 -lm -lstdc++ ${LIBS}
-
 
 export SHELL=/bin/bash
 export DATE=`date +"%X %x"`

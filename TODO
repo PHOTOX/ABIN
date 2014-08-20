@@ -1,16 +1,10 @@
-for ab initio, orca gives slightly different results between 
-403-a130a-9 and as67-1. Maybe try newer version
-! version 3.0.2 works the same on 403-a130a-p and as67-1.
 
-make shake user friendly----automatically determine bonds to hydrogens and water
-also, test  shake, see p. 416 in Understanding mol. simulations 
-
-todo: MPI version for terachem
-
-udelat r.molpro pro caspt2/casscf-nacm
 
 ###----UTILS
+udelat r.molpro pro caspt2/casscf-nacm
+
 spectra from movies
+
 cut_abin.....see slavicek@a11-11:~/CFConWATER/MD-TD  dodelat
 xyz reordering
 OOO....OHHH...H
@@ -20,6 +14,11 @@ awk '{}' $1
 
 
 ####FOR LATER VERSIONS ####################################
+make shake user friendly----automatically determine bonds to hydrogens and water
+also, test  shake, see p. 416 in Understanding mol. simulations 
+Leave this probably to the next version, it requires coupling to massive NHC, which is not well tested
+
+todo: MPI version for terachem
 NAB - compile my own libnab.a library and pass al argumets through it
 NAB - use new NAB version from AmberTools14
 QMMM --- otestovat, udelat glycin + 10A vod 
