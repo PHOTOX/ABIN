@@ -1,0 +1,47 @@
+#!/bin/bash
+# SETUP --------------------------------
+OUTPUT=output
+ABINEXE=./abin.dev
+JOBNAME=ABIN_$$
+INPUTPARAM=input.in
+INPUTGEOM=mini.dat
+########################################
+
+export LD_LIBRARY_PATH=/home/hollas/programes/src/gcc-4.8/lib64:/home/hollas/programes/src/gcc-4.8/lib:$LD_LIBRARY_PATH
+
+myname=$(basename $0)
+echo "Job started at: " >> $OUTPUT
+date >> $OUTPUT
+echo "Running on node:" >> $OUTPUT
+uname -n >> $OUTPUT
+echo "Working directory:" >> $OUTPUT
+echo "/scratch/$USER/$JOBNAME" >> $OUTPUT
+echo " " >> $OUTPUT
+uname -n > job.log
+echo "/scratch/$USER/$JOBNAME" >> job.log
+
+KDE=`pwd`
+
+if [[ -d /scratch/$USER/$JOBNAME ]];then
+   echo "Job direcory /scratch/$USER/$JOBNAME already exist!"
+   echo "Perhaps it's a leftover from some old job, you could probably delete it."
+   echo "Exiting..."
+   exit 1
+else
+   mkdir /scratch/$USER/$JOBNAME
+fi
+
+
+cp -pr * /scratch/$USER/$JOBNAME/.
+
+cd /scratch/$USER/$JOBNAME
+rm *$myname     # hack,so that we do not overwrite stdout and stderr later
+
+$ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+
+cp -pr * $KDE/.
+
+cd ..
+
+rm -r $JOBNAME
+

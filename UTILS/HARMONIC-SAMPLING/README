@@ -1,0 +1,103 @@
+-------------------------------------------------------
+-------------------------------------------------------
+-------------------------------------------------------
+Sampling harmonic wavefunction with FMS, brief tutorial
+
+Important note: there are different versions of the code,
+here we describe the version of Dan Hollas, which depends 
+on recent implementation of FMS in MOLPRO2012
+-------------------------------------------------------
+-------------------------------------------------------
+-------------------------------------------------------
+
+-----------------------------------------
+Step 1: Optimizing geometry
+Files: opt.com
+-----------------------------------------
+
+-the optimization can be done e.g. on the MP2 level
+-output geometry in angstrom is found in opt.com.log
+
+-----------------------------------------
+Step 2: Frequency calculations
+Files: freq.com
+-----------------------------------------
+
+- can be done at MP2 level (numerically), the level must be the same as for the optimization!!
+- for parallel jobs :as numerical hessian is 'embarassingly parallel' problem, you should use the MPPX parallel version as:
+MX yourinput.com queue ncpu
+(see http://www.molpro.net/info/2012.1/doc/manual/node8.html for details)
+
+-----------------------------------------
+Step 3: Frequency processing 
+Files: mp2freq
+-----------------------------------------
+
+- take freq.com.out and add a first line "number-of-atom number-of-normal-modes"
+-process it with ./mp2freq < freq.com.out > Frequencies.dat
+-the Frequencies.dat file should be stripped off the low frequency modes (i.e. below 500 cm^-1,to be done manually)
+-Then, move Frequencies.dat into FMSINPOUT directory
+
+-----------------------------------------
+Step 4: Making Geometry.dat and geometry.xyz
+Files: molgeom.sh
+-----------------------------------------
+see this www for info about the format of Geometry.dat file
+http://www.molpro.net/info/2012.1/doc/manual/node382.html
+
+Geometry.dat and geometry.xyz contain the minimum geometry of the molecule.
+You can use the molgeom.sh script to extract the xyz geometry in angstroms from freq.com.out as:
+./molgeom.sh freq.com.out > FMSINPOUT/geometry.xyz
+You should then edit geometry.xyz so that there is only one geometry. (there will probably be 2 same geometries)
+Then you can copy geometry.xyz into Geometry.dat and exchange first two lines
+and adding  UNITS=ANG on the first line
+
+-----------------------------------------
+Step 5: Running the FMS
+Files: wigner_sampling.sh, input.com, randsum
+-----------------------------------------
+input.com is a generic input for molpro. It does not need to be edited.
+
+You need to edit wigner_sampling.sh.
+- number of atoms, number of generated geometries
+- masses for atoms other than H, C, N, O, S, F, Cl
+- note, that gaussian widths are completely arbitrary, since we are not even running FMS but simple AIMD
+
+-Traj.x files are being generated in directory FMSTRAJS
+
+-----------------------------------------
+Step 6: Processing the trajectories 
+Files: make_restart
+-----------------------------------------
+
+-The Traj.x can be converted into restart.xyz and mini.dat using "make_restart.f90". 
+This code needs the file "atoms.dat", which contains the list of atom names.
+It than automatically assigns correct mass to common atoms of periodic table (including deuterium as D).
+If you need some other atoms or different isotopes, you have to manually adjust the subroutine "mass_init". 
+
+-----------------------------------------
+Step 7: Running multiple MD runs 
+files:  create_wignertrajectories,make_restart, Abin files
+-----------------------------------------
+-Traj.x required
+-it uses "make_restart"
+-in the directory, one needs to have abin executable file, MOLPRO directory,input.in,r.abin
+Note that the first line of input.in must be "&general"!!!!!
+See README in folder ABIN-MULTIPLE-TRAJS for more details
+
+-----------------------------------------
+Note1: Analyzing distributions from wigner sampling
+Files: analyze_wigner.f90
+-----------------------------------------
+For the analysis of bond distances, angles and dihedrals, there's a fortran code analyze_wigner.
+For help, type ./analyze_wigner -h
+
+-----------------------------------------
+Note2: Running simulations for different isotopologues
+-----------------------------------------
+-the mass of atoms has to be changed in frequency calculations
+
+-the mass has to be changed also in wigner_sampling.sh (or Control.dat)
+
+-It has to be edited for the dynamics in ABIN (make_restart.f90 and input.in)
+

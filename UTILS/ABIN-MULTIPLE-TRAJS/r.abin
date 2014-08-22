@@ -1,0 +1,34 @@
+
+# This is a stub for r.abin
+# It is supposed to be prepended by script create_wignertrajectories.sh
+
+export LD_LIBRARY_PATH=/home/hollas/programes/src/gcc-4.8/lib64:/home/hollas/programes/src/gcc-4.8/lib:$LD_LIBRARY_PATH
+
+myname=$(basename $0)
+echo "Job started at: " >> $OUTPUT
+date >> $OUTPUT
+echo "Running on node:" >> $OUTPUT
+uname -n >> $OUTPUT
+echo "Working directory:" >> $OUTPUT
+echo "/scratch/$USER/$JOBNAME" >> $OUTPUT
+echo " " >> $OUTPUT
+uname -n > job.log
+echo "/scratch/$USER/$JOBNAME" >> job.log
+
+KDE=`pwd`
+
+mkdir /scratch/$USER/$JOBNAME
+
+cp -pr * /scratch/$USER/$JOBNAME/.
+
+cd /scratch/$USER/$JOBNAME
+rm *$myname     # hack,so that we do not overwrite stdout and stderr later
+
+$ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+
+cp -pr * $KDE/.
+
+cd ..
+
+rm -r $JOBNAME
+

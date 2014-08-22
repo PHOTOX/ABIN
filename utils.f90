@@ -74,6 +74,7 @@ module mod_utils
    character(len=*),intent(inout)   :: chinput, chcoords
    character(len=len(chinput))   :: arg
    integer            :: i
+   logical            :: lexist
    
    i=0
    do while (i < command_argument_count())
@@ -105,6 +106,21 @@ module mod_utils
       end select
 
    end do
+   !check for existence of input files
+
+   inquire(file=chcoords,exist=lexist)
+   if (.not.lexist)then
+      write(*,*)'FATAL: Input file does not exists!'
+      write(*,*)chcoords
+      stop 1
+   end if
+
+   inquire(file=chinput,exist=lexist)
+   if (.not.lexist)then
+      write(*,*)'FATAL: The following input file does not exists!'
+      write(*,*)chinput
+      stop 1
+   end if
 
    end subroutine Get_cmdline
 

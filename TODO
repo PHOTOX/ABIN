@@ -1,4 +1,7 @@
 
+FOR 1.0 version
+comment out export COMMIT in makefile
+rename abin.dev to abin.v1
 
 ###----UTILS
 udelat r.molpro pro caspt2/casscf-nacm
