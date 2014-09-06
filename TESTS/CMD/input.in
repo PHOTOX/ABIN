@@ -17,6 +17,7 @@ nyosh=7
 /
 
 &general
+nproc=1
 idebug=0
 nstep=10,
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!

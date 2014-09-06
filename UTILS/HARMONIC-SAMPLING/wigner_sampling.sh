@@ -11,9 +11,14 @@ writemass=0 #=1 for atoms other than H, C, N, O, S, F, Cl: see below
 iseed=10066077 #random seed 
 #-----------------------------------------
 
-MyIRandom $iseed $ntrajs > iran.dat
-
 inputdeck=input.com
+
+MyIRandom $iseed $ntrajs > iran.dat
+if [[ $? -ne "0" ]];then
+   echo "Error during random number generation.Exiting now..."
+   exit 1
+fi
+
 
 #!DO NOT! EDIT THE FOLLOWING ######
 mkdir -p FMSTRAJS

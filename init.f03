@@ -432,10 +432,20 @@ endif
    subroutine check_inputsanity()
    character(len=*),parameter :: chknow='If you know what you are doing, &
     &  set  iknow=1 (namelist general) to proceed.'
-!$    if(nthreads.gt.1.and.ipimd.ne.1)then
-!$     write(*,*)'Parallel execution is currently only supported with PIMD (ipimd=1)'
+
+      !we should exclude all non-abinitio options, but whatever....
+!$    if(nthreads.gt.1.and.(ipimd.ne.1.or.pot.eq.'nab'))then
+!$     write(*,*)'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
 !$     call abinerror('init')
 !$    endif
+
+      if(nproc.gt.1)then
+!$       if(.false.)then
+         write(*,*)'ERROR: This executable was not compiled with parallel support.'
+         error=1
+!$       end if
+      end if
+
       !-----Check,whether input variables don't exceeds array limits
       if(ntraj.gt.ntrajmax)then
        write(*,*)'Maximum number of trajectories is:'
@@ -468,6 +478,19 @@ endif
        error=1
       endif
 !----------HERE we check for errors in input.      
+      if (nproc.gt.nwalk)then
+         write(*,*)'ERROR: Nproc greater than nwalk. That does not make sense.'
+         write(*,*)'Set nproc <= nwalk.'
+         error=1
+      end if
+      if (nproc.le.0)then
+         write(*,*)'ERROR: Nproc must be a positive integer.'
+         error=1
+      end if
+      if (modulo(nwalk,nproc).ne.0)then
+         write(*,*)'ERROR: Nwalk is not divisible by nproc. This is not a wise usage of your computer time.'
+         error=1
+      end if
       if(pot.eq.'none')then
        write(*,*)'FATAL: Variable "pot" not specified.Exiting now...'
        stop 1

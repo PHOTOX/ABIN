@@ -29,6 +29,7 @@ PATHTOWIGNER="./WIGNER/FMSTRAJS"  # path to wigner "trajectories"
 irandom0=10061989       # random seed, set negative for random seed based on time
 pot="MOLPRO"            # folder with ab initio bash script
 #submit="qsub -q aq"    # comment this line if you don't want to submit to queue yet
+rewrite=1               # if =1 -> rewrite trajectories that already exist
 
 ##########END OF SETUP##########
 
@@ -60,10 +61,17 @@ cp initial iseed0 $input $folder
 while [[ $i -le $nsample ]];do
 
 if [[ -e $folder/TRAJ.$i ]];then
-	echo "Trajectory number $i already exists!!Please, delete it."
-	echo "Exiting..."
-	exit 1
-#	rm -r $folder/TRAJ.$i
+   if [[ $rewrite -eq 1 ]];then
+
+      rm -r $folder/TRAJ.$i
+
+   else
+
+      echo "Trajectory number $i already exists!"
+      echo "Exiting..."
+      exit 1
+
+   fi
 fi
 
 mkdir $folder/TRAJ.$i

@@ -12,6 +12,7 @@ ipimd=1,		!classical simulation 0, quantum simulation 1
 nwalk=10,		!number of random walkers 
 imini=10000,		!equilibration period,!not properly implemented yet
 istage=1,		!staging transformation (1), without staging (0)
+nproc=1
 
 dt=20.,			!number of steps and timestep
 irandom=131313,  	!random seed

@@ -18,11 +18,11 @@
 
 #########SETUP###########
 movie=./movie.xyz       # Input xyz file.
-output=geoms.xyz  # Output xyz file.
-nsample=20             # Number of samples.
-random=1                # 0 - pick geometries using fixed offset
+output=geoms.xyz        # Output xyz file.
+nsample=0               # Number of samples. Greater than 0 or 0 for maximum number of samples (0 only with fixed offset)
+random=0                # 0 - pick geometries using fixed offset
                         # 1 - pick geometries randomly
-step=20000                # fixed offset, every step-th geometry is taken
+step=11                 # fixed offset, every step-th geometry is taken
 seed=980160             # random seed, if negative, it is based on current time
 #########################
 
@@ -34,25 +34,18 @@ if [[ ! -e $movie ]];then
 fi
 natom=$(head -1 $movie)                # Number of atoms.
 
-if [[ -e $output ]];then
-   echo "WARNING: file $output already exists."
-   echo "Do you want to rewrite it? [yes/no]" 
-   read answer
-   if [[ $answer -ne "yes" ]];then
-      echo "ABORTING."
-      exit 1
-   else
-      rm $output
-   fi
-fi
-
 if [[ $random -ne 0 ]] && [[ $random -ne 1 ]];then
    echo "ERROR: parameter random must be 0 or 1."
    exit 1
 fi
 
+if [[ $random -eq 1 ]] && [[ $nsample -eq 0 ]];then
+   echo "ERROR: nsample can be 0 only with fixed offset (random=0)."
+   exit 1
+fi
+
 if [[ $random -eq 0 ]] && [[ $step -le 0 ]];then
-   echo "ERROR: parameter nstep must be positive integer."
+   echo "ERROR: parameter step must be positive integer."
    exit 1
 fi
 
@@ -68,19 +61,19 @@ geoms=`expr $lines / $natom2`
 let geoms3=geoms/10
 
 if [[ $nsample -gt $geoms ]];then
-   echo "ERROR: Number of geometries is smaller than number of samples."
+   echo "ERROR: Number of geometries ($geoms) is smaller than number of samples."
    echo "Change parameter \"nsample\"."
    exit 1
 fi
 
-if [[ $random -eq 0 ]] && [[ $(expr $step \* $nsample ) -gt $geoms ]];then
-   echo "ERROR: Small number of geometries."
+if [[ $nsample -ne 0 ]] && [[ $random -eq 0 ]] && [[ $(expr $step \* $nsample ) -gt $geoms ]];then
+   echo "ERROR: Small number of geometries ($geoms)."
    echo "Please, decrease the parameter \"step\"."
    exit 1
 fi
 
 if [[ $geoms3 -lt $nsample ]] && [[ $random -eq 1 ]];then
-   echo "ERROR: Number of geometries is too small for this number of samples."
+   echo "ERROR: Number of geometries ($geoms) is too small for this number of samples."
    echo "It is not meaningful to pick geometries at random. Exiting..."
    exit 1
 fi
@@ -91,6 +84,22 @@ if [[ $random -eq 1 ]];then
    if [[ $? -ne 0 ]];then
       echo "Problems when generating random integers."
       exit 1
+   fi
+fi
+
+if [[ $nsample -eq 0 ]];then
+   let nsample=geoms/step
+fi
+
+if [[ -e $output ]];then
+   echo "WARNING: file $output already exists."
+   echo "Do you want to rewrite it? [yes/no]"
+   read answer
+   if [[ $answer -ne "yes" ]];then
+      echo "ABORTING."
+      exit 1
+   else
+      rm $output
    fi
 fi
 

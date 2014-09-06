@@ -697,7 +697,8 @@ module mod_random
          if (present(lread))then
             read(iout,'(A)',iostat=iost)readstring
             if(iost /= 0)then
-               write(*,*)'PRNG state not present in restart file.Ignoring...'
+               write(*,*)'PRNG state not present in restart.xyz. Ignoring...'
+               write(*,*)'Random seed from input parameter file will be used.'
             else if (chprng.ne.trim(readstring)) then
                write(*,*)'ERROR: PRNG STATE IN RESTART FILE SEEMS TO BE BROKEN.'
                write(*,*)'Expected:',chprng

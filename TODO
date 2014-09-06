@@ -1,3 +1,10 @@
+FINAL TASKS
+test PIMD and PIGLE for nab water,
+optimize the value of tau0, test for different temperatures.
+Check this value for larger clusters.
+
+open file temper.dat even if inose.eq.0???
+
 
 FOR 1.0 version
 comment out export COMMIT in makefile
@@ -6,9 +13,7 @@ rename abin.dev to abin.v1
 ###----UTILS
 udelat r.molpro pro caspt2/casscf-nacm
 
-spectra from movies
 
-cut_abin.....see slavicek@a11-11:~/CFConWATER/MD-TD  dodelat
 xyz reordering
 OOO....OHHH...H
 awk 'BEGIN{i=1;j=1}{if($1=="H"){H1[i]=$0;getline;H2[i]=$0;i++}if($1=="O") {O[j]=$0;j++}}END{for(k=1;k<j;k++) {print O[k];print H1[k];print H2[k]}}' snap2005.xyz > o

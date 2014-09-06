@@ -2,7 +2,7 @@
 !  ABIN: Program for Born-Oppenheimer MD with potential calculated 
 !  on-the-fly by an external procedure placed in ./DYN (and lot more)
 !------------------------------------------------------------------  
-!  Copyright (C) 2014                     D.Hollas,M.Oncak, P.Slavicek
+!  Copyright (C) 2014             D.Hollas, M.Oncak, O.Svoboda and P.Slavicek
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -242,7 +242,7 @@ endif
       enddo 
 
 !DUMP restart file at the end of a run even if the final step is not compatible with nrest
-!because ncalc might be >1, we have to perform transformation to get the most
+!Because ncalc might be >1, we have to perform transformation to get the most
 !recent coordinates and velocities
        if (istage.gt.0)then
         if(istage.eq.1)then     

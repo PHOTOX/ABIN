@@ -1,10 +1,13 @@
 !----Initial version                    by Daniel Hollas,9.2.2012
+!- This module contains some routines that do analyses and do I/O operations.
+!- Crucially, it also contains routines performing restart.
 
 module mod_analysis
    use mod_const, only: DP
    implicit none
    private 
    public :: trajout, restout, analysis, restin
+   !These are the character string that we check for during restart.
    character(len=*),parameter :: chnose='NHC momenta',chQT='Quantum Thermostat', &
             chSH='Coefficients for SH', chAVG='Cumulative averages of various estimators', &
             chcoords='Cartesian Coordinates [au]', chvel='Cartesian Velocities [au]'
@@ -224,8 +227,11 @@ module mod_analysis
 
    end subroutine restout
 
+
+   ! Subroutine that reads from restart.xyz during restart
+   ! It is called from subroutine init.
    subroutine restin(x,y,z,vx,vy,vz,it)
-     use mod_general,only:icv, ihess, nwalk, ipimd, natom
+     use mod_general,only: icv, ihess, nwalk, ipimd, natom
      use mod_nhc,    only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
      use mod_estimators
      use mod_kinetic,only: entot_cumul, est_temp_cumul
@@ -241,7 +247,7 @@ module mod_analysis
 
      prngread=.false. 
 
-     write(*,*)'irest=1,Reading geometry,velocities and NHC momenta from restart.xyz'
+     write(*,*)'irest=1, Reading geometry, velocities and other information from restart.xyz.'
 
      open(111,file='restart.xyz',status = "OLD", action = "READ")
      read(111,*)it
@@ -333,9 +339,10 @@ module mod_analysis
       endif
      endif
 
-!-   trying to restart PRNG
+!-   Trying to restart PRNG
 !-   prngread is optional argument determining, whether we write or read
-!-   currently,prngread is not used, since vranf is initialize before restart
+!-   currently,prngread is not used, since vranf is initialize BEFORE restart
+!    and is possibly rewritten here
      call rsavef(111,prngread) 
       
      close(111)
@@ -347,7 +354,7 @@ module mod_analysis
         character(len=*) :: chin, chref
 
         if(trim(adjustl(chin)).ne.trim(chref))then
-           write(*,*)'ERROR while reading from restart.xyz'
+           write(*,*)'ERROR while reading from restart.xyz.'
            write(*,*)'I read ',chin
            write(*,*)'but expected ',chref
            call abinerror('restin')
