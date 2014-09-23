@@ -1,4 +1,3 @@
-      program main
 !  this program will take a portion of the molpro output file
 !  and convert it to a Frequency.dat file
 !  input format:
@@ -8,6 +7,7 @@
 !  Then, without skipping a line append the list of frequencies and 
 !  modes from the molpro output, starting with the line 
 !  "Normal Modes"
+      program mp2freq
       integer MaxNumAtoms
       parameter (MaxNumAtoms=100)
       integer NumAtoms, NumModes, i, j, k, istartpt

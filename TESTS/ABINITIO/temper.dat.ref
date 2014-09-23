@@ -1,2 +1,2 @@
- #        Time[fs] Temperature           Temp-Average
+ #      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat
            0.97    377.29    377.29   -0.1188953774E+02

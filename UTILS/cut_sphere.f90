@@ -285,7 +285,7 @@ end subroutine Get_cmdline
 subroutine PrintHelp()
 implicit none
     print '(a)', ''
-    print '(a)', 'Program for cutting solvent molecules around a given solute.'
+    print '(a)', 'Program for cutting solvent molecules around a given solute from a larger solvated system.'
     print '(a)', 'You may cut either specific number of closest solvent molecules'
     print '(a)', 'or all solvent mocules within given radius.'
     print '(a)', ''
@@ -293,16 +293,16 @@ implicit none
     print '(a)', ''
     print '(a)', 'cmdline options:'
     print '(a)', ''
-    print '(a)', '  -h,    --help       Print this information and exit.'
-    print '(a)', '  -u     <integer>    Number of atoms in the solute.'
-    print '(a)', '  -va    <integer>    Number of atoms in one solvent molecule (default=3)'
-    print '(a)', '  -v     <integer>    Number solvent molecules to cut.'
-    print '(a)', '  -r     <radius>     Radius of the sphere to cut.'
-    print '(a)', '  -i     <atidx>      Cut around the atom with index atidx.'
-    print '(a)', '  -com                Cut around the geometrical center of molecule.'
-    print '(a)', '                      This is default if -r is specified.'
-    print '(a)', '  -trans              Translate the molecule so that the  &
-    coordinates of geometrical center are (0, 0, 0).'
+    print '(a)', '  -h or --help     Print this information and exit.'
+    print '(a)', '  -u  <integer>    Number of atoms in the solute.'
+    print '(a)', '  -va <integer>    Number of atoms in one solvent molecule (default=3).'
+    print '(a)', '  -v  <integer>    Number solvent molecules to cut.'
+    print '(a)', '  -r  <radius>     Radius of the sphere to cut.'
+    print '(a)', '  -i  <atidx>      Cut around the atom with index atidx.'
+    print '(a)', '  -com             Cut around the geometrical center of molecule.'
+    print '(a)', '                   This is the default if -r is specified.'
+    print '(a)', '  -trans           Translate the molecule so that the &
+                  coordinates of geometrical center are (0, 0, 0).'
 end subroutine PrintHelp
 
 subroutine PrintInputError()

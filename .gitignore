@@ -15,4 +15,3 @@ TESTS/*/restart.xyz.old
 TESTS/*/restart.xyz.10
 TESTS/*/debug.nacm
 TESTS/*/nacmrest.dat.10
-TESTS/*/ERROR

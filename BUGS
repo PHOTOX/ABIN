@@ -1,4 +1,12 @@
 --------------------------------------------------
+For harmonic 1dho, the position distribution is not symmetrical around 0. Why???
+Momentum distribution is OK.
+Affected routines: 2dho, uknownn
+Present since version/commit: unknown
+Status: UNRESOLVED
+---------------------------------------------------
+
+--------------------------------------------------
 type: enhancement
 what should be the default value of tau0,
 to achieve best energy conservation?

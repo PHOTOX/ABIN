@@ -56,7 +56,7 @@ fi
 
 # Determine, how many geometries we have.
 let natom2=natom+2
-lines=$(cat movie.xyz | wc -l)
+lines=$(cat $movie | wc -l)
 geoms=`expr $lines / $natom2`
 let geoms3=geoms/10
 

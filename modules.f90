@@ -305,7 +305,7 @@ end module
             if (names(iat).eq.massnames(j))then
 
                if (masses(j)>0)then
-                  write(*,*)'Defining new atom ',names(iat),'with mass=',masses(j)
+                  write(*,*)'Defining new atom ',names(iat),' with mass=',masses(j)
                   am(iat)=masses(j)
                else
                   write(*,*)'Mass cannot be negative. Please, fix arrays "masses" or "mass_names" in your input.'

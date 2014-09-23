@@ -58,8 +58,9 @@ module mod_random
 !---+----|----+----|----+----|----+----|----+----|----+----|----+----|--
 !----------------------------- last line -------------------------------
       subroutine gautrg(gran,nran,iseed,iout)
-         !DH WARNING: initialiazation from gautrg and vranf are different
-         !gautrg gran is shifted by 1
+      ! DH WARNING: initialiazation from gautrg and vranf are different
+      ! gautrg gran is shifted by 1
+      ! Apparently, nran must be >1
 !
 !      vectorized portable unit standard deviation gaussian random
 !      number generator using the box-mueller transformation method.
@@ -667,6 +668,7 @@ module mod_random
       return
       end subroutine getstr
 
+!-    ROUTINE RSAVEF, reads or writes the state of the generator
       subroutine rsavef(iout,lread)
          use mod_utils, only: abinerror
          integer,intent(in) :: iout  !where do we write the state
@@ -684,15 +686,6 @@ module mod_random
             write(*,*)'Unit for PRNG state must be opened!Exiting...'
             call abinerror('rsavef')
          end if
-
-!         if (isave.eq.1)then
-!         if (isave.eq.1)then
-!            write(iout,'(A)')chprng
-!            write(iout,*)init,last
-!            do i=1,np
-!               write(iout,*)x(i)
-!            end do
-!         end if
 
          if (present(lread))then
             read(iout,'(A)',iostat=iost)readstring

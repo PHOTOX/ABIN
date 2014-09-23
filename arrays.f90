@@ -16,9 +16,16 @@ module mod_arrays
    contains
 
    subroutine allocate_arrays(natomalloc, nwalkalloc)
-      integer,intent(in)  :: natomalloc, nwalkalloc
+      integer,intent(in)  :: nwalkalloc
+      integer  :: natomalloc
 
-      allocate( x(natomalloc, nwalkalloc) )
+      ! This is to avoid segfault for natom=1 and ndist>0
+      if (natomalloc.eq.1)then
+         allocate( x(natomalloc+1, nwalkalloc) )
+      else
+         allocate( x(natomalloc, nwalkalloc) )
+      end if
+
       x=0.0d0
       !automatic allocation
       y=x

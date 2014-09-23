@@ -293,17 +293,17 @@ if (nwritev.gt.0)then
    open(13,file='vel.dat',access=chaccess,action='write')
 endif
 
-open(1,file='energies.dat',access=chaccess,action='write')
-write(1,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+if (ipimd.ne.1)then
+   open(1,file='energies.dat',access=chaccess,action='write')
+   write(1,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+end if
 if(ipimd.eq.1.or.icv.eq.1)then
   open(7,file='est_energy.dat',access=chaccess,action='write')
   write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
 endif
 
-if(inose.gt.0)then
-  open(2,file='temper.dat',access=chaccess,action='write')
-  write(2,*)'#        Time[fs] Temperature           Temp-Average'
-endif
+open(2,file='temper.dat',access=chaccess,action='write')
+write(2,*)'#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
 
 if(ipimd.eq.2)then
   open(3,file='pop.dat',access=chaccess,action='write')
@@ -666,7 +666,7 @@ endif
       if(imasst.eq.0)then
        do imol=1,nmolt
         if(natmolt(imol).le.0)then
-         write(*,*)'Number of atoms in molecules not specified!Set array natmolt properly.'
+         write(*,*)'Number of atoms in molecules not specified! Set array natmolt properly.'
          error=1
         endif
        enddo

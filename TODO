@@ -1,17 +1,27 @@
 FINAL TASKS
+ondra...check interfaces...
+
+check for presence of file DYN/r.dyn in init.f03
+
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
 Check this value for larger clusters.
+fot natom=1, segfault if ndist>0
+
 
 open file temper.dat even if inose.eq.0???
 
+add swith to calc.spectrum.cpp, nm or ev or cm
+
 
 FOR 1.0 version
+add interfaces to git, determine natom by "cat ../geom.dat.$ibead | wc -l"
 comment out export COMMIT in makefile
 rename abin.dev to abin.v1
 
 ###----UTILS
 udelat r.molpro pro caspt2/casscf-nacm
+make analogue for of mp2freq for G09
 
 
 xyz reordering
@@ -22,6 +32,11 @@ awk '{}' $1
 
 
 ####FOR LATER VERSIONS ####################################
+DL-FIND? useful for CI optimizations problems with molpro
+http://pubs.acs.org/doi/full/10.1021/jp9028968
+
+
+
 make shake user friendly----automatically determine bonds to hydrogens and water
 also, test  shake, see p. 416 in Understanding mol. simulations 
 Leave this probably to the next version, it requires coupling to massive NHC, which is not well tested

@@ -37,36 +37,38 @@ module mod_kinetic
       est_temp=2*ekin_mom/(dime*natom*nwalk-nshake-f-dime*conatom)
       est_temp_cumul=est_temp_cumul+est_temp
 
-
-      if(modulo(it,nwrite).eq.0.and.inose.eq.1)then
-       call calc_nhcham()
-       write(2,'(F15.2,2F10.2,E20.10)')it*dt*autofs,est_temp*autok,est_temp_cumul*autok/it2,nhcham+ekin_mom+eclas
-      endif
-
-      if(modulo(it,nwrite).eq.0.and.inose.ne.1.and.ipimd.ne.2)then
-       if(inose.eq.2)then
-        write(2,'(F15.2,2F10.2,E20.10)')it*dt*autofs,est_temp*autok,est_temp_cumul*autok/it2,langham+ekin_mom+eclas
-       else
-        write(2,'(F15.2,2F10.2)')it*dt*autofs,est_temp*autok,est_temp_cumul*autok/it2
-       endif
-      endif
-
       if(ipimd.eq.0)then
        entot_cumul=entot_cumul+eclas+ekin_mom
-       if(modulo(it,nwrite).eq.0)then
-        write(1,'(F15.2,4E20.10)')it*dt*autofs,eclas,ekin_mom,eclas+ekin_mom,entot_cumul/it2
-       endif
       endif
 
-      if(modulo(it,nwrite).eq.0.and.ipimd.eq.2)then
-       write(1,'(F15.2,3E20.10)')it*dt*autofs,eclas,ekin_mom,eclas+ekin_mom
+      if(modulo(it,nwrite).eq.0)then
+
+         write(2,'(F15.2,F10.2)',advance="no")it*dt*autofs,est_temp*autok
+         if(ipimd.ne.2) write(2,'(F10.2)',advance="no")est_temp_cumul*autok/it2
+
+         if(inose.eq.1)then
+            call calc_nhcham()
+            write(2,'(E20.10)',advance="no")nhcham+ekin_mom+eclas
+         else if (inose.eq.2)then
+            write(2,'(E20.10)',advance="no")langham+ekin_mom+eclas
+         end if
+
+         write(2,*)
+
+         if (ipimd.ne.1)then
+            write(1,'(F15.2,3E20.10)', advance='no')it*dt*autofs,eclas,ekin_mom,eclas+ekin_mom
+            if (ipimd.eq.0) write(1,'(E20.10)',advance="no")entot_cumul/it2
+            write(1,*)
+         end if
+
+      !modulo endif
       endif
-      
+
       RETURN
-      end subroutine temperature
+   end subroutine temperature
 
 
-      real(DP) function ekin_v (vx,vy,vz)
+   real(DP) function ekin_v (vx,vy,vz)
       use mod_general, ONLY: nwalk, natom
       use mod_system, ONLY:am
       implicit none

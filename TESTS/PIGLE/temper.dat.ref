@@ -1,4 +1,4 @@
- #        Time[fs] Temperature           Temp-Average
+ #      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat
            0.48   4424.19   4424.19    0.2101082871E-01
            0.97   3867.85   4146.02    0.2230584994E-01
            1.45   3657.94   3983.33    0.2171384518E-01
@@ -9,7 +9,7 @@
            3.87   4760.92   3968.47    0.2130754648E-01
            4.35   4119.21   3985.22    0.1981431509E-01
            4.84   3892.06   3975.90    0.1894866871E-01
- #        Time[fs] Temperature           Temp-Average
+ #      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat
            5.32   4082.42   3985.58    0.1540601987E-01
            5.81   4934.06   4064.62    0.1151176707E-01
            6.29   3653.17   4032.97    0.1052985257E-01

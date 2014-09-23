@@ -14,7 +14,7 @@ module mod_nhc
    real(DP)  :: temp0=-1, temp=0.0d0
    integer :: inose=-1,nchain=4,initNHC=-1
    integer :: imasst=1  ! switch for massive thermostatting
-   integer :: nrespnose=3,nyosh=7,nmolt=1
+   integer :: nrespnose=3,nyosh=7,nmolt=0
    integer :: scaleveloc, readNHC=1
    integer,allocatable :: natmolt(:)
    integer,allocatable :: nshakemol(:)
@@ -155,8 +155,9 @@ module mod_nhc
         enddo
         if(initNHC.eq.1)then  
          write(*,*)'Initializing NHC momenta.'
-         call gautrg(ran,nmolt,0,6)
-         do imol=1,nmolt !TODO nefunguje?! - uz nevim proc, otestovat...
+         ! +1 if nmolt=1, gautrg needs array at least of length=2
+         call gautrg(ran,nmolt+1,0,6)
+         do imol=1,nmolt 
           pnhx(imol,iw,inh)=ran(imol)*sqrt(temp*ms(imol,inh))
          enddo
         endif
