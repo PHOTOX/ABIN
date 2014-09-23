@@ -1,0 +1,62 @@
+#!/bin/bash
+cd G09
+timestep=$1
+ibead=$2
+input=input$ibead
+natom=$(cat ../geom.dat.$ibead | wc -l )
+let natom2=natom+2
+
+
+CHKFILE="$PWD/checkpoint$ibead.chk"
+
+#-----------NOTES FOR GAUSSIAN INPUT-------------------
+# (guess=(read,Tcheck) reads wavefunction from checkpoint file, if present
+# SCF=XQC turns on automatically quadratic convergence (SCF=QC), when we do not converge
+
+# FOR METHODS OTHER THAN HF or DFT, you have to change greping of energies at the end of this script!!!! 
+
+#-----USER SETUP---------------------------------------------------------
+cat > $input.com << EOF
+\$rungauss
+%chk=$CHKFILE
+%Mem=720Mb
+%Nproc=1
+#B97D/6-31g* Force  guess=(Read,TCheck) punch(Derivatives)
+
+comment
+
+0 1
+EOF
+
+########END OF USER MODIFICATIONS###################
+
+cat ../geom.dat.$ibead >> $input.com
+echo ' ' >>$input.com
+
+#######GAUSSIAN STUFF###########
+export g09root="/home/slavicek/G03/gaussian09/a02/g09"
+export GAUSS_EXEDIR="$g09root"
+export GAUSS_SCRDIR="$PWD/scratch$ibead"
+export scrhome=$GAUSS_SCRDIR
+export LD_LIBRARY_PATH=$GAUSS_EXEDIR
+mkdir -p $GAUSS_SCRDIR
+
+$GAUSS_EXEDIR/g09 $input.com
+if [[ $? -eq 0 ]];then
+   cp $input.log $input.log.old
+else
+   cp $input.log $input.log.error
+   echo "WARNING from r.g09: G09 job probably failed."
+   echo " See $input.log.error"
+fi
+
+/bin/rm -rf /$GAUSS_SCRDIR
+/bin/rm -rf core
+################################
+
+### EXTRACTING ENERGY AND FORCES
+grep 'SCF Done' $input.log |head -1|awk -F" " '{print $5}' > ../engrad.dat.$ibead
+
+grep -A$natom2 'Forces (Hartrees/Bohr)' $input.log | tail -n $natom | awk '{printf"%1.9f %1.9f %1.9f \n",-1*$3,-1*$4,-1*$5}' >> ../engrad.dat.$ibead
+
+

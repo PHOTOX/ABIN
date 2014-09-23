@@ -1,0 +1,83 @@
+#!/bin/bash
+cd MOLPRO
+timestep=$1
+ibead=$2
+input=input$ibead
+
+
+rm $input.pun
+# MOLPRO-CASSCF/CASPT2 for ground state
+# Predavame vlnovou funkci. Pokud nechceme, staci zakomentovat 2.radek,
+# 3. radek (PUNCH) je nutny!, bereme z nej sily a energie
+cat > $input.com << EOF
+***Abin job
+memory,80,m;
+file,2,$input.wfu,unknown
+PUNCH,$input.pun,new
+gprint,orbital,civector
+
+Angstrom
+
+geometry=../geom.dat.$ibead
+
+basis=6-31g*
+
+show,lastorb
+if (lastorb.ne.MCSCF)then
+{hf
+ wf,20,0,0}
+endif
+
+{mcscf;
+occ,10;closed,2;
+WF,19,0,1;state,1;weight,1,1;
+maxiter,40
+!{ITERATIONS;DO,Uncouple,1,5}
+cpmcscf,grad,1.1;
+}
+
+forces;
+
+! UNCOMMENT FOLLOWING LINES FOR GENERALY CONTRACTED BASIS SETS (e.g. cc-pVDZ)
+!{rs2,shift=0.3,mix=1,root=1,maxit=50;state,1;
+noexc}
+!forces
+!the following is mot likely not needed
+!data,truncate,2,5002 
+
+EOF
+###END OF USER  INPUT######################
+
+#-Determine, which cluster are we on and set the proper MOLPRO path
+node=$(uname -a | awk '{print $2}' )
+if [[ $node =~ s[0-9] ]];then
+   m12root=$(readlink -f /usr/local/programs/molpro/molpro2012.1/arch/amd64-intel_12.0.5.220/molpros_2012_1_Linux_x86_64_i8)
+elif [[ $node =~ a[0-9] ]] ;then
+   m12root=$(readlink -f /usr/local/programs/common/molpro/molpro2012.1/arch/x86_64-intel_12.0.5.220/molpros_2012_1_Linux_x86_64_i8)
+else
+   m12root=$(readlink -f /usr/local/programs/common/molpro/molpro2012.1/arch/x86_64-intel_12.0.5.220/molpros_2012_1_Linux_x86_64_i8)
+   #echo "Could not recognize node. Please, set variable m12root manualy in script $0"
+fi
+MOLPROEXE=$m12root/bin/molpro
+
+
+#----------MOLPRO-------------------------
+#wavefunction is copied to current working directory after end of the job
+# i.e. we will have wavefunction even after restart
+export TMPDIR=$PWD/scratch$ibead
+$MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
+if [[ $? -eq 0 ]];then
+   cp $input.com.out $input.com.out.old
+else
+   cp $input.com.out $input.com.out.error
+   echo "WARNING from r.molpro: MOLPRO job probably failed. See $input.com.out.error"
+fi
+###########################################
+
+#######Ziskani sil a energii###############
+#grep 'RSPT2 STATE 1.1 Energy' $input.pun | awk '{print $5}' > ../engrad.dat.$ibead
+grep 'MCSCF STATE 1.1 Energy' $input.pun | awk '{print $5}' > ../engrad.dat.$ibead
+
+#Here we get forces, should be the same for both CASSCF and CASPT2
+grep 'GRADIENT,' $input.pun | awk '{print $5,$6,$7}' >> ../engrad.dat.$ibead
+

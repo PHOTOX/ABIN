@@ -6,16 +6,11 @@ check for presence of file DYN/r.dyn in init.f03
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
 Check this value for larger clusters.
-fot natom=1, segfault if ndist>0
 
-
-open file temper.dat even if inose.eq.0???
-
-add swith to calc.spectrum.cpp, nm or ev or cm
+add a swith to calc.spectrum.cpp, nm or ev or cm
 
 
 FOR 1.0 version
-add interfaces to git, determine natom by "cat ../geom.dat.$ibead | wc -l"
 comment out export COMMIT in makefile
 rename abin.dev to abin.v1
 

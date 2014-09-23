@@ -1,0 +1,110 @@
+#!/bin/bash
+cd QCHEM
+export QC=/usr/local/programs/common/qchem/qchem-4.1/arch/x86_64
+timestep=$1
+ibead=$2
+input=input$ibead.com
+natom=$(cat ../geom.dat.$ibead | wc -l )
+
+#-----------NOTES FOR QCHEM-------------------
+# SCF_GUESS read should guarantee faster SCF convergence
+# QCHEM sometimes print core file for no obvious reason ---> removing core at the end
+# QCHEM must have SCF_CONVERGENCE set to high value (10?)
+# QCHEM must have symmetry and reorientation turned off (sym_ignore true),
+# otherwise it yields bad gradients
+# Comments on energy and gradient readings are below 
+
+natom=`head -1 ../mini.dat`
+
+echo '
+$molecule
+0 1'> $input
+cat ../geom.dat >> $input
+echo '$end
+
+$rem'>>$input
+
+if [ "$istep" -ne "1" ]; then
+  echo 'SCF_GUESS read'>>$input
+fi
+
+echo '
+JOBTYPE force
+EXCHANGE hf
+CORRELATION mp2
+BASIS  aug-cc-pVDZ
+max_scf_cycles    100
+SCF_ALGORITHM DIIS_GDM ! use DIIS for first iterations, then switch to geometric direct minimizer
+MAX_DIIS_CYCLES 50 ! do not allow more than 100 DIIS iterations
+THRESH_DIIS_SWITCH 4 ! change to GDM when accuracy 10-4 is reached
+scf_convergence 10 ! convergence criterion is 10-10
+THRESH		13 ! should be scf_convergence+3
+N_FROZEN_CORE FC ! do not correlate core electrons
+sym_ignore true  ! ignores symmetry throughout the calculations
+$end
+
+'>>$input
+
+source ${QC}/qcenv.sh
+export QCSCRATCH=$PWD/scratch$ibead
+qchem $input $input.out WF$ibead &> $input.log
+
+if [[ $? -eq 0 ]];then
+   cp $input.out $input.out.old
+else
+   echo "WARNING from r.qchem: QCHEM calculation probably failed."
+   echo "See $input.com.out.error"
+   cp $input.out $input.out.error
+fi
+
+### EXTRACTING ENERGY AND FORCES
+# 1) Adjust to different method if needed. The string 'Full Analytical Gradient of MP2 energy
+# is only valid for MP2'
+# Energies should work for all cases, but always check that!!
+# 2) gradientvar tells, how many atomic gradients are on one line in the qchem output
+# gradientvar needs to be adjusted for a particular method 
+
+gradientvar=5   #=6 for HF and DFT
+                #=5 for MP2 I think
+grep 'otal energy' $input.out|tail -1|awk -F "=" '{print $2}' | awk '{print $1}' > ../engrad.dat.$ibead
+
+coeff1=`expr $natom / $gradientvar`
+coeff2=`expr $natom % $gradientvar`
+
+if [ "$coeff2" -eq  0 ] ; then
+  coeff=`expr $coeff1`
+else
+coeff=`expr $coeff1 + 1`
+fi 
+
+gradx=2
+grady=`expr $gradx + 1`
+gradz=`expr $gradx + 2`
+k=0
+for ((i=1;i<=coeff;i++)){
+
+fx=( ${fx[@]} `grep 'Full Analytical Gradient of MP2 Energy' $input.out -A$gradx | tail -1` )
+fy=( ${fy[@]} `grep 'Full Analytical Gradient of MP2 Energy' $input.out -A$grady | tail -1` )
+fz=( ${fz[@]} `grep 'Full Analytical Gradient of MP2 Energy' $input.out -A$gradz | tail -1` )
+unset fx[$k]
+unset fy[$k]
+unset fz[$k]
+
+gradx=`expr $gradx + 4`
+grady=`expr $grady + 4`
+gradz=`expr $gradz + 4`
+k=`expr $k + $gradientvar`
+}
+
+fx=( ${fx[@]} )
+fy=( ${fy[@]} )
+fz=( ${fz[@]} )
+
+for ((i=0;i<natom;i++)){
+echo "${fx[$i]} ${fy[$i]} ${fz[$i]}">>../engrad.dat.$ibead
+}
+
+### end of reading energies and forces
+
+rm -f core
+

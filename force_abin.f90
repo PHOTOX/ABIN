@@ -63,29 +63,36 @@
 !--- HERE we decide which program we use to obtain gradients and energies
      select case (pot)
       case ('g09')
-              write(chsystem,*)'./G09/r.g09 '
+              write(chsystem,'(A)')'./G09/r.g09 '
       case ('tera')
-              write(chsystem,*)'./TERA/r.tera '
+              write(chsystem,'(A)')'./TERA/r.tera '
       case ('orca')
-              write(chsystem,*)'./ORCA/r.orca '
+              write(chsystem,'(A)')'./ORCA/r.orca '
       case ('molpro')
-              write(chsystem,*)'./MOLPRO/r.molpro '
+              write(chsystem,'(A)')'./MOLPRO/r.molpro '
       case ('turbo')
-              write(chsystem,*)'./TURBO/r.turbo '
+              write(chsystem,'(A)')'./TURBO/r.turbo '
       case ('gamess')
-              write(chsystem,*)'./GAMESS/r.gamess '
+              write(chsystem,'(A)')'./GAMESS/r.gamess '
       case ('qchem')
-              write(chsystem,*)'./QCHEM/r.qchem '
+              write(chsystem,'(A)')'./QCHEM/r.qchem '
       case ('dyn')
-              write(chsystem,*)'./DYN/r.dyn '
+              write(chsystem,'(A)')'./DYN/r.dyn '
       case DEFAULT
               write(*,*)'Error in input parameter "pot"'
               call abinerror('force_abin')
      end SELECT
 
+     INQUIRE(FILE=chsystem, EXIST=file_exists)
+     if (.not.file_exists)then
+        write(*,*)'File ',chsystem
+        write(*,*)'does not exist! Exiting...'
+        call abinerror('force_abin')
+     end if
+
 !-Passing arguments to bash script
 !-First argument is time step
-!-Second argument is the bead index, used for parallel calculations
+!-Second argument is the bead index, neccessary for parallel calculations
    write(chsystem,'(A20,I13,I4.3)')chsystem,it,iw
 
   !for SH, pass the 4th parameter:precision of NACME as 10^(-nac_accu1)
@@ -97,7 +104,7 @@
 
 !----make sure that the file exist and flush the disc buffer     
      itest=0
-     INQUIRE(FILE=chforce, EXIST=file_exists)
+     INQUIRE( FILE=chforce, EXIST=file_exists )
      do while(.not.file_exists.and.itest.lt.10)
      write(*,*)'WARNING:File ',chforce,' does not exist. Waiting..'
      call system('sync')    !mel by zajistit flush diskoveho bufferu

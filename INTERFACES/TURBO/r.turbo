@@ -1,0 +1,50 @@
+#!/bin/bash
+cd TURBO
+timestep=$1
+ibead=$2
+input=input$ibead
+natom=$(cat ../geom.dat.$ibead | wc -l )
+natom1=`expr $natom + 1`
+
+#NOTE: this SCRIPT WAS NOT EXTENSIVELY TESTED.
+# USE WITH CARE!!!
+# it will not work in parallel version of ABIN
+#MODIFY FILE input.turbo !
+#If you want something else then DFT,you have to also modify greping of energies and gradients
+
+export TURBODIR=/home/oncakm/TurboMole-6.0
+PATH=/home/oncakm/TurboMole-6.0/scripts:$PATH
+PATH=$TURBODIR/bin/x86_64-unknown-linux-gnu:$PATH
+SCRATCH="./scratch"
+
+
+echo $natom > geom.temp
+echo > geom.temp
+cat ../geom.dat >>geom.temp
+
+x2t geom.temp > coord
+
+#TODO: change this
+if [ ! -d $SCRATCH ];then
+	mkdir $SCRATCH
+ 	rm -r TEMP
+	mkdir TEMP
+	cp coord input.turbo TEMP
+	cd TEMP
+	define < input.turbo > define.out
+	cp * $SCRATCH
+	cd ../
+fi
+
+cp coord TEMP/control $SCRATCH
+ 
+BACK=`pwd`
+
+cd $SCRATCH
+ridft > job.out
+rdgrad > grad.out
+
+grep 'total energy' job.out | awk -F" " '{print $5}'|tail -1 > $BACK/../engrad.dat.$ibead
+tail -$natom1 gradient|head -$natom |awk -F" " '{print $1 " " $2 " " $3 }'>> $BACK/../engrad.dat.$ibead
+
+

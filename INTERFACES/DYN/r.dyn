@@ -1,0 +1,42 @@
+#!/bin/bash
+cd DYN
+timestep=$1
+ibead=$2
+input=input$ibead
+natom=$(cat ../geom.dat.$ibead | wc -l )
+
+# TEMPLATE FOR AB INITIO DYNAMICS with ABIN
+# MODIFY accordingly and set pot='dyn' in input.in
+
+cat > $input.com << EOF
+job input here
+
+EOF
+
+cat ../geom.dat >> geom.xyz  #only xyz coordinates
+
+
+#END OF USER INPUT################
+
+#######LAUNCHING PROGRAM###########
+SETTING PROGRAME VARIABLES
+DONT FORGET TO DISTINGUISH THE SCRATCH DIRECTORIES BY $ibead FOR PARALLEL JOBS
+
+PATH_TO_PROGRAM/dyn $input.com > $input.com.out
+#check whether all is ok
+if [[ $? -eq 0 ]];then
+   cp $input.com.out $input.com.out.old
+else
+   echo "WARNING: DYN calculation probably failed."
+   echo "See $input.com.out.error"
+   cp $input.com.out $input.com.out.error
+fi
+
+################################
+
+
+### EXTRACTING ENERGY AND GRADIENTS
+grep 'energy' $input.com.out | awk -F "=" '{print $2}'>../engrad.dat.$ibead
+grep 'Gradient' $input.com.out -A$lines | tail -n $natom >>../engrad.dat.$ibead
+
+
