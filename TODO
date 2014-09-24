@@ -1,8 +1,6 @@
 FINAL TASKS
 ondra...check interfaces...
 
-check for presence of file DYN/r.dyn in init.f03
-
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
 Check this value for larger clusters.

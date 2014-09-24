@@ -1,0 +1,71 @@
+This is a sample input file for ABIN for CMD simulation
+
+&general
+pot='nab'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,nab,harm,morse,guillot,2dho 
+natom=27,		!number of atoms
+ipimd=0,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
+imini=2000,		! equilibration period (should be at least 2000), or number of steps for minimization
+istage=0,		! staging transformation (1), without staging (0)
+nstep=50000,		! number of steps
+dt=20.,			! timestep [au]
+irandom=1651563,  	! random seed
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=5,		! how often should we print coordinates?
+nrest=5,		! how often we print restart files?
+nwritev=0,		! how often we print velocities?
+/
+
+&nhcopt
+temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
+inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2
+nchain=4,		! number of nose-hoover chains
+tau0=0.001,		! relaxation time of NHC thermostat
+nrespnose=3,		! number of inner respa steps for NH thermostat
+nyosh=7,		! number of steps in suzuki-yoshida scheme,can be 1,3 or 7
+/
+
+&nab
+cutoff=1000.0,	! non-bonded cutoff (both LJ and coulomb)
+nsnb=100,	!update non-bonded list every nsnb steps	
+/
+
+
+----------------------END OF INPUT---------------------------------------------
+!!!!!EVERYTHING BELOW IS IGNORED!!!!
+
+
+
+
+------------------OTHER OPTIONS (if needed, move them to their sections)------- 
+
+GENERAL
+isbc=0,			! spherical boundary conditions
+rb_sbc=27.5d0,          ! radius of the cluster for sbc
+kb_sbc=0.2d0,		! force constant for spherical potential [au]
+END 
+
+SYSTEM
+!---------SHAKE OPTIONS  (see manual for complete description)
+nshake=0,		! Number of bond constraints
+shake_tol=0.0001	! Shake tolerance
+ishake1=2,2		! list of bond constraints
+ishake2=7,8		!
+nmol=1,			! number of "molecules"
+nshakemol=0,            ! number of constraints in molecules
+
+!---ANGLE and Dihedral analysis
+nang=2,			! number of analyzed angles
+ang1=1,		! angle definition: first atoms
+ang2=1,		! angle definition: second atoms
+ang3=1,		! angle definition: third  atoms
+ndih=2,			! number of analyzed dihedrals
+dih1=1,		! dihedral def: first atoms
+dih2=2,		! dihedral def: second atoms
+dih3=3,		! dihedral def: third atoms
+dih4=4,		! dihedral def: fourth atoms
+nbin_ang=700,		! number of bins for angles and dihedrals
+shiftdih=360.0d0 	! 0 for dihs between (-180,180); 360 for (0,360)
+
+END SYSTEM

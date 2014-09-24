@@ -1,0 +1,26 @@
+This is a sample input file for ABIN for GLE simulation (quantum thermostat).
+
+&general
+pot='g09'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,qchem 
+natom=27,		! number of atoms
+ipimd=1,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
+nwalk=4,                ! 4 is usually sufficient for PIGLE simulations
+istage=0,               ! for PIGLE, istage must be 0
+imini=2000,		! equilibration period (should be at least 2000), or number of steps for minimization
+nstep=50000,		! number of steps
+dt=20.,			! timestep [au]
+irandom=1651563,  	! random seed
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=5,		! how often should we print coordinates?
+nrest=5,		! how often we print restart files?
+nwritev=0,		! how often we print velocities?
+/
+
+
+&nhcopt
+temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
+inose=2,		! GLE  thermostat 2, needs GLE-A and GLE-C files
+/
+

@@ -1,5 +1,6 @@
 #!/bin/bash
 cd G09
+export g09root="/home/slavicek/G03/gaussian09/a02/g09"
 timestep=$1
 ibead=$2
 input=input$ibead
@@ -34,7 +35,6 @@ cat ../geom.dat.$ibead >> $input.com
 echo ' ' >>$input.com
 
 #######GAUSSIAN STUFF###########
-export g09root="/home/slavicek/G03/gaussian09/a02/g09"
 export GAUSS_EXEDIR="$g09root"
 export GAUSS_SCRDIR="$PWD/scratch$ibead"
 export scrhome=$GAUSS_SCRDIR
