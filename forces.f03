@@ -8,7 +8,7 @@ module mod_forces
 
    subroutine force_clas(fx,fy,fz,x,y,z,energy)
       use mod_general
-      use mod_qmmm,     only: qmmmtype,force_LJCoul
+      use mod_qmmm,     only: force_LJCoul
       use mod_nab,      only: ipbc,wrap,nsnb,force_nab
       use mod_sbc,      only: force_sbc, isbc !,ibag
       use mod_system,   only: conatom
@@ -91,10 +91,9 @@ module mod_forces
 !      if (ibag.eq.1) call force_bag(transx,transy,transz,fxab,fyab,fzab)
 
 !---------QMMM SECTION-----------------
-     if(iqmmm.eq.1)then
-      if(qmmmtype.eq.'nab') call force_nab(transx,transy,transz,fxab,fyab,fzab,eclas)
-      if(qmmmtype.eq.'abin') call force_LJCoul(transx,transy,transz,fxab,fyab,fzab,eclas)
-     endif
+!- ONIOM method (iqmmm=1) is called in force_abin
+     if(iqmmm.eq.2) call force_nab(transx,transy,transz,fxab,fyab,fzab,eclas)
+     if(iqmmm.eq.3) call force_LJCoul(transx,transy,transz,fxab,fyab,fzab,eclas)
 
 !--------------------------------------
 

@@ -180,7 +180,7 @@
 !     CORRECTION FOR QMMM, COMPUTING ONLY QM PART and SUBSTRACTING FROM THE WHOLE SYSTEM
 !     currently does not work!!!
 !     PBC NOT SUPPORTED!
-      if(iqmmm.eq.1)then
+      if(iqmmm.eq.2)then
 
         if(idebug.eq.1)then
                 iter=-1
