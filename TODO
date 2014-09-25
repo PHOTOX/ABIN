@@ -1,12 +1,9 @@
 FINAL TASKS
-ondra...check interfaces...
-
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
 Check this value for larger clusters.
 
 add a swith to calc.spectrum.cpp, nm or ev or cm
-
 
 FOR 1.0 version
 comment out export COMMIT in makefile

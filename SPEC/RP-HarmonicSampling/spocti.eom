@@ -1,0 +1,56 @@
+#!/bin/bash
+
+name=cyclo
+maxi=1000
+natoms=7
+
+i=1
+j=1
+rm run.$name.eom.*
+
+while [ $i -le $maxi ] 
+do
+
+cat > $name.$i.com << EOF 
+print,civector
+memory,150,m;
+geometry={
+nosymm,noorient,angstrom
+EOF
+
+awk -v natoms=$natoms 'BEGIN{
+ncoord=3*natoms
+AT[1]="Ge"
+AT[2]="Si"
+AT[3]="Si"
+AT[4]="H"
+AT[5]="H"
+AT[6]="H"
+AT[7]="H"
+}
+{
+	for (k=1;k <= ncoord;k++) {
+		coord[k]=$(k+1)
+	}
+}
+END{
+for (i=1;i<=ncoord;i=i+3) {
+	n++
+	print (AT[n] ",,"),coord[i]/1.8897,coord[i+1]/1.8897,coord[i+2]/1.8897  
+}
+}' ../SPAWN.SUP/Traj.$i >> $name.$i.com	
+
+cat >>  $name.$i.com << EOF
+}
+basis=aug-cc-pVDZ
+hf
+{ccsd
+eom,-20.1,trans=1}
+EOF
+
+echo "~/bin/runM06 $name.$i.com" >> run.$name.eom.$j
+if [ `expr $i % 50` == 0  ] ;then
+	let j=j+1
+fi
+let i=i+1
+done

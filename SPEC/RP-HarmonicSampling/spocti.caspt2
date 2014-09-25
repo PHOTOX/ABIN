@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# Simple script for doing Reflection Principle electronic spectra 
+# using CASPT2 method in MOLPRO
+# Takes geometries from Wigner Sampling
+
+name=cyclo
+maxi=50
+natoms=7
+
+i=1
+j=1
+rm run.$name.caspt2.*
+
+while [ $i -le $maxi ] 
+do
+
+cat > $name.$i.com << EOF 
+print,civector
+memory,150,m;
+geometry={
+nosymm,noorient,angstrom
+EOF
+
+awk -v natoms=$natoms 'BEGIN{
+ncoord=3*natoms
+AT[1]="C"
+AT[2]="C"
+AT[3]="C"
+AT[4]="H"
+AT[5]="H"
+AT[6]="H"
+AT[7]="H"
+}
+{
+	for (k=1;k <= ncoord;k++) {
+		coord[k]=$(k+1)
+	}
+}
+END{
+for (i=1;i<=ncoord;i=i+3) {
+	n++
+	print (AT[n] ",,"),coord[i]/1.8897,coord[i+1]/1.8897,coord[i+2]/1.8897  
+}
+}' ../SPAWN.SUP/Traj.$i >> $name.$i.com	
+
+cat >>  $name.$i.com << EOF
+}
+basis=aug-cc-pVDZ
+ks,b3lyp
+  multi;
+  occ, 13;
+  closed,9;
+  state,5;
+  maxiter,100;
+{rs2,shift=0.3,mix=5,root=1;state,5}
+do i=2,5
+exc(i-1)= 27.2114*(energy(i)-energy(1))
+dx(i-1) = trdmx((i-1)*(i-2)/2+1)
+dy(i-1) = trdmy((i-1)*(i-2)/2+1)
+dz(i-1) = trdmz((i-1)*(i-2)/2+1)
+f(i-1)=2/3*(energy(i)-energy(1))*(dx(i-1)^2+dy(i-1)^2+dz(i-1)^2)
+mark(i-1)='hola'
+enddo
+text 'Hola,CASPT2'
+table,mark,dx,dy,dz,exc,f
+EOF
+
+echo "~/bin/runM06 $name.$i.com" >> run.$name.caspt2.$j
+if [ `expr $i % 50` == 0  ] ;then
+	let j=j+1
+fi
+let i=i+1
+done

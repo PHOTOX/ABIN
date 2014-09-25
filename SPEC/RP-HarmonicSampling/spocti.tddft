@@ -1,0 +1,47 @@
+#!/bin/bash
+
+name=cyclo
+maxi=1
+natoms=7
+
+i=1
+rm run.$name.tddft
+
+while [ $i -le $maxi ] 
+do
+echo '$rungauss
+%Mem=520Mb
+%nproc=1
+#T cam-b3lyp/aug-cc-pVDZ TD=(singlets,NState=20) pop=none
+
+koment
+
+0 1' > $name.$i.com 
+
+awk -v natoms=$natoms 'BEGIN{
+ncoord=3*natoms
+AT[1]="C"
+AT[2]="C"
+AT[3]="C"
+AT[4]="H"
+AT[5]="H"
+AT[6]="H"
+AT[7]="H"
+}
+{
+	for (k=1;k <= ncoord;k++) {
+		coord[k]=$(k+1)
+	}
+}
+END{
+for (i=1;i<=ncoord;i=i+3) {
+	n++
+	printf "%2s   % 4.8f  % 4.8f  % 4.8f\n",AT[n],coord[i]/1.8897,coord[i+1]/1.8897,coord[i+2]/1.8897 
+}
+print ""
+}' ../SPAWN.SUP/Traj.$i >> $name.$i.com	
+
+echo ~/bin/G09 $name.$i.com >> run.$name.tddft
+
+let i=i+1
+done

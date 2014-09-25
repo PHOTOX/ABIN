@@ -1,0 +1,94 @@
+#!/bin/bash
+
+i=1
+while [ $i -lt 1001 ]
+do
+ echo ' &control'> Control.dat
+ echo " IRestart=0
+ IterInv=.false.
+ InitState=2
+ InitialCond=2
+ ITSharp=2
+ TSharp=1
+ NumPreSpawn=0
+ FirstGauss=.false.
+ TimeStep=10.0
+ MultiSpawn=1
+ MaxTraj=50
+ SimulationTime=2.0
+ Model=10
+ NumParticles=7
+ NumStates=2
+ EnergyAdjust=.true.
+ CSThresh=5
+ CFThresh=4.9
+ OMax=10.3
+ MaxEDiff=.05
+ PopToSpawn=0.1
+ RegThresh=0.00001
+ EShellOnly=.true.
+ NBonds=1
+ IBond(1,1)=1,2
+ IntegType='VV'
+ ExShift=0.
+ Adaptive=.false.
+ WriteMolden=.true.
+ MoldenStep=200">>Control.dat
+ head -$i randsum|tail -1|awk -F" " '{print " " $1 $2}' >> Control.dat
+echo ' DCDWrite=.true.
+ DCDStep=10
+ MultiGrad=.true.
+ WFNRestart=.false.
+/
+Particle Data: Dimensionality, Mass, GaussianWidth
+
+3 21864.0 30.0
+3 21864.0 30.0
+3 21864.0 30.0
+3 1822.  6.0
+3 1822.  6.0
+3 1822.  6.0
+3 1822.  6.0
+
+Initial State Trajectory -- Ground State Minimum
+2
+1.0
+             0.079465126    1.698191383    0.355095798
+0.0 0.0 0.0
+            -0.769743735   -1.008968381    0.666636918
+0.0 0.0 0.0
+            -2.697562136   -3.353650062    0.600768506
+0.0 0.0 0.0
+            -1.140990349   -1.977571317    4.219290325
+0.0 0.0 0.0
+            -1.037648827    2.987143061    2.634955117
+0.0 0.0 0.0
+            -3.190650230    4.259997038    4.362385507
+0.0 0.0 0.0
+            -1.289609306    0.767919193    5.583880736
+0.0 0.0 0.0
+             3.007692826    1.582783240    1.040741534
+0.0 0.0 0.0
+             5.570052243    2.978271767    1.593492379
+0.0 0.0 0.0
+             1.115213865   -1.131420544    6.183762617
+0.0 0.0 0.0
+             4.486029615   -0.028909584    4.583819265
+0.0 0.0 0.0
+             5.017601034   -2.435242130    6.262357506
+0.0 0.0 0.0
+            -1.235860363   -2.689663364    1.459347942
+0.0 0.0 0.0
+            -0.800586105   -1.089057944    5.918171336
+0.0 0.0 0.0
+            -1.614548319    3.350853641    4.426420689
+0.0 0.0 0.0
+             4.723425891    1.378921944    1.795039380
+0.0 0.0 0.0
+             4.002048005   -0.924622612    6.170966858
+0.0 0.0 0.0
+'>>Control.dat
+~oncakm/bin/runFMS cyclo.com 
+ cp Traj.1 SPAWN.SUP/Traj.$i 
+ i=`expr $i + 1`
+done

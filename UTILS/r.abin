@@ -9,7 +9,6 @@ INPUTGEOM=mini.dat
 
 export LD_LIBRARY_PATH=/home/hollas/programes/src/gcc-4.8/lib64:/home/hollas/programes/src/gcc-4.8/lib:$LD_LIBRARY_PATH
 
-myname=$(basename $0)
 echo "Job started at: " >> $OUTPUT
 date >> $OUTPUT
 echo "Running on node:" >> $OUTPUT
@@ -32,10 +31,9 @@ else
 fi
 
 
-cp -pr * /scratch/$USER/$JOBNAME/.
+cp -upr * /scratch/$USER/$JOBNAME/.
 
 cd /scratch/$USER/$JOBNAME
-rm *$myname     # hack,so that we do not overwrite stdout and stderr later
 
 $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 

@@ -1,0 +1,47 @@
+#!/bin/bash
+#tento skript je zavisly na skriptu spocti.caspt2 !!!!!!!!!!!!!
+##########SETUP#####
+name=cyclo
+numstates=4	#number of excited states (don't forget to substract ground state)
+imax=500	#maximum number of points
+##############
+
+i=1
+m=0
+rm o2 -f
+while [ $i -le $imax ]
+do
+if  [ -f $name.$i.com.out ] 
+then
+	l=`grep 'Variable memory released' $name.$i.com.out | wc -l` 
+	if [ $l == "1" ]
+	then
+###NACITAME excitacni energie a tranzitni dipolove momenty, pouzivame grep bo je to rychlejsi nez projizdeni awk
+		echo -n "$i "
+		grep 'hola'  $name.$i.com.out | awk '{
+		if ($1 == "hola" ) { 
+			print $5
+			print $2,$3,$4
+		}
+		}' >> o2
+		let m=m+1
+	fi
+fi
+let i=i+1
+done
+
+echo ""
+echo "Number of samples:" $m
+if [ $m == 0 ];then
+	exit 1
+fi
+
+echo $m > o_temp
+echo $numstates >> o_temp
+sed s/D/E/g o2 >> o_temp
+./calc.spectrum < o_temp > o$m
+#echo Graph \(eV, osc. strengths\) in \"graf\"
+echo Graph \(nm, cm^2*10-20\) in \"o$m\"
+
+awk '{print 1241./$1,$2*6.022e23/(1000*2.302)}' o$m > spec.$m.eveps.dat
+echo Graph \(eV, eps\) in \"spec.$m.eveps.dat\"
