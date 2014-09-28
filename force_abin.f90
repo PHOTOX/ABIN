@@ -150,7 +150,6 @@
        fz(iat,iw)=-fz(iat,iw)
      enddo
 
-     call printf(fx, fy, fz)
 
 !----READING of HESSIAN     
      if (ihess.eq.1)then

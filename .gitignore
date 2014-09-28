@@ -7,6 +7,7 @@ TESTS/*/*diff
 TESTS/*/*dat
 TESTS/*/*xyz
 TESTS/*/geom.dat.00*
+TESTS/*/geom_mm.dat.00*
 TESTS/ABINITIO/ORCA/input*
 TESTS/QMMM/ORCA/input*
 TESTS/QMMM/MM/input*
