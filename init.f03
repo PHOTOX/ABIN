@@ -392,7 +392,7 @@ endif
          call ABr_init()
       endif
 
-      if (iqmmm.gt.0.or.pot.eq.'mm') write(*,nml=qmmm)
+      if (iqmmm.eq.3.or.pot.eq.'mm') write(*,nml=qmmm)
 
       if (pot.eq."nab".or.iqmmm.eq.2)then
        if (alpha_pme.lt.0) alpha_pme = pi/cutoff

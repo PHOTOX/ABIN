@@ -5,7 +5,7 @@
 # WARNING: dependecies on *.mod files are hidden!
 # If you change modules, you should recompile the whole thing i.e. make clean;make
 #
-OUT = abin.dev
+OUT = abin.dev.qmmm
 # You actually have to use gfortran and gcc, becouse of precompiled LIBS
 FC = gfortran
 CC = gcc
