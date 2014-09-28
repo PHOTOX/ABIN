@@ -55,13 +55,13 @@ fi
 cd TESTS
 err=0
 
-files=( bkl.dat phase.dat coef.dat phaserest.dat phaserest.?? nacmrest.dat nacmrest.dat.?? minimize.dat geom.mini.xyz temper.dat r.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? ORCA/input* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie_mini.xyz restart.xyz.old restart.xyz restart.xyz.?? restart.xyz.? )
+files=( bkl.dat phase.dat coef.dat phaserest.dat phaserest.?? nacmrest.dat nacmrest.dat.?? minimize.dat geom.mini.xyz temper.dat r.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? ORCA/input* MM/input* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie_mini.xyz restart.xyz.old restart.xyz restart.xyz.?? restart.xyz.? )
 
 #EULER should check wf_thresh conditions
 if [[ $2 == "sh" ]];then
 folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
 else
-folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE SH_TDC PIGLE GLE PIMD ABINITIO SHAKE HARMON MINI )
+folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE SH_TDC PIGLE GLE PIMD ABINITIO SHAKE HARMON MINI QMMM )
 #folders=( SHAKE )
 fi
 
