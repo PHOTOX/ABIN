@@ -18,6 +18,7 @@ module mod_forces
       use mod_utils,    only: printf
       use mod_transform
       use mod_interfaces, only: force_abin
+      use mod_water,    only: watpot
       real(DP),intent(inout) ::  x(:,:),y(:,:),z(:,:)
       real(DP),intent(inout) ::  fx(:,:),fy(:,:),fz(:,:)
       real(DP),intent(out)   ::  energy
@@ -72,6 +73,8 @@ module mod_forces
      SELECT CASE (pot)
         case ("mm")
           call force_LJCoul(transx,transy,transz,fxab,fyab,fzab,eclas)
+        case ("mmwater")
+          call force_water(transx,transy,transz,fxab,fyab,fzab,eclas, natom, nwalk, watpot)
         case ("harm")
           call force_harmon(transx,transy,transz,fxab,fyab,fzab,eclas)
         case ("2dho")

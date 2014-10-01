@@ -32,6 +32,7 @@ subroutine init(dt)
       use mod_shake
       use mod_minimize, only: gamm, gammthr
       use mod_analysis, only: restin
+      use mod_water,    only: watpot, check_water
       implicit none
       real(DP),intent(out) :: dt
       real(DP), allocatable  :: masses(:)
@@ -52,7 +53,7 @@ subroutine init(dt)
 
       namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-               parrespa,dime,ncalc,idebug,enmini,rho,iknow
+               parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot
 
       namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
                         scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
@@ -249,6 +250,8 @@ subroutine init(dt)
       do iat=1,natom
          names(iat)(2:2)=UpperToLower(names(iat)(2:2))
       end do
+
+      if (pot.eq.'mmwater') call check_water(natom, names)
 
 
 !-----THERMOSTAT INITIALIZATION------------------ 
