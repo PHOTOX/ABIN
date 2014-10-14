@@ -28,7 +28,7 @@
       module mod_array_size
       use mod_const, only: DP 
       implicit none
-      integer,parameter   :: MAXCHAIN=10
+      integer,parameter   :: MAXCHAIN=10, MAXTYPES = 10
       integer,parameter   :: NBINMAX=2000, NDISTMAX=30
       integer,parameter   :: NSTMAX=20, NTRAJMAX=1
       save

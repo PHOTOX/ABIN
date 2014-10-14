@@ -51,21 +51,28 @@ module mod_sh
    gama=0.0d0
 
    allocate( nacx(natom, ntrajmax, nstate, nstate) )
+   allocate( nacy(natom, ntrajmax, nstate, nstate) )
+   allocate( nacz(natom, ntrajmax, nstate, nstate) )
+   allocate( nacx_old(natom, ntrajmax, nstate, nstate) )
+   allocate( nacy_old(natom, ntrajmax, nstate, nstate) )
+   allocate( nacz_old(natom, ntrajmax, nstate, nstate) )
    nacx=0.0d0
    !automatic allocation and data copying
-   nacy=nacx
-   nacz=nacx
+   nacy=0.0d0
+   nacz=0.0d0
    nacx_old=nacx
    nacy_old=nacx
    nacz_old=nacx
    if (inac.eq.1)then
       allocate( dotproduct_old(nstate, nstate, ntrajmax) )
+      allocate( dotproduct(nstate, nstate, ntrajmax) )
       dotproduct_old=0.0d0
       dotproduct=dotproduct_old
       adjmom=1
    end if
 
    allocate( en_array(nstate, ntraj) )
+   allocate( en_array_old(nstate, ntraj) )
    en_array=0.0d0
    en_array_old=en_array
 

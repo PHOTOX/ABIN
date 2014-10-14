@@ -16,8 +16,14 @@ module mod_nhc
    integer :: imasst=1  ! switch for massive thermostatting
    integer :: nrespnose=3,nyosh=7,nmolt=0
    integer :: scaleveloc, readNHC=1
+#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
    integer,allocatable :: natmolt(:)
    integer,allocatable :: nshakemol(:)
+#else
+   integer, parameter  ::  MAXMOL=3000
+   integer  :: natmolt     ( MAXMOL )
+   integer  :: nshakemol   ( MAXMOL )
+#endif
    real(DP),allocatable :: pnhx(:,:,:),pnhy(:,:,:),pnhz(:,:,:)
    real(DP),allocatable :: xi_x(:,:,:), xi_y(:,:,:),xi_z(:,:,:)
    real(DP),allocatable :: w(:),ms(:,:),Qm(:)

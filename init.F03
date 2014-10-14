@@ -34,11 +34,11 @@ subroutine init(dt)
       use mod_analysis, only: restin
       implicit none
       real(DP),intent(out) :: dt
-      real(DP), allocatable  :: masses(:)
+      real(DP) :: masses(MAXTYPES)
       real(DP)  :: rans(10)
       integer :: iw,iat,natom1,imol,shiftdihed=1, iost
       integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
-      character(len=2), allocatable :: massnames(:)
+      character(len=2) :: massnames(MAXTYPES)
       character(len=10)   :: chaccess
       character(len=200)  :: chinput, chcoords
       character(len=200)  :: chiomsg
@@ -62,7 +62,7 @@ subroutine init(dt)
                         Nshake,ishake1,ishake2,shake_tol
       namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
                         nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
-      namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,inames,qmmmtype
+      namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,qmmmtype
       namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
 
       chcoords='mini.dat'
@@ -91,19 +91,21 @@ subroutine init(dt)
        scaleveloc=1
       endif
 
-      !we have to initialize here, because we read them from input
-      allocate( names(natom)     )
-      allocate( attypes(natom)   )
-      allocate( massnames(natom) )
+      ! We have to initialize here, because we read them from input
+      allocate( names( natom )     )
       names     = ''
-      attypes   = names
-      massnames = names
-      allocate( masses(natom)    )
-      masses = -1.0d0
+      attypes   = ''
+      massnames = ''
+      masses    = -1.0d0
+
+#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
       allocate( ishake1(natom*3-6) )
       allocate( ishake2(natom*3-6) )
-      ishake1 = 0
-      ishake2 = ishake1
+#endif
+      do iat=1,natom*3-6
+         ishake1(iat) = 0
+         ishake2(iat) = 0
+      end do
 
 
       ! the namelist system does not need to be present
@@ -120,10 +122,14 @@ subroutine init(dt)
          massnames=LowerToUpper(massnames)
       end if
 
+#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
       allocate ( natmolt(natom)  )
       allocate ( nshakemol(natom)  )
-      natmolt=0
-      nshakemol=natmolt
+#endif
+      do iat=1,natom  !cannot be more then natom
+         natmolt(iat) = 0
+         nshakemol(iat) = 0
+      end do
       read(150,nhcopt)
       rewind(150)
 
@@ -135,15 +141,14 @@ subroutine init(dt)
       end if
 
       if(iqmmm.eq.1.or.pot.eq.'mm')then
-         allocate( q(natom) )
-         allocate( rmin(natom) )
-         allocate( eps(natom) )
          read(150,qmmm)
          rewind(150)
       end if
 
       if(qmmmtype.eq."nab".or.pot.eq.'nab')then
+#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
          allocate ( natmol(natom) )
+#endif
          read(150,nab)
          rewind(150)
       end if
@@ -665,6 +670,10 @@ endif
       endif
       if(imasst.eq.0.and.nmolt.le.0)then
               write(*,*)'Number of molecules coupled to separate NH chains not specified!Set nmolt > 0.'
+              error=1
+      endif
+      if(nmolt.gt.natom)then
+              write(*,*)'Input error: nmolt > natom, which is not possible. Consult the manual.'
               error=1
       endif
       if(imasst.eq.0)then

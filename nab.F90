@@ -6,7 +6,11 @@
       real(DP) :: alpha_pme=-1,kappa_pme=-1,cutoff=100.0d0
       real(DP) :: epsinf=3d33
       real(DP), allocatable :: charges(:)
+#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
       integer, allocatable  :: natmol(:) !used for wraping, independent of nmolt
+#else
+      integer  :: natmol(2000) !hardcoded for older gfortran
+#endif
       integer  :: nmol=1 !used for wraping, independent of nmolt
       integer  :: ipbc=0,nsnb=1
       integer  :: ips=0 ! 1-both LJ and coul, 2-coul 3- LJ

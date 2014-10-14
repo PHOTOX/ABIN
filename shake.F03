@@ -6,7 +6,12 @@ module mod_shake
    private
    public   :: shake_init, shake_tol, nshake, shake, ishake1, ishake2
    real(DP), allocatable :: dshake(:)
+#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || ( __GNUC__ > 4 )
    integer, allocatable  :: ishake1(:),ishake2(:)
+#else
+   integer, parameter    :: MAXSHAKE=6000
+   integer :: ishake1(maxshake),ishake2(maxshake)
+#endif
    real(DP) :: shake_tol=0.001d0
    integer  :: nshake=0
    save

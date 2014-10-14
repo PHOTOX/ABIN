@@ -3,13 +3,15 @@
 !------------------------------------------------------
 module mod_qmmm
    use mod_const, only: DP
+   use mod_array_size, only: MAXTYPES
    use mod_utils, only: abinerror
    implicit none
-   character(len=2), allocatable :: attypes(:)
-   integer          :: natqm,natmm
+   integer, parameter   :: maxtype=10  ! TODO: for now, we dont sanitize input for this
+   integer              :: natqm,natmm
+   character(len=2)     :: attypes( MAXTYPES )
    character(len=10),parameter :: LJcomb='LB' !no other option for now
-   character(len=10) :: qmmmtype='NA'
-   real(DP),allocatable  :: q(:),rmin(:),eps(:)
+   character(len=10)    :: qmmmtype='NA'
+   real(DP)             :: q( MAXTYPES ), rmin( MAXTYPES ), eps( MAXTYPES )
    real(DP),allocatable  :: AIJ(:,:),BIJ(:,:)
    save
    CONTAINS

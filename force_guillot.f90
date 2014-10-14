@@ -4,6 +4,7 @@
 
 module mod_guillot
    use mod_const, ONLY: DP, ANG, AUTOKCAL
+   use mod_utils, ONLY: abinerror
    private
    public :: force_guillot,inames_guillot
 
@@ -22,13 +23,6 @@ module mod_guillot
 
 
       do i=1,natom
-!       if(names(i).eq.'H')then
-!        inames(i)=1
-!       else if(names(i).eq.'O')then
-!        inames(i)=0
-!       else if (names(i).eq.'CL')then
-!        inames(i)=2
-!       endif
        do k=1,nwalk
        fx(i,k)=0.0d0
        fy(i,k)=0.0d0
@@ -309,6 +303,9 @@ module mod_guillot
         inames(i)=0
        else if (names(i).eq.'CL')then
         inames(i)=2
+       else
+        write(*,*)'Error: Wrong atom type for guillot potential!'
+        call abinerror('inames_guillot')
        endif
       enddo
    end subroutine inames_guillot
