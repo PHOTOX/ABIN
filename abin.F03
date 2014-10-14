@@ -282,16 +282,6 @@ print '(a)','   / /      \ \    | |_|  |   | |   | |   \  |'
 print '(a)','  /_/        \_\   |_____/    |_|   |_|    \_|'
 print '(a)',' '
 
-!print '(a)','                    _____      _     _        _ '
-!print '(a)','        /\         |  _  \    | |   | |\     | |'
-!print '(a)','       /  \        | |_|  |   | |   | | \    | |'
-!print '(a)','      / /\ \       |      /   | |   | |\ \   | |'
-!print '(a)','     / /  \ \      |-----|    | |   | | \ \  | |'
-!print '(a)','    / /----\ \     |-----\    | |   | |  \ \ | |'
-!print '(a)','   / /------\ \    |  _   \   | |   | |   \ \| |'
-!print '(a)','  / /        \ \   | |_|  |   | |   | |    \ | |'
-!print '(a)',' /_/          \_\  |_____/    |_|   |_|     \|_|'
-!print '(a)',' '
 print '(a)','     version 1.0'
 print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek       2014'
 print '(a)',' '
@@ -300,10 +290,12 @@ print *,'Compiled at  ',date
 print *,commit
 !$ print *,'Compiled with parallel OpenMP support for PIMD.'
 print *,' '
-!COMMENT THIS IF YOU DON'T HAVE FORTRAN 2008
-print *, 'This file was compiled by ', &
+
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+print *, 'This file was compiled by ',  &
              compiler_version(), ' using the options: '
 print *,     compiler_options()
+#endif
 
 write(*,*)'Job started at:'
 write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &

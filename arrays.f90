@@ -22,46 +22,61 @@ module mod_arrays
       ! This is to avoid segfault for natom=1 and ndist>0
       if (natomalloc.eq.1)then
          allocate( x(natomalloc+1, nwalkalloc) )
+         allocate( y(natomalloc+1, nwalkalloc) )
+         allocate( z(natomalloc+1, nwalkalloc) )
+         allocate( transx(natomalloc+1, nwalkalloc) )
+         allocate( transy(natomalloc+1, nwalkalloc) )
+         allocate( transz(natomalloc+1, nwalkalloc) )
       else
          allocate( x(natomalloc, nwalkalloc) )
+         allocate( y(natomalloc, nwalkalloc) )
+         allocate( z(natomalloc, nwalkalloc) )
+         allocate( transx(natomalloc, nwalkalloc) )
+         allocate( transy(natomalloc, nwalkalloc) )
+         allocate( transz(natomalloc, nwalkalloc) )
       end if
 
       x=0.0d0
       !automatic allocation
       y=x
       z=x
-
-      amt=x; amg=amt
-
       transx=x
       transy=transx
       transz=transx
 
-      px=x
-      py=px
-      pz=px
+      allocate( amt(natomalloc, nwalkalloc) )
+      allocate( amg(natomalloc, nwalkalloc) )
+      amt=0.0d0; amg=amt
 
-      vx=px
-      vy=vx
-      vz=vx
 
-      vx_old=vx
-      vy_old=vx_old
-      vz_old=vx_old
+      allocate( px(natomalloc, nwalkalloc) )
+      allocate( py(natomalloc, nwalkalloc) )
+      allocate( pz(natomalloc, nwalkalloc) )
+      allocate( vx(natomalloc, nwalkalloc) )
+      allocate( vy(natomalloc, nwalkalloc) )
+      allocate( vz(natomalloc, nwalkalloc) )
+      allocate( transxv(natomalloc, nwalkalloc) )
+      allocate( transyv(natomalloc, nwalkalloc) )
+      allocate( transzv(natomalloc, nwalkalloc) )
 
+      px=0.0d0;   py = px; pz=px 
+      vx=px;      vy=vx;   vz=vx
+      vx_old=vx;  vy_old=vx_old; vz_old=vx_old
       transxv=vx ;transyv=transxv; transzv=transxv
 
-      fxc=x
-      fyc=fxc
-      fzc=fxc
+      allocate( fxc(natomalloc, nwalkalloc) )
+      allocate( fyc(natomalloc, nwalkalloc) )
+      allocate( fzc(natomalloc, nwalkalloc) )
+      allocate( fxq(natomalloc, nwalkalloc) )
+      allocate( fyq(natomalloc, nwalkalloc) )
+      allocate( fzq(natomalloc, nwalkalloc) )
+      allocate( transfxc(natomalloc, nwalkalloc) )
+      allocate( transfyc(natomalloc, nwalkalloc) )
+      allocate( transfzc(natomalloc, nwalkalloc) )
 
-      fxq=fxc
-      fyq=fxc
-      fzq=fxc
-
-      transfxc=fxc
-      transfyc=fxc
-      transfzc=fxc
+      fxc=0.0d0;  fyc=fxc; fzc=fxc
+      fxq=fxc;    fyq=fxc; fzq=fxc
+      transfxc=fxc;  transfyc=fxc;  transfzc=fxc
 
    end subroutine allocate_arrays
 

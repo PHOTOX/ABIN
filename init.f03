@@ -93,12 +93,15 @@ subroutine init(dt)
 
       !we have to initialize here, because we read them from input
       allocate( names(natom)     )
+      allocate( attypes(natom)   )
+      allocate( massnames(natom) )
       names     = ''
       attypes   = names
       massnames = names
       allocate( masses(natom)    )
       masses = -1.0d0
       allocate( ishake1(natom*3-6) )
+      allocate( ishake2(natom*3-6) )
       ishake1 = 0
       ishake2 = ishake1
 
@@ -118,6 +121,7 @@ subroutine init(dt)
       end if
 
       allocate ( natmolt(natom)  )
+      allocate ( nshakemol(natom)  )
       natmolt=0
       nshakemol=natmolt
       read(150,nhcopt)

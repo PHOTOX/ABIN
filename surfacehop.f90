@@ -184,8 +184,9 @@ module mod_sh
    use mod_qmmm, only:natqm
    integer :: ist1,ist2,iat,itrj
    integer :: iunit1, iunit2
-   open(newunit=iunit1,file='nacmrest.dat',action="write")
-   if (phase.eq.1) open(newunit=iunit2,file='phaserest.dat',action="write")
+   iunit1 = 600; iunit2 = 601
+   open(iunit1,file='nacmrest.dat',action="write")
+   if (phase.eq.1) open(iunit2,file='phaserest.dat',action="write")
    do itrj=1, ntraj
 
    do ist1=1,nstate-1
@@ -227,12 +228,13 @@ module mod_sh
    character(len=200) :: chmsg
    character(len=20) :: chit
    character(len=60) :: chrestart
+   iunit1=600; iunit2=601
 
    write(*,*)'Reading NACM from nacmrest.dat'
-   open(newunit=iunit1,file='nacmrest.dat',action="read")
+   open(iunit1,file='nacmrest.dat',action="read")
    if (phase.eq.1)then
       write(*,*)'Reading phase from phaserest.dat'
-      open(newunit=iunit2,file='phaserest.dat',action="read")
+      open(iunit2,file='phaserest.dat',action="read")
    end if
 
    do itrj=1, ntraj
@@ -455,7 +457,7 @@ module mod_sh
       real(DP)  :: pop0, a_re, a_im, prob(nstmax), cn, stepfs
       character(len=500) :: formt
       character(len=20) :: chist,chihop,chit
-      integer :: iost, iunit=1
+      integer :: iost, iunit=600
 
 
       do itrj=1,ntraj
@@ -793,9 +795,9 @@ module mod_sh
 
      if(idebug.eq.1)then
        if(it.eq.1)then
-         open(newunit=iunit,file='dotprodmatrix.dat')
+         open(iunit,file='dotprodmatrix.dat')
        else
-         open(newunit=iunit,file='dotprodmatrix.dat',access='append')
+         open(iunit,file='dotprodmatrix.dat',access='append')
        endif
       write(iunit,*)'Step: ',it
       do ist1=1,nstate

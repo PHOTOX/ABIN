@@ -33,10 +33,10 @@ ${OUT} : abin.o
 	${FC} ${FFLAGS} ${ALLDEPENDS} $< ${LDLIBS} -o $@
 
 #Always recompile abin.f90 to get current date and commit
-abin.o : abin.f03 ${ALLDEPENDS}
+abin.o : abin.F03 ${ALLDEPENDS}
 	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
 	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
-	$(FC) $(FFLAGS) -c abin.f03
+	$(FC) $(FFLAGS) -c abin.F03
 
 clean :
 	/bin/rm -f *.o *.mod NAB/*.o

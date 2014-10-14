@@ -32,6 +32,8 @@ module mod_density
    real(DP)  :: r,anorm,dx,dbin
    integer :: idist,iw,ipom,ian,unit1
 
+   unit1 = 600
+
    
    do idist=1,ndist
       do iw=1,nwalk
@@ -57,7 +59,7 @@ module mod_density
    enddo
    
    if(modulo(it,nwrite).eq.0)then
-      open(newunit=unit1,file='dist.dat')
+      open(unit1,file='dist.dat')
       do idist=1,ndist
 
          anorm=0.0d0
@@ -85,7 +87,7 @@ module mod_density
    use mod_utils, only: abinerror
    real(DP) x(:,:),y(:,:),z(:,:)
    real(DP) anorm,dbin,angmin,angmax,alfa
-   integer :: idist,iw,ipom,ian
+   integer :: idist,iw,ipom,ian, iunit
    
    angmin=0.0d0
    angmax=180.0d0
@@ -107,9 +109,10 @@ module mod_density
       dist_ang(ipom,idist)=dist_ang(ipom,idist)+1.0d0
       enddo
    enddo
-   
+  
+   iunit = 600 
    if(modulo(it,nwrite).eq.0)then
-      open(10,file='angles.dat')
+      open(iunit,file='angles.dat')
       do idist=1,nang
          anorm=0.0d0
 
@@ -118,12 +121,12 @@ module mod_density
          enddo
     
          do ian=1,nbin_ang
-            write(10,*)ian*dbin+angmin,dist_ang(ian,idist)/(anorm*dbin)
+            write(iunit,*)ian*dbin+angmin,dist_ang(ian,idist)/(anorm*dbin)
          enddo
    
-         write(10,*)
+         write(iunit,*)
       enddo
-      close(10)
+      close(iunit)
    endif
    
    end subroutine density_ang
@@ -136,7 +139,9 @@ module mod_density
    use mod_utils, only: abinerror
    real(DP) x(:,:),y(:,:),z(:,:)
    real(DP) anorm,dbin,dihmin,dihmax,delta
-   integer :: idist,iw,ipom,ian
+   integer :: idist,iw,ipom,ian, iunit
+
+   iunit = 600
 
    if (shiftdih.gt.0)then
      dihmin=0.0d0
@@ -164,7 +169,7 @@ module mod_density
    enddo
    
    if(modulo(it,nwrite).eq.0)then
-      open(10,file='dihedrals.dat')
+      open(iunit,file='dihedrals.dat')
       do idist=1,ndih
          anorm=0.0d0
 
@@ -173,12 +178,12 @@ module mod_density
          enddo
     
          do ian=1,nbin_ang
-            write(10,*)ian*dbin+dihmin,dist_dih(ian,idist)/(anorm*dbin)
+            write(iunit,*)ian*dbin+dihmin,dist_dih(ian,idist)/(anorm*dbin)
          enddo
    
-         write(10,*)
+         write(iunit,*)
       enddo
-      close(10)
+      close(iunit)
    endif
    
    end subroutine  density_dih
