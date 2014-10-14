@@ -4,7 +4,8 @@ export g09root="/home/slavicek/G03/gaussian09/a02/g09"
 timestep=$1
 ibead=$2
 input=input$ibead
-natom=$(cat ../geom.dat.$ibead | wc -l )
+geom=../geom.dat.$ibead
+natom=$(cat $geom | wc -l )
 let natom2=natom+2
 
 
@@ -31,7 +32,7 @@ EOF
 
 ########END OF USER MODIFICATIONS###################
 
-cat ../geom.dat.$ibead >> $input.com
+cat $geom >> $input.com
 echo ' ' >>$input.com
 
 #######GAUSSIAN STUFF###########

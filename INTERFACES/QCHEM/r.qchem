@@ -4,7 +4,8 @@ export QC=/usr/local/programs/common/qchem/qchem-4.1/arch/x86_64
 timestep=$1
 ibead=$2
 input=input$ibead.com
-natom=$(cat ../geom.dat.$ibead | wc -l )
+geom=../geom.dat.$ibead
+natom=$(cat $geom | wc -l )
 
 #-----------NOTES FOR QCHEM-------------------
 # SCF_GUESS read should guarantee faster SCF convergence
@@ -19,7 +20,7 @@ natom=`head -1 ../mini.dat`
 echo '
 $molecule
 0 1'> $input
-cat ../geom.dat >> $input
+cat $geom >> $input
 echo '$end
 
 $rem'>>$input

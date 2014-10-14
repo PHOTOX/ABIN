@@ -6,6 +6,10 @@
 #mozna porovnani s energiemi s predchoziho kroku?
 #taky to chce asi nekam extra vypisovat CASSCF energie, tj neco jako soubor PES_CASSCF.dat
 cd MOLPRO
+timestep=$1
+ibead=$2
+input=input$ibead
+nacaccu=$3
 m12root=$(readlink -f /usr/local/programs/molpro/molpro2012.1/arch/amd64-intel_12.0.5.220/molpros_2012_1_Linux_x86_64_i8)
 MOLPROEXE=$m12root/bin/molpro
 natom=$(cat ../geom.dat | wc -l)
@@ -19,14 +23,7 @@ read -t 2 -a istate
 read -t 2 -a nstate
 read -t 2 -a tocalc
 
-#if [ $istate -le 2 ] ; then
-#touch ../EXIT
-#fi
-
-if [ -e istep ]; then
-istep=`cat istep`
-else
-istep=1
+if [[ $timestep  -eq 0 ]]; then
 echo '#      Mulliken charge for the state we are on'> ../charge.actual
 echo '#      Mulliken charges for all electronic states considered'> ../charges.all
 fi
@@ -34,11 +31,11 @@ fi
 # MOLPRO-CASSCF
 #Predavame vlnovou funkci. Pokud nechceme, staci zakomentovat 2.radek,
 #3. radek (PUNCH) je nutny!, bereme z nej sily a energie
-cat > input.com << EOF
+cat > $input.com << EOF
 ***Abin input
 memory,100,m;
-file,2,input.wfu,unknown
-PUNCH,input.pun,new
+file,2,$input.wfu,unknown
+PUNCH,$input.pun,new
 gprint,orbital,civector
 
 Angstrom
@@ -57,8 +54,7 @@ endif
 
 EOF
 
-#DH: calculation of NACM only if dE < deltaE
-cat > input.pom << EOF
+cat > $input.pom << EOF
 multi
 occ,14
 closed,8
@@ -76,9 +72,9 @@ EOF
   #echo ${tocalc[$pom]} 
   if [[ ${tocalc[$pom]} -eq 1 ]];then
    if [ $pom -lt 10 ];then
-    echo "cpmcscf ,nacm,$ist1.1,$ist2.1,save=500$pom.1;" >> input.pom
+    echo "cpmcscf ,nacm,$ist1.1,$ist2.1,save=500$pom.1;" >> $input.pom
    else
-    echo "cpmcscf ,nacm,$ist1.1,$ist2.1,save=50$pom.1;" >> input.pom
+    echo "cpmcscf ,nacm,$ist1.1,$ist2.1,save=50$pom.1;" >> $input.pom
    fi
   fi
   let pom++
@@ -91,9 +87,9 @@ EOF
  for ((ist2=ist1+1;ist2<=nstate;ist2++)) {
   if [[ ${tocalc[$pom]} -eq 1 ]];then
    if [ $pom -lt 10 ];then
-    echo "forces ;nacm,500$pom.1;" >> input.pom
+    echo "forces ;nacm,500$pom.1;" >> $input.pom
    else
-    echo "forces ;nacm,50$pom.1;" >> input.pom
+    echo "forces ;nacm,50$pom.1;" >> $input.pom
    fi
   fi
   let pom++
@@ -120,72 +116,35 @@ EOF
   	for (j=0;j<5;j++) print cpm[i+j]
 	for (j=0;j<5;j++) print forces[i+j]
 	}
- }' input.pom >> input.com
+ }' $input.pom >> $input.com
 
 echo "
 rs2,mix=6,root=$istate,shift=0.3,maxit=300,maxiti=1000,nocheck;   
 wf,27,0,1                    
 state,6                      
 
-forces">>input.com
+forces">>$input.com
 
 for ((ist1=1;ist1<=nstate;ist1++)) {
-echo "pop; density,2140.2,state=$ist1.1" >> input.com
+echo "pop; density,2140.2,state=$ist1.1" >> $input.com
 }
 
 #--END OF MOLPRO INPUT--------------------
 
 #----------MOLPRO-------------------------
 export TMPDIR=$PWD/SCRATCH
-$MOLPROEXE -s --no-xml-output -W $PWD/SCRATCH  >& input.com.out <input.com
+$MOLPROEXE -s --no-xml-output -W $PWD/SCRATCH  >& $input.com.out <$input.com
 
 ###########################################
-
-##ccc errors 
-## dobehl vypocet v poradku?
-#ok=`grep 'released' input.com.out`
-#if [ -z "${ok}" ]; then
-# # jaka chyba, gradient?
-# gradchyba=`grep 'NO CONVER' input.com.out -B2|grep 'z-vector'`
-#
-# if [ -n "${gradchyba}" ]; then
-#echo "step: $istep computing numerical gradient">>../errors.dat
-#./numeric $istate  
-#~slavicek/MOLPRO2009/bin/molpro -s --no-xml-output -W /scratch/$USER/SCRATCH-ABIN_$1  >& input.force.com.out <input.force.com ;
-#
-# gradchyba2=`grep 'NO CONVER' input.force.com.out -B2|grep 'z-vector'`
-#   if [ -z "${gradchyba2}" ]; then
-# # snizuji presnost vypoctu couplingu, stale numericky gradient!!!
-#./numeric $istate  
-# sed -i 's/save/accu=1d-3,save/g' input.force.com
-#echo "step: $istep computing numerical gradient and decreasing nacm accuracy">>../errors.dat
-#
-#~slavicek/MOLPRO2009/bin/molpro -s --no-xml-output -W /scratch/$USER/SCRATCH-ABIN_$1  >& input.force.com.out <input.force.com ;
-#
-##vnitrni cyklus, pokud nepomuze jen numericky gradient
-#   fi
-# else
-#
-# # snizuji presnost vypoctu couplingu, stale numericky gradient!!!
-#./numeric $istate  
-# sed -i 's/save/accu=1d-3,save/g' input.force.com
-#echo "step: $istep computing numerical gradient and decreasing nacm accuracy">>../errors.dat
-#
-#~slavicek/MOLPRO2009/bin/molpro -s --no-xml-output -W /scratch/$USER/SCRATCH-ABIN_$1  >& input.force.com.out <input.force.com ;
-#  
-#fi
-#fi
-## probehlo vse v poradku, mohu prejit ke grepovani?
-#if [ -n "${ok}" ]; then
 
 astate=1
 while [[ $astate -le $nstate ]]
 do
-grep "RSPT2 STATE $astate.1 Energy" input.com.out |head -1|awk -F" " '{print $5}'>>../forces.dat
+grep "RSPT2 STATE $astate.1 Energy" $input.com.out |head -1|awk -F" " '{print $5}'>>../engrad.dat.$ibead
 let astate++
 done
 
-grep "RSPT2 GRADIENT FOR STATE $istate.1" input.com.out -A$natom3|tail -n$natom|awk -F" " '{print $2 " " $3 " " $4}'>>../forces.dat
+grep "RSPT2 GRADIENT FOR STATE $istate.1" $input.com.out -A$natom3|tail -n$natom|awk -F" " '{print $2 " " $3 " " $4}'>>../engrad.dat.$ibead
 
 #absolute value function
 
@@ -212,10 +171,10 @@ echo "$val2"
  for ((ist1=1;ist1<=nstate-1;ist1++)) {
  for ((ist2=ist1+1;ist2<=nstate;ist2++)) {
   if [ ${tocalc[$pom]} -eq 1 ];then
-    Ecas1=`grep "MCSCF STATE $ist1.1 Energy" input.com.out |head -1|awk -F" " '{print $5}'`
-    Ecas2=`grep "MCSCF STATE $ist2.1 Energy" input.com.out |head -1|awk -F" " '{print $5}'`
-    Ept21=`grep "RSPT2 STATE $ist1.1 Energy" input.com.out |head -1|awk -F" " '{print $5}'`
-    Ept22=`grep "RSPT2 STATE $ist2.1 Energy" input.com.out |head -1|awk -F" " '{print $5}'`
+    Ecas1=`grep "MCSCF STATE $ist1.1 Energy" $input.com.out |head -1|awk -F" " '{print $5}'`
+    Ecas2=`grep "MCSCF STATE $ist2.1 Energy" $input.com.out |head -1|awk -F" " '{print $5}'`
+    Ept21=`grep "RSPT2 STATE $ist1.1 Energy" $input.com.out |head -1|awk -F" " '{print $5}'`
+    Ept22=`grep "RSPT2 STATE $ist2.1 Energy" $input.com.out |head -1|awk -F" " '{print $5}'`
     dEcas=`echo "scale=8;($Ecas2 - $Ecas1)"|bc`
     dEpt2=`echo "scale=8;($Ept22 - $Ept21)"|bc`
     dEcas=`absval $dEcas`
@@ -227,8 +186,8 @@ echo "$val2"
  
 #ZMENIT VYPISOVANI COUPLINGU TAK, ABYCH JE MOHL PRENASOBIT!!!    
  
-#    grep "SA-MC NACME FOR STATES $ist1.1 - $ist2.1" input.com.out -A$natom3|tail -n$natom|awk -F" " '{print $2 " " $3 " " $4}'>>../nacm.dat
-    grep "SA-MC NACME FOR STATES $ist1.1 - $ist2.1" input.com.out -A$natom3|tail -n$natom|awk -F" " '{print $2 " " $3 " " $4}'>nacm.temp
+#    grep "SA-MC NACME FOR STATES $ist1.1 - $ist2.1" $input.com.out -A$natom3|tail -n$natom|awk -F" " '{print $2 " " $3 " " $4}'>>../nacm.dat
+    grep "SA-MC NACME FOR STATES $ist1.1 - $ist2.1" $input.com.out -A$natom3|tail -n$natom|awk -F" " '{print $2 " " $3 " " $4}'>nacm.temp
 #    cat nacm.temp>>nacm.temp.all
     for ((nat=1;nat<=natom;nat++)){
 
@@ -252,48 +211,11 @@ echo "$val2"
   let pom++
 
 cp ../nacm.dat .
-grep -e 'REAL TIME'  input.com.out > timing.out
+grep -e 'REAL TIME'  $input.com.out > timing.out
 
 #####Mulliken charges#########
 echo "step:  $istep">>../charges.all
 echo "step:  $istep    state:$istate ">>../charge.actual
-grep 'Unique atom' input.com.out -A$natom | awk -F " " '{print $2 "  " $9 $10}'>>../charges.all
-grep "Type=MCSCF/CHARGE (state $istate.1" input.com.out -A10 | awk -F " " '{print $2 "  " $9 $10}'|tail -7>>../charge.actual
-
-## CTEME Z INPUT.FORCE.COM.OUT
-#else astate=1
-#    while [[ $astate -le $nstate ]]
-#      do
-#      grep "MCSCF STATE $astate.1 Energy" input.force.com.out |head -1|awk -F" " '{print $5}'>>../forces.dat
-#      let astate++
-#      done
-#
-#      grep "Numerical gradient for ENERGY" input.force.com.out -A$natom4|tail -n$natom|awk -F" " '{print $2 " " $3 " " $4}'>>../forces.dat
-# pom=0
-#  for ((ist1=1;ist1<=nstate-1;ist1++)) {
-#     for ((ist2=ist1+1;ist2<=nstate;ist2++)) {
-#     if [ ${tocalc[$pom]} -eq 1 ];then
-#       grep "SA-MC NACME FOR STATES $ist1.1 - $ist2.1" input.force.com.out -A$natom3|tail -n$natom|awk -F" " '{print $2 " " $3 " " $4}'>>../nacm.dat
-#     fi
-#     let pom++
-#      }
-#     }
-#
-#     let pom++
-#
-#     cp ../nacm.dat .
-#grep -e 'REAL TIME'  input.force.com.out > timing.out
-#
-######Mulliken charges#########
-#echo "step:  $istep">>../charges.all
-#echo "step:  $istep    state:$istate ">>../charge.actual
-#grep 'Unique atom' input.force.com.out -A$natom | awk -F " " '{print $2 "  " $9 $10}'>>../charges.all
-#grep "Type=MCSCF/CHARGE (state $istate.1" input.force.com.out -A10 | awk -F " " '{print $2 "  " $9 $10}'|tail -7>>../charge.actual
-#
-#fi
-
-
-let istep=istep+1
-echo $istep > istep
-
+grep 'Unique atom' $input.com.out -A$natom | awk -F " " '{print $2 "  " $9 $10}'>>../charges.all
+grep "Type=MCSCF/CHARGE (state $istate.1" $input.com.out -A10 | awk -F " " '{print $2 "  " $9 $10}'|tail -7>>../charge.actual
 

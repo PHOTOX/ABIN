@@ -3,7 +3,8 @@ cd DYN
 timestep=$1
 ibead=$2
 input=input$ibead
-natom=$(cat ../geom.dat.$ibead | wc -l )
+geom=../geom.dat.$ibead
+natom=$(cat $geom | wc -l )
 
 # TEMPLATE FOR AB INITIO DYNAMICS with ABIN
 # MODIFY accordingly and set pot='dyn' in input.in
@@ -13,7 +14,7 @@ job input here
 
 EOF
 
-cat ../geom.dat >> geom.xyz  #only xyz coordinates
+cat $geom >> geom.xyz  #only xyz coordinates
 
 
 #END OF USER INPUT################
