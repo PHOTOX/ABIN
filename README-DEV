@@ -1,0 +1,5 @@
+We need gfortran at least 4.6 for allocatable variables in namelists due to this bug...
+https://gcc.gnu.org/bugzilla/show_bug.cgi?id=43062
+
+We now support 4.3.
+4.2 is not supported as it does not supports IMPORT statement.

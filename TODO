@@ -1,6 +1,3 @@
-We need gfortran at leaast 4.6 due to this bug...
-https://gcc.gnu.org/bugzilla/show_bug.cgi?id=43062
-
 FINAL TASKS
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
@@ -9,7 +6,7 @@ Check this value for larger clusters.
 add a swith to calc.spectrum.cpp, nm or ev or cm
 
 FOR 1.0 version
-comment out export COMMIT in makefile
+merge QMMM
 rename abin.dev to abin.v1
 
 ###----UTILS
@@ -29,12 +26,11 @@ DL-FIND? useful for CI optimizations problems with molpro
 http://pubs.acs.org/doi/full/10.1021/jp9028968
 
 
-
 make shake user friendly----automatically determine bonds to hydrogens and water
 also, test  shake, see p. 416 in Understanding mol. simulations 
 Leave this probably to the next version, it requires coupling to massive NHC, which is not well tested
 
-todo: MPI version for terachem
+todo: test MPI version for terachem, make it parallel
 NAB - compile my own libnab.a library and pass al argumets through it
 NAB - use new NAB version from AmberTools14
 QMMM --- otestovat, udelat glycin + 10A vod 
