@@ -2,7 +2,7 @@
 
 # Script for analysis of SH trajectories. 
 # Assumes that the trajectories are in folders $folder/TRAJ.$i
-# It works even for trajectories that are still running using fetchabin.sh.
+# It works even for trajectories that are still running by using fetchabin.sh.
 # You should have the following scripts in your path: fetchabin.sh, checkenergy.awk, prum.awk
 # It produces 3 files in folder $folder :
 # energycons.dat - contains information about energy conservation in each trajectory

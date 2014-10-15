@@ -6,24 +6,52 @@
 
 ! It cooperates with script wigner_sampling.sh
 ! Expects standard input from FMSTRAJS/TRAJ.$i
-! Atom masses are determined from the library.
-! Atom names must be provided in a separate file atoms.dat
+! Atom masses are determined from the library of elements.
+! Atom names must be provided in a separate reference file given as a first argument.
+! This will typically be: FMSINPOUT/geometry.xyz
 
-! Call as: ./make_restart < FMSTRAJS/TRAJ.xx
+! Call as: ./make_restart PATH_TO_REFERENCE_GEOMETRY  < FMSTRAJS/TRAJ.xx
 
    program MakeRestart
       implicit none
       integer,parameter :: npartmax=1000
       real*8,parameter    :: mu=1823.d0,ang=1.8897d0
-      real*8  :: x(npartmax),p(npartmax),y(npartmax),amass(npartmax)
-      character*2 :: atom(npartmax)
-      integer :: i,natom,nstate,istate
+      real*8, allocatable  :: x(:),p(:),y(:),amass(:)
+      character(len=2), allocatable :: atom(:)
+      integer :: i,natom,natom2, nstate,istate
       integer :: index_x,index_y,index_z
       real*8  :: time
+      character(len=100) :: chgeom
+      logical :: lex
+
+      
+      if ( command_argument_count().ne.1 )then
+         write(*,*)'Error in make_restart: Wrong number of arguments!'
+         call Help()
+         stop 1
+      end if
+      call get_command_argument(1, chgeom)
+
+      inquire(file=chgeom, exist=lex)
+      if(.not.lex)then
+         write(*,*)'Error in make_restart:File does not exist!',chgeom
+         stop 1
+      end if
+      inquire(file='initial', exist=lex)
+      if(.not.lex)then
+         write(*,*)'Error in make_restart: File "initial" does not exist!'
+         stop 1
+      end if
 
       open(100,file='initial',status='old', action="read")
       read(100,*)istate,nstate,natom
       close(100)
+
+      allocate( x(natom*3)    )
+      allocate( y(natom*3)    )
+      allocate( p(natom*3)    )
+      allocate( amass(natom)  )
+      allocate( atom(natom)   )
 
       
       ! Read Wigner data, expecting atomic units
@@ -34,7 +62,16 @@
         y(i)=x(i)/ang !Bohr to angstroms
       enddo
 ! INITIALIZING MASS
-      open(103,file='atoms.dat',status='old', action="read")
+      open(103,file=chgeom,status='old', action="read")
+      read(103, *)natom2
+      if (natom.ne.natom2)then
+         write(*,*)'Error in make_restart: Number of atoms from standard input and file: '
+         write(*,*)chgeom,' do not match! Exiting now...'
+         call Help()
+         stop 1
+      end if
+
+      read(103,*)
       do i=1,natom
        read(103,*)atom(i)
       enddo
@@ -277,3 +314,14 @@
        endif
       enddo
    end subroutine
+
+   subroutine Help()
+      write(*,*)
+      write(*,*)'make_restart'
+      write(*,*)'Small program for converting Wigner trajectory from MOLPRO-FMS to ABIN restart file.'
+      write(*,*)'Call as: ./make_restart PATH_TO_REFERENCE_GEOMETRY  < FMSTRAJS/TRAJ.xx'
+      write(*,*)'Atomic masses are determined from atom names in the reference XYZ geometry.'
+      write(*,*)
+   end subroutine Help
+
+
