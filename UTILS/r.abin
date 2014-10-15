@@ -1,13 +1,20 @@
 #!/bin/bash
+
+# Script for launching ABIN simulation on cluster nodes.
+
+# 1. copy all data from PWD to the node's scratch.
+# 2. Launch ABIN
+# 3. Copy data back (only newer files are copied!)
+# 4. Remove scratch directory. (if delscratch = true)
+
 # SETUP --------------------------------
 OUTPUT=output
 ABINEXE=./abin.dev
 JOBNAME=ABIN_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
+delscratch=true
 ########################################
-
-export LD_LIBRARY_PATH=/home/hollas/programes/src/gcc-4.8/lib64:/home/hollas/programes/src/gcc-4.8/lib:$LD_LIBRARY_PATH
 
 echo "Job started at: " >> $OUTPUT
 date >> $OUTPUT
@@ -31,15 +38,17 @@ else
 fi
 
 
-cp -upr * /scratch/$USER/$JOBNAME/.
+cp -pr * /scratch/$USER/$JOBNAME/.
 
 cd /scratch/$USER/$JOBNAME
 
 $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 
-cp -pr * $KDE/.
+cp -upr * $KDE/.
 
 cd ..
 
-rm -r $JOBNAME
+if [[ $delscratch -eq "true" ]];then
+   rm -r $JOBNAME
+fi
 

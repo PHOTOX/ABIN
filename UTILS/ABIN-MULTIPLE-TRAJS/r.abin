@@ -1,10 +1,8 @@
 
 # This is a stub for r.abin
 # It is supposed to be prepended by script create_wignertrajectories.sh
+delscratch=true
 
-export LD_LIBRARY_PATH=/home/hollas/programes/src/gcc-4.8/lib64:/home/hollas/programes/src/gcc-4.8/lib:$LD_LIBRARY_PATH
-
-myname=$(basename $0)
 echo "Job started at: " >> $OUTPUT
 date >> $OUTPUT
 echo "Running on node:" >> $OUTPUT
@@ -17,18 +15,27 @@ echo "/scratch/$USER/$JOBNAME" >> job.log
 
 KDE=`pwd`
 
-mkdir /scratch/$USER/$JOBNAME
+if [[ -d /scratch/$USER/$JOBNAME ]];then
+   echo "Job direcory /scratch/$USER/$JOBNAME already exist!"
+   echo "Perhaps it's a leftover from some old job, you could probably delete it."
+   echo "Exiting..."
+   exit 1
+else
+   mkdir /scratch/$USER/$JOBNAME
+fi
+
 
 cp -pr * /scratch/$USER/$JOBNAME/.
 
 cd /scratch/$USER/$JOBNAME
-rm *$myname     # hack,so that we do not overwrite stdout and stderr later
 
 $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 
-cp -pr * $KDE/.
+cp -upr * $KDE/.
 
 cd ..
 
-rm -r $JOBNAME
+if [[ $delscratch -eq "true" ]];then
+   rm -r $JOBNAME
+fi
 

@@ -48,6 +48,7 @@ $end
 
 source ${QC}/qcenv.sh
 export QCSCRATCH=$PWD/scratch$ibead
+unset QCLOCALSCR
 qchem $input $input.out WF$ibead &> $input.log
 
 if [[ $? -eq 0 ]];then
