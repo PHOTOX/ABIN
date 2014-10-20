@@ -41,7 +41,11 @@ abin.o : abin.f03 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 	$(FC) $(FFLAGS) -c abin.f03
 
 clean :
+	/bin/rm -f *.o *.mod
+
+cleanall :
 	/bin/rm -f *.o *.mod NAB/*.o
+	cd WATERMODELS && make clean
 
 test :
 	/bin/bash ./test.sh ${OUT} all
