@@ -1,10 +1,8 @@
 #!/bin/bash
-
-# Script for launching ABIN simulation on cluster nodes.
-
-# 1. copy all data from PWD to the node's scratch.
-# 2. Launch ABIN
-# 3. Copy data back (only newer files are copied!)
+# Script for launching an ABIN simulation on cluster nodes.
+# 1. Copy all data from CWD to the node's scratch.
+# 2. Launch ABIN.
+# 3. Copy data back (only newer files are copied!).
 # 4. Remove scratch directory. (if delscratch = true)
 
 # SETUP --------------------------------
@@ -16,31 +14,33 @@ INPUTGEOM=mini.dat
 delscratch=true
 ########################################
 
+SCRDIR=/scratch/$USER/$JOBNAME
+
 echo "Job started at: " >> $OUTPUT
 date >> $OUTPUT
 echo "Running on node:" >> $OUTPUT
 uname -n >> $OUTPUT
 echo "Working directory:" >> $OUTPUT
-echo "/scratch/$USER/$JOBNAME" >> $OUTPUT
+echo "$SCRDIR" >> $OUTPUT
 echo " " >> $OUTPUT
 uname -n > job.log
-echo "/scratch/$USER/$JOBNAME" >> job.log
+echo "$SCRDIR" >> job.log
 
 KDE=`pwd`
 
-if [[ -d /scratch/$USER/$JOBNAME ]];then
-   echo "Job direcory /scratch/$USER/$JOBNAME already exist!"
+if [[ -d $SCRDIR ]];then
+   echo "Job direcory $SCRDIR already exist!"
    echo "Perhaps it's a leftover from some old job, you could probably delete it."
    echo "Exiting..."
    exit 1
 else
-   mkdir /scratch/$USER/$JOBNAME
+   mkdir $SCRDIR
 fi
 
 
-cp -pr * /scratch/$USER/$JOBNAME/.
+cp -upr * $SCRDIR/.
 
-cd /scratch/$USER/$JOBNAME
+cd $SCRDIR
 
 $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 
@@ -51,4 +51,3 @@ cd ..
 if [[ $delscratch -eq "true" ]];then
    rm -r $JOBNAME
 fi
-

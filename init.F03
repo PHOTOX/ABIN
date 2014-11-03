@@ -199,7 +199,9 @@ subroutine init(dt)
       open(111,file=chcoords,status = "old", action = "read") 
       read(111,*)natom1
       if(natom1.ne.natom)then
-        write(*,*)'No. of atoms in input.in and in mini.dat do not match.'
+        write(*,'(A,A)')'No. of atoms in ',chinput
+        write(*,'(A,A)')'and in ',chcoords
+        write(*,*)'do not match.'
         call abinerror('init')
       endif
       read(111,*)

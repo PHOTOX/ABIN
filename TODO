@@ -1,15 +1,19 @@
 FINAL TASKS
+better create_trajectories.sh
+
+otestovat, zda funguje vstup geometrie z jineho souboru nez mini.dat
+
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
 Check this value for larger clusters.
 
-add a swith to calc.spectrum.cpp, nm or ev or cm
 
 FOR 1.0 version
 merge QMMM
 rename abin.dev to abin.v1
 
 ###----UTILS
+add a swith to calc.spectrum.cpp, nm or ev or cm
 udelat r.molpro pro caspt2/casscf-nacm
 make analogue for of mp2freq for G09
 

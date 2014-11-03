@@ -23,7 +23,7 @@ export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
 F_OBJS = modules.o utils.o interfaces.o random.o shake.o nosehoover.o stage.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
-force_mm.o nab.o force_bound.o force_guillot.o  forces.o surfacehop.o force_abin.f90  analyze_ext_distp.o density.o analysis.o  \
+force_mm.o nab.o force_bound.o force_guillot.o  forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
 minimizer.o arrays.o init.o mdstep.o 
 
 C_OBJS = nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o  EWALD/ewaldf.o
