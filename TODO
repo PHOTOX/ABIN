@@ -1,5 +1,7 @@
 FINAL TASKS
 better create_trajectories.sh
+better make_restart
+do some error checking into r.abin, pokudse nepodari zkopirovat zpet scratch, tak nemazat
 
 otestovat, zda funguje vstup geometrie z jineho souboru nez mini.dat
 

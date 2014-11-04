@@ -37,7 +37,6 @@ module mod_arrays
       end if
 
       x=0.0d0
-      !automatic allocation
       y=x
       z=x
       transx=x

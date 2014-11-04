@@ -1,5 +1,7 @@
-H
-RMONIC SAMPLING...otestovat spravnost WIGNERA, test different versions of wigner
+HARMONIC SAMPLING...otestovat spravnost WIGNERA, test different versions of wigner
 
-check whether works: create_movietrajectories.sh, create_wignertrajectories.sh
+join create_movietrajectories.sh and create_wignertrajectories.sh
+should be straightforward, use some switch between the 2 modes.
+
+check whether works: create_movietrajectories.sh
 

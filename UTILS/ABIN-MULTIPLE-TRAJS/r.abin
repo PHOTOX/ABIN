@@ -1,6 +1,6 @@
 
 # This is a stub for r.abin
-# It is supposed to be prepended by script create_wignertrajectories.sh
+# It is supposed to be prepended by script create_trajectories.sh
 delscratch=true
 
 echo "Job started at: " >> $OUTPUT

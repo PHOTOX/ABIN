@@ -31,5 +31,5 @@ fetchabin.sh copies data from scratch to current working directory.
 Small fortran code that cuts closest solvent molecules around the solute.
 
 8. prum.awk, checkenergy.awk
-These are small helper scripts use by other scripts.
+These are small helper scripts used by other scripts.
 They should be in your $PATH.
