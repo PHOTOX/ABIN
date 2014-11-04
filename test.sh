@@ -61,7 +61,7 @@ files=( bkl.dat phase.dat coef.dat phaserest.dat phaserest.?? nacmrest.dat nacmr
 if [[ $2 == "sh" ]];then
 folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
 else
-folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE SH_TDC PIGLE GLE PIMD ABINITIO SHAKE HARMON MINI QMMM )
+folders=( CMD GLE SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE SH_TDC PIGLE PIMD ABINITIO SHAKE HARMON MINI QMMM )
 #folders=( SHAKE )
 fi
 

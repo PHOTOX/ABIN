@@ -1,5 +1,4 @@
 FINAL TASKS
-add test for water models
 
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
