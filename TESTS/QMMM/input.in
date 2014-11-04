@@ -1,10 +1,10 @@
 This is a sample input file for ONIOM QMMM
 &general
-pot='orca'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
+pot='dyn'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
 ipimd=0,		!classical simulation 0, quantum simulation 1
 nwalk=1,		!number of random walkers 
 imini=10,		!equilibration period,!not properly implemented yet
-nstep=1,
+nstep=2,
 dt=40.,			!number of steps and timestep
 irandom=131313,  	!random seed
 iqmmm=1

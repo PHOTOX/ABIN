@@ -8,9 +8,9 @@ TESTS/*/*dat
 TESTS/*/*xyz
 TESTS/*/geom.dat.00*
 TESTS/*/geom_mm.dat.00*
-TESTS/ABINITIO/ORCA/input*
-TESTS/QMMM/ORCA/input*
-TESTS/QMMM/MM/input*
+TESTS/ABINITIO/DYN/OUT*
+TESTS/QMMM/DYN/OUT*
+TESTS/QMMM/MM/OUT*
 TESTS/*/output
 TESTS/*/restart.xyz
 TESTS/*/restart.xyz.0
