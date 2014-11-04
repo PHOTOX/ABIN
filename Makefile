@@ -4,7 +4,6 @@
 
 # WARNING: dependecies on *.mod files are hidden!
 # If you change modules, you should recompile the whole thing i.e. make clean;make
-
 OUT = abin.dev
 # You actually have to use gfortran and gcc, because of precompiled NAB libraries
 FC = gfortran
@@ -13,7 +12,7 @@ CC = gcc
 FFLAGS =  -g -fopenmp  -Wall -Wextra -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
 
-LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a
+LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a WATERMODELS/libttm.a
 LDLIBS = -lfftw3 -lm -lstdc++ ${LIBS}
 
 export SHELL=/bin/bash
@@ -23,7 +22,7 @@ export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
 F_OBJS = modules.o utils.o interfaces.o random.o shake.o nosehoover.o stage.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
-force_mm.o nab.o force_bound.o force_guillot.o  forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
+force_mm.o nab.o force_bound.o force_guillot.o water.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
 minimizer.o arrays.o init.o mdstep.o 
 
 C_OBJS = nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o  EWALD/ewaldf.o
@@ -32,16 +31,21 @@ ALLDEPENDS = ${C_OBJS} ${F_OBJS}
 
 # This is the default target
 ${OUT} : abin.o
-	${FC} ${FFLAGS} ${ALLDEPENDS} $< ${LDLIBS} -o $@
+	cd WATERMODELS && make all 
+	${FC} ${FFLAGS} WATERMODELS/water_interface.o ${ALLDEPENDS}  $< ${LDLIBS} -o $@
 
-# Always recompile abin.f90 to get current date and commit
-abin.o : abin.F03 ${ALLDEPENDS}
+#Always recompile abin.F03 to get current date and commit
+abin.o : abin.F03 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
 	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
 	$(FC) $(FFLAGS) -c abin.F03
 
 clean :
+	/bin/rm -f *.o *.mod
+
+cleanall :
 	/bin/rm -f *.o *.mod NAB/*.o
+	cd WATERMODELS && make clean
 
 test :
 	/bin/bash ./test.sh ${OUT} all

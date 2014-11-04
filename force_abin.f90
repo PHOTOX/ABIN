@@ -6,6 +6,7 @@
       use mod_sh,       only: nac_accu1, tocalc, en_array, istate, nstate
       use mod_qmmm,     only: natqm
       use mod_utils,    only: abinerror
+      use mod_interfaces, only: oniom
       implicit none
       real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
       real(DP),intent(out)   :: fx(:,:),fy(:,:),fz(:,:)
@@ -93,7 +94,7 @@
 !-Passing arguments to bash script
 !-First argument is time step
 !-Second argument is the bead index, neccessary for parallel calculations
-   write(chsystem,'(A20,I13,I4.3)')chsystem,it,iw
+  write(chsystem,'(A20,I13,I4.3)')chsystem,it,iw
 
   !for SH, pass the 4th parameter:precision of NACME as 10^(-nac_accu1)
    if(ipimd.eq.2)then
@@ -117,9 +118,9 @@
 !-------READING ENERGY from engrad.dat
       read(20+iw,*,IOSTAT=iost)temp1
       if(iost.ne.0)then
-              write(*,*)'Fatal problem with reading energy from file', chforce
-              write(*,*)'This usually means, that the ab initio program failed.'
-              write(*,*)'See the appropriate output files.'
+              write(*,*)'Fatal problem with reading energy from file ', chforce
+              write(*,*)'This usually means, that the ab initio program failed to converge.'
+              write(*,*)'See the appropriate output files from external program, e.g. G09/input001.log'
               call abinerror('force_abin')
       endif
 !$OMP ATOMIC
@@ -138,7 +139,7 @@
      do iat=1,natqm
       read(20+iw,*,IOSTAT=iost)fx(iat,iw),fy(iat,iw),fz(iat,iw)
       if(iost.ne.0)then
-              write(*,*)'Fatal problem with reading energy from engrad.dat'
+              write(*,*)'Fatal problem with reading gradients from engrad.dat'
               write(*,*)'This usually means, that the ab initio program failed.'
               write(*,*)'See the appropriate output files.'
               call abinerror('force_abin')
@@ -148,6 +149,7 @@
        fy(iat,iw)=-fy(iat,iw)
        fz(iat,iw)=-fz(iat,iw)
      enddo
+
 
 !----READING of HESSIAN     
      if (ihess.eq.1)then
@@ -177,10 +179,151 @@
       close(unit=20+iw+nwalk,status='delete')
      endif
 
+     if (iqmmm.eq.1) call oniom(x, y, z, fx, fy, fz, eclas, iw)
+
     end do
 !$OMP END DO 
 !$OMP END PARALLEL  
 
 end
+
+
+
+
+
+subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
+   use mod_const,    only: DP, ANG
+   use mod_general,  only: natom, it
+   use mod_system,   only: names
+   use mod_qmmm,     only: natqm
+   use mod_utils,    only: abinerror
+   implicit none
+   real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout)   :: fx(:,:),fy(:,:),fz(:,:)
+   real(DP),intent(inout)   :: eclas
+   integer, intent(in)    :: iw
+   real(DP)  :: temp1, tempx, tempy, tempz
+   character(len=100) :: chsystem
+   character(len=20) :: chgeom, chforce, fgeom
+   logical :: file_exists
+   integer :: iat, iost, itest
+
+   write(chgeom,'(A,I3.3)')'geom_mm.dat.',iw
+   write(chforce,'(A,I3.3)')'engrad_mm.dat.',iw
+   write(chsystem,'(A)')'./MM/r.mm '
+
+   fgeom='(A2,3E25.17E2)'
+
+   INQUIRE(FILE=chsystem, EXIST=file_exists)
+   if (.not.file_exists)then
+      write(*,*)'File ',chsystem
+      write(*,*)'does not exist! Exiting...'
+      call abinerror('oniom')
+   end if
+
+   write(chsystem,'(A20,I13,I4.3)')chsystem,it,iw
+
+!----WRITING GEOMETRY of the whole system
+   open(unit=20+iw,file=chgeom, action='write')
+    do iat=1,natom
+     write(20+iw,fgeom)names(iat), x(iat,iw)/ang, y(iat,iw)/ang, z(iat,iw)/ang
+    enddo
+   close(unit=20+iw)
+
+   call system(chsystem)
+
+!----make sure that the file exist and flush the disc buffer     
+   itest=0
+   INQUIRE( FILE=chforce, EXIST=file_exists )
+   do while(.not.file_exists.and.itest.lt.10)
+   write(*,*)'WARNING:File ',chforce,' does not exist. Waiting..'
+   call system('sync')    !mel by zajistit flush diskoveho bufferu
+   INQUIRE(FILE=chforce, EXIST=file_exists)
+   itest=itest+1
+   end do
+   
+   open(unit=20+iw,file=chforce,status='old',ACTION='READ')
+
+!-------READING ENERGY from engrad_mm.dat
+   read(20+iw,*,IOSTAT=iost)temp1
+   if(iost.ne.0)then
+           write(*,*)'Fatal problem with reading energy from file ', chforce
+           write(*,*)'This usually means, that the a program failed.'
+           write(*,*)'See the appropriate output files, e.g. MM/input001.com.out'
+           call abinerror('oniom')
+   endif
+
+   eclas=eclas+temp1
+
+!----READING energy gradients from engrad.dat
+   do iat=1,natom
+      read(20+iw,*,IOSTAT=iost)tempx, tempy, tempz
+      if(iost.ne.0)then
+              write(*,'(2A)')'Fatal problem with reading gradients from file ',chforce
+              write(*,*)'This usually means, that the ab initio program failed.'
+              write(*,*)'See the appropriate output files, e.g. MM/input001.com.out'
+              call abinerror('force_abin')
+      endif
+!---Conversion to forces        
+     fx(iat,iw)=fx(iat,iw) - tempx
+     fy(iat,iw)=fy(iat,iw) - tempy
+     fz(iat,iw)=fz(iat,iw) - tempz
+   enddo
+
+
+   close(unit=20+iw,status='delete')
+
+!-----------------MM, only model QM part-------------------------- 
+
+!----WRITING GEOMETRY of the QM part
+   open(unit=20+iw,file=chgeom)
+    do iat=1,natqm
+     write(20+iw,fgeom)names(iat),x(iat,iw)/ang,y(iat,iw)/ang,z(iat,iw)/ang
+    enddo
+   close(unit=20+iw)
+
+   call system(chsystem)
+
+!----make sure that the file exist and flush the disc buffer     
+   itest=0
+   INQUIRE( FILE=chforce, EXIST=file_exists )
+   do while(.not.file_exists.and.itest.lt.10)
+   write(*,*)'WARNING:File ',chforce,' does not exist. Waiting..'
+   call system('sync')    !mel by zajistit flush diskoveho bufferu
+   INQUIRE(FILE=chforce, EXIST=file_exists)
+   itest=itest+1
+   end do
+   
+   open(unit=20+iw,file=chforce,status='old',ACTION='READ')
+
+!-------READING ENERGY from engrad_mm.dat
+   read(20+iw,*,IOSTAT=iost)temp1
+   if(iost.ne.0)then
+           write(*,*)'Fatal problem with reading energy from file ', chforce
+           write(*,*)'This usually means, that the external program failed.'
+           write(*,*)'See the appropriate output files, e.g. MM/input001.com.out'
+           call abinerror('oniom')
+   endif
+
+   eclas=eclas-temp1
+
+!----READING energy gradients from engrad.dat
+     do iat=1,natqm
+      read(20+iw,*,IOSTAT=iost)tempx, tempy, tempz
+      if(iost.ne.0)then
+              write(*,'(2A)')'Fatal problem with reading gradients from file ',chforce
+              write(*,*)'This usually means, that the external program failed.'
+              write(*,*)'See the appropriate output files, e.g. MM/input001.com.out'
+              call abinerror('force_abin')
+      endif
+!---Conversion to forces        
+       fx(iat,iw)=fx(iat,iw) + tempx
+       fy(iat,iw)=fy(iat,iw) + tempy
+       fz(iat,iw)=fz(iat,iw) + tempz
+     enddo
                                         
+   close(unit=20+iw, status='delete')
+
+end subroutine oniom
+
 

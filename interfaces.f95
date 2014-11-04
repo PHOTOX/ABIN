@@ -17,6 +17,14 @@ module mod_interfaces
    real(DP),intent(out)   :: eclas
    end subroutine force_abin
 
+   subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
+   IMPORT :: DP
+   real(DP),intent(in)      :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout)   :: fx(:,:),fy(:,:),fz(:,:)
+   real(DP),intent(inout)   :: eclas
+   integer, intent(in)      :: iw
+   end subroutine oniom
+
    END INTERFACE
 
 end module mod_interfaces

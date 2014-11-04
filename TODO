@@ -1,6 +1,4 @@
 FINAL TASKS
-better create_trajectories.sh
-better make_restart
 do some error checking into r.abin, pokudse nepodari zkopirovat zpet scratch, tak nemazat
 
 otestovat, zda funguje vstup geometrie z jineho souboru nez mini.dat
@@ -11,13 +9,10 @@ Check this value for larger clusters.
 
 
 FOR 1.0 version
-merge QMMM
 rename abin.dev to abin.v1
 
-###----UTILS
-add a swith to calc.spectrum.cpp, nm or ev or cm
+remove utils from this directory UTILS
 udelat r.molpro pro caspt2/casscf-nacm
-make analogue for of mp2freq for G09
 
 
 xyz reordering

@@ -7,7 +7,10 @@ TESTS/*/*diff
 TESTS/*/*dat
 TESTS/*/*xyz
 TESTS/*/geom.dat.00*
-TESTS/ABINITIO/ORCA/input*
+TESTS/*/geom_mm.dat.00*
+TESTS/ABINITIO/DYN/OUT*
+TESTS/QMMM/DYN/OUT*
+TESTS/QMMM/MM/OUT*
 TESTS/*/output
 TESTS/*/restart.xyz
 TESTS/*/restart.xyz.0
@@ -15,3 +18,4 @@ TESTS/*/restart.xyz.old
 TESTS/*/restart.xyz.10
 TESTS/*/debug.nacm
 TESTS/*/nacmrest.dat.10
+WATERMODELS/libttm.a

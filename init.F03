@@ -32,6 +32,7 @@ subroutine init(dt)
       use mod_shake
       use mod_minimize, only: gamm, gammthr
       use mod_analysis, only: restin
+      use mod_water,    only: watpot, check_water
       implicit none
       real(DP),intent(out) :: dt
       real(DP) :: masses(MAXTYPES)
@@ -52,7 +53,7 @@ subroutine init(dt)
 
       namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-               parrespa,dime,ncalc,idebug,enmini,rho,iknow
+               parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot
 
       namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
                         scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
@@ -62,7 +63,7 @@ subroutine init(dt)
                         Nshake,ishake1,ishake2,shake_tol
       namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
                         nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
-      namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,qmmmtype
+      namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,inames
       namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
 
       chcoords='mini.dat'
@@ -140,12 +141,12 @@ subroutine init(dt)
          integ=UpperToLower(integ)
       end if
 
-      if(iqmmm.eq.1.or.pot.eq.'mm')then
+      if(iqmmm.gt.0.or.pot.eq.'mm')then
          read(150,qmmm)
          rewind(150)
       end if
 
-      if(qmmmtype.eq."nab".or.pot.eq.'nab')then
+      if(iqmmm.eq.2.or.pot.eq.'nab')then
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
          allocate ( natmol(natom) )
 #endif
@@ -260,6 +261,8 @@ subroutine init(dt)
       do iat=1,natom
          names(iat)(2:2)=UpperToLower(names(iat)(2:2))
       end do
+
+      if (pot.eq.'mmwater') call check_water(natom, names)
 
 
 !-----THERMOSTAT INITIALIZATION------------------ 
@@ -394,19 +397,18 @@ endif
 
 !-----inames initialization for guillot rm MM part. 
 !-----We do this also because string comparison is very costly
-      if(iqmmm.eq.1.or.pot.eq.'mm'.or.pot=='guillot') allocate( inames(natom) )
+      if(iqmmm.eq.3.or.pot.eq.'mm'.or.pot=='guillot') allocate( inames(natom) )
       if(pot.eq.'guillot') call inames_guillot()
 
-      if(iqmmm.eq.1.or.pot.eq.'mm')then
-       if(qmmmtype.ne.'nab')then
+      if(iqmmm.eq.3.or.pot.eq.'mm')then 
          attypes=LowerToUpper(attypes)
          call inames_init()
          call ABr_init()
-       endif
-       write(*,nml=qmmm)
       endif
 
-      if (pot.eq."nab".or.qmmmtype.eq."nab")then
+      if (iqmmm.eq.3.or.pot.eq.'mm') write(*,nml=qmmm)
+
+      if (pot.eq."nab".or.iqmmm.eq.2)then
        if (alpha_pme.lt.0) alpha_pme = pi/cutoff
        if (kappa_pme.lt.0) kappa_pme = alpha_pme
        call nab_init(alpha_pme,cutoff,nsnb,ipbc,ips,iqmmm) !C function...see nabinit.c
@@ -518,11 +520,11 @@ endif
        write(*,*)'These are used to wrap molecules back to the box'
        error=1
       endif
-      if(iqmmm.eq.1.and.qmmmtype.ne.'nab'.and.qmmmtype.ne.'abin')then
-       write(*,*)'Set qmmmtype to "abin" or "nab"(using Amber ff)'
+      if(iqmmm.lt.0.or.iqmmm.gt.3)then
+       write(*,*)'Error: iqmmm must be 0, 1, 2 or 3.'
        error=1
       endif
-      if(iqmmm.eq.1.and.ipbc.eq.1)then
+      if(iqmmm.eq.2.and.ipbc.eq.1)then
        write(*,*)'QM/MM with PBC not supported !'
        error=1
       endif
@@ -751,16 +753,16 @@ endif
        write(*,*)'Only 1 particle is allowed for 2D harmonic oscillator!'
        error=1
       endif
-      if(pot.eq.'mm'.and.iqmmm.eq.1)then
-       write(*,*)'Pot="mm"is not compatible with iqmmm=1!'
+      if(pot.eq.'mm'.and.iqmmm.gt.0)then
+       write(*,*)'Pot="mm"is not compatible with iqmmm>0!'
        error=1
       endif
-      if(iqmmm.eq.1)then
+      if(iqmmm.gt.1)then
        write(*,*)'WARNING: QMMM is higly experimental at this point. Use with care!'
        write(*,*)chknow
        if (iknow.ne.1) error=1
       endif
-      if((natmm+natqm.ne.natom).and.iqmmm.eq.1)then
+      if((natmm+natqm.ne.natom).and.iqmmm.gt.0)then
        write(*,*)'Natmm+natqm not equal to natom!'
        error=1
       endif

@@ -42,7 +42,7 @@ readparm( m, "input.top" );
 
 mme_init( m, NULL, "::Z", dummy, NULL );
 
-if(*iqmmm == 1) {
+if(*iqmmm == 2) {
  	qm = getpdb( "input_qm.pdb", NULL );
 	readparm( qm, "input_qm.top" );
 	mme_init( qm, NULL, "::Z", dummy, NULL );

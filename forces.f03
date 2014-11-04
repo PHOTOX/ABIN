@@ -8,7 +8,7 @@ module mod_forces
 
    subroutine force_clas(fx,fy,fz,x,y,z,energy)
       use mod_general
-      use mod_qmmm,     only: qmmmtype,force_LJCoul
+      use mod_qmmm,     only: force_LJCoul
       use mod_nab,      only: ipbc,wrap,nsnb,force_nab
       use mod_sbc,      only: force_sbc, isbc !,ibag
       use mod_system,   only: conatom
@@ -18,6 +18,7 @@ module mod_forces
       use mod_utils,    only: printf
       use mod_transform
       use mod_interfaces, only: force_abin
+      use mod_water,    only: watpot
       real(DP),intent(inout) ::  x(:,:),y(:,:),z(:,:)
       real(DP),intent(inout) ::  fx(:,:),fy(:,:),fz(:,:)
       real(DP),intent(out)   ::  energy
@@ -72,6 +73,8 @@ module mod_forces
      SELECT CASE (pot)
         case ("mm")
           call force_LJCoul(transx,transy,transz,fxab,fyab,fzab,eclas)
+        case ("mmwater")
+          call force_water(transx,transy,transz,fxab,fyab,fzab,eclas, natom, nwalk, watpot)
         case ("harm")
           call force_harmon(transx,transy,transz,fxab,fyab,fzab,eclas)
         case ("2dho")
@@ -91,10 +94,9 @@ module mod_forces
 !      if (ibag.eq.1) call force_bag(transx,transy,transz,fxab,fyab,fzab)
 
 !---------QMMM SECTION-----------------
-     if(iqmmm.eq.1)then
-      if(qmmmtype.eq.'nab') call force_nab(transx,transy,transz,fxab,fyab,fzab,eclas)
-      if(qmmmtype.eq.'abin') call force_LJCoul(transx,transy,transz,fxab,fyab,fzab,eclas)
-     endif
+!- ONIOM method (iqmmm=1) is called in force_abin
+     if(iqmmm.eq.2) call force_nab(transx,transy,transz,fxab,fyab,fzab,eclas)
+     if(iqmmm.eq.3) call force_LJCoul(transx,transy,transz,fxab,fyab,fzab,eclas)
 
 !--------------------------------------
 

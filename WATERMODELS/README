@@ -1,0 +1,36 @@
+Implementation of the following four water potentails is provided:
+
+q-TIP4PF : J. Chem. Phys. 131, 024501 (2009); http://dx.doi.org/10.1063/1.3167790
+           "Competing quantum effects in the dynamics of a flexible water model"
+           Scott Habershon, Thomas E. Markland, and David E. Manolopoulos
+
+TTM2.1-F : J. Phys. Chem. A, 2006, 110 (11), pp 4100–4106 DOI: 10.1021/jp056477k
+           "The Flexible, Polarizable, Thole-Type Interaction Potential for
+           Water (TTM2-F) Revisited"
+           George S. Fanourgakis and Sotiris S. Xantheas
+
+           J. Chem. Phys. 116, 5115 (2002); http://dx.doi.org/10.1063/1.1447904
+           "Development of transferable interaction models for water. IV.
+           A flexible, all-atom polarizable potential (TTM2-F) based on geometry
+           dependent charges derived from an ab initio monomer dipole moment
+           surface"
+           C. J. Burnham and S. S. Xantheas
+
+  TTM3-F : J. Chem. Phys. 128, 074506 (2008); http://dx.doi.org/10.1063/1.2837299
+           "Development of transferable interaction potentials for water. V.
+           Extension of the flexible, polarizable, Thole-type model potential
+           (TTM3-F, v. 3.0) to describe the vibrational spectra of water clusters
+           and liquid water"
+           George S. Fanourgakis and Sotiris S. Xantheas
+
+  TTM4-F : J. Chem. Phys. 128, 154519 (2008); http://dx.doi.org/10.1063/1.2895750
+           "The vibrational proton potential in bulk liquid water and ice"
+           C. J. Burnham, D. J. Anick, P. K. Mankoo, and G. F. Reiter
+
+Type 'make' to compile the potentials along with a little program (test-ttm)
+that illustrates how to invoke them.
+
+Volodymyr Babin <vb27606@gmail.com>
+
+This code was downloaded from:http://www.deleramentum.net/codes/ttm/codes/
+by Daniel Hollas

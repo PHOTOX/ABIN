@@ -16,7 +16,7 @@ nstep=5000,		! number of steps
 dt=20.,			! timestep [au]
 irandom=111313,  	! random seed
 nabin=50,		! what is the gap between ab initio calculations?(RESPA ONLY)
-iqmmm=0,		! 0 - QM/MM OFF, 1 - QM/MM ON
+iqmmm=0,		! 0 - QM/MM OFF, 1 - ONIOM, 2- QM/MM from NAB (not working now), 3 - native LJ QM/MM 
 
 nwrite=10,		! how often some output should be printed (estimators etc.)
 nwritex=5,		! how often should we print coordinates?
