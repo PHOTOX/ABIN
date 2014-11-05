@@ -63,7 +63,7 @@ subroutine init(dt)
                         Nshake,ishake1,ishake2,shake_tol
       namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
                         nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
-      namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes,inames
+      namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
       namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
 
       chcoords='mini.dat'

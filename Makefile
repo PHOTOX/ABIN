@@ -9,7 +9,7 @@ OUT = abin.dev
 FC = gfortran
 CC = gcc
 
-FFLAGS =  -g -fopenmp  -Wall -Wextra -fbounds-check -Og -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
+FFLAGS =  -g -fopenmp  -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS =  -g -INAB/include #-Wno-unused-result " 
 
 LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a WATERMODELS/libttm.a
