@@ -40,7 +40,7 @@ program abin_dyn
 !$ integer :: nthreads,omp_get_max_threads
 
      call PrintLogo(values1)
-     call system('rm -f ERROR engrad.dat.* nacm.dat hessian.dat.* geom.dat.*')
+     call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
 
 
 !-   INPUT AND INITIALIZATION SECTION      
