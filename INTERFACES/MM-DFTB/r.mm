@@ -1,6 +1,6 @@
 #!/bin/bash
 cd MM
-EXE=dftb+
+EXE=~hollas/bin/dftb+
 
 timestep=$1
 ibead=$2
@@ -11,21 +11,32 @@ natom=`cat $geom | wc -l`
 WRKDIR=OUT$ibead.$natom
 mkdir -p $WRKDIR ; cd $WRKDIR
 
-cat > geom_in.gen << EOF
-$natom C
-O H
+# You have to specify, which elements are present in your system
+# i.e. define array id[x]="element"
+# No extra elements are allowed.
+awk -v natom="$natom" 'BEGIN{
+   id[1]="O"
+   id[2]="H"
+   nid=2    # number of different elements
 
-EOF
+# END OF USER INPUT
+   print natom,"C"
+   for (i=1;i<=nid;i++) {
+      printf"%s ",id[i]
+   }
+   print ""
+   print ""
+}
+#conversion of xyz input to dftb geom
+{
+   for (i=1;i<=nid;i++) {
+      if ( $1 == id[i] ) {
+         print NR, i, $2, $3, $4
+      }
+   }
+}'  ../$geom > geom_in.gen
 
-awk 'BEGIN{
-id[1]=1
-id[2]=2
-id[3]=2
-id[4]=1
-id[5]=2
-id[6]=2
-}{print NR,id[NR],$2,$3,$4}' ../$geom >> geom_in.gen
-
+#Reading initial charge distribution
 if [ -e charges.bin ];then
    sed 's/#ReadInitialCharges/ReadInitialCharges/' ../dftb_in.hsd > dftb_in.hsd
 else

@@ -19,7 +19,7 @@ Status: UNRESOLVED
 ERROR introduced in QMMM branch, we have remove engrad_mm.dat* 
 in the beginning of the simulation.
 Affected: QMMM
-Status: RESOLVED in this commit.
+Status: RESOLVED in commit adedc68.
 
 ---------------------------------------------------
 Do we do correctly inac=1??

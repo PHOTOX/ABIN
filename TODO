@@ -1,8 +1,6 @@
 FINAL TASKS
 do some error checking into r.abin, pokudse nepodari zkopirovat zpet scratch, tak nemazat
 
-otestovat, zda funguje vstup geometrie z jineho souboru nez mini.dat
-
 test QMMM one more time with luciferin
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
