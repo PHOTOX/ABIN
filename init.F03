@@ -103,10 +103,8 @@ subroutine init(dt)
       allocate( ishake1(natom*3-6) )
       allocate( ishake2(natom*3-6) )
 #endif
-      do iat=1,natom*3-6
-         ishake1(iat) = 0
-         ishake2(iat) = 0
-      end do
+      ishake1 = 0
+      ishake2 = 0
 
 
       ! the namelist system does not need to be present
@@ -127,10 +125,9 @@ subroutine init(dt)
       allocate ( natmolt(natom)  )
       allocate ( nshakemol(natom)  )
 #endif
-      do iat=1,natom  !cannot be more then natom
-         natmolt(iat) = 0
-         nshakemol(iat) = 0
-      end do
+      natmolt   = 0
+      nshakemol = 0
+
       read(150,nhcopt)
       rewind(150)
 
@@ -150,6 +147,7 @@ subroutine init(dt)
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
          allocate ( natmol(natom) )
 #endif
+         natmol = 0
          read(150,nab)
          rewind(150)
       end if
