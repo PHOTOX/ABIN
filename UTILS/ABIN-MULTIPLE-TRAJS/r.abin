@@ -32,6 +32,12 @@ cd /scratch/$USER/$JOBNAME
 $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 
 cp -upr * $KDE/.
+if [[ $? -ne "0" ]];then
+   echo "Error when copying the data from scratch back to the server."
+   echo "I will keep the directory $SCRDIR on node:"
+   uname -a
+   exit 1
+fi
 
 cd ..
 

@@ -243,10 +243,6 @@ subroutine init(dt)
       if(nshake.ge.1)then
        write(*,*)'Setting distances for SHAKE from mini.dat'
        call shake_init(x,y,z)
-      else 
-       do iat=1,natom
-        nshakemol(iat)=0
-       enddo
       endif
 
      call dist_init() !zeroing distribution arrays

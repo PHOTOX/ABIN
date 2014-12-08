@@ -3,6 +3,7 @@ test QMMM one more time with luciferin
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
 Check this value for larger clusters.
+ask prof. lewerence about the usage of his code
 
 
 FOR 1.0 version

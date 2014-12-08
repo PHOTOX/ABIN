@@ -50,14 +50,14 @@ select case (imod)
 case (0)
 
 if (lecho) write(*,*)'How many bonds?'
-read(*, 10, IOSTAT=iost) ndist
+read(*, *, IOSTAT=iost) ndist
 if (iost.ne.0) call PrintInputError()
 if (ndist.gt.0)then
   allocate( dists(2,ndist) )
   allocate( r(ndist) )
   if (lecho) write(*,*)'Please, specify each bond by atom indices, one bond per line.'
   do i=1,ndist
-    read(*,20 ,IOSTAT=iost)dists(1,i),dists(2,i)
+    read(*,* ,IOSTAT=iost)dists(1,i),dists(2,i)
     if (iost.ne.0) call PrintInputError()
   enddo
   allocate( bins_dist(nbin_dist, ndist) )
@@ -65,7 +65,7 @@ if (ndist.gt.0)then
 end if
 
 if (lecho) write(*,*)'How many angles?'
-read(*, 10, IOSTAT=iost)nang
+read(*, *, IOSTAT=iost)nang
 if (iost.ne.0) call PrintInputError()
 
 if (nang.gt.0)then
@@ -73,14 +73,14 @@ if (nang.gt.0)then
   allocate( alfa(nang) )
   if (lecho) write(*,*)'Please, specify each angle by atom indices, one angle per line.'
   do i=1,nang
-    read(*, 30)angles(1,i),angles(2,i),angles(3,i)
+    read(*, *)angles(1,i),angles(2,i),angles(3,i)
   enddo
   allocate( bins_ang(nbin_ang, nang)    ) 
   bins_ang=0
 end if
 
 if (lecho) write(*,*)'How many dihedrals?'
-read(*, 10,IOSTAT=iost)ndih
+read(*, *,IOSTAT=iost)ndih
 if (iost.ne.0) call PrintInputError()
 
 if (ndih.gt.0)then
@@ -88,7 +88,7 @@ if (ndih.gt.0)then
   allocate( delta(ndih) )
   if(lecho)  write(*,*)'Please, specify each dihedral by atom indices, one dihedral per line.'
   do i=1,ndih
-    read(*,40 )dihs(1,i),dihs(2,i),dihs(3,i),dihs(4,i)
+    read(*,* )dihs(1,i),dihs(2,i),dihs(3,i),dihs(4,i)
   enddo
   allocate( bins_dih(nbin_dih, ndih) )
   bins_dih=0
@@ -105,19 +105,19 @@ case (1)
    if (iost.ne.0) call PrintInputError()
  
    if(lecho)  write(*,*)'Please, specify atom index.'
-   read(*, 10, IOSTAT=iost)dists(1,1)
+   read(*, *, IOSTAT=iost)dists(1,1)
  
    if(lecho)  write(*,*)'Please, specify atom element to which we calculate distances..'
    read(*,'(A2)')rdfname
  
    if(lecho)  write(*,*)'How many atoms should I ignore?'
-   read(*, 10)nignore
+   read(*, *)nignore
  
    if(nignore.gt.0)then
       allocate( ignore(nignore) )
       if(lecho)  write(*,*)'Please, specify indices of atoms to ignore, one per line.'
       do i=1,nignore
-         read(*,10)ignore(i)
+         read(*,*)ignore(i)
       end do
    end if
 
