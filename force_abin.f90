@@ -5,7 +5,7 @@
       use mod_harmon,   only: hess
       use mod_sh,       only: nac_accu1, tocalc, en_array, istate, nstate
       use mod_qmmm,     only: natqm
-      use mod_utils,    only: abinerror
+      use mod_utils,    only: abinerror,lowertoupper
       use mod_interfaces, only: oniom
       implicit none
       real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
@@ -62,27 +62,9 @@
 
 
 !--- HERE we decide which program we use to obtain gradients and energies
-     select case (pot)
-      case ('g09')
-              write(chsystem,'(A)')'./G09/r.g09 '
-      case ('tera')
-              write(chsystem,'(A)')'./TERA/r.tera '
-      case ('orca')
-              write(chsystem,'(A)')'./ORCA/r.orca '
-      case ('molpro')
-              write(chsystem,'(A)')'./MOLPRO/r.molpro '
-      case ('turbo')
-              write(chsystem,'(A)')'./TURBO/r.turbo '
-      case ('gamess')
-              write(chsystem,'(A)')'./GAMESS/r.gamess '
-      case ('qchem')
-              write(chsystem,'(A)')'./QCHEM/r.qchem '
-      case ('dyn')
-              write(chsystem,'(A)')'./DYN/r.dyn '
-      case DEFAULT
-              write(*,*)'Error in input parameter "pot"'
-              call abinerror('force_abin')
-     end SELECT
+
+!    e.g. ./G09/r.g09
+     chsystem='./'//trim(LowerToUpper(pot))//'/r.'//pot
 
      INQUIRE(FILE=chsystem, EXIST=file_exists)
      if (.not.file_exists)then
