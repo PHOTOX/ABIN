@@ -337,7 +337,7 @@ endif
 
 if(isbc.eq.1)then
  open(11,file='r.dat',access=chaccess,action='write')
- write(11,*)'#Radius    density'
+ write(11,*)'#TimeStep     Radius[ANG]    density[kg.m^3]'
 endif
 
 if(icv.eq.1)then

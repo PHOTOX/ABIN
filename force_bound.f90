@@ -76,6 +76,7 @@ MODULE mod_sbc
       END SUBROUTINE
 !--------------------------------
       SUBROUTINE force_sbc(x,y,z,fx,fy,fz)
+      use mod_const,  only: ANG
       use mod_general,only: natom, nwalk, it, nwrite
       use mod_system, ONLY: names 
       real(DP),intent(in)    :: x(:,:), y(:,:), z(:,:)
@@ -111,7 +112,7 @@ MODULE mod_sbc
       enddo
 
 !      if(idebug.eq.1)then
-       if(modulo(it,nwrite).eq.0) write(11,*)it,rmax,mass_total/(4.0d0/3.0d0*pi*rmax**3)/fact
+       if(modulo(it,nwrite).eq.0) write(11,'(I12,2F15.3)')it,rmax/ang,mass_total/(4.0d0/3.0d0*pi*rmax**3)/fact
 !      endif
 
       return
