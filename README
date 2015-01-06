@@ -20,12 +20,13 @@ Full text of the license is in file LICENCE.
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
 
-Full documentation can be found in file abin-documentation.pdf
+Full documentation can be found in filder DOC.
 
 ----------------------------------------------
 2. INSTALLATION
 ----------------------------------------------
-To compile the code, you need a gfortran and gcc compiler with version >4.6.
+To compile the code, you need a gfortran and gcc compiler with version >4.3.
+However, version > 4.6 is recommended.
 If your distribution does not have the required version of the compilers, it can be downloaded from this website:
 https://gcc.gnu.org/wiki/GFortranBinaries
 The site offers compiled binaries and required libraries, so compilation is typically not needed.

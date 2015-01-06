@@ -1,54 +1,9 @@
-FINAL TASKS
-
+FOR 1.0 version
 test QMMM one more time with luciferin
+rename abin.dev to abin.v1
 test PIMD and PIGLE for nab water,
 optimize the value of tau0, test for different temperatures.
 Check this value for larger clusters.
 
-FOR 1.0 version
-rename abin.dev to abin.v1
-
-udelat r.molpro pro caspt2/casscf-nacm
-
-
-xyz reordering
-OOO....OHHH...H
-awk 'BEGIN{i=1;j=1}{if($1=="H"){H1[i]=$0;getline;H2[i]=$0;i++}if($1=="O") {O[j]=$0;j++}}END{for(k=1;k<j;k++) {print O[k];print H1[k];print H2[k]}}' snap2005.xyz > o
-HOHHOH....
-awk '{}' $1
-
-
-####FOR LATER VERSIONS ####################################
-DL-FIND? useful for CI optimizations problems with molpro
-http://pubs.acs.org/doi/full/10.1021/jp9028968
-
-
-make shake user friendly----automatically determine bonds to hydrogens and water
-also, test  shake, see p. 416 in Understanding mol. simulations 
-Leave this probably to the next version, it requires coupling to massive NHC, which is not well tested
-
-todo: test MPI version for terachem, make it parallel
-NAB - compile my own libnab.a library and pass al argumets through it
-NAB - use new NAB version from AmberTools14
-QMMM --- otestovat, udelat glycin + 10A vod 
-OTESTOVAT SHAKE
-
-EWALD jak je to s 1-4 interakcemi?,parametr scee
-NORMAL MODES, shake , PIGLET
-ELASTIC BAG
-
-
-u PBC simulace se mirne lisi sily mme a mme2...nevime proc
-
---------------FOR TESTING------------------------
-globalni termostat
-podivat se v gdb,zda jsme omezili pocatecni oscilace
-
-pro pripadne PME je potreba modifikovat nbond_box!
-funkce mme by nemela mit erfc
-a co mme2? jak ted delame hessian?
-
-http://archive.ambermd.org/201007/0619.html
-amber11/AmberTools/test/nab/Run.ips
-
-
+remove TODO.
+always make ISSUE on GitHUB.
