@@ -1,4 +1,11 @@
 !---+----|----+----|----+----|----+----|----+----|----+----|----+----|--
+!  The following code was kindly provided by prof. Marius Lewerenz.
+!  Version of this code is included in the program MCMC2.
+!  See the following article for details.
+!  Bonhommeau, D. A.; Lewerenz, M. and Gaigeot, M. 
+!  MCMC2 (version 1.1): A {Monte Carlo} code for multiply-charged clusters
+!  Comp. Phys. Comm. , 185, 2014, pp. 1188-1191
+!  doi: 10.1016/j.cpc.2013.09.026
 !
 !      set of random number routines extracted from toolbox
 !                                          m. lewerenz may/2001

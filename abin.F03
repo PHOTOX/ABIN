@@ -1,6 +1,6 @@
 ! -----------------------------------------------------------------
 !  ABIN: Program for Born-Oppenheimer MD with potential calculated 
-!  on-the-fly by an external procedure placed in ./DYN (and lot more)
+!  on-the-fly by an external program. (and a lot more)
 !------------------------------------------------------------------  
 !  Copyright (C) 2014             D.Hollas, M.Oncak, O.Svoboda and P.Slavicek
 !
