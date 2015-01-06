@@ -10,7 +10,6 @@ ask prof. lewerence about the usage of his code
 FOR 1.0 version
 rename abin.dev to abin.v1
 
-remove utils from this directory UTILS
 udelat r.molpro pro caspt2/casscf-nacm
 
 

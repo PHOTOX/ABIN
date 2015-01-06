@@ -1,0 +1,841 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage[pdftitle={Diploma Thesis 2013},
+pdfauthor={Daniel Hollas},
+bookmarks=true,
+colorlinks=true,
+breaklinks=true,
+urlcolor=red,
+citecolor=blue,
+linkcolor=blue,
+unicode=true]{hyperref}
+
+\usepackage[super,sort&compress,comma]{natbib}
+\bibliographystyle{achemso_DH}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\author{Daniel Hollas}
+\title{ABIN - Documentation}
+\title{Abin -  \textit{Ab initio} molecular dynamics program \\ v1.0}
+\begin{document}
+
+%\thanks{written by Daniel Hollas}
+\maketitle
+
+\newcommand{\abin}{\textsc{Abin} }
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+\abin is an program performing \textit{ab initio} Born-Oppenheimer molecular dynamics. It was designed specifically to deal with quantum nuclear effects. It can do path integral simulations and also utilizes recently developed quantum thermostat\cite{Ceriotti2011}.
+It can also simulate non-adiabatic events using Surface-hoping algorithm.   
+
+The basic philosophy of \abin is simple. While the program itself handles the propagation of the system according to the equations of motion, the forces and energies are taken from the external electronic structure program such as Gaussian. The call to the chosen external program is handled via simple shell script. Therefore, writing a new interface is rather straightforward and can be done without any changes to the code itself.
+
+The current capabilities of \abin are:
+\begin{itemize}
+\item Classical MD in the gas phase or in condensed phase using spherical boundary conditions. Both NVE and NVT ensembles are supported. The temperature is regulated using Nosé-Hoover chain thermostat\cite{Martyna1992a}. Equations of motions are integrated using velocity Verlet algorithm. Forces and energies are obtained either within the code using classical Amber force field or from external programs. 
+At this moment there are interfaces to the following programs: \textsc{Gaussian 09\cite{G09}}, \textsc{Molpro}\cite{MOLPRO06}, \textsc{Gamess}\cite{Schmidt1993}, \textsc{TurboMole}\cite{turbomole}, \textsc{QChem}\cite{Shao2006}, \textsc{Orca}\cite{orca} and \textsc{TeraChem}\cite{Ufimtsev2009}. 
+
+\item Path Integral MD using staging transformation, RESPA integrator and massive Nosé-Hoover Chain thermostat.
+\item Surface hopping algorithm\cite{Barbatti2011} for mixed quantum classical MD. This code is currently interfaced with \textsc{Molpro} and \textsc{GAMESS} packages. 
+\item Simulations with quantum thermostat\cite{Ceriotti2010d} and combined PI+GLE\cite{Ceriotti2011} methods.
+\item two-layer QM/MM ONIOM interface, which calculates the "MM" part using any external program.
+\item Constraints using SHAKE algorithm (currently only for classical MD).
+\item Simple minimization using the steepest descent method. 
+\end{itemize} 
+
+Several other capabilities are currently under development, namely:
+\begin{itemize}
+\item PIMD utilizing normal mode coordinates, which will allow for PIMD simulations with constraints.
+Normal modes are also important for an efficient implementation of the PI+GLE method.
+\item Periodic boundary conditions, allowing for the simulations of condensed phases (at the molecular mechanical level).
+\item Ewald summation algorithm for calculation of long-range coulomb forces and energies.
+\end{itemize}
+
+\subsection{Installation}
+\abin is distributed in the form of Fortran and C source code and is intended and tested to be used in Linux environment.
+In the rest of the manual, it is always assumed that you are in the top \abin directory (i.e. ABINv1.0). You should see the following content:
+\begin{description}
+\item[src/] Directory with source code.
+
+\item[ABIN-INTERFACES/] Directory with interfaces for many common \textit{ab initio} codes.
+
+\item[bin/] Directory containing the compiled binary \textit{abin.v1.0} and other small handy scripts. It is highly recommended to copy the files from bin/ directory somewhere to your  \$PATH (i.e.\,$\sim$/bin) Some of scripts need to be in your path in order for other utilities in the UTIL/ directory to work.
+
+\item[UTIL/] Directory containing many scripts and small programs that allow efficient usage of \abin. See UTIL/README for a brief overview.
+
+\item[SAMPLE/] Directory with sample input files.
+\end{description}
+
+To compile the code, you need the following to be installed in your system:
+\begin{itemize}
+\item gcc and gfortran compilers, version at least 4.3, although versions >=4.6 are preferred.
+In the improbable case that your system has older version, you can download gfortran binaries here:
+
+https://gcc.gnu.org/wiki/GFortranBinaries
+
+\item FFTW library, which is typically provided with your linux distribution or it can be downloaded here:
+
+http://www.fftw.org/download.html 
+
+\end{itemize}
+
+\noindent
+The compilation can be as easy as: 
+
+\medskip
+\colorbox{black!20}{$ \$ \quad cd\; src\,; \; make$}
+
+\bigskip\noindent
+You can test the installation by:
+
+\medskip
+\colorbox{black!20}{$ \$ \quad make \; test$}  (one of the test requires a working \textsc{Orca} installation)
+
+\medskip\noindent
+Before recompilation, you should always clean up by:
+
+\medskip
+\colorbox{black!20}{$ \$ \quad make \; clean$}
+
+\section{Quick start}
+\subsection{Input files}
+
+There are two mandatory input files -- one contains the input coordinates in xyz format and the other one contains all the parameters specifying the simulation.
+
+The xyz format is specified as follows: 
+first line contains number of atoms, second line is empty or contains some comment and the following lines contains cartesian coordinates (in \AA ngstroms) in the form "\textit{atom-name	x y z}". The atom names are not case-sensitive.
+
+The parameter file contains all parameters needed for the simulation.
+The input uses Fortran namelist syntax.
+Variables are grouped into different namelists and there are two namelists that have to be always present: \textit{general} and \textit{nhcopt}. For each type of simulation, there is an example input file in
+the folder SAMPLES/. Here is the minimum input file for classical MD.
+
+\begin{verbatim}
+----------------------------------------------------------------
+Everything outside namelists is ignored
+
+&general                ! This is the beginning of a namelist.
+!Comments within a namelist start with exclamation mark.
+!The order of keywords is irrelevant.
+!Most of the keywords have reasonable default values.
+pot='g09'               ! where do we get forces and energies?
+natom=27,               ! number of atoms
+ipimd=0,                ! 0=CMD, 1=PIMD,2=SH,3=minimization
+mini=2000,              ! equilibration period (should be at least 2000)
+
+!keywords on one line are separated by a comma
+nstep=50000,dt=20.,     ! number of time steps, time step [au]
+irandom=1651563,        ! random seed
+irest=0,                ! should we restart from restart.xyz?
+
+nwrite=1,               ! how often some output should be printed (energies etc.)
+nwritex=5,              ! how often should we print coordinates?
+nrest=5,                ! how often should we print restart files?
+nwritev=0,              ! how often should we print velocities?
+/  ! end of a namelist
+
+&nhcopt
+temp=298.15,            ! Temperature [K] for Maxwell-Boltzmann sampling and thermostat.
+inose=1,                ! Thermostatting: 0=no thermostat, 1=Nose-Hoover 1,2=GLE
+tau0=0.001,             ! relaxation time of the NHC thermostat
+/
+
+\end{verbatim}
+
+Besides these two input files, you need to prepare the directory with a bash script calling the specified \textit{ab initio} program e.\,g. G09/r.g09. You have to modify this file and specify the method, basis set and other parameters specifying the ab initio calculation. The interface can be found in the folder INTERFACE.
+
+After you prepared your input files, you can run \abin simply as:
+
+\bigskip
+\colorbox{black!20}{$ \$ \quad bin/abin.v1.0\quad [-c \; coordinates.xyz]\; [-i\; input.dat]\quad  > output $}
+
+\bigskip \noindent
+Without the command line options, the program looks for initial coordinates in file \textit{mini.dat}
+and input parameters in \textit{input.in}.
+
+If you run \abin in cluster environment, it is better to use the automated scripts as described in the section \ref{sec:clusters}.
+
+\subsection{Output files}
+
+At the beginning of the simulation, \abin dumps all the input parameters (including the defaults not specified by the user)
+to the standard output along with some other essential information like atom masses, number of threads in parallel simulations etc.
+During the simulation, only the timestep and time in femtosecond is printed to standards output, all the other information are printed to separate files.
+
+All output files are simple text files. Besides the files containing the geometries, they should all be readable by Xmgrace and you can thus visualize the time evolution of each quantity very easily. Each file contains a one-line header explaining the quantity in each column.
+
+\begin{description}
+\item[temper.dat] This file contains instantaneous and average temperature. The third column shows the conserved quantity of the respective thermostat (see section about NH thermostat). You should always check, whether this quantity does not drift. Otherwise, the thermostat
+is probably not working properly.
+
+\item[energies.dat] This file contains various types of energies. The content may vary slightly depending on the type of simulation. However, the columns are usually in the following order: \textit{time}, \textit{potential energy}, \textit{kinetic energy}, \textit{total energy}.
+
+\item[movie\_mini.xyz]  Contains trajectory from the equilibration period (see parameter \textit{imini}). Thus it is usually not used for subsequent analysis. Note however, that all previous files contains data from equilibration period.
+
+\item[movie.xyz] This file contains the trajectory in the xyz format and is readily readable e.g. by VMD or Molden.
+
+\item[restart.xyz] This file contains all the necessary information so that \abin can restart the simulation in case it crashed or if the user wants to extend it. All data are given in atomic units. The structure of this file depends on the simulation parameters (\textit{e.g.} which thermostat you use). The first line contains the current time step. Then there is a section containing the current geometry followed by the section containing the velocities. The third section contains either the thermostat parameters (if you use one) or surface hopping wave function. The next section contains the cumulative averages of certain estimators. The last part contains the state of random number generator. This part is not mandatory. If it's missing, the random number generator simply uses the random seed from the input file and starts the sequence from the beginning.
+
+If you need to produce restart file manually (i.e. for simulation starting with predetermined initial velocities) you must always use the correct character string that comes at the beginning of each section (i.e. "\textit{Cartesian Velocities [au]}").
+For surface hopping or classical MD, you can use program UTILS/HARMONIC\_SAMPLING/make\_restart.f90 to produce the appropriate restart file.
+
+\end{description}
+
+The other output files are present only when you using certain methods. These are described later in the manual.
+
+\subsection{Running Abin on clusters}
+\label{sec:clusters}
+There are a few scripts that are recommended for efficient execution of \abin jobs on clusters. All of them are simple bash scripts and it should be straightforward to customize them to your needs.
+
+The launching script r.abin (it should be located at the same directory as your input files) can be submitted simply as follows:
+
+\bigskip 
+\colorbox{black!20}{\$  \textit{qsub -cwd r.abin}} (you may also want to specify the queue by \textit{-q QueueName})
+
+\bigskip \noindent 
+The script copies all files in the current working directory to the directory on the node scratch and launches \abin there to avoid I/O traffic over the network.
+The names of the node and the scratch directory are written to file job.log
+
+In order to see the current data from the run, one can use the script fetchabin.sh simply as:
+
+\bigskip
+\colorbox{black!20}{$ \$ \quad fetchabin.sh $} (assuming it is in your $PATH$).
+
+\bigskip \noindent 
+This will copy the files from the scratch to the current working directory.  
+
+\noindent
+To interrupt the simulation, use:
+
+\colorbox{black!20}{$ \$ \quad ExitAbin.sh $}
+
+\bigskip \noindent 
+This script will create empty file \textit{EXIT} in the scratch directory. \abin checks for the existence of this file at the beginning of each step and if present, prints the restart file and exits. There are two advantages of this approach over simple \textit{qdel} command. First, you have the most recent restart file. Moreover, the files from scratch disk are automatically deleted (if you used script r.abin).
+
+\subsection{Running classical MD}
+
+Here we will see how to setup a basic classical NVT simulation using velocity Verlet algorithm to propagate classical Newton's equations and Nos\'{e}-Hoover-Chain thermostat to keep constant temperature. 
+It is supposed that you have a clean directory with the xyz geometry of your system.
+
+\begin{itemize}
+
+\item The first thing to decide is what program to use to get forces and energies. If you would choose for example ORCA, copy the directory
+ABIN-INTERFACES/ORCA. Now you have to modify script ORCA/r.orca and specify the method and basis that you want to use. The job of this script is simple: take the geometry from \abin, create input for \textsc{Orca}, launch \textsc{Orca}, collect data from \textsc{Orca}'s output and send them back to \abin.  
+\item Now you need to create or modify the file with input parameters. Copy the sample file from SAMPLES/input.in.cmd.
+This file is commented so it should be straightforward to understand. There are a few basic things that need to be specified in every simulation: where do we get forces (parameter \textit{pot}), how many atoms we have (\textit{natom}), what type of simulation do we want (\textit{ipimd}, how many time steps and their length (\textit{nstep, dt}). These keywords are in namelist "general". There are two more critical parameters in namelist "nhcopt". You need to specify the thermostat (in this case we will use Nosé-Hoover-Chain thermostat, inose=1)
+and temperature of the system (\textit{temp}). The keyword \textit{temp} also specifies the initial temperature i.e. the Maxvell-Boltzmann distribution from which we randomly take initial velocities. And that's basically it.
+
+\item Now you can launch the simulation. If you are using the cluster environment, copy the script UTILS/r.abin.
+You should modify it and specify the names of your input files and and path to the \abin binary  (please, copy the binary somewhere to your home folder i.e. $\sim$/bin. Then you can send the job to queue and use fetchabin.sh script too see, what's happening. It is strongly advised that each simulation has its own folder and that there is no other stuff in that folder. Otherwise, fetchabin.sh will copy unnecessary amount of data and will rewrite any changes that you could make since the simulation began. 
+
+\end{itemize}
+
+There are couple of other options that you typically want to set. Each simulation should have its unique random seed (\textit{irandom}). This is especially critical for surface hopping simulations and simulations utilizing quantum thermostat ($inose=2$). Secondly, you might want to control the frequency of writing to the output to files (\textit{nwrite, nwritex, nrest, nwritev}). Especially the trajectory file movie.xyz might get very big for large systems and/or long simulations. If you are doing thermodynamical simulations $(inose > 0$) you don't need every geometry anyway, since they are correlated and therefore useless for statistical analysis.
+
+When running a classical simulation without thermostat (\textit{inose=0}) you should always check the conservation of energy in file energies.dat. If you use thermostat ($inose>0$), you should check the conserved quantity of the thermostat, which is printed at the fourth column in file temper.dat. This might vividly oscillate, but it should not drift. If it drifts, then your time step is too long, or you need to tune the parameters of the thermostat, as explained below the next section.
+
+\subsubsection{Tuning Nosé-Hoover thermostat} 
+
+A comprehensive review of Nosé-Hoover algorithm is given in section \ref{sec:NHC}. Here we describe only practical details.
+
+It is sometimes necessary to tune the parameters of the thermostat if its conserved quantity drifts or if it even produces incorrect temperature. There are couple of parameters that are needed to specify the action of the thermostat. All of them have default values, which were chosen for typical systems containing hydrogen atoms. The most important parameter is so called relaxation time of the thermostat ($tau0$) given in picoseconds. If this value is not chosen appropriately, the thermostat may decouple from the system and will not work.
+If your system does not contain fast vibrations, you may want to set a larger value.  
+
+Other parameters are more robust. Number of chains ($nchain=4$) and number of inner iterations during of the NHC integrator ($nrespnose$, $nyosh$) have by default high values that should suffice for common usage. Since the simulation time is typically determined by \textit{ab initio} calculations, the overhead caused by these conservative settings is usually completely negligible.
+
+\abin by default uses so called massive thermostatting scheme originally devised for PIMD simulations ($imasst=1$).
+If you know what you are doing, you might want to use global thermostat, but be aware that this is not tested nearly as much as the massive version and can in some cases provide wrong results for small systems, because \abin does not remove initial rotations. The details about the global version can be found in section \ref{sec:shake} which explains how to set up the simulation with SHAKE constraints.
+
+\subsection{Restarting the simulation}
+
+Quite often you will need to restart the simulation from the last point. This is typically pretty straightforward. Simply set \textit{irest=1} in namelist "general" and start the simulation again. 
+
+Note that \abin always checks for the presence of files movie.xyz and restart.xyz. If they are present but \textit{irest=0}, the program will stop with an error. This prevents an inadvertent deletion of your precious data. However, if you delete movie.xyz and restart.xyz and set \textit{irest=0}, all other output files will be rewritten. 
+
+Before reading any data, \abin copies the original restart.xyz file to "restart.xyz.\textit{timestep}". This file serves as a backup if anything goes wrong, so that you can always go back to that restart file. 
+
+WARNING: If the frequency of restart printing (\textit{nrest}) is different from the other ones (\textit{nwrite}, \textit{nwritex}), it may happen that there will be duplicate entries in the output files after the restart. However, you can easily fix this after the end of simulation by simply deleting the conflicting lines and geometries. You can easily determine, whether the simulation was restarted by searching for headers in the output files (lines beginning with "\# Time").
+
+In same rare cases, you may want to change the parameters of the simulations when before restart.
+This may cause troubles because the format might be different. If you want for example to turn on the thermostat, the restart file will be missing the thermostat section. You may fix that by setting \textit{readNHC=0} or \textit{readQT=0}. In other more complicated cases, you will have to manually edit the restart file. As mentioned before, \abin is strict about the exact string match in order to prevent reading corrupted restart file.  
+
+If you want to see what's really going on during restart, checkout the subroutine \textit{restin} in src/analysis.f90. If you want to create the restart file for surface hopping simulation, you should use/modify program UTILS/ABIN-MULTIPLERUNS/make\_restart.f90.
+
+\subsection{Running Path Integral MD}
+
+TODO:
+
+PIMD simulation produces one more output file -- \textit{est\_energy.dat} -- which contains the instantaneous values and cumulative averages of primitive and centroid virial total energy estimators (equations \ref{eqeprim} a \ref{eqevir}). The cumulative average of the virial estimator should converge much more quickly to an constant value. However, both estimators should always converge to the same value. If they do not, something is wrong with your simulation.
+
+Note that during PIMD simulations \abin always prints geometries of every bead.
+
+\subsubsection{Running parallel simulations}
+
+PIMD algorithm can be straightforwardly parallelized, as we need to do do \textit{nwalk} independent \textit{ab initio} calculations at each time step.
+\abin uses OpenMP parallelization for this. Note that this is the only part of the code, that is currently parallelized.
+
+You can set variable \textit{nproc} to specify the number of processors you want to use. As you might suspect, \textit{nwalk} should be divisible by \textit{nproc} for maximum efficiency (\abin will complain if it is not).
+
+Note that you can in addition use parallel version of the \textit{ab initio} program as well. You can of course do that for all types of simulations. However, in the case of PIMD, it is almost always more efficient to use \abin parallelization, since you rarely get perfect linear scaling in \textit{ab initio} codes.
+
+For example, it might be convenient to set \textit{nproc=4} when using PI-GLE method with 4 beads (see below), and also set 2 processors for each ab initio calculation. This setup requires 8 processors in total.
+
+\subsection{Running simulations with GLE thermostat}
+Besides the Nosé-Hoover thermostat, \abin can also use the thermostat based on Generalized Langevin equation (GLE). While this thermostat can be used also for classical MD and has many different application, it is currently used to simulate quantum nuclear effects using either Quantum Thermostat or PI+GLE method as described below.
+
+\subsection{Quantum thermostat}
+The quantum thermostat method (here denoted QT) was devised by M. Cerriotti et al. CITE for efficient simulations of quantum nuclear effects without the need for Path Integrals, which are very computationally demanding. There are two key ideas behind this method:
+
+\begin{itemize}
+\item The QT method is based on the solution of harmonic oscillator in thermal equilibrium. 
+It turns out that both classical and quantum distributions have Gaussian shape, albeit with different widths. One can then convert the classical distribution into the quantum distribution
+by running classical MD at elevated temperature $T^{\star}$ given by:
+\begin{equation}
+\T =  
+\end{equation}
+\end{itemize}
+
+\subsection{PI+GLE method}
+The ideas behind the quantum thermostat can be also applied for accelerating the convergend of PIMD simulations to the quantum limit.  
+
+
+\subsection{Running Surface Hopping simulations}
+TODO:
+
+
+
+\subsection{SHAKE and global NH thermostat}
+TODO:
+
+\label{sec:shake}
+
+\colorbox{black!20}{imasst=0 } %\hspace{4cm}} \newline
+\colorbox{black!20}{natmolt=2 } %\hspace{4cm}}
+
+
+\subsection{Boundary conditions}
+By default, all simulations are performed under open boundary conditions.
+For classical simulation with Amber force fields (keyword pot=nab), the periodic boundary conditions (\textbf{PBC}) are being developed.
+For cluster simulations, one can use simple spherical restraining potential (\textbf{SBC}) as explained in detail below. 
+
+%The more elaborate elastic bag method\cite{bag} is currently under development.
+
+%\subsubsection{PBC} 
+\subsubsection{SBC}
+TODO 
+%\subsubsection{Elastic bag} 
+
+\section{List of keywords}
+This section contains a rather extensive list of all the keywords. 
+Most of the keywords have default values, which are given in the 2nd column. 
+Some of the keywords may be rather obscure and related only to technicalities or special applications.
+If you feel that you do not understand some keyword, don't worry, it's probably not important.
+The keywords that you most likely don't need to care about are given with \colorbox{black!20}{grey background}.
+Note that the program will sometimes prevent you from using experimental features, weird keyword combinations
+or debug options unless you set $ iknow=1 $ in namelist "general". It also tries to sanitize user input against obvious errors.
+But do not rely on this feature! You can still make your simulation meaningless by bad simulation parameters.
+
+The keywords are divided into namelists that they belong to.
+The namelists \textit{general} and \textit{nhc} must always be present in the input file.
+Order of namelists in the input file is irrelevant.
+
+\subsection{\&general}
+\begin{tabular}{lcl}
+\textit{keyword} & \textbf{default} & Description \\
+\hline 
+
+\textit{pot} & - & Specifies, where do we get forces and energies. Supported options are: \\
+ &  & \textbf{g09}, \textbf{orca}, \textbf{tera}, \textbf{turbo}, \textbf{molpro} \\
+ &  & \textbf{dyn} (user specified script ./DYN/.r.dyn ) \\
+ &  & \textbf{nab} (amber force field), \textbf{harm} (diatomic harmonic oscillator), \\ 
+ &  & \textbf{morse} (morse potential for diatomic molecule), \textbf{guillot}[CITE],\\
+ &  & \textbf{2dho} (2-dimensional one-atom harmonic oscillator) \\ 
+
+\textit{natom} & -- &  Number of atoms. \\ 
+ 
+\textit{pimd} & \textbf{0} & Controls the type of simulation. \\  
+ & & \textbf{0} -- Classical simulation \\ 
+ & & \textbf{1} -- Path-integral simulation \\  
+ & & \textbf{2} -- Surface Hopping \\
+ & & \textbf{3} -- Simple steepest-descent minimization \\ 
+
+\textit{nstep} & \textbf{1}& Number of time steps. \\
+
+\textit{dt} & \textbf{20} & Time step [a.\,u.] \\
+
+\textit{irandom} & \textbf{156873} & Random seed \\ 
+
+\textit{irest} & \textbf{0} & Controls the restart of the simulation. \\
+ & & \textbf{0} -- Do not restart. Take the initial structure from mini.dat \\
+ & & If restart.xyz is present, end with and error for safety reasons. \\
+ & & \textbf{1} -- Restart the simulation from file "restart.xyz". \\ 
+ & & Copy the file "restart.xyz" to "restart.xyz.\textit{it}", where \textit{it} is the current timestep.  \\
+
+\textit{imini} & \textbf{0} &  Number of time steps for equilibration of the system. 
+During this period, the coordinates are printed to file movie\_mini.xyz. Should be at least 2000. \\
+
+\textit{conatom} & \textbf{0} & Number of frozen atoms. \\ 
+& & \\
+& & \textsc{Keywords for PIMD and PI-GLE simulations} \\
+\textit{nwalk} & \textbf{1} & Number of random walkers (beads) for PIMD. \\
+ & & It is automatically set to 1 if \textit{pimd=0}. \\
+ 
+\textit{istage}  & \textbf{0} & Controls the coordinates used for PIMD.\\
+ & & \textbf{0} -- Normal cartesian coordinates.  \\
+ & & \textbf{1} -- Staging coordinates; these should we always used with PIMD. \\
+\textit{nproc} & \textbf{1} & Number of processors for parallel simulations. \\
+& & Should be 1 or equal to \textit{nwalk}. 	 \\
+\colorbox{black!20}{\textit{nabin}} & \textbf{50} & Number of substeps in RESPA algorithm used for PIMD. \\
+ 
+& & \\
+& & \textsc{Options controlling the output} \\
+\textit{nwrite} & \textbf{1}  & Print basic output every \textit{nwrite} step (e.g. temperature, energies).  \\
+\textit{nwritex}& \textbf{1}  & Print coordinates every  \textit{nwritex} step. \\
+\textit{nrest} & \textbf{1}   & Print restart file every \textit{nrest} step.   \\
+& &  Larger value is recomended, since restart files can be quite big. \\
+\textit{nwritev} & \textbf{0} & Print velocities every \textit{nwritev} step.   \\
+\colorbox{black!20}{\textit{ncalc}} & \textbf{1}   & Calculate observables (energies, temperature) every \textit{ncalc} step. 	\\
+
+\end{tabular}
+\newpage
+
+\begin{tabular}{lcl}
+
+& & \textsc{Other options} \\
+\textit{isbc }&\textbf{0} & Controls spherical boundary conditions (SBC).\\
+& & \textbf{0} -- Off.\\
+& & \textbf{1} -- On.\\
+\textit{rb\_sbc} & -- & Radius of the sphere for SBC in Angstroms.\\
+& &  If not given, the radius of the initial structure is used. \\
+\textit{kb\_sbc} & \textbf{0.02} &  Force constant for SBC in atomic units. \\
+
+\colorbox{black!20}{\textit{anal\_ext}} & \textbf{0} & Should we call external analysis routine? \\
+ & &User can write his/her own routine, which is called during analysis.\\
+ & &  Template for this subroutine is in file analyze\_ext\_template.f90. \\
+
+\colorbox{black!20}{\textit{icv}}  & \textbf{0} &	 Should we calculate constant volume heat capacities? \\
+\colorbox{black!20}{\textit{ihess}}& \textbf{0} &  Should we compute hessian for heat capacities? \\
+& &  Currently only implemented for pot=\textit{nab},\textit{harm} or \textit{morse}.   \\
+\end{tabular} 
+
+
+\subsection{\&system}
+\begin{tabular}{lcp{13cm}}
+\textit{keyword} & \textbf{default} & Description \\
+\hline 
+\textit{massnames} & \textit{array} & Array of atom names, for which we define user-specified masses. \\
+\textit{masses} & \textit{array} &  Array of user-specified masses. \\
+& & This array should match the \textit{massnames} array. \\
+& & \\
+
+& & \textsc{Shake options} \\
+\textit{nshake} & \textbf{0} & Number of fixed bonds. \\
+\textit{shake\_tol} & \textbf{0.001} & Shake convergence tolerance \\
+\textit{ishake1} & \textit{array} & Array of first-atom indices specifying the fixed bonds.  \\
+\textit{ishake2} & \textit{array} & Array of second-atom indices specifying the fixed bonds. \\
+& & \\
+& & \textsc{Options related to geometrical analyses} \\
+\textit{ndist}& \textbf{0} & Number of distances for analysis. \\
+\textit{nang}& \textbf{0} & Number of angles for analysis. \\
+\textit{ndih}& \textbf{0} & Number of dihedral angles for analysis. \\
+
+\textit{dist1} & \textit{array} & Array of first-atom indices for bond definition.\\
+\textit{dist2} & \textit{array} & Array of second-atom indices for bond definition.\\
+\textit{ang1} & \textit{array} & Array of first-atom indices for angle definition.\\
+
+\textit{xmin} & 0.5 & Minimum bond distance for binning. \\
+\textit{xmax} & 5.0 & Maximum bond distance for binning. \\
+\textit{disterror} & \textbf{0} & If set to \textbf{1}, abort the simulation
+if the bond distance is outside the range (\textit{xmin},\textit{xmax}).\\ 
+
+\textit{ang2} & \textit{array} & Array of second-atom indices for angle definition.\\
+\textit{ang3} & \textit{array} & Array of third-atom indices for angle definition.\\
+
+\textit{dih1} & \textit{array} & Array of first-atom indices for dihedral definition.\\
+\textit{dih2} & \textit{array} & Array of second-atom indices for dihedral definition.\\
+\textit{dih3} & \textit{array} & Array of third-atom indices for dihedral definition.\\
+\textit{dih4} & \textit{array} & Array of fourth-atom indices for dihedral definition.\\
+
+
+\colorbox{black!20}{ \textit{nbin} }& \textbf{2000} & Number of bins for the histograms of bond densities. \\
+\colorbox{black!20}{\textit{nbin\_ang}} & \textbf{180} & Number of bins for the histograms of angles. \\
+& & \\
+
+\hline
+\end{tabular}
+
+\newpage
+\subsection{\&nhcopt}
+\begin{tabular}{lcp{13cm}}
+\textit{keyword} & \textbf{default} & Description \\
+\hline
+\textit{temp} & \textbf{0.0} &  Temperature in Kelvins.
+This also controls the generation of initial velocities if \textit{temp0} is not explicitly set. \\ 
+\textit{temp0} & -- &  Temperature of initial Maxvell-Boltzmann distribution. \\
+\textit{inose} & \textbf{0} &  Controls the use of a thermostat. \\
+& & \textbf{0} -- Microcanonical trajectory. No thermostat. \\
+& & \textbf{1} -- Nos\'{e}-Hoover thermostat.\\
+& & \textbf{2} -- Quantum GLE thermostat.\\
+
+
+\textit{nchain} & \textbf{4} & Number of Nos\'{e}-Hoover chains. This should be always $>1$ for small systems. \\
+
+\textit{tau0} & \textbf{0.001} & Relaxation time of the thermostat in picoseconds. From this parameter, 
+the thermostat masses are determined automatically based on temperature and size of the system.\cite{Tuckerman_book} \\
+
+\textit{imasst} & \textbf{1} & Determines, whether we use massive or global thermostat. \\
+& & \textbf{0} -- Use global thermostat.
+Requires further specification of the system using \textit{nmolt}, \textit{natmolt} and \textit{nshakemol} variables.
+WARNING: This was not thoroughly tested.
+Since we do not remove rotations, this thermostat can produce wrong results. It is however required if you use SHAKE.\\
+& & \textbf{1} -- Use massive thermostat. Each degree of freedom has its own NH chain.
+This is required for PIMD and recommended for classical simulations. \\
+
+\textit{nmolt} & \textbf{1} & If we use global NHC thermostat, the system is divided into \textit{nmolt} parts
+and each part has its own NHC thermostat. \\
+
+\textit{natmolt} & \textit{array}& Array of integers specifying the number of atoms in each part that has its own thermostat.
+This assumes, that the parts are consecutively aligned in the input coordinates.  \\
+
+\textit{nshakemol} & \textbf{0} & Array of integers specifying a number of fixed bonds in each part of the system that has its own thermostat.
+Note that you can not fix bonds between atoms from different parts of the system. \\
+
+\colorbox{black!20}{nrespnose} & \textbf{3} & Number of sub-steps of the NHC integrator.\cite{Tuckerman_book} \\
+
+\colorbox{black!20}{nyosh} & \textbf{7} & Number of weights in the Suzuki-Yoshida scheme.\cite{Tuckerman_book} \\
+& & \textbf{1} - Do not use Suzuki-Yoshida scheme (not recommended) \\
+& & 3 -- 4th order Suzuki-Yoshida scheme.\\
+& & 7 -- 6th order Suzuki-Yoshida scheme.\\  
+
+\colorbox{black!20}{\textit{ams}} & -- &  Nos\'{e}-Hoover mass.
+This number is always chosen automatically for PIMD simulations.
+This parameter overrides the \textit{tau0} parameter. \\
+
+\colorbox{black!20}{\textit{scaleveloc}} & \textbf{1} & Whether we scale initial velocities so that the total kinetic energy
+matches the desired temperature. This should reduce the initial oscillations of the thermostat. \\ 
+
+\colorbox{black!20}{\textit{initnhc}} & \textbf{1} & Whether we initialize NHC momenta. \\ 
+
+\colorbox{black!20}{\textit{readnhc}} & \textbf{1} & Read NHC momenta from restart.xyz if $inose=1$. \\ 
+
+\end{tabular}
+
+
+
+\newpage
+\subsection{\&sh}
+This namelist contains parameters for surface hopping simulations and is read only if \textit{ipimd}=3.
+ 
+\hspace*{-0.4cm} 
+\begin{tabular}{lcp{12cm}}
+\textit{keyword} & \textbf{default} & Description \\
+\hline
+\textit{nstate} & \textbf{1} & Number of electronic adiabatic states.\\
+%\rule[0ex]{0pt}{4ex}
+\textit{istate\_init} & \textbf{1} & Initial electronic state. \\ 
+
+\textit{deltae} & \textbf{5.0} & Energy threshold for the computation of NAC vectors.
+The NAC vector between states is not computed if the difference in energy is $ > deltae$.\\ 
+ 
+\textit{popthr} & \textbf{0.001} & The NAC vector between two states is not computed,
+unless at least one of them has population $ > popthr$. Set this to some negative number to disable this feature. \\
+
+\textit{nac\_accu1} & \textbf{7} & Default accuracy of NAC vector is $10^{-nac\_accu1}$. \\
+
+\textit{nac\_accu2} & \textbf{5} & If the calculation of NAC does not converge, 
+try with accuracy $10^{-nac\_accu2}$. \\
+
+
+\textit{energydifthr} & \textbf{1.0} &  Abort the simulation if the total energy in two consecutive
+time steps differs more than \textit{energydifthr}.       \\
+ 
+\textit{energydriftthr} & \textbf{1.0} & Abort the simulation the total energy drifts 
+from its initial value more than this threshold. 
+This criterion is more strict than \textit{energydifthr}. \\
+ 
+\colorbox{black!20}{\textit{popsumthr}} & \textbf{0.001} & If the norm of the electronic wave function differs from 1
+more than \textit{popthr}, the simulation is aborted.
+You should probably increase \textit{substep}. \\
+
+\textit{alpha} & \textbf{0.1} & Empirical parameter for the decoherence correction.[CITE]
+If you do not want to use decoherence correction, set $alpha <= 0 $. \\
+   
+\textit{substep} & \textbf{100} & Number of substeps for the integration of electronic SE. \\
+
+\colorbox{black!20}{\textit{integ}} & \textbf{butcher} & Integrator of the electronic Schr\"{o}dinger equation. \\
+& & \textbf{euler} -- Euler integrator. Only for debugging purposes!\\
+& & \textbf{rk4} -- Runge-Kutta 4th-order integrator. Not recommended.\\
+& & \textbf{butcher} -- Butcher's 5th-order integrator. Default and recommended.\\
+
+\colorbox{black!20}{\textit{nohop}} & \textbf{0} & Hopping is forbidden if $nohop=1$. \\
+
+\colorbox{black!20}{\textit{inac}} & \textbf{0} & Controls whether we use NAC couplings or time-derivative couplings. \\
+ & & \textbf{0} -- Use non-adiabatic couplings from \textit{ab initio} program. \\
+ & & \textbf{1} -- Use time-derivative couplings. \\
+ 
+\colorbox{black!20}{\textit{adjmom}} & \textbf{0} & Controls the adjustment of velocity after the hopping event. \\
+ & & \textbf{0} -- Adjust the velocity along the direction of NAC vector.
+ If there is not enough kinetic energy in that direction,
+ try simple scaling as if \textit{adjmom}=1. \\
+ & & \textbf{1} -- Scale the velocity, if there is enough kinetic energy. \\
+ & & This is the only and default option if \textit{inac}=1.  \\
+ 
+ \colorbox{black!20}{\textit{revmom}} & \textbf{0} & Should we reverse the velocity in case of frustrated hop? \\
+ & & \textbf{0} -- No. \\
+ & & \textbf{1} -- Yes. \\
+ 
+ \colorbox{black!20}{\textit{phase}} & \textbf{0} & Should we integrate the phase along the trajectory? \\
+ & & \textbf{0} -- No. \\
+ & & \textbf{1} -- Yes. \\
+ 
+\end{tabular}
+
+
+%\subsection{\&qmmm}
+%\begin{description}
+%\item[natqm] Number of quantum atoms. These must be first in \textit{mini.dat}!
+%\end{description}
+%
+%\subsection{\&nab}
+%\begin{description}
+%\item[ipbc] Control PBC.Must match conditions in input.top\newline
+%\textbf{0} -- PBC off.\newline 
+%\textbf{0} -- PBC on. 
+%\end{description}
+
+\section{Interface with electronic structure codes}
+
+\section{Detailed descriptions of the algorithms}
+\subsection{PIMD with staging transformation}
+There are three essential aspects of an efficient PIMD scheme: Coordinate transformation that uncouples the quantum harmonic terms (either staging or normal modes), efficient thermostatting and multiple time step algorithm. These will be all described in detail in next few paragraphs, including working equations as implemented in the \textsc{Abin} code.
+
+Staging transformation is defined by the recursive relations 
+\begin{eqnarray}
+q_1&=&x_1 \nonumber \\
+q_k&=&x_k - \frac{(k-1)x_{k+1}+x_1}{k},   k=2,\dots,P ,
+\end{eqnarray}
+with the inverse transformation:
+\begin{eqnarray}
+x_1&=&q_1 \nonumber \\
+x_k&=&q_k+\frac{k-1}{k}x_{k+1}+\frac{1}{k}q_1,   k=2,\dots,P .
+\end{eqnarray}
+Similar relations hold for the transformation of forces.
+The effective Hamiltonian of an extended system with $P$ beads  %(Eq. \ref{eqham}, see Section \ref{sPIMD})
+then transforms to: 
+\begin{equation}
+H_{\mathrm{eff}}= \sum^P_{k=1}\left[\frac{p_k^2}{2m^*_k} + \frac{1}{2}m_k\omega_P^2 q_k^2+\frac{1}{P}U(q_k)\right]  ,
+\end{equation}
+where $\omega_P=\sqrt{P}/\beta\hbar$ and parameters $m_k$ are defined as:
+\begin{eqnarray}
+m_1 &=& 0, \\
+m_k &=& \frac{k}{k-1}m,   k=2,\dots ,P ,
+\end{eqnarray}
+and fictitious masses $m_k^*$ are chosen as $m^*_1=m$ and $m_k^*=m_k$. The Hamiltonian is further supplemented by Nosé-Hoover chain of length $M$ (to be discussed in the next Section) so that the final set of equations of motion read as follows:
+\begin{subequations}
+\label{eqPIMDfull}
+\begin{eqnarray}
+\dot{q_k}&=&\frac{p_k}{m_k^{*}}  ,\\
+\dot{p_k}&=&-m_k\omega^2_P q_k - \frac{1}{P}\frac{\partial U}{\partial q_k} - \frac{p_{\eta_{k,1}}}{Q_1}p_k  , \\
+\dot{\eta}_{k,\gamma}&=&\frac{p_{\eta_{k, \gamma}}}{Q_k}   ,\\
+\label{eqNHC1}
+\dot{p}_{\eta_{k,1}}&=&\frac{p_k^2}{m_k^{}}-kT-\frac{p_{\eta_{k,2}}}{Q_k}p_{\eta_{k,1}}   ,\\
+\dot{p}_{\eta_{k,1}}&=&\left[\frac{p_{\eta_{k,\gamma-1}}^2}{m_k^{}}-kT\right]-\frac{p_{\eta_{k,\gamma+1}}}{Q_k}p_{\eta_{k,\gamma}}   \gamma = 2,\dots ,M-1   , \\
+\dot{p}_{\eta_{k,M}}&=&\left[\frac{p_{\eta_{k,M-1}}^2}{Q_k}-kT\right]  .
+\end{eqnarray}
+\end{subequations}
+The thermostat masses are set to $Q_k=kT/\omega^2_P$. The mass corresponding to the first bead, which happens to be the centroid of the bead necklace, can alternatively be set to $Q_1=kT\tau^2$, where $\tau$ s the characteristic time scale of the system.
+  
+The conserved quantity of these equations is:
+\begin{equation}
+H= \frac{p_k^2}{2m_k^*} + U + \sum_{\gamma=1}^M\left[\frac{p^2_{\eta_\gamma}}{2Q_k}+kT\eta_\gamma\right]   .
+\end{equation}
+
+This quantity should not drift over time as we are using a time-reversible integrator (see below). One should also always check the convergence of the primitive and centroid-virial energy estimators (Eqs. \ref{eqeprim} and \ref{eqevir}) as these should always converge to the same value regardless of number of beads. Failure to do so usually indicates that the time step is too long.
+
+\begin{equation}
+\epsilon_\mathrm{P}=\frac{3NP}{2\beta}-\frac{1}{2}\omega_P^2\sum_{i=1}^N m_i\sum_{s=1}^P |\mathbf{r}_{i,s}-\mathbf{r}_{i,s+1}|^2+\overline{U} ,
+\label{eqeprim}
+\end{equation}
+\begin{equation}
+\epsilon_{\mathrm{CV}}=\frac{3N}{2\beta}+\frac{1}{2P}\sum_{i=1}^N\sum_{s=1}^P(\mathbf{r}_{i,s}-\mathbf{r}_i^{(c)})\cdot\left(\frac{\partial \overline{U}}{\partial\mathbf{r}_{i,s}} \right)+\overline{U}  ,
+\label{eqevir}
+\end{equation}
+where $\overline{U}=\frac{1}{P}\sum_{s=1}^P U(\mathbf{r}_{1,s},\dots,\mathbf{r}_{N,s})$ and $\mathbf{r}_i^{(c)}=\sum_{s=1}^Pr_{i,s}/P $ are centroid variables.
+
+Eqs. \ref{eqPIMDfull} are integrated using RESPA multiple time step algorithm according to he following splitting of the Liouville operator:
+\begin{equation}
+iL = iL_{\mathrm{quant}}+iL_{\mathrm{kin}}+iL_{\mathrm{clas}}+iL_{\mathrm{NHC}}  ,
+\end{equation}
+where the operators for kinetic, quantum and classical parts are defined as:
+\begin{eqnarray}
+iL_{\mathrm{kin}} 	&=& \sum^P_{k=1}\frac{p_k}{m_k^*}\frac{\partial}{\partial q_k}  ,\\
+iL_{\mathrm{quant}} 	&=& -\sum^P_{k=1} m_k\omega^2_P q_k\frac{\partial}{\partial p_k}  ,\\
+iL_{\mathrm{clas}}  	&=& -\sum^P_{k=1}\frac{1}{P}\frac{\partial U}{\partial q_k}\frac{\partial}{\partial p_k}   .
+\end{eqnarray}
+The operator for Nosé-Hoover part $iL_{\mathrm{NHC}}$ will be discussed separately in the next Section. The propagator $e^{iL\Delta t}$ can be factorized into: 
+\begin{eqnarray}
+\label{eqRESPA}
+e^{iL\Delta t}&=&e^{iL_{\mathrm{NHC}}\delta t/2}e^{iL_{\mathrm{clas}}\Delta t/2}e^{-iL_{\mathrm{NHC}}\delta t/2}\\
+& &\left[e^{iL_{\mathrm{NHC}}\delta t/2}e^{iL_{\mathrm{quant}}\delta t/2}e^{iL_{\mathrm{kin}}\Delta t} e^{iL_{\mathrm{quant}}\delta t/2}e^{iL_{\mathrm{NHC}}\delta t/2}\right]^n \nonumber \\
+& & e^{iL_{\mathrm{NHC}}\delta t/2}e^{iL_{\mathrm{clas}}\Delta t/2}e^{iL_{\mathrm{NHC}}\delta t/2}  . \nonumber
+\end{eqnarray}
+Note that the propagator $e^{iL_{\mathrm{NHC}}\delta t/2}$ is applied in the inner loop in order to efficiently thermostat the rapidly varying harmonic motion (so called XI-RESPA scheme).
+In this scheme, the quantum forces are evaluated at $n$-times shorter time step. The classical forces and energies need to be calculated only once per $\Delta t$, which is very important mainly for \textit{ab initio} PIMD, where the calculation of classical forces is very expensive. Note that simple velocity Verlet algorithm sandwiched by $e^{iL_{\mathrm{NHC}}\Delta t/2}$ is recovered by setting $n=1$. 
+
+Eq.\,\ref{eqRESPA} can be transformed into the computer algorithm by noticing  that all the operators (except for Nosé-Hoover part) are of the form $e^{c\frac{\partial}{\partial x}}$. It can be shown, that these operators represent simple translation\cite{Tuckerman_book}:
+$$ e^{\frac{p_k}{m_k}\frac{\partial}{\partial q_k}\Delta t}\,q_k =q_k + \frac{p}{m}\Delta t   .$$
+
+\subsection{Integration of Nosé-Hoover Chain equations}
+\label{sec:NHC}
+There are currently two versions of the code for propagating the NHC equations in the \textsc{Abin} program. The massive version attach NHC chain to each degree of freedom and is primarily used for the PIMD simulations, while the second versions is more general and allows the user to specify the subsystems that are coupled separately to the thermostat. One chain is usually attached to the whole system in case of CMD. However, in this global version, only total kinetic energy is controlled so hot and cold spots can theoretically develop in the system. This version is necessary for simulations with constraints, since it does not break the constraint conditions. For example, if we want to simulate rigid water model, we can couple each water molecule to a separate thermostat, but we cannot thermostat each atom, since that would break the constraints. 
+
+The equations for the global version of NHC thermostat are only slightly different from the massive version described above. One simply replace Eq. \ref{eqNHC1} by:
+\begin{eqnarray}
+\dot{p}_{\eta_1}=\left[\sum^N_{i=1}\frac{\mathbf{p}_i}{m_i}-3NkT\right]-\frac{p_{\eta_{1}}}{Q_1}\mathbf{p}_i ,
+\end{eqnarray}
+where $N$ is number of thermostatted particles. The conserved quantity is now:
+\begin{equation}
+H = \sum^N_{i=1}\frac{\mathbf{p}_i^2}{2m_i} + U + 3NkT\eta_1 + \sum_{\gamma=1}^M\left[\frac{p_{\eta_\gamma}}{2Q_\gamma}\right]+ \sum_{\gamma=2}^M kT\eta_\gamma   .
+\end{equation}
+Note that the indexing of the masses $Q$ is now different.The masses in the massive PIMD scheme may be different for each bead, but they are the same for each index $\gamma$. In this case, they may differ for each index $\gamma$. Namely, it can be shown that optimal masses are\cite{Martyna1992a}:
+\begin{eqnarray}
+Q_1&=&3NkT\tau^2   ,\\
+Q_\gamma &=& kT\tau^2   \gamma =2,\dots, M , \nonumber
+\end{eqnarray}
+where $\tau$ is the characteristic time scale of the system. It is convenient to set the thermostat masses using this parameter, because the optimal values of the masses themselves depend on system size and target temperature. If the masses are set inappropriately, the thermostat may decouple from the system and the correct temperature will not be obtained.
+
+The integration of NHC equations is generally difficult, since the right hand side depends on velocities.
+I implemented the approach of Tuckerman \textit{et al.} who used the Liouville operator formalism to derive the time-reversible algorithm for propagation\cite{Martyna1996}. Here I describe the implementation of the global version. The implementation of the massive version is completely analogous.
+
+The Liouville operator for NHC is:
+\begin{eqnarray}
+iL_{\textrm{NHC}}&=&-\sum^N_{i=1}\frac{p_{\eta_1}}{Q_1}\mathbf{p}_i\cdot \frac{\partial}{\partial \mathbf{p}_i}+
+\sum_{\gamma =1}^M\frac{p_{\eta_\gamma}}{Q_\gamma}\frac{\partial}{\partial \eta_\gamma} \\
+&+&\sum_{\gamma=1}^{M-1}\left( G_\gamma-p_{\eta_\gamma}\frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}\right)\frac{\partial}{\partial p_{\eta_\gamma}}+G_M\frac{\partial}{\partial p_{\eta_M}} ,\nonumber
+\end{eqnarray}
+where the thermostat "forces" are defined as:
+\begin{eqnarray}
+G_1&=&\sum^N_{i=1}\frac{\mathbf{p}_i^2}{m_i}-3NkT   ,\\
+G_\gamma &=&\frac{p_{\eta_{\gamma-1}}}{Q_{\gamma-1}}-kT\nonumber  .
+\end{eqnarray}
+The primitive factorization of the propagator $e^{iL_{\mathrm{NHC}}\delta t/2} $ was done as:
+\begin{eqnarray}
+S(\delta/2)=\mathrm{exp}\left[\frac{\delta}{4} G_M \frac{\partial}{\partial p_{\eta_M}} \right] &&\nonumber \\
+\times \prod^{1}_{\gamma =M-1} \left\lbrace \mathrm{exp}\left[-\frac{\delta}{8}  \frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}
+p_{\eta_\gamma}\frac{\partial}{\partial p_{\eta_\gamma}} \right]
+\mathrm{exp}\left[\frac{\delta}{4}G_\gamma\frac{\partial}{\partial p_{\eta_\gamma}} \right]
+\mathrm{exp}\left[-\frac{\delta}{8}\frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}
+p_{\eta_\gamma}\frac{\partial}{\partial p_{\eta_\gamma}} \right] \right\rbrace & & \nonumber\\
+\times  \prod^N_{i=1} 
+\mathrm{exp}\left[-\frac{\delta}{2}\frac{p_{\eta_1}}{Q_1}\mathbf{p}_i\cdot\frac{\partial}{\partial \mathbf{p}_i} \right]
+\prod^M_{\gamma=1} \mathrm{exp}\left[\frac{\delta}{2}\frac{p_{\eta_\gamma}}{Q_\gamma}\frac{\partial}{\partial \eta_\gamma} \right]& &  \nonumber \\
+\times  \prod^{M-1}_{\gamma =1} \left\lbrace \mathrm{exp}\left[-\frac{\delta}{8}\frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}
+p_{\eta_\gamma}\frac{\partial}{\partial p_{\eta_\gamma}} \right] 
+\mathrm{exp}\left[\frac{\delta}{4}G_\gamma\frac{\partial}{\partial p_{\eta_\gamma}} \right]
+\mathrm{exp}\left[-\frac{\delta}{8}\frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}
+p_{\eta_\gamma}\frac{\partial}{\partial p_{\eta_\gamma}} \right] \right\rbrace &  & \nonumber \\
+\times  \mathrm{exp}\left[\frac{\delta}{4} G_M \frac{\partial}{\partial p_{\eta_M}} \right]  .& &
+\label{eqprimfac}
+\end{eqnarray}
+
+However, this factorization would severely limit the time step since the thermostat forces are rapidly varying. One can again exploit the RESPA scheme. Still, the number of inner time step $n_c$ would be very high. To reduce this number, I used the Suzuki-Yoshida scheme\cite{Yoshida1990}, in which the time step is multiplied by a set of numerical weights, which results in higher order method than the simple Trotter factorization. 
+The final factorization of the NHC propagator can be written as follows:
+\begin{equation}
+e^{iL_{\mathrm{NHC}}\Delta t/2} \approx \left[ \prod_{\alpha=1}^{n_{\mathrm{sy}}}S(w_\alpha\Delta t/2n) \right]^{n_c}   .
+\end{equation}
+Suzuki-Yoshida weights $w_\alpha$ for fourth-order method and sixth-order method are currently supported.
+
+The primitive factorization in Eq.\,\ref{eqprimfac} contains translational operators introduced above and also operators of the form $e^{cx\frac{\partial}{\partial x}}$. These can be shown to act as a scaling operators:
+\begin{equation}
+\mathrm{exp}\left[cx\frac{\partial}{\partial x}\right] x = xe^c  .
+\end{equation}
+Therefore, the factorization in Eq. \ref{eqprimfac} can be also directly translated to the computer code.
+
+\newpage
+\subsection{Quantum Thermostat}
+Unlike the PIMD method, the quantum thermostat (QT) technique is only an approximate way to describe the quantum nuclear effects. The code in \textsc{abin} is based on the implementation by Parinello \textit{et al.}\cite{Ceriotti2010d}.
+
+The quantum thermostat is based on Generalized Langevin equation (GLE), which is a stochastic integro-differential equation. The general theory is rather involved, so only the basic ideas are explained here. Interested reader is referred to the original literature\cite{Ceriotti2010d}.
+
+Integro-differential equation that is equations involving both derivatives and integrals are rather difficult to implement as the evolution of the system depends on the entire system history. Fortunately, the GLE can be cast into the simple matrix form using additional 
+dynamical variables as follows (considering only one particle with mass $m$)\cite{Ceriotti2010}:
+\begin{equation}
+\dot{q}=\frac{p}{m} ,
+\label{eqGLE}
+\end{equation}
+$${\dot{p} \choose \mathbf{\dot{s}}} = {-U'(q) \choose \mathbf{0}} - 
+{a_{pp}  \textbf{a}_p^T  \choose \mathbf{\overline{a}}_p  \mathbf{A}} {p \choose \mathbf{s}} +
+{b_{pp}  \mathbf{b}_p^T  \choose \mathbf{{b}}_p  \mathbf{B}}
+\Bigg(\mathbf{\xi}\Bigg)   ,$$
+where $\mathbf{s}$ is the vector of $n$ additional degree of freedoms, $\mathbf{\xi}$ is the vector of $n+1$ uncorrelated Gaussian random numbers. For $n=0$, the standard Langevin equation is recovered.
+\begin{equation}
+\dot{q}=p
+\label{eqLE}
+\end{equation}
+$$\dot{p}=-U'(q)-a_{pp}p+b_{pp}\xi(t)  ,$$
+where $a_{pp}$ is the friction coefficient and $b_{pp}$ is the intensity of the random force. These are related through the so-called fluctuation-dissipation theorem (FDT), which reads as:
+\begin{equation}
+b_{pp}^2=2a_{pp}m k_\mathrm{B} T  .
+\end{equation}
+\noindent
+The matrices in the Eq. \ref{eqGLE} are related through so-called drift matrix $\mathbf{C}$ as\cite{Ceriotti2010}:
+\begin{equation}
+\mathbf{A}_p \mathbf{C}_p+\mathbf{C}_p\mathbf{A}_p^T=\mathbf{B}_p\mathbf{B}_p^T  ,
+\label{eqmatrix}
+\end{equation}
+with the notation $\mathbf{M}_p={m_{pp}  \textbf{m}_p^T  \choose \mathbf{\overline{m}}_p  \mathbf{M}}$. 
+By setting $\mathbf{C}_p=k_{B} T$, the Eq. \ref{eqGLE} satisfy the FDT and and thus generates canonical distributions at given temperature.
+
+Eq. \ref{eqGLE} can be solved analytically for the harmonic oscillator. Therefore, for a given frequency, 
+we know how the system responds to the thermostat and we can thus optimize the parameters of the matrices to obtain a desired response. 
+For example, the parameters can be optimized for the optimal sampling of classical phase space. One can also maintain different normal modes at different temperatures (frequency dependent thermostatting) and this possibility is the basis for simulating quantum effects.
+
+One can exploit the fact that both quantum and classical distributions have gaussian shape and differ only in the standard deviation. By setting the effective temperature to $T^*(\omega)=\frac{\hbar\omega}{2k_B}\mathrm{coth}\frac{\hbar\omega}{2k_\mathrm{B}T} $ we can convert classical gaussian distribution with standard deviation $\sigma^2_\mathrm{c}=\frac{k_\mathrm{B} T}{m\omega^2}$ to the quantum distribution with deviation $\sigma^2_\mathrm{q}=\frac{\hbar}{2m\omega}coth\frac{\hbar\omega}{2k_\mathrm{B}T}$  using purely classical simulations. However, we need to maintain different normal modes at different effective temperature, which is exactly what GLE makes possible. By doing this, the simulations are non-equilibrium and do not satisfy FDT theorem.
+
+The fitting of parameters in matrices $\mathbf{A}$ and $\mathbf{C}$ (matrix $\mathbf{B}$ is then computed using Eq. \ref{eqmatrix}) is not straightforward and is not described here. Although the derived parameters are strictly applicable only for systems of coupled harmonic oscillators, they can also be used as an approximate method for realistic molecular systems, which are in general anharmonic, since they can be viewed as a collection of normal modes coupled by anharmonicities. 
+However, one must be cautious when the anharmonic coupling is too strong. In such cases, the energy may flow between different normal modes (\textit{i.e.} from the high to low frequencies) and the simulation is spoiled. This may be viewed as ZPE leakage, which is a common problem in semiclassical approaches.
+
+The main advantage of QT is its computational simplicity. The computational savings as compared with full PIMD simulations are substantial, especially for \textit{ab initio} simulations. Moreover, the sampling efficiency is much greater using QT method, since the PIMD simulations become less ergodic and difficult to converge with large number of beads.
+
+Another advantage of the QT over the simple PIMD scheme presented here is that it provides at least an approximate momentum distributions. This might be potentially useful for the generation of initial conditions for semiclassical photodynamical simulations.
+
+Finally, it is possible to combine the QT with PIMD (here denoted as PI+GLE method)\cite{Ceriotti2011} which results in much faster convergence of quantities with the number of beads. Moreover, the ZPE leakage becomes of lesser concern as we increase the number of beads.
+It was shown\cite{Ceriotti2011} and it is also our experience that only four beads are sufficient for fully converged position distribution. 
+When using normal mode transformation, the GLE parameters can be optimized specifically for each normal mode to speed up the convergence of quantum kinetic energy computed with centroid-virial energy estimator\cite{Ceriotti2012}. This so called PIGLET method is not yet implemented. 
+Note that neither PI+GLE nor PIGLET methods provide rigorous momentum distribution function, although other approximate methods can still be used\cite{Ceriotti2012}.
+
+
+\subsubsection{Implementation}
+\label{sGLEimpl}
+The quantum thermostat in \textsc{ABIN} is based on the sample code from the website \textit{http://gle4md.berlios.de/} which is maintained by the original authors.
+At present, the GLE thermostat is called on top of the classical velocity Verlet algorithm according to the following pseudocode:
+\vspace*{0.4cm}
+
+\textit{call GleStep}($\frac{dt}{2}$)
+
+$p = p + force\times\frac{dt}{2} $
+
+$q = q + \frac{p}{m}dt $
+
+\textit{call GetForces}() 
+
+$p = p + force\times\frac{dt}{2} $
+
+\textit{call GleStep($\frac{dt}{2}$)}
+\vspace*{0.4cm}
+
+The PI+GLE method is also implemented. The GLE thermostat in this case is part of the RESPA algorithm in the same way as the NHC thermostat. Note, that in PI+GLE method, one has to use physical bead masses i.\,e. staging transformation is not applicable in this case\cite{Ceriotti2012}. More efficient implementation would require the use of normal mode transformation. This is now a work in progress.
+
+The parameters for different simulations can be obtained from the same website as mentioned above. To choose the appropriate parameters, one only needs to know the highest frequency present in the system and the temperature of the simulation. The parameters can be distinguished by a number of additional degrees of freedom $s$ and by the fitted frequency range which is given by the ration $x=\frac{\hbar\omega}{k_\mathrm{B}T}$. That means that the maximum frequency for given parameters depends on the temperature of the simulation. In the case of PI+GLE method, the parameters are different for different number of beads.
+
+There is a fundamental difference between GLE and PIGLE parameters. The latter were optimized only to give correct position distributions since the momenta do not have physical meaning in the PIMD method. This approach leaves more freedom in the fitting procedure and therefore, the PIGLE parameters were also optimized for optimal sampling. Therefore, even for simulations with one bead, PIGLE-P1 parameters should be superior to the original GLE parameters if one is not interested in the momentum distribution. 
+
+\newpage
+
+\newpage
+\bibliography{abin}
+
+\end{document}

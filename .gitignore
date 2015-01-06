@@ -19,3 +19,9 @@ TESTS/*/restart.xyz.10
 TESTS/*/debug.nacm
 TESTS/*/nacmrest.dat.10
 WATERMODELS/libttm.a
+DOC/*.log
+DOC/*.bbl
+DOC/*.aux
+DOC/*.blg
+DOC/*.toc
+DOC/*out
