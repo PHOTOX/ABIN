@@ -1,32 +1,34 @@
+WARNING: There are still some small issues to be solved before release of stable version.
+
 ----------------------------------------------
-1. What is ABIN?
+1. What is this?
 ----------------------------------------------
 
-ABIN is an program for performing ab initio Born-Oppenheimer molecular dynamics.
+This is a program for performing ab initio molecular dynamics.
 It was designed specifically to deal with quantum nuclear effects.
 It can do path integral simulations and also utilizes recently developed quantum thermostat based on General Langevin equation.
-It can also simulate non-adiabatic events using Surface-hoping algorithm.   
+It can also simulate non-adiabatic events using Surface-hoping algorithm.
 
-The basic philosophy of ABIN is simple. While the program itself handles the propagation of the system according to the equations of motion,
+The basic philosophy of this program is simple. While the program itself handles the propagation of the system according to the equations of motion,
 the forces and energies are taken from the external electronic structure program such as Gaussian.
 The call to the chosen external program is handled via simple shell script.
 Therefore, writing a new interface is rather straightforward and can be done without any changes to the code itself.
 
-The ABIN code is provided under the GNU General Public License.
-Full text of the license is in file LICENCE.
+The code is provided under the GNU General Public License.
+A full text of the license is in file LICENCE.
 
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
 
-Full documentation can be found in filder DOC.
+A full documentation can be found in folder DOC.
 
 ----------------------------------------------
 2. INSTALLATION
 ----------------------------------------------
-To compile the code, you need a gfortran and gcc compiler with version >4.3.
-However, version > 4.6 is recommended.
+To compile the code, you need a gfortran and gcc compiler with version at least 4.3.
+However, version 4.6 and higher is recommended.
 If your distribution does not have the required version of the compilers, it can be downloaded from this website:
 https://gcc.gnu.org/wiki/GFortranBinaries
 The site offers compiled binaries and required libraries, so compilation is typically not needed.
@@ -50,8 +52,8 @@ $ make  clean
 Here you find the information about the key source files.
 
 SAMPLE/     - Contains sample input files.
-INTERFACES/ - Contains bash abin interfaces to common ab initio codes.
-UTIL/       - Contains some handy scripts that might be useful together with ABIN.
+INTERFACES/ - Contains bash interfaces to common ab initio codes.
+UTIL/       - Contains some handy scripts that might be useful in conjuction with the MD code.
 
 
 abin.f90       - Main routine.
