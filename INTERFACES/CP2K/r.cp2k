@@ -1,0 +1,146 @@
+#!/bin/bash
+cd CP2K
+timestep=$1
+ibead=$2
+input=dyn-$ibead-input
+natom=`cat ../geom.dat.$ibead | wc -l` 
+let lines=natom+2
+
+echo "$natom" > dyn-$ibead-geom.xyz
+echo " " >> dyn-$ibead-geom.xyz
+cat ../geom.dat.$ibead >> dyn-$ibead-geom.xyz  #only xyz coordinates
+
+# TEMPLATE FOR AB INITIO DYNAMICS with CP2K
+# MODIFY accordingly and set pot='cp2k' in input.in
+
+# Number of processors
+nproc=8
+
+cat > $input.inp << EOF
+&GLOBAL
+	PROJECT dyn-$ibead
+	PREFERRED_FFT_LIBRARY FFTW
+	FFTW_PLAN_TYPE MEASURE
+	RUN_TYPE ENERGY_FORCE
+	PRINT_LEVEL LOW
+&END GLOBAL
+
+&FORCE_EVAL
+
+    &DFT
+        CHARGE 0
+        BASIS_SET_FILE_NAME BASIS_MOLOPT
+        POTENTIAL_FILE_NAME GTH_POTENTIALS
+
+        &MGRID
+            CUTOFF 500
+            NGRIDS 5
+        &END MGRID
+
+        &QS
+            EPS_DEFAULT 1.E-10
+        &END QS
+
+        &SCF
+
+            SCF_GUESS RESTART
+            MAX_SCF 20
+            EPS_SCF 5.0E-7
+
+            &OT
+                MINIMIZER DIIS
+                PRECONDITIONER FULL_SINGLE_INVERSE
+            &END OT
+
+            &OUTER_SCF
+                MAX_SCF 100
+                EPS_SCF 5.0E-7
+            &END OUTER_SCF
+
+            &PRINT
+
+                &RESTART
+                    ADD_LAST NUMERIC
+                    &EACH
+                        QS_SCF 0
+                    &END EACH
+                &END RESTART
+
+            &END PRINT
+
+        &END SCF
+
+        &XC
+            &XC_FUNCTIONAL BLYP
+            &END XC_FUNCTIONAL
+
+            &XC_GRID
+                XC_SMOOTH_RHO NN10
+                XC_DERIV SPLINE2_SMOOTH
+            &END XC_GRID
+
+
+        &END XC
+
+    &END DFT
+
+    &SUBSYS
+        &TOPOLOGY
+            COORD_FILE_NAME dyn-$ibead-geom.xyz
+            COORD_FILE_FORMAT XYZ
+        &END TOPOLOGY
+        &CELL
+            ABC 12.43 12.43 12.43
+        &END CELL
+        &KIND H
+            BASIS_SET DZVP-MOLOPT-SR-GTH
+            POTENTIAL GTH-PBE-q1
+        &END KIND
+        &KIND O
+            BASIS_SET DZVP-MOLOPT-SR-GTH
+            POTENTIAL GTH-PBE-q6
+        &END KIND
+        &KIND N
+            BASIS_SET DZVP-MOLOPT-SR-GTH
+            POTENTIAL GTH-PBE-q5
+        &END KIND
+    &END SUBSYS
+
+    &PRINT
+        &FORCES
+        &END FORCES
+    &END PRINT
+
+&END FORCE_EVAL
+EOF
+
+
+#END OF USER INPUT################
+
+#######LAUNCHING PROGRAM###########
+. /home/uhlig/intel/composer_xe_2013_sp1.4.211/bin/compilervars.sh intel64
+. /home/uhlig/intel/composer_xe_2013_sp1.4.211/mkl/bin/mklvars.sh intel64
+. /home/uhlig/build/libint/1.1.4-icc/env.sh
+. /home/uhlig/build/openmpi/1.6.5-icc/env.sh
+. /home/uhlig/build/fftw/3.3.4-icc/env.sh
+
+CP2K=/home/uhlig/build/cp2k/2.5_11122014/cp2k.popt
+
+mpirun -np $nproc $CP2K $input.inp > $input.out
+
+#check whether all is ok
+if [[ $? -eq 0 ]];then
+   cp $input.out $input.out.old
+else
+   echo "WARNING: CP2K calculation probably failed."
+   echo "See $input.out.error"
+   cp $input.out $input.out.error
+fi
+
+################################
+
+### EXTRACTING ENERGY AND GRADIENTS
+grep 'ENERGY| Total FORCE_EVAL ( QS ) energy (a.u.):' $input.out | tr -s " " | awk -F ":" '{print $2}' > ../engrad.dat.$ibead
+grep 'ATOMIC FORCES in \[a.u.\]' $input.out -A$lines | tail -n $natom |  awk '{printf" % 1.8f  % 1.8f  % 1.8f \n",-$4,-$5,-$6}' >> ../engrad.dat.$ibead
+
+
