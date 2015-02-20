@@ -22,7 +22,7 @@
 !!$    nthreads=omp_get_max_threads()
 
      eclas=0.0d0
-!     ithread=1
+
 !----Format for geom.dat; needed,so that Molpro can read it
      fgeom='(A2,3E25.17E2)'
 
@@ -48,9 +48,9 @@
        write(20+iw+2*nwalk,'(I2)')istate(iw)
        write(20+iw+2*nwalk,'(I2)')nstate
 
-!horni troj. matice bez diagonaly
-! tocalc(,)=1 -> pocitame couplingy
-! tocalc(,)=0 -> nepocitame couplingy
+! upper triangular matrix without diagonal
+! tocalc(,)=1 -> compute NA couplings
+! tocalc(,)=0 -> do NOT compute NA cooupligs
        do ist1=1,nstate-1
         do ist2=ist1+1,nstate
          write(20+iw+2*nwalk,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
@@ -62,7 +62,6 @@
 
 
 !--- HERE we decide which program we use to obtain gradients and energies
-
 !    e.g. ./G09/r.g09
      chsystem='./'//trim(LowerToUpper(pot))//'/r.'//pot
 
@@ -78,7 +77,7 @@
 !-Second argument is the bead index, neccessary for parallel calculations
   write(chsystem,'(A20,I13,I4.3)')chsystem,it,iw
 
-  !for SH, pass the 4th parameter:precision of NACME as 10^(-nac_accu1)
+!-for SH, pass the 4th parameter:precision of NACME as 10^(-nac_accu1)
    if(ipimd.eq.2)then
     write(chsystem,'(A40,I3,A12)')chsystem,nac_accu1,' < state.dat'
    endif
@@ -97,12 +96,12 @@
      
      open(unit=20+iw,file=chforce,status='old',ACTION='READ')
 
-!-------READING ENERGY from engrad.dat
+!-----READING ENERGY from engrad.dat
       read(20+iw,*,IOSTAT=iost)temp1
       if(iost.ne.0)then
               write(*,*)'Fatal problem with reading energy from file ', chforce
               write(*,*)'This usually means, that the ab initio program failed to converge.'
-              write(*,*)'See the appropriate output files from external program, e.g. G09/input001.log'
+              write(*,*)'See the appropriate output files from external program in folder '//trim(LowerToUpper(pot))//"/."
               call abinerror('force_abin')
       endif
 !$OMP ATOMIC
@@ -119,11 +118,12 @@
 
 !----READING energy gradients from engrad.dat
      do iat=1,natqm
-      read(20+iw,*,IOSTAT=iost)fx(iat,iw),fy(iat,iw),fz(iat,iw)
+      read(20+iw,*,IOSTAT=iost)fx(iat,iw), fy(iat,iw), fz(iat,iw)
       if(iost.ne.0)then
-              write(*,*)'Fatal problem with reading gradients from engrad.dat'
+              write(*,*)'Fatal problem with reading gradients from file ', chforce
               write(*,*)'This usually means, that the ab initio program failed.'
-              write(*,*)'See the appropriate output files.'
+              write(*,*)'See the appropriate output files from external program in folder ' &
+              //trim(LowerToUpper(pot))//"/."
               call abinerror('force_abin')
       endif
 !---Conversion to forces        
@@ -147,10 +147,10 @@
 
       do iat2=1,natqm*3
        do iat1=1,natqm*3,3
-       read(20+iw+nwalk,*)hess(iat1,iat2,iw),hess(iat1+1,iat2,iw),hess(iat1+2,iat2,iw)
-       hess(iat1,iat2,iw)=hess(iat1,iat2,iw)/nwalk
-       hess(iat1+1,iat2,iw)=hess(iat1+1,iat2,iw)/nwalk
-       hess(iat1+2,iat2,iw)=hess(iat1+2,iat2,iw)/nwalk
+        read(20+iw+nwalk,*)hess(iat1,iat2,iw),hess(iat1+1,iat2,iw),hess(iat1+2,iat2,iw)
+        hess(iat1,iat2,iw)=hess(iat1,iat2,iw)/nwalk
+        hess(iat1+1,iat2,iw)=hess(iat1+1,iat2,iw)/nwalk
+        hess(iat1+2,iat2,iw)=hess(iat1+2,iat2,iw)/nwalk
        enddo
       enddo
      endif
@@ -231,7 +231,7 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
    if(iost.ne.0)then
            write(*,*)'Fatal problem with reading energy from file ', chforce
            write(*,*)'This usually means, that the a program failed.'
-           write(*,*)'See the appropriate output files, e.g. MM/input001.com.out'
+           write(*,*)'See the appropriate output files in folder MM/.'
            call abinerror('oniom')
    endif
 
@@ -241,15 +241,15 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
    do iat=1,natom
       read(20+iw,*,IOSTAT=iost)tempx, tempy, tempz
       if(iost.ne.0)then
-              write(*,'(2A)')'Fatal problem with reading gradients from file ',chforce
+              write(*,'(2A)')'Fatal problem with reading gradients from file ', chforce
               write(*,*)'This usually means, that the ab initio program failed.'
-              write(*,*)'See the appropriate output files, e.g. MM/input001.com.out'
-              call abinerror('force_abin')
+              write(*,*)'See the appropriate output files in folder MM/.'
+              call abinerror('oniom')
       endif
 !---Conversion to forces        
-     fx(iat,iw)=fx(iat,iw) - tempx
-     fy(iat,iw)=fy(iat,iw) - tempy
-     fz(iat,iw)=fz(iat,iw) - tempz
+     fx(iat,iw) = fx(iat,iw) - tempx
+     fy(iat,iw) = fy(iat,iw) - tempy
+     fz(iat,iw) = fz(iat,iw) - tempz
    enddo
 
 
@@ -260,7 +260,7 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
 !----WRITING GEOMETRY of the QM part
    open(unit=20+iw,file=chgeom)
     do iat=1,natqm
-     write(20+iw,fgeom)names(iat),x(iat,iw)/ang,y(iat,iw)/ang,z(iat,iw)/ang
+     write(20+iw,fgeom)names(iat), x(iat,iw)/ang, y(iat,iw)/ang, z(iat,iw)/ang
     enddo
    close(unit=20+iw)
 
@@ -283,19 +283,19 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
    if(iost.ne.0)then
            write(*,*)'Fatal problem with reading energy from file ', chforce
            write(*,*)'This usually means, that the external program failed.'
-           write(*,*)'See the appropriate output files, e.g. MM/input001.com.out'
+           write(*,*)'See the appropriate output files in folder MM/.'
            call abinerror('oniom')
    endif
 
    eclas=eclas-temp1
 
-!----READING energy gradients from engrad.dat
+!----READING gradients from engrad_mm.dat
      do iat=1,natqm
       read(20+iw,*,IOSTAT=iost)tempx, tempy, tempz
       if(iost.ne.0)then
               write(*,'(2A)')'Fatal problem with reading gradients from file ',chforce
               write(*,*)'This usually means, that the external program failed.'
-              write(*,*)'See the appropriate output files, e.g. MM/input001.com.out'
+              write(*,*)'See the appropriate output files in folder MM/.'
               call abinerror('force_abin')
       endif
 !---Conversion to forces        
