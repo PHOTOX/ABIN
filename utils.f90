@@ -17,31 +17,53 @@ module mod_utils
    get_distance=r
    end function get_distance
 
-   elemental function UpperToLower(string) result (return_string)
+   function SanitizeString(string) result (return_string)
       character(len=*),intent(in) :: string
       character(len=len(string))  :: return_string
-      integer, parameter          :: UPPER_A = iachar ('A'),UPPER_Z = iachar('Z')
+      integer                     :: c, i
+
+      return_string = adjustl(string)
+      do i=1,len(trim(return_string))
+         c = iachar( return_string(i:i))
+         !check for almost all nonalphabetical chars from ASCII table
+         if (c < 48.or.(c>57.and.c<65).or.c>172)then
+            write(*,*)'Suspicious character found in one of the input strings:'//string
+            write(*,*)'Please check your input files. Exiting...'
+            call abinerror('UpperToLower')
+         end if
+      end do
+      
+   end function SanitizeString
+
+   function UpperToLower(string) result (return_string)
+      character(len=*),intent(in) :: string
+      character(len=len(string))  :: return_string
+      integer, parameter          :: UPPER_A = iachar ('A'), UPPER_Z = iachar('Z')
       integer, parameter          :: DELTA_LOWER_UPPER = iachar('a')-iachar('A')
       integer                     :: c,i
    
-      do i=1,len(string)
-         c =iachar( string(i:i))
+      return_string = SanitizeString(string)
+      do i=1,len(trim(return_string))
+         c = iachar( return_string(i:i))
          if (c >= UPPER_A .and. c <= UPPER_Z) c = c + DELTA_LOWER_UPPER
          return_string(i:i) = achar(c)
       end do
    end function UpperToLower
    
-   elemental function LowerToUpper(string) result (return_string)
+   function LowerToUpper(string) result (return_string)
       character(len=*),intent(in) :: string
       character(len=len(string))  :: return_string
-      integer, parameter          :: LOWER_A = iachar ('a'),LOWER_Z = iachar('z')
+      integer, parameter          :: LOWER_A = iachar ('a'), LOWER_Z = iachar('z')
       integer, parameter          :: DELTA_UPPER_LOWER = iachar('A')-iachar('a')
       integer                     :: c,i
    
-      do i=1,len(string)
-         c =iachar( string(i:i))
-      if (c >= LOWER_A .and. c <= LOWER_Z) c = c + DELTA_UPPER_LOWER
-      return_string(i:i) = achar(c)
+      return_string = SanitizeString(string)
+
+      do i=1,len(trim(return_string))
+         c =iachar( return_string(i:i))
+
+         if (c >= LOWER_A .and. c <= LOWER_Z) c = c + DELTA_UPPER_LOWER
+         return_string(i:i) = achar(c)
       end do
    end function LowerToUpper
 
