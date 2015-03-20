@@ -10,10 +10,6 @@ tau=0.159
 I should really test this for larger system.....
 
 
-
-update interfaces with current versions of programes
-especially G09 on a11....how to properly implement server dependencies???
-
-in each interface....source SetEnvironment.sh or sth like that
-probably should be located in the PATH.
+in each interface....source SetEnvironment.sh
+should be located in the PATH.
 even better, in PHOTOX PATH, that everybody should have....

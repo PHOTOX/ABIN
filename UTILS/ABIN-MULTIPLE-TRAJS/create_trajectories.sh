@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# TODO:  make more general cut_sphere, and then expect it in the PATH
-# lepe vyresit tvorbu input.in, pouzit sed
+#TODO: lepe vyresit tvorbu input.in, pouzit sed
 
 #---------------------------------------------------------------------------------
 #  Create_Trajectories                   Daniel Hollas, Ondrej Svoboda 2014
@@ -53,7 +52,7 @@ rewrite=0               # if =1 -> rewrite trajectories that already exist
 
 ## If you need to process the input via cut_sphere, adjust the following command
 # (Do not provide file names.)
-#cut="./cut_sphere_veloc -u 4 -v 3" # cut command
+#cut="cut_sphere -u 4 -v 3" # cut command, velocity file is handled automatically
 ##########END OF SETUP##########
 
 
@@ -176,14 +175,18 @@ if [[ $mode = "movie" ]];then
       head -$offsetvel $veloc | tail -$natom1 > veloc.in
    fi
 #--- Perform cutting, if needed.
-# TODO: make cut_sphere to take files as parameters
-
    if [[  ! -z "$cut" ]];then
-      if [[ ! $($cut < geom) ]];then
+      if [[ ! -z "$veloc" ]];then
+          $cut -vel veloc.in < geom
+       else
+          $cut
+      fi
+      if [[ $? -ne "0" ]];then
          Error "$cut"
       fi
-   cp cut_qm.xyz geom
-   cp veloc.out veloc.in
+
+      cp cut_qm.xyz geom
+      cp veloc.out veloc.in
    fi
 fi
 
