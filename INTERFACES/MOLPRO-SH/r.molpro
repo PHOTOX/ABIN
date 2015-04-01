@@ -262,6 +262,6 @@ cat ../state.dat >> ../stateall.dat
 echo "timestep:  $timestep">>../charges.all
 echo "timestep:  $timestep    state:$istate ">>../charge.actual
 grep 'Unique atom' $input.com.out -A$natom | awk -F " " '{print $2 "  " $9 $10}'>>../charges.all
-grep "Type=MCSCF/CHARGE (state $istate.1" $input.com.out -A10 | awk -F " " '{print $2 "  " $9 $10}'|tail -7>>../charge.actual
+grep "Type=MCSCF/CHARGE (state $istate.1" $input.com.out -A10 | awk -F " " '{print $2 "  " $9 $10}'|tail -$natom1>>../charge.actual
 
 
