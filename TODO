@@ -9,7 +9,3 @@ in terachem, they use 1000fs, but with a bit different definition, so it transla
 tau=0.159
 I should really test this for larger system.....
 
-
-in each interface....source SetEnvironment.sh
-should be located in the PATH.
-even better, in PHOTOX PATH, that everybody should have....

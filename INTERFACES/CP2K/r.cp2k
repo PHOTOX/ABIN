@@ -6,6 +6,8 @@ input=dyn-$ibead-input
 natom=`cat ../geom.dat.$ibead | wc -l` 
 let lines=natom+2
 
+source SetEnvironment.sh CP2K
+
 echo "$natom" > dyn-$ibead-geom.xyz
 echo " " >> dyn-$ibead-geom.xyz
 cat ../geom.dat.$ibead >> dyn-$ibead-geom.xyz  #only xyz coordinates
@@ -118,22 +120,15 @@ EOF
 #END OF USER INPUT################
 
 #######LAUNCHING PROGRAM###########
-. /home/uhlig/intel/composer_xe_2013_sp1.4.211/bin/compilervars.sh intel64
-. /home/uhlig/intel/composer_xe_2013_sp1.4.211/mkl/bin/mklvars.sh intel64
-. /home/uhlig/build/libint/1.1.4-icc/env.sh
-. /home/uhlig/build/openmpi/1.6.5-icc/env.sh
-. /home/uhlig/build/fftw/3.3.4-icc/env.sh
 
-CP2K=/home/uhlig/build/cp2k/2.5_11122014/cp2k.popt
-
-mpirun -np $nproc $CP2K $input.inp > $input.out
+mpirun -np $nproc $CP2KEXE $input.inp > $input.out
 
 #check whether all is ok
 if [[ $? -eq 0 ]];then
    cp $input.out $input.out.old
 else
    echo "WARNING: CP2K calculation probably failed."
-   echo "See $input.out.error"
+   echo "See CP2K/$input.out.error"
    cp $input.out $input.out.error
 fi
 

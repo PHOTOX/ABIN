@@ -1,6 +1,8 @@
 #!/bin/bash
 cd QCHEM
-export QC=/usr/local/programs/common/qchem/qchem-4.1/arch/x86_64
+
+source SetEnvironment.sh QCHEM
+
 timestep=$1
 ibead=$2
 input=input$ibead.com

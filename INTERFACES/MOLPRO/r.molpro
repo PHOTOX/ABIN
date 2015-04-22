@@ -4,6 +4,8 @@ timestep=$1
 ibead=$2
 input=input$ibead
 
+source SetEnvironment.sh MOLPRO
+
 
 rm $input.pun
 # MOLPRO-CASSCF/CASPT2 for ground state
@@ -47,19 +49,6 @@ noexc}
 
 EOF
 ###END OF USER  INPUT######################
-
-#-Determine, which cluster are we on and set the proper MOLPRO path
-node=$(uname -a | awk '{print $2}' )
-if [[ $node =~ s[0-9] ]];then
-   m12root=$(readlink -f /usr/local/programs/molpro/molpro2012.1/arch/amd64-intel_12.0.5.220/molpros_2012_1_Linux_x86_64_i8)
-elif [[ $node =~ a[0-9] ]] ;then
-   m12root=$(readlink -f /usr/local/programs/common/molpro/molpro2012.1/arch/x86_64-intel_12.0.5.220/molpros_2012_1_Linux_x86_64_i8)
-else
-   m12root=$(readlink -f /usr/local/programs/common/molpro/molpro2012.1/arch/x86_64-intel_12.0.5.220/molpros_2012_1_Linux_x86_64_i8)
-   #echo "Could not recognize node. Please, set variable m12root manualy in script $0"
-fi
-MOLPROEXE=$m12root/bin/molpro
-
 
 #----------MOLPRO-------------------------
 #wavefunction is copied to current working directory after end of the job

@@ -1,6 +1,8 @@
 #!/bin/bash
 cd G09
-export g09root="/home/slavicek/G03/gaussian09/a02/g09"
+
+source SetEnvironment.sh G09
+
 timestep=$1
 ibead=$2
 input=input$ibead
