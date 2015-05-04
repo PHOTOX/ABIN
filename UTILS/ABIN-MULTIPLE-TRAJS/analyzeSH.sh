@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Script for analysis of SH trajectories. 
-# Assumes that the trajectories are in folders $folder/TRAJ.$i
+# A simle script for analysis of SH trajectories. 
+# It Assumes that the trajectories are in folders $folder/TRAJ.$i
 # It works even for trajectories that are still running by using fetchabin.sh.
 # You should have the following scripts in your path: fetchabin.sh, checkenergy.awk, prum.awk
 # It produces 3 files in folder $folder :
@@ -11,11 +11,10 @@
 #                - 4th column contains final energy drift of the trajectory
 # populations.dat - contains electronic populations based on actual state occupation from all trajectories.
 # elpop.dat - contains electronic populations based on WF coefficients from file pop.dat
-#           - should be similar to populations.dat. If not, SH algorithm does not work properly.
+#           - It should be similar to populations.dat. If that's not the case, the SH algorithm does not work properly.
 
 #######SETUP#############
-initialstate=2
-folder=CAS22SA3-COMPNX-NEWHOP.$initialstate
+folder=CAS22SA3.2
 isample=1
 nsample=100
 SKIPFOLDERS=( 6 74 )     # these trajectories will be excluded from analysis
@@ -46,6 +45,7 @@ i=$isample
 
 while [[ $i -le $nsample ]];do
 
+   # skip trajectories specified by the user
    for j in ${SKIPFOLDERS[@]};do
       if [[ $j -eq $i ]];then
          echo "Omittind directory R$i"
