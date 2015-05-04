@@ -1,6 +1,7 @@
 #!/bin/bash
 cd MM
-EXE=~hollas/bin/dftb+
+source SetEnvironment.sh DFTB
+EXE=$DFTBEXE
 
 timestep=$1
 ibead=$2

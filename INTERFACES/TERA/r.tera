@@ -6,6 +6,8 @@ input=input$ibead.com
 natom=$(cat ../geom.dat.$ibead | wc -l )
 
 
+source SetEnvironment.sh TERA
+
 
 ########  USER INPUT FOR  TERACHEM  ################
 parallel=0 #=1 if we execute ABIN in parallel
@@ -86,21 +88,16 @@ head -n $natqm ../geom.dat.$ibead >> input$ibead.xyz
 node=$(uname -n)
 export OMP_NUM_THREADS=$numgpus  #setting to number of gpus,used only for MKL library anyway i.e. for initial diagonalization
 
- if [ $node = "a25" ];then    #tesla node, we use older and faster version of Terachem
-export TeraChem=/home/hollas/TeraChem/TERACHEM-1.5/
-export NBOEXE=/home/hollas/TeraChem/TERACHEM-1.5/nbo6.exe
-export LD_LIBRARY_PATH=/home/hollas/TeraChem/cudav4.0/cuda/lib64:$LD_LIBRARY_PATH
-/home/hollas/TeraChem/TERACHEM-1.5/terachem $input > $input.out
+$TERAEXE  $input > $input.out
 
- else    #GTX nody, Kepler version, slower due to software workarounds
-
-export TeraChem=/home/hollas/TeraChem/
-export NBOEXE=/home/hollas/TeraChem/nbo6.exe
-export LD_LIBRARY_PATH=/usr/local/programs/cuda/cuda-5.0/cuda/lib64/:$LD_LIBRARY_PATH
-/home/hollas/TeraChem/terachem  $input > $input.out
+#check whether all is ok
+if [[ $? -eq 0 ]];then
+   cp $input.out $input.out.old
+else
+   echo "WARNING: TeraChem calculation probably failed."
+   echo "See TERA/$input.out.error"
+   cp $input.out $input.out.error
 fi
-
-cp $input.out $input.out.old
 
 ########## EXTRACTING DATA ################
 

@@ -1,6 +1,7 @@
 #!/bin/bash
 cd ORCA
-ORCAEXE=orca
+
+source SetEnvironment.sh ORCA
 
 timestep=$1
 ibead=$2

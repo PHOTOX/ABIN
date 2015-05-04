@@ -25,9 +25,11 @@ module mod_utils
       return_string = adjustl(string)
       do i=1,len(trim(return_string))
          c = iachar( return_string(i:i))
-         !check for almost all nonalphabetical chars from ASCII table
-         if (c < 48.or.(c>57.and.c<65).or.c>172)then
-            write(*,*)'Suspicious character found in one of the input strings:'//string
+         ! check for almost all nonalphabetical chars from ASCII table
+         ! allow dash, slash and dot -/.
+         if (c < 44.or.(c>57.and.c<65).or.c>172)then
+            write(*,*)'Suspicious character found in one of the input strings: '//string
+            write(*,*)'ASCII index:', c,' Position in the string:', i
             write(*,*)'Please check your input files. Exiting...'
             call abinerror('UpperToLower')
          end if

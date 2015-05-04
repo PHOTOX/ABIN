@@ -75,11 +75,11 @@
 !-Passing arguments to bash script
 !-First argument is time step
 !-Second argument is the bead index, neccessary for parallel calculations
-  write(chsystem,'(A20,I13,I4.3)')chsystem,it,iw
+  write(chsystem,'(A40,I13,I4.3)')chsystem,it,iw
 
 !-for SH, pass the 4th parameter:precision of NACME as 10^(-nac_accu1)
    if(ipimd.eq.2)then
-    write(chsystem,'(A40,I3,A12)')chsystem,nac_accu1,' < state.dat'
+    write(chsystem,'(A60,I3,A12)')chsystem,nac_accu1,' < state.dat'
    endif
      
    call system(chsystem)

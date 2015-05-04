@@ -118,7 +118,9 @@ subroutine init(dt)
          write(*,*)chiomsg
          call abinerror('init')
       else
-         massnames=LowerToUpper(massnames)
+         do iat=1,natom
+            massnames(iat)=LowerToUpper(massnames(iat))
+         end do
       end if
 
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
@@ -395,7 +397,9 @@ endif
       if(pot.eq.'guillot') call inames_guillot()
 
       if(iqmmm.eq.3.or.pot.eq.'mm')then 
-         attypes=LowerToUpper(attypes)
+         do iat=1, natom
+            attypes(iat)=LowerToUpper(attypes(iat))
+         end do
          call inames_init()
          call ABr_init()
       endif
