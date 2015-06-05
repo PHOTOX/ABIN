@@ -5,9 +5,88 @@
 
 module mod_analyze
 implicit none
-real*8, parameter  :: pi=3.14159265d0
-real*8,allocatable :: x(:), y(:), z(:)
+real*8, parameter  :: pi = 3.14159265d0
+real*8, allocatable :: x(:), y(:), z(:)
 save
+
+CONTAINS
+
+real*8 function get_distance( at1, at2, boxx, boxy, boxz)
+   implicit none
+   integer,intent(in) :: at1, at2
+   real*8, optional, intent(in) :: boxx, boxy, boxz
+   real*8  :: dx, dy, dz, temp
+
+   dx = x(at1) - x(at2)
+   dy = y(at1) - y(at2)
+   dz = z(at1) - z(at2)
+   if (present(boxx))then
+      if(boxx.gt.0)then
+         dx = dx - boxx * nint(dx/boxx)
+         dy = dy - boxy * nint(dy/boxy)
+         dz = dz - boxz * nint(dz/boxz)
+   end if
+   end if
+   
+   temp = dx*dx + dy*dy + dz*dz
+   temp = dsqrt(temp)
+   get_distance = temp
+   return 
+end function
+
+real*8 function get_angle(at1,at2,at3)
+   implicit none
+   integer,intent(in) :: at1, at2, at3
+   real*8  :: vec1x, vec1y, vec1z
+   real*8  :: vec2x, vec2y, vec2z
+
+   vec1x = x(at1) - x(at2)
+   vec1y = y(at1) - y(at2)
+   vec1z = z(at1) - z(at2)
+   vec2x = x(at3) - x(at2)
+   vec2y = y(at3) - y(at2)
+   vec2z = z(at3) - z(at2)
+   get_angle = 180/pi * acos( (vec1x*vec2x + vec1y*vec2y + vec1z*vec2z) / &
+   (dsqrt(vec1x**2 + vec1y**2 + vec1z**2) * sqrt(vec2x**2 + vec2y**2 + vec2z**2)))
+   return 
+end function
+
+
+real*8 function get_dihedral(at1, at2, at3, at4, shiftdih)
+   implicit none
+   integer,intent(in) :: at1,at2,at3,at4
+   real*8  :: shiftdih
+   real*8  :: vec1x,vec1y,vec1z
+   real*8  :: vec2x,vec2y,vec2z
+   real*8  :: vec3x,vec3y,vec3z,sign
+   real*8  :: norm1x,norm1y,norm1z,norm2x,norm2y,norm2z
+   
+   vec1x = x(at1) - x(at2)
+   vec1y = y(at1) - y(at2)
+   vec1z = z(at1) - z(at2)
+   vec2x = x(at3) - x(at2)
+   vec2y = y(at3) - y(at2)
+   vec2z = z(at3) - z(at2)
+   vec3x = x(at4) - x(at3)
+   vec3y = y(at4) - y(at3)
+   vec3z = z(at4) - z(at3)
+   
+   norm1x = vec1y*vec2z - vec1z*vec2y
+   norm1y = vec1z*vec2x - vec1x*vec2z
+   norm1z = vec1x*vec2y - vec1y*vec2x
+   norm2x = vec3y*vec2z - vec3z*vec2y
+   norm2y = vec3z*vec2x - vec3x*vec2z
+   norm2z = vec3x*vec2y - vec3y*vec2x
+   
+   sign = norm1x*vec3x+norm1y*vec3y+norm1z*vec3z
+   get_dihedral = 180/pi*acos((norm1x*norm2x+norm1y*norm2y+norm1z*norm2z)/ &
+   (sqrt(norm1x**2+norm1y**2+norm1z**2)*sqrt(norm2x**2+norm2y**2+norm2z**2)))
+   
+   if (sign.gt.0) get_dihedral = shiftdih - get_dihedral
+   
+   return
+end function
+
 end module  
 
 
@@ -16,17 +95,17 @@ use mod_analyze
 implicit none
 real*8,allocatable  :: r(:), delta(:), alfa(:)
 real*8,allocatable  :: bins_dist(:,:), bins_ang(:,:),bins_dih(:,:)
-integer,allocatable :: dists(:,:),angles(:,:),dihs(:,:)
+integer,allocatable :: dists(:,:), angles(:,:), dihs(:,:)
 integer,allocatable :: ignore(:)
-real*8  :: distmin=0.5d0,distmax=5.0d0,get_distance
-real*8  :: dihmin=-180.0d0,dihmax=180.0d0,get_dihedral
-real*8  :: angmin=0.0d0,angmax=180.0d0,get_angle
+real*8  :: distmin=0.5d0, distmax=5.0d0, get_distance
+real*8  :: dihmin=-180.0d0, dihmax=180.0d0, get_dihedral
+real*8  :: angmin=0.0d0, angmax=180.0d0, get_angle
 real*8  :: shiftdih=0.0d0
-integer :: nbin_dist=1000,nbin_ang=180,nbin_dih=180
-integer :: ndist=0,nang=0,ndih=0
+integer :: nbin_dist=1000, nbin_ang=180, nbin_dih=180
+integer :: ndist=0, nang=0, ndih=0
 real*8  :: anorm=0.0d0, dx
-integer :: idist,ipom,ian,i
-integer :: iat, iat2, natom,it,iost
+integer :: idist, ipom, ian, i
+integer :: iat, iat2, natom, it, iost
 integer :: nignore, rdfpairs, rdfparts1, rdfparts2
 integer :: imod=0  !mode of action, =1 for RDF
 character(len=100) :: chmovie
@@ -36,7 +115,7 @@ logical              :: lecho=.true., lignore=.false.
 real*8  :: boxx=-1, boxy=-1, boxz=-1, rho, dvol
 
 !- Default, can be change from command line
-chmovie='movie.xyz'
+chmovie = 'movie.xyz'
 
 !-Read optional command line options
 call Get_cmdline(chmovie, nbin_dist, nbin_ang, nbin_dih, distmin, distmax, shiftdih, lecho, &
@@ -47,9 +126,7 @@ call Get_cmdline(chmovie, nbin_dist, nbin_ang, nbin_dih, distmin, distmax, shift
 30 format(3I3)
 40 format(4I3)
 
-
-
-!-Now read from stdin, what to analyze
+! Now read from stdin, what to analyze
 select case (imod)
 case (0)
 
@@ -61,11 +138,11 @@ if (ndist.gt.0)then
   allocate( r(ndist) )
   if (lecho) write(*,*)'Please, specify each bond by atom indices, one bond per line.'
   do i=1,ndist
-    read(*,20 ,IOSTAT=iost)dists(1,i),dists(2,i)
+    read(*, 20 , IOSTAT=iost)dists(1,i),dists(2,i)
     if (iost.ne.0) call PrintInputError()
   enddo
   allocate( bins_dist(nbin_dist, ndist) )
-  bins_dist=0.0d0
+  bins_dist = 0.0d0
 end if
 
 if (lecho) write(*,*)'How many angles?'
@@ -77,14 +154,14 @@ if (nang.gt.0)then
   allocate( alfa(nang) )
   if (lecho) write(*,*)'Please, specify each angle by atom indices, one angle per line.'
   do i=1,nang
-    read(*, 30)angles(1,i),angles(2,i),angles(3,i)
+    read(*, 30)angles(1,i), angles(2,i), angles(3,i)
   enddo
   allocate( bins_ang(nbin_ang, nang)    ) 
-  bins_ang=0.0d0
+  bins_ang = 0.0d0
 end if
 
 if (lecho) write(*,*)'How many dihedrals?'
-read(*, 10,IOSTAT=iost)ndih
+read(*, 10,IOSTAT = iost) ndih
 if (iost.ne.0) call PrintInputError()
 
 if (ndih.gt.0)then
@@ -261,33 +338,34 @@ end if ! imod end if, the rest will be skipped anyway
 do idist=1,nang
    dx=(angmax-angmin)/nbin_ang
 
- alfa(idist)=get_angle(angles(1,idist),angles(2,idist),angles(3,idist))
- ipom=ceiling( (alfa(idist)-angmin)/dx )
+   alfa(idist)=get_angle(angles(1,idist),angles(2,idist),angles(3,idist))
+   ipom=ceiling( (alfa(idist)-angmin)/dx )
 
- if(ipom.gt.nbin_ang.or.ipom.le.0)then
-  write(*,*)'problems with angle distribution function'
-  write(*,*)'For angle between atoms:',angles(1,idist),angles(2,idist),angles(3,idist)
-  write(*,*)'Value of ipom=',ipom,'Geometry number=',it
-  stop 1
- endif
+   if(ipom.gt.nbin_ang.or.ipom.le.0)then
+      write(*,*)'problems with angle distribution function'
+      write(*,*)'For angle between atoms:',angles(1,idist),angles(2,idist),angles(3,idist)
+      write(*,*)'Value of ipom=',ipom,'Geometry number=',it
+      stop 1
+   endif
 
- bins_ang(ipom,idist)=bins_ang(ipom,idist)+1.0d0
+   bins_ang(ipom,idist)=bins_ang(ipom,idist)+1.0d0
 enddo
+
 if ( nang.gt.0) write(102,*)it,(alfa(idist),idist=1,nang)
 
-
 do idist=1,ndih
- dx=(dihmax-dihmin)/nbin_dih
- delta(idist)=get_dihedral(dihs(1,idist),dihs(2,idist),dihs(3,idist),dihs(4,idist),shiftdih)
- ipom=ceiling((delta(idist)-dihmin)/dx)
 
- if(ipom.gt.nbin_dih.or.ipom.le.0)then
-  write(*,*)'problems with dihedral angle distribution function'
-  write(*,*)'For dihedral between atoms:',dihs(1,idist),dihs(2,idist),dihs(3,idist),dihs(4,idist)
-  write(*,*)'Value of ipom=',ipom,'Geometry number=',it
-  stop 1
- endif
- bins_dih(ipom,idist)=bins_dih(ipom,idist)+1.0d0
+   dx=(dihmax-dihmin)/nbin_dih
+   delta(idist)=get_dihedral(dihs(1,idist),dihs(2,idist),dihs(3,idist),dihs(4,idist),shiftdih)
+   ipom=ceiling((delta(idist)-dihmin)/dx)
+
+   if(ipom.gt.nbin_dih.or.ipom.le.0)then
+      write(*,*)'problems with dihedral angle distribution function'
+      write(*,*)'For dihedral between atoms:',dihs(1,idist),dihs(2,idist),dihs(3,idist),dihs(4,idist)
+      write(*,*)'Value of ipom=',ipom,'Geometry number=',it
+      stop 1
+   endif
+   bins_dih(ipom,idist)=bins_dih(ipom,idist)+1.0d0
 enddo
 
 if( ndih.gt.0) write(103,*)it,(delta(idist),idist=1,ndih)
@@ -303,36 +381,36 @@ write(*,*)'Succesfully processed ',it,' geometries.'
 
 !--------PRINTING and Normalizing histograms---------------------
 if (ndist.gt.0 )then
-  open(128,file='dist_hist.dat')
-  dx=(distmax-distmin)/nbin_dist
-  do idist=1,ndist
-    anorm=0.0d0
+   open(128,file='dist_hist.dat')
+   dx = (distmax-distmin)/nbin_dist
+   do idist = 1,ndist
+      anorm = 0.0d0
 
-    do ian=1,nbin_dist
-      anorm=anorm+bins_dist(ian,idist)
-    enddo
+      do ian=1, nbin_dist
+         anorm = anorm + bins_dist(ian,idist)
+      enddo
 
-    if (imod.eq.1)then
-       write(*,*)'Number of particles type 1 in RDF:',rdfparts1
-       write(*,*)'Number of particles type 2 in RDF:',rdfparts2
-    end if
-    do ian=1,nbin_dist
-      r(1)=distmin+dx*(ian+0.5)
       if (imod.eq.1)then
-         dvol=((ian+1)**3-ian**3)*dx**3
-         rho=1.0d0
-         if(boxx.gt.0) rho=rdfparts2/boxx/boxy/boxz
-         anorm=4.0d0/3.0d0*pi*dvol*rho
-         anorm=anorm*it*rdfparts1
-         if(rdfname1.ne.rdfname2)then
-            anorm=anorm*2.0d0
-         end if
+         write(*,*)'Number of particles type 1 in RDF:',rdfparts1
+         write(*,*)'Number of particles type 2 in RDF:',rdfparts2
+      end if
+      do ian = 1, nbin_dist
+         r(1) = distmin+dx*(ian+0.5)
+         if (imod.eq.1)then
+            dvol = ((ian+1)**3-ian**3)*dx**3
+            rho = 1.0d0
+            if(boxx.gt.0) rho = rdfparts2/boxx/boxy/boxz
+            anorm = 4.0d0/3.0d0*pi*dvol*rho
+            anorm = anorm*it*rdfparts1
+            if(rdfname1.ne.rdfname2)then
+               anorm=anorm*2.0d0
+            end if
       end if
       if (imod.eq.0)then
-         anorm=anorm*dx
+         anorm = anorm * dx
       end if
 
-      write(128,*) r(1), bins_dist(ian,idist)/anorm
+      write(128,*) r(1), bins_dist(ian, idist) / anorm
 
     enddo
     write(128,*)
@@ -342,154 +420,75 @@ if (ndist.gt.0 )then
 endif
 
 if (nang.gt.0 )then
-  open(10,file='ang_hist.dat')
-  dx=(angmax-angmin)/nbin_ang
+   open(10,file='ang_hist.dat')
+   dx=(angmax-angmin)/nbin_ang
 
-  do idist=1,nang
-    anorm=0.0d0
+   do idist=1,nang
+      anorm=0.0d0
 
-    do ian=1,nbin_ang
-      anorm=anorm+bins_ang(ian,idist)
-    enddo
+      do ian=1,nbin_ang
+         anorm=anorm+bins_ang(ian,idist)
+      enddo
 
-    do ian=1,nbin_ang
-      write(10,*)ian*dx+angmin+dx/2,bins_ang(ian,idist)/(anorm*dx)
-    enddo
+      do ian=1,nbin_ang
+         write(10,*)ian*dx+angmin+dx/2,bins_ang(ian,idist)/(anorm*dx)
+      enddo
 
-    write(10,*)
-  enddo
-  close(10)
+      write(10,*)
+   enddo
+   close(10)
 endif
 
 
 if (ndih.gt.0 )then
-  open(11,file='dih_hist.dat')
-  dx=(dihmax-dihmin)/nbin_dih
+   open(11,file='dih_hist.dat')
+   dx=(dihmax-dihmin)/nbin_dih
 
-  do idist=1,ndih
-    anorm=0.0d0
+   do idist=1,ndih
+      anorm=0.0d0
 
-    do ian=1,nbin_dih
-      anorm=anorm+bins_dih(ian,idist)
-    enddo
+      do ian=1,nbin_dih
+         anorm=anorm+bins_dih(ian,idist)
+      enddo
 
 
-    do ian=1,nbin_dih
-      write(11,*)ian*dx+dihmin+dx/2,bins_dih(ian,idist)/(anorm*dx)
-    enddo
+      do ian=1,nbin_dih
+         write(11,*)ian*dx+dihmin+dx/2,bins_dih(ian,idist)/(anorm*dx)
+      enddo
 
-    write(11,*)
-  enddo
-  close(11)
+      write(11,*)
+   enddo
+   close(11)
 
 endif
 
 if (ndist.gt.0)then
-  deallocate( bins_dist )
-  deallocate( dists )
-  deallocate( r )
+   deallocate( bins_dist )
+   deallocate( dists )
+   deallocate( r )
 endif
 if (nang.gt.0)then
-  deallocate( bins_ang ) 
-  deallocate( angles )
-  deallocate( alfa )
+   deallocate( bins_ang ) 
+   deallocate( angles )
+   deallocate( alfa )
 endif
 if (ndih.gt.0)then
-  deallocate( bins_dih )
-  deallocate( dihs )
-  deallocate( delta )
+   deallocate( bins_dih )
+   deallocate( dihs )
+   deallocate( delta )
 endif
 deallocate( x )
 deallocate( y )
 deallocate( z )
 
-end
+end program
 
 
 
 
 
-real*8 function get_distance( at1, at2, boxx, boxy, boxz)
-   use mod_analyze
-   implicit none
-   integer,intent(in) :: at1, at2
-   real*8, optional, intent(in) :: boxx, boxy, boxz
-   real*8  :: dx, dy, dz, temp
-
-   dx=x(at1)-x(at2)
-   dy=y(at1)-y(at2)
-   dz=z(at1)-z(at2)
-   if (present(boxx))then
-      if(boxx.gt.0)then
-         dx=dx-boxx*nint(dx/boxx)
-         dy=dy-boxy*nint(dy/boxy)
-         dz=dz-boxz*nint(dz/boxz)
-   end if
-   end if
-   
-   temp=dx*dx+dy*dy+dz*dz
-   temp=dsqrt(temp)
-   get_distance=temp
-
-   return 
-end
 
 
-real*8 function get_angle(at1,at2,at3)
-   use mod_analyze
-   implicit none
-   integer,intent(in) :: at1,at2,at3
-   real*8  :: vec1x,vec1y,vec1z
-   real*8  :: vec2x,vec2y,vec2z
-
-   vec1x=x(at1)-x(at2)
-   vec1y=y(at1)-y(at2)
-   vec1z=z(at1)-z(at2)
-   vec2x=x(at3)-x(at2)
-   vec2y=y(at3)-y(at2)
-   vec2z=z(at3)-z(at2)
-   get_angle=180/pi*acos((vec1x*vec2x+vec1y*vec2y+vec1z*vec2z)/ &
-   (dsqrt(vec1x**2+vec1y**2+vec1z**2)*sqrt(vec2x**2+vec2y**2+vec2z**2)))
-
-   return 
-end
-
-
-real*8 function get_dihedral(at1, at2, at3, at4, shiftdih)
-   use mod_analyze
-   implicit none
-   integer,intent(in) :: at1,at2,at3,at4
-   real*8  :: shiftdih
-   real*8  :: vec1x,vec1y,vec1z
-   real*8  :: vec2x,vec2y,vec2z
-   real*8  :: vec3x,vec3y,vec3z,sign
-   real*8  :: norm1x,norm1y,norm1z,norm2x,norm2y,norm2z
-   
-   vec1x=x(at1)-x(at2)
-   vec1y=y(at1)-y(at2)
-   vec1z=z(at1)-z(at2)
-   vec2x=x(at3)-x(at2)
-   vec2y=y(at3)-y(at2)
-   vec2z=z(at3)-z(at2)
-   vec3x=x(at4)-x(at3)
-   vec3y=y(at4)-y(at3)
-   vec3z=z(at4)-z(at3)
-   
-   norm1x=vec1y*vec2z-vec1z*vec2y
-   norm1y=vec1z*vec2x-vec1x*vec2z
-   norm1z=vec1x*vec2y-vec1y*vec2x
-   norm2x=vec3y*vec2z-vec3z*vec2y
-   norm2y=vec3z*vec2x-vec3x*vec2z
-   norm2z=vec3x*vec2y-vec3y*vec2x
-   
-   sign = norm1x*vec3x+norm1y*vec3y+norm1z*vec3z
-   get_dihedral = 180/pi*acos((norm1x*norm2x+norm1y*norm2y+norm1z*norm2z)/ &
-   (sqrt(norm1x**2+norm1y**2+norm1z**2)*sqrt(norm2x**2+norm2y**2+norm2z**2)))
-   
-   if (sign.gt.0) get_dihedral = shiftdih - get_dihedral
-   
-   return
-end
    
 subroutine Get_cmdline(chmovie, nbin_dist, nbin_ang, nbin_dih, distmin, distmax, shiftdih, lecho, &
             imod, boxx, boxy, boxz)
