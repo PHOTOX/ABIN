@@ -176,7 +176,7 @@ module mod_sh
    endif
    
    if(popthr.gt.0)then  
-      !COMPUTE NACM only if population of the states is gt.popthr
+      !COMPUTE NACME only if population of the states is gt.popthr
       do ist1=1,nstate-1
          pop=cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
          do ist2=ist1+1,nstate
@@ -202,7 +202,7 @@ module mod_sh
    
          if(tocalc(ist1,ist2).eq.1)then
    
-            write(iunit1,*)'NACM between states',ist1,ist2
+            write(iunit1,*)'NACME between states',ist1,ist2
             do iat=1,natqm              ! reading only for QM atoms
                write(iunit1,*)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
             enddo
@@ -237,7 +237,7 @@ module mod_sh
    character(len=60) :: chrestart
    iunit1=600; iunit2=601
 
-   write(*,*)'Reading NACM from nacmrest.dat'
+   write(*,*)'Reading NACME from nacmrest.dat'
    open(iunit1,file='nacmrest.dat',action="read")
    if (phase.eq.1)then
       write(*,*)'Reading phase from phaserest.dat'
@@ -256,7 +256,7 @@ module mod_sh
             do iat=1,natqm              ! reading only for QM atoms
                read(iunit1,*,iomsg=chmsg)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                if (iost.ne.0)then
-                  write(*,*)'Error reading NACM from file nacmrest.'
+                  write(*,*)'Error reading NACME from file nacmrest.'
                   write(*,*)chmsg
                   call abinerror('write_nacm_rest')
                end if
@@ -317,7 +317,7 @@ module mod_sh
                   nacz(iat,itrj,ist2,ist1)=-nacz(iat,itrj,ist1,ist2)
                else
                   close(127,status='delete')
-                  write(*,*)'WARNING:NACM between states',ist1,ist2,'not read.'
+                  write(*,*)'WARNING: NACME between states',ist1,ist2,'not read.'
                   readnacm=iost
                   return
                endif
@@ -335,6 +335,7 @@ module mod_sh
    end function readnacm
 
    subroutine calcnacm(itrj)
+   use mod_utils, only: LowerToUpper
    use mod_general, only: it, pot
    integer, intent(in) :: itrj
    integer :: ist1,ist2
@@ -352,14 +353,11 @@ module mod_sh
    enddo
    close(510) 
 
-   if(pot.eq.'molpro')then
-      write(*,*)'WARNING: Some NACME not computed.Trying with decreased accuracy.'
-      write(*,*)'Calling script r.molpro with accuracy:',nac_accu2
-      write(chsystem,'(A20,I13,I4.3,I3,A12)')'./MOLPRO/r.molpro ',it,itrj,nac_accu2,' < state.dat'
-   else
-      write(*,*)'Different accuracy for NACME is currently supported only by MOLPRO.'
-      call abinerror('calcnacm')
-   endif
+   chsystem='./'//trim(LowerToUpper(pot))//'/r.'//pot
+   ! We do not check whether the script is sensitive to the 3rd parameter
+   write(*,*)'WARNING: Some NACMs not computed. Trying with decreased accuracy...'
+   write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu2
+   write(chsystem,'(A20,I13,I4.3,I3,A12)')chsystem,it,itrj,nac_accu2,' < state.dat'
 
    call system(chsystem)
    end subroutine calcnacm
@@ -496,13 +494,13 @@ module mod_sh
       enddo
 
        iost=readnacm(itrj)
-!------------if NACM NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
+!------------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
        if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
-       call calcnacm(itrj)
+         call calcnacm(itrj)
 
-       iost=readnacm(itrj)
+         iost=readnacm(itrj)
        endif
-!------------if NACM STILL NOT COMPUTED: USE OLD NACM--------------
+!------------if NACME STILL NOT COMPUTED: USE OLD NACM--------------
        if(iost.ne.0)then
         write(*,*)'ERROR:Some NACMEs not read.'
         call abinerror('surfacehop')
