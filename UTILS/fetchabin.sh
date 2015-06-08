@@ -23,7 +23,7 @@ inose=$(awk -F"[,=]" '{if($1=="inose")print $2}' $KDE/input.in 2> /dev/null)
 
 if [[ $inose -eq "0" ]];then
    echo "Checking energy conservation." 
-   echo "# Energy_jump   Energy_drift" 
+   echo "# Energy_jump [ eV ] Energy_drift [ eV ]" 
    grep -s -v -e "#" $KDE/energies.dat | checkenergy.awk
 fi
 
