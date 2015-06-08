@@ -118,7 +118,7 @@ subroutine init(dt)
          write(*,*)chiomsg
          call abinerror('init')
       else
-         do iat=1,natom
+         do iat=1,MAXTYPE
             massnames(iat)=LowerToUpper(massnames(iat))
          end do
       end if
