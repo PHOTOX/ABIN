@@ -14,18 +14,16 @@ CONTAINS
 real*8 function get_distance( at1, at2, boxx, boxy, boxz)
    implicit none
    integer,intent(in) :: at1, at2
-   real*8, optional, intent(in) :: boxx, boxy, boxz
+   real*8, intent(in) :: boxx, boxy, boxz
    real*8  :: dx, dy, dz, temp
 
    dx = x(at1) - x(at2)
    dy = y(at1) - y(at2)
    dz = z(at1) - z(at2)
-   if (present(boxx))then
-      if(boxx.gt.0)then
-         dx = dx - boxx * nint(dx/boxx)
-         dy = dy - boxy * nint(dy/boxy)
-         dz = dz - boxz * nint(dz/boxz)
-   end if
+   if (boxx.gt.0)then
+      dx = dx - boxx * nint(dx/boxx)
+      dy = dy - boxy * nint(dy/boxy)
+      dz = dz - boxz * nint(dz/boxz)
    end if
    
    temp = dx*dx + dy*dy + dz*dz
@@ -34,27 +32,39 @@ real*8 function get_distance( at1, at2, boxx, boxy, boxz)
    return 
 end function
 
-real*8 function get_angle(at1,at2,at3)
+real*8 function get_angle(at1, at2, at3, boxx, boxy, boxz)
    implicit none
    integer,intent(in) :: at1, at2, at3
+   real*8, optional, intent(in) :: boxx, boxy, boxz
    real*8  :: vec1x, vec1y, vec1z
    real*8  :: vec2x, vec2y, vec2z
-
+   
    vec1x = x(at1) - x(at2)
    vec1y = y(at1) - y(at2)
    vec1z = z(at1) - z(at2)
    vec2x = x(at3) - x(at2)
    vec2y = y(at3) - y(at2)
    vec2z = z(at3) - z(at2)
-   get_angle = 180/pi * acos( (vec1x*vec2x + vec1y*vec2y + vec1z*vec2z) / &
-   (dsqrt(vec1x**2 + vec1y**2 + vec1z**2) * sqrt(vec2x**2 + vec2y**2 + vec2z**2)))
-   return 
-end function
+   
+   if(boxx.gt.0)then
+      vec1x = vec1x - boxx * nint(vec1x/boxx)
+      vec1y = vec1y - boxy * nint(vec1y/boxy)
+      vec1z = vec1z - boxz * nint(vec1z/boxz)
+      vec2x = vec2x - boxx * nint(vec2x/boxx)
+      vec2y = vec2y - boxy * nint(vec2y/boxy)
+      vec2z = vec2z - boxz * nint(vec2z/boxz)
+   end if
 
+   get_angle=180/pi*acos((vec1x*vec2x+vec1y*vec2y+vec1z*vec2z)/ &
+   (dsqrt(vec1x**2+vec1y**2+vec1z**2)*sqrt(vec2x**2+vec2y**2+vec2z**2)))
 
-real*8 function get_dihedral(at1, at2, at3, at4, shiftdih)
+return 
+end function get_angle
+
+real*8 function get_dihedral(at1, at2, at3, at4, shiftdih, boxx, boxy, boxz)
    implicit none
    integer,intent(in) :: at1,at2,at3,at4
+   real*8, optional, intent(in) :: boxx, boxy, boxz
    real*8  :: shiftdih
    real*8  :: vec1x,vec1y,vec1z
    real*8  :: vec2x,vec2y,vec2z
@@ -70,6 +80,18 @@ real*8 function get_dihedral(at1, at2, at3, at4, shiftdih)
    vec3x = x(at4) - x(at3)
    vec3y = y(at4) - y(at3)
    vec3z = z(at4) - z(at3)
+
+   if(boxx.gt.0)then
+      vec1x = vec1x - boxx * nint(vec1x/boxx)
+      vec1y = vec1y - boxy * nint(vec1y/boxy)
+      vec1z = vec1z - boxz * nint(vec1z/boxz)
+      vec2x = vec2x - boxx * nint(vec2x/boxx)
+      vec2y = vec2y - boxy * nint(vec2y/boxy)
+      vec2z = vec2z - boxz * nint(vec2z/boxz)
+      vec3x = vec3x - boxx * nint(vec3x/boxx)
+      vec3y = vec3y - boxy * nint(vec3y/boxy)
+      vec3z = vec3z - boxz * nint(vec3z/boxz)
+   end if
    
    norm1x = vec1y*vec2z - vec1z*vec2y
    norm1y = vec1z*vec2x - vec1x*vec2z
@@ -121,6 +143,7 @@ chmovie = 'movie.xyz'
 call Get_cmdline(chmovie, nbin_dist, nbin_ang, nbin_dih, distmin, distmax, shiftdih, lecho, &
                imod, boxx, boxy, boxz)
 
+! the following formats were not a good idea and are now obsolete
 10 format(I3)
 20 format(2I3)
 30 format(3I3)
@@ -131,14 +154,14 @@ select case (imod)
 case (0)
 
 if (lecho) write(*,*)'How many bonds?'
-read(*, 10, IOSTAT=iost) ndist
+read(*, *, IOSTAT=iost) ndist
 if (iost.ne.0) call PrintInputError()
 if (ndist.gt.0)then
   allocate( dists(2,ndist) )
   allocate( r(ndist) )
   if (lecho) write(*,*)'Please, specify each bond by atom indices, one bond per line.'
   do i=1,ndist
-    read(*, 20 , IOSTAT=iost)dists(1,i),dists(2,i)
+    read(*,*, IOSTAT=iost)dists(1,i),dists(2,i)
     if (iost.ne.0) call PrintInputError()
   enddo
   allocate( bins_dist(nbin_dist, ndist) )
@@ -146,7 +169,7 @@ if (ndist.gt.0)then
 end if
 
 if (lecho) write(*,*)'How many angles?'
-read(*, 10, IOSTAT=iost)nang
+read(*, *, IOSTAT=iost)nang
 if (iost.ne.0) call PrintInputError()
 
 if (nang.gt.0)then
@@ -154,7 +177,7 @@ if (nang.gt.0)then
   allocate( alfa(nang) )
   if (lecho) write(*,*)'Please, specify each angle by atom indices, one angle per line.'
   do i=1,nang
-    read(*, 30)angles(1,i), angles(2,i), angles(3,i)
+    read(*, *)angles(1,i), angles(2,i), angles(3,i)
   enddo
   allocate( bins_ang(nbin_ang, nang)    ) 
   bins_ang = 0.0d0
@@ -169,7 +192,7 @@ if (ndih.gt.0)then
   allocate( delta(ndih) )
   if(lecho)  write(*,*)'Please, specify each dihedral by atom indices, one dihedral per line.'
   do i=1,ndih
-    read(*,40 )dihs(1,i),dihs(2,i),dihs(3,i),dihs(4,i)
+    read(*,*)dihs(1,i),dihs(2,i),dihs(3,i),dihs(4,i)
   enddo
   allocate( bins_dih(nbin_dih, ndih) )
   bins_dih=0.0d0
@@ -192,13 +215,13 @@ case (1)
    read(*,'(A2)')rdfname2
  
    if(lecho)  write(*,*)'How many atoms should I ignore?'
-   read(*, 10)nignore
+   read(*,*)nignore
  
    if(nignore.gt.0)then
       allocate( ignore(nignore) )
       if(lecho)  write(*,*)'Please, specify indices of atoms to ignore, one per line.'
       do i=1,nignore
-         read(*,10)ignore(i)
+         read(*,*)ignore(i)
       end do
    end if
 
@@ -298,6 +321,7 @@ if (imod.eq.1)then
          r(1)=get_distance(iat, iat2, boxx, boxy, boxz)
        
          ! only half a box
+         ! this line is here for non-cubic boxes
          if (r(1).gt.distmax.and.boxx.gt.0) cycle
             
          ipom=ceiling( ( (r(1)) - distmin )/dx )
@@ -316,15 +340,16 @@ if (imod.eq.1)then
 end if
 
 if (imod.eq.0)then
-   do idist=1,ndist
+   do idist = 1, ndist
    
-    r(idist)=get_distance(dists(1,idist),dists(2,idist) )
+    r(idist) = get_distance(dists(1,idist), dists(2,idist), boxx, boxy, boxz)
    
-    ipom=ceiling( ( (r(idist)) - distmin )/dx )
+    ipom = ceiling( ( (r(idist)) - distmin )/dx )
     if(ipom.gt.nbin_dist.or.ipom.le.0)then
-     write(*,*)'problems with distribution function'
-     write(*,*)'For distance between atoms:',dists(1,idist),dists(2,idist)
-     write(*,*)'Value of ipom=',ipom,'Geometry number=',it
+     write(*,*)'Problems with bond distribution function'
+     write(*,*)'For distance between atoms:',dists(1,idist), dists(2,idist)
+     write(*,*)'Distance=',r(idist),'Geometry number=',it
+     write(*,*)'Boxx, boxy, boxz:',boxx, boxy, boxz
      stop 1
     endif
  
@@ -335,11 +360,12 @@ if (imod.eq.0)then
 end if ! imod end if, the rest will be skipped anyway
 
 
-do idist=1,nang
-   dx=(angmax-angmin)/nbin_ang
+do idist = 1, nang
+   dx = (angmax-angmin)/nbin_ang
 
-   alfa(idist)=get_angle(angles(1,idist),angles(2,idist),angles(3,idist))
-   ipom=ceiling( (alfa(idist)-angmin)/dx )
+   alfa(idist) = get_angle(angles(1,idist), angles(2,idist), angles(3,idist), &
+                        boxx, boxy, boxz)
+   ipom = ceiling( (alfa(idist)-angmin)/dx )
 
    if(ipom.gt.nbin_ang.or.ipom.le.0)then
       write(*,*)'problems with angle distribution function'
@@ -356,7 +382,8 @@ if ( nang.gt.0) write(102,*)it,(alfa(idist),idist=1,nang)
 do idist=1,ndih
 
    dx=(dihmax-dihmin)/nbin_dih
-   delta(idist)=get_dihedral(dihs(1,idist),dihs(2,idist),dihs(3,idist),dihs(4,idist),shiftdih)
+   delta(idist) = get_dihedral(dihs(1,idist), dihs(2,idist), dihs(3,idist), dihs(4,idist), &
+                              shiftdih, boxx, boxy, boxz)
    ipom=ceiling((delta(idist)-dihmin)/dx)
 
    if(ipom.gt.nbin_dih.or.ipom.le.0)then
