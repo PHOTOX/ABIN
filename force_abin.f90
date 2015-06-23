@@ -16,7 +16,7 @@
       character(len=20) :: chgeom,chforce,chhess,fgeom
       logical :: file_exists
       integer :: iat,iw,iat1,iat2,itest !,nthreads=1, ithread
-      integer :: ist1,ist2,iost
+      integer :: ist1,ist2,iost, ISTATUS
 !!$    integer :: omp_get_max_threads,OMP_get_thread_num
 
 !!$    nthreads=omp_get_max_threads()
@@ -82,7 +82,20 @@
     write(chsystem,'(A60,I3,A12)')chsystem,nac_accu1,' < state.dat'
    endif
      
-   call system(chsystem)
+   ISTATUS = system(chsystem)
+
+   ! Exit status 0 turns to 0
+   ! For some reason, exit status 1 turns to 256
+   ! However, this one we get by default from bash, don't know why...
+   ! see this thread for explanation:
+   ! http://coding.derkeiler.com/Archive/Fortran/comp.lang.fortran/2007-01/msg00085.html
+   ! If the bash script wants to notify ABIN, it can use e.g. exit 2
+   if(ISTATUS.ne.0.and.ISTATUS.ne.256)then
+      write(*,*)'ERROR: Something went wrong during the execution of the ab initio external&
+      & program. See the approprite output files in& 
+      & folder '//trim(LowerToUpper(pot))//"/" 
+      call abinerror('force_abin')
+   end if
 
 !----make sure that the file exist and flush the disc buffer     
      itest=0
@@ -94,18 +107,22 @@
      itest=itest+1
      end do
      
-     open(unit=20+iw,file=chforce,status='old',ACTION='READ')
+     open(unit=20+iw,file=chforce,status='old',ACTION='READ', IOSTAT=iost)
+      if(iost.ne.0)then
+         write(*,*)'Fatal problem when trying to open the file ', chforce
+         call abinerror('force_abin')
+      end if
 
 !-----READING ENERGY from engrad.dat
       read(20+iw,*,IOSTAT=iost)temp1
       if(iost.ne.0)then
-              write(*,*)'Fatal problem with reading energy from file ', chforce
-              write(*,*)'This usually means, that the ab initio program failed to converge.'
-              write(*,*)'See the appropriate output files from external program in folder '//trim(LowerToUpper(pot))//"/."
-              call abinerror('force_abin')
+          write(*,*)'Fatal problem with reading energy from file ', chforce
+          write(*,*)'This usually means, that the ab initio program failed to converge.'
+          write(*,*)'See the appropriate output files from the external program in folder '//trim(LowerToUpper(pot))//"/."
+          call abinerror('force_abin')
       endif
 !$OMP ATOMIC
-      eclas=eclas+temp1
+      eclas = eclas + temp1
 ! SH             
      if(ipimd.eq.2)then
       en_array(1,iw)=temp1
