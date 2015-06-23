@@ -214,11 +214,18 @@ module mod_sh
       enddo
    enddo
 
+   ! Printing total energy at t=0, so that we can safely restart
+   ! and we do not break checking for energy drift
+   ! For now, energy jump check is not handled well.
+   write(iunit1, *)'Total Energy(t=0) [eV]'
+   write(iunit1, *)entot0
+
    if(phase.eq.1)then
       do ist1=1,nstate
          write(iunit2,*)(gama(ist1,ist2,itrj),ist2=1,nstate)
       end do
    end if
+   
 
    end do
 
@@ -270,6 +277,12 @@ module mod_sh
    
       enddo
    enddo
+
+   ! Reading total energy at t=0, so that we can safely restart
+   ! and we do not break checking for energy drift
+   ! For now, energy jump check is not handled well.
+   read(iunit1, *)
+   read(iunit1, *)entot0
 
    if(phase.eq.1)then
       do ist1=1,nstate
