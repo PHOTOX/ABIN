@@ -677,7 +677,6 @@ module mod_random
 
 !-    ROUTINE RSAVEF, reads or writes the state of the generator
       subroutine rsavef(iout,lread)
-         use mod_utils, only: abinerror
          integer,intent(in) :: iout  !where do we write the state
 !         integer,intent(in) :: isave !0=read,1=save
          logical,intent(out),optional :: lread
@@ -691,7 +690,7 @@ module mod_random
          inquire(unit=iout,exist=lexist,opened=lopened)
          if(lexist.and..not.lopened)then
             write(*,*)'Unit for PRNG state must be opened!Exiting...'
-            call abinerror('rsavef')
+            stop 1
          end if
 
          if (present(lread))then
@@ -703,7 +702,7 @@ module mod_random
                write(*,*)'ERROR: PRNG STATE IN RESTART FILE SEEMS TO BE BROKEN.'
                write(*,*)'Expected:',chprng
                write(*,*)'Got',readstring
-               call abinerror('rsavef')
+               stop 1
             else
                read(iout,*)init,last
                read(iout,*)isave,gsave

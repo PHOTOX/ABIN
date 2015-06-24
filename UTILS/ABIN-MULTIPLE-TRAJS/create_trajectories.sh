@@ -19,7 +19,7 @@
 #-The trajectories are executed and stored in $folder.
 
 # Files needed in this folder: r.abin, input.in, make_restart
-# MyIRandom utility should be in your $PATH.
+# abin-randomint utility should be in your $PATH.
 # Also folder $pot (e.g. MOLPRO) is needed.
 #---------------------------------------------------------------------------------
 
@@ -129,9 +129,9 @@ let natom1=natom+1
 
 #--------------------generation of random numbers--------------------------------
 echo "Generating $nsample random integers."
-MyIRandom $irandom0 $nsample > iran.dat
+abin-randomint $irandom0 $nsample > iran.dat
 if [[ $? -ne "0" ]];then
-   Error "MyIrandom"
+   Error "abin-randomint"
 fi
 
 #--------------------------------------------------------------------------------
