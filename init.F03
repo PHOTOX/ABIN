@@ -23,7 +23,6 @@ subroutine init(dt)
       use mod_gle
       use mod_nab
       use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
-      use mod_fftw3,    only: fftw_init
       use mod_random
       use mod_guillot,  only: inames_guillot
       use mod_utils
@@ -33,6 +32,9 @@ subroutine init(dt)
       use mod_minimize, only: gamm, gammthr
       use mod_analysis, only: restin
       use mod_water,    only: watpot, check_water
+#ifdef USEFFTW
+      use mod_fftw3,    only: fftw_init
+#endif
       implicit none
       real(DP),intent(out) :: dt
       real(DP) :: masses(MAXTYPES)
@@ -189,8 +191,9 @@ subroutine init(dt)
               md=1
       endif
 
-!-------------------------INITIALIZATION OF FFTW ROUTINES-------
+#ifdef USEFFTW
       if(istage.eq.2) call fftw_init(nwalk)
+#endif
 
 
 !     allocate all basic arrays and set them to 0.0d0
@@ -456,6 +459,14 @@ endif
          error=1
 !$       end if
       end if
+
+#ifndef USEFFTW
+      if(istage.eq.2)then
+         write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
+         write(*,*)'Normal mode transformations cannot be performed.'
+         stop 1
+      end if
+#endif
 
       !-----Check,whether input variables don't exceeds array limits
       if(ntraj.gt.ntrajmax)then

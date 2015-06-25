@@ -289,6 +289,9 @@ print '(a)',' '
 print *,'Compiled at  ',date
 print *,commit
 !$ print *,'Compiled with parallel OpenMP support for PIMD.'
+#ifdef USEFFTW
+   write(*,*)'Compiled with FFTW support.'
+#endif
 print *,' '
 
 #if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
@@ -310,7 +313,9 @@ subroutine finish(values1,values2)
    use mod_nhc
    use mod_estimators, only: h
    use mod_harmon, only: hess
+#ifdef USEFFTW
    use mod_fftw3
+#endif
    implicit none
    integer,dimension(8),intent(in)  :: values1
    integer,dimension(8),intent(out) :: values2
@@ -330,7 +335,9 @@ subroutine finish(values1,values2)
 !--------------CLEANING-------------------------
    if (ihess.eq.1) deallocate ( hess )
    if (ihess.eq.1.and.pot.eq.'nab') deallocate ( h )
+#ifdef USEMPI
    if (istage.eq.2) call fftw_end()
+#endif
 
    if(inose.eq.1)then
     deallocate( w )

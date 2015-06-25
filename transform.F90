@@ -1,52 +1,5 @@
-
-module mod_fftw3
-   use, intrinsic :: iso_c_binding
-   include 'fftw3.f03'
-   type(C_PTR) :: plan_utox,plan_xtou
-   real(C_DOUBLE), dimension(:), allocatable :: x_in, y_in, z_in
-   complex(C_DOUBLE_COMPLEX), dimension(:), allocatable :: cx, cy, cz
-   save
-   contains
-
-   subroutine fftw_init(nwalk)
-      use mod_const, only: DP
-      integer :: nwalk
-
-      if(DP.ne.C_DOUBLE)then
-         write(*,*)'WARNING: Kind DP is not equal kind C_DOUBLE'
-         write(*,*)'Precision might be lost during normal mode transform.'
-         write(*,*)'Set iknow=1 if you want to proceed.'
-         if (iknow.ne.1) call abinerror('fftw_init')
-      end if
-
-      allocate( x_in(nwalk+1) )
-      allocate( y_in(nwalk+1) )
-      allocate( z_in(nwalk+1) )
-
-      allocate( cx(nwalk+1) )
-      allocate( cy(nwalk+1) )
-      allocate( cz(nwalk+1) )
-
-      plan_xtou=fftw_plan_dft_r2c_1d(nwalk,x_in,cx, FFTW_MEASURE)
-      plan_utox=fftw_plan_dft_c2r_1d(nwalk,cx,x_in, FFTW_MEASURE)
-
-   end subroutine
-
-   subroutine fftw_end()
-      deallocate( x_in )
-      deallocate( y_in )
-      deallocate( z_in )
-
-      deallocate( cx )
-      deallocate( cy )
-      deallocate( cz )
-
-      call fftw_destroy_plan(plan_xtou)
-      call fftw_destroy_plan(plan_utox)
-   end subroutine fftw_end
-end module mod_fftw3
-
 !---mod_transform                  P.Slavicek and D.Hollas, 9.2.2012
+!--- Transformation routines for PIMD and PI+GLE.
 !---Various staging transformation subroutines are placed here.
 !---NORMAL MODE TRANSFORMATION added during March 2013
 
@@ -265,60 +218,70 @@ module mod_transform
 !     in trans matrices,values in x,y and z matrices are NOT modified!!      
 !     masses are also modified
    subroutine UtoX(x,y,z,transx,transy,transz)
+#ifdef USEFFTW
       use mod_fftw3
-      real(DP)  :: x(:,:),y(:,:),z(:,:)
-      real(DP)  :: transx(:,:),transy(:,:),transz(:,:)
-      integer   :: iat,iw
+#endif
+      real(DP)  :: x(:,:), y(:,:), z(:,:)
+      real(DP)  :: transx(:,:), transy(:,:), transz(:,:)
+      integer   :: iat, iw
 
-       do iat=1,natom
+#ifdef USEFFTW
+       do iat = 1, natom
 
-       cx(1)=complex(x(iat,1),0)
-       cy(1)=complex(y(iat,1),0)
-       cz(1)=complex(z(iat,1),0)
-       cx((nwalk+2)/2)=complex(x(iat,nwalk),0)
-       cy((nwalk+2)/2)=complex(y(iat,nwalk),0)
-       cz((nwalk+2)/2)=complex(z(iat,nwalk),0)
-       do iw=2,nwalk/2
-        cx(iw)=complex(x(iat,2*iw-2),x(iat,2*iw-1))
-        cy(iw)=complex(y(iat,2*iw-2),y(iat,2*iw-1))
-        cz(iw)=complex(z(iat,2*iw-2),z(iat,2*iw-1))
+       cx(1) = complex(x(iat,1),0)
+       cy(1) = complex(y(iat,1),0)
+       cz(1) = complex(z(iat,1),0)
+       cx((nwalk+2)/2) = complex(x(iat,nwalk), 0)
+       cy((nwalk+2)/2) = complex(y(iat,nwalk), 0)
+       cz((nwalk+2)/2) = complex(z(iat,nwalk), 0)
+       do iw = 2, nwalk/2
+        cx(iw) = complex(x(iat,2*iw-2), x(iat,2*iw-1))
+        cy(iw) = complex(y(iat,2*iw-2), y(iat,2*iw-1))
+        cz(iw) = complex(z(iat,2*iw-2), z(iat,2*iw-1))
        enddo
-
-      call fftw_execute_dft_c2r(plan_utox,cx,x_in)
-      call fftw_execute_dft_c2r(plan_utox,cy,y_in)
-      call fftw_execute_dft_c2r(plan_utox,cz,z_in)
+      call fftw_execute_dft_c2r(plan_utox, cx, x_in)
+      call fftw_execute_dft_c2r(plan_utox, cy, y_in)
+      call fftw_execute_dft_c2r(plan_utox, cz, z_in)
 
       do iw=1,nwalk
-       transx(iat,iw)=x_in(iw)
-       transy(iat,iw)=y_in(iw)
-       transz(iat,iw)=z_in(iw)
+       transx(iat,iw) = x_in(iw)
+       transy(iat,iw) = y_in(iw)
+       transz(iat,iw) = z_in(iw)
       enddo
 
       enddo
 
 !      write(*,*)'normal modes back to cartesian'
 !      call printf(transx/ang,transy/ang,transz/ang)
+#else
+      write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
+      write(*,*)'Normal mode transformations cannot be performed.'
+      stop 1
+#endif
 
    end subroutine UtoX
 
 !  This routine transforms cartesian to normal coordinates, which are stored
 !  in trans matrices,values in x,y and z matrices are NOT modified!!      
    subroutine XtoU(x,y,z,transx,transy,transz)
+#ifdef USEFFTW
       use mod_fftw3
+#endif
       use mod_general, only: idebug
-      real(DP)  :: x(:,:),y(:,:),z(:,:)
-      real(DP)  :: transx(:,:),transy(:,:),transz(:,:)
-      integer   :: iat,iw
+      real(DP)  :: x(:,:), y(:,:), z(:,:)
+      real(DP)  :: transx(:,:), transy(:,:), transz(:,:)
+      integer   :: iat, iw
 
-      do iat=1,natom
-       do iw=1,nwalk
-        x_in(iw)=x(iat,iw)
-        y_in(iw)=y(iat,iw)
-        z_in(iw)=z(iat,iw)
+#ifdef USEFFTW
+      do iat = 1, natom
+       do iw = 1, nwalk
+        x_in(iw) = x(iat,iw)
+        y_in(iw) = y(iat,iw)
+        z_in(iw) = z(iat,iw)
        enddo
-       call fftw_execute_dft_r2c(plan_xtou,x_in,cx)
-       call fftw_execute_dft_r2c(plan_xtou,y_in,cy)
-       call fftw_execute_dft_r2c(plan_xtou,z_in,cz)
+      call fftw_execute_dft_r2c(plan_xtou,x_in,cx)
+      call fftw_execute_dft_r2c(plan_xtou,y_in,cy)
+      call fftw_execute_dft_r2c(plan_xtou,z_in,cz)
 
 if(idebug.eq.1)then
        write(*,*)'complex coefficients'
@@ -326,19 +289,19 @@ if(idebug.eq.1)then
        write(*,*)(cy(iw),iw=1,nwalk)
        write(*,*)(cz(iw),iw=1,nwalk)
 endif
-       transx(iat,1)=realpart(cx(1))/nwalk
-       transy(iat,1)=realpart(cy(1))/nwalk
-       transz(iat,1)=realpart(cz(1))/nwalk
-       transx(iat,nwalk)=realpart(cx((nwalk+2)/2))/nwalk
-       transy(iat,nwalk)=realpart(cy((nwalk+2)/2))/nwalk
-       transz(iat,nwalk)=realpart(cz((nwalk+2)/2))/nwalk
+       transx(iat,1) = realpart(cx(1)) / nwalk
+       transy(iat,1) = realpart(cy(1)) / nwalk
+       transz(iat,1) = realpart(cz(1)) / nwalk
+       transx(iat,nwalk) = realpart(cx((nwalk+2)/2)) / nwalk
+       transy(iat,nwalk) = realpart(cy((nwalk+2)/2)) / nwalk
+       transz(iat,nwalk) = realpart(cz((nwalk+2)/2)) / nwalk
        do iw=2,nwalk/2
-       transx(iat,2*iw-2)=realpart(cx(iw))/nwalk
-       transx(iat,2*iw-1)=imagpart(cx(iw))/nwalk
-       transy(iat,2*iw-2)=realpart(cy(iw))/nwalk
-       transy(iat,2*iw-1)=imagpart(cy(iw))/nwalk
-       transz(iat,2*iw-2)=realpart(cz(iw))/nwalk
-       transz(iat,2*iw-1)=imagpart(cz(iw))/nwalk
+       transx(iat,2*iw-2) = realpart(cx(iw)) / nwalk
+       transx(iat,2*iw-1) = imagpart(cx(iw)) / nwalk
+       transy(iat,2*iw-2) = realpart(cy(iw)) / nwalk
+       transy(iat,2*iw-1) = imagpart(cy(iw)) / nwalk
+       transz(iat,2*iw-2) = realpart(cz(iw)) / nwalk
+       transz(iat,2*iw-1) = imagpart(cz(iw)) / nwalk
        enddo
       enddo
 !       write(*,*)'original cartesian to normal modes'
@@ -346,6 +309,11 @@ endif
 !       write(*,*)'transformed coordinates to normal modes'
 !       call printf(transx/ang,transy/ang,transz/ang)
 
+#else
+      write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
+      write(*,*)'Normal mode transformations cannot be performed.'
+      stop 1
+#endif
 
 
    end subroutine XtoU
