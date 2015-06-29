@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#TODO: lepe vyresit tvorbu input.in, pouzit sed
+# lepe vyresit tvorbu input.in, pouzit sed
 
 #---------------------------------------------------------------------------------
 #  Create_Trajectories                   Daniel Hollas, Ondrej Svoboda 2014
@@ -24,13 +24,14 @@
 #---------------------------------------------------------------------------------
 
 #######-----SETUP---#############
-mode="movie"    # ="wigner"  - take initial conditions from Wigner distributions.  (irest=1)
-                # ="movie"   - take initial geometries sequentially from XYZ movie.
+mode="wigner"        # ="wigner"  - take initial conditions from Wigner distributions.  (irest=1)
+                     # ="movie"   - take initial geometries sequentially from XYZ movie.
 movie="../movie.xyz"       # PATH TO a XYZ movie with initial geometries
 veloc=""                   # leave blank if you do not have velocities
-#PATHTOWIGNER="./WIGNER"  # path to wigner "trajectories"
-input=input.in.shorter          
-pot="QCHEM"            # folder with ab initio bash script
+PATHTOWIGNER="../WIGNER"   # path to wigner "trajectories"
+input=input.in
+pot="QCHEM"                # folder with ab initio bash script
+                           # (must be consistent with parameter 'pot' in ABIN input)
 
 # Following variables can be determined automatically from input for SH runs
 # for classical AIMD, set initialstate and nstate equal to 1
@@ -40,15 +41,16 @@ pot="QCHEM"            # folder with ab initio bash script
 natom=13
 initialstate=1
 nstate=1
-
-isample=1 	        # initial number of traj
-nsample=100	        # number of trajectories
 folder=MP2.$initialstate  # name of the directory
-molname=nh3             # for the name of the job in the queue
-irandom0=10061989       # random seed, set negative for random seed based on time
-abinexe=/home/$USER/bin/abin.v1  # path to abin binary
-#submit="qsub -q aq"    # comment this line if you don't want to submit to queue yet
-rewrite=0               # if =1 -> rewrite trajectories that already exist
+molname=wat3nh3            # for the name of the job in the queue
+abinexe=/home/$USER/bin/abin/abin.dev  # path to abin binary
+
+isample=800 	        # initial number of traj
+nsample=1000	        # number of trajectories
+irandom0=1365816       # random seed, set negative for random seed based on time
+submit="qsub " # -q sq-* "    # comment this line if you don't want to submit to queue yet
+rewrite=0             # if =1 -> rewrite trajectories that already exist
+jobs=25
 
 ## If you need to process the input via cut_sphere, adjust the following command
 # (Do not provide file names.)
@@ -116,6 +118,26 @@ echo "initial_state nstate natom"
 echo $initialstate $nstate $natom
 
 #- NO MORE MODIFICATION USUALLY NEEDED
+if [[ -e $folder/$molname$isample.*.sh ]];then
+   echo  "Error: File $folder/$molname$isample.*.sh already exists!"
+   exit 1
+fi
+
+# determine number of ABIN simulations per job
+let nsimul=nsample-isample+1
+if [[ $nsimul -le $jobs ]];then
+   remainder=0
+   injob=1
+   jobs=nsimul
+else
+   let injob=nsimul/jobs  #number of simulations per job
+   #determine the remainder and distribute it evenly between jobs
+   let remainder=nsimul-injob*jobs
+fi
+
+pwd=$(pwd)
+
+j=1
 i=$isample
 inputcheck=$(awk '{if($1=="&general"){print NR;exit 0}}' $input)
 if [[ $inputcheck -ne 1 ]];then
@@ -178,7 +200,7 @@ if [[ $mode = "movie" ]];then
    if [[  ! -z "$cut" ]];then
       if [[ ! -z "$veloc" ]];then
           $cut -vel veloc.in < geom
-       else
+      else
           $cut
       fi
       if [[ $? -ne "0" ]];then
@@ -238,14 +260,38 @@ INPUTGEOM=mini.dat
 OUTPUT=output
 EOF
 grep -v -e 'ABINEXE=' -e "JOBNAME=" -e "INPUTPARAM=" -e "INPUTGEOM=" ../../r.abin >>r.$molname.$initialstate.$i
-
-#---------------------------------------------------------------------------
-if [[ ! -z "$submit" ]];then
-   $submit -cwd r.$molname.$initialstate.$i
-fi
+chmod 755 r.$molname.$initialstate.$i
 
 cd ../..
+
+echo "cd TRAJ.$i" >> $folder/$molname$isample.$j.sh
+echo "./r.$molname.$initialstate.$i" >> $folder/$molname$isample.$j.sh
+echo "cd $pwd/$folder" >> $folder/$molname$isample.$j.sh
+
+#--Distribute calculations evenly between jobs for queue
+   if [[ $remainder -le 0 ]];then
+      let ncalc=injob
+   else
+      let ncalc=injob+1 
+   fi
+   if [[ `expr \( $i - $first + 1 \) % $ncalc` -eq 0 ]] && [[ $j -lt $jobs ]]; then
+      let j++
+      let remainder--
+   fi
+#---------------------------------------------------------------------------
+
 let i++
 
 done
+
+j=1
+
+if [[ ! -z "$submit" ]];then
+   cd $folder
+   while [[ $j -le $jobs ]]
+   do
+      $submit -cwd $molname$isample.$j.sh
+      let j++
+   done
+fi
 
