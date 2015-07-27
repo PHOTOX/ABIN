@@ -7,7 +7,7 @@ input=input$ibead
 source SetEnvironment.sh MOLPRO
 
 
-rm $input.pun
+rm -f $input.pun
 # MOLPRO-CASSCF/CASPT2 for ground state
 # Predavame vlnovou funkci. Pokud nechceme, staci zakomentovat 2.radek,
 # 3. radek (PUNCH) je nutny!, bereme z nej sily a energie

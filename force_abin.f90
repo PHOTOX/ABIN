@@ -102,7 +102,7 @@
      INQUIRE( FILE=chforce, EXIST=file_exists )
      do while(.not.file_exists.and.itest.lt.10)
      write(*,*)'WARNING:File ',chforce,' does not exist. Waiting..'
-     call system('sync')    !mel by zajistit flush diskoveho bufferu
+     ISTATUS = system('sync')    !mel by zajistit flush diskoveho bufferu
      INQUIRE(FILE=chforce, EXIST=file_exists)
      itest=itest+1
      end do
@@ -155,7 +155,7 @@
       INQUIRE(FILE=chhess, EXIST=file_exists)
       do while(.not.file_exists.and.itest.lt.10)
        write(*,*)'WARNING:File ',chhess,' does not exist. Waiting..'
-       call system('sync')    !mel by zajistit flush diskoveho bufferu
+       ISTATUS = system('sync')    !mel by zajistit flush diskoveho bufferu
        INQUIRE(FILE=chhess, EXIST=file_exists)
        itest=itest+1
       end do
