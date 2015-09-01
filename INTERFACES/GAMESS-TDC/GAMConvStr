@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+#  Converts structure or movie to GAMESS xyz format
+#   Now implemented up to Argon
+
+INPUT=$1
+
+NAtoms=`head -n 1 $INPUT | awk -F" " '{print $1}'`
+NLines=`wc -l $INPUT | awk -F" " '{print $1}'`
+NStruct=$(( $NLines / ( $NAtoms + 2 ) ))
+
+echo $NAtoms $NStruct > temp.tmp
+
+../fGAMConvStr < $INPUT
+
+rm temp.tmp

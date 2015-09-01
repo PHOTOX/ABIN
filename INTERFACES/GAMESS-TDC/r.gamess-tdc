@@ -1,0 +1,78 @@
+#!/bin/bash
+#
+# DHWARNING: This script requires nwritex=1 in the input.in!
+
+# ABIN interface for Time-derivative coupling code for GAMESS.
+# Currently supports CASSCF and FOMO-CAS-CI wavefunctions.
+
+# Choose either FOMO or CASSCF.
+POT=FOMO
+#POT=CASSCF
+
+cd GAMESS-TDC
+timestep=$1
+ibead=$2
+input=input$ibead
+nacaccu=$3
+geom="../geom.dat.$ibead"
+natom=$(cat $geom | wc -l )
+
+
+rm -f ../engrad.dat.$ibead fomo_sten.dat tdcoups.dat anforce.dat
+if [[ $timestep -eq 0 ]];then
+   rm -f output.tdc *temp *tmp strTDC*.str
+fi
+
+if [[ ! -e strTDC_1.str ]];then
+   echo "Copying first structure into strTDC_1.str"
+   echo $natom > strTDC_1.str
+   echo "" >> strTDC_1.str
+   cat $geom >> strTDC_1.str
+fi
+
+read -t 2 -a istate
+read -t 2 -a nstate
+
+echo $natom > strTDC_2.str
+echo "" >> strTDC_2.str
+cat $geom >> strTDC_2.str
+
+if [ ! -e str.state.tmp ]; then
+  echo $nstate > str.state.tmp
+fi
+
+echo "Timestep: $timestep" >> output.tdc
+
+if [[ "$POT" = "FOMO" ]];then
+   forceoutput=numforce.dat
+   ./TDCoupsFOMO >> output.tdc
+elif [[ "$POT" = "CASSCF" ]];then
+   forceoutput=anforce.dat
+   ./TDCoupsCAS >> output.tdc
+else
+   echo "Unrecognized parameter POT in r.gamess"
+   exit 2
+fi
+
+if [[ $? -ne 0 ]];then
+   echo "ERROR in TDCoups. See file GAMESS-TDC/output.tdc"
+   exit 2
+fi
+
+head -n $(( $nstate + 1 )) fomo_sten.dat | tail -n $nstate> ../engrad.dat.001
+
+awk -v natom="$natom" -v istate="$istate" '{
+	if ( NR == (istate-1)*natom+2*istate) {
+	   for (i=1;i<=natom;i++){
+   		getline
+		print $2,$3,$4
+	   }
+   	}	   
+}' $forceoutput >> ../engrad.dat.001
+
+cat tdcoups.dat >> tdal.dat
+cp tdcoups.dat ../.
+
+#cat ../engrad.dat.001 >> ../engrad_all.dat
+#cat ../restart.xyz >> ../restart_all.xyz
+

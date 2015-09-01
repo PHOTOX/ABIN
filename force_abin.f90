@@ -91,8 +91,8 @@
    ! http://coding.derkeiler.com/Archive/Fortran/comp.lang.fortran/2007-01/msg00085.html
    ! If the bash script wants to notify ABIN, it can use e.g. exit 2
    if(ISTATUS.ne.0.and.ISTATUS.ne.256)then
-      write(*,*)'ERROR: Something went wrong during the execution of the ab initio external&
-      & program. See the approprite output files in& 
+      write(*,*)'ERROR: Something went wrong during the execution of the ab initio external program.' 
+      write(*,*)'See the approprite output files in& 
       & folder '//trim(LowerToUpper(pot))//"/" 
       call abinerror('force_abin')
    end if

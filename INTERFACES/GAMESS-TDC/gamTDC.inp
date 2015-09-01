@@ -1,0 +1,24 @@
+ $CONTRL
+  SCFTYP=RHF  RUNTYP=ENERGY
+  NOSYM=1 IOCCU=1 ICHARG=0 COORD=UNIQUE
+  MAXIT=200 ISPHER=1 CITYP=GUGA
+  $END
+ $BASIS GBASIS=N31 NGAUSS=6 NDFUNC=1 $END
+ $SYSTEM MEMORY=80000000 $END
+ $INTGRL NOPK=1 $END
+ $CIDRT GROUP=C1 FORS=.TRUE. NFZC=7 NDOC=1 NVAL=1 $END
+***NSTATE in the following line should be more than desired states,***
+***because states of higher multiplicities get in the way***
+ $GUGDIA NSTATE=4 $END
+ $GUESS GUESS=HUCKEL $END
+***Following lines are for FOMO. They are read only when FOMO is requested.***
+***In this case, FOMO active space (2,2) is requested***
+ $OCCUPA FLOCC=GAUSSFLC FLOWID=0.30 NFVIRT=27 NFCLOS=7
+   OCCUP(1)=2.0,0.0 $END
+ $END
+ $DATA
+ komentar 
+ C1
+ $End
+
+

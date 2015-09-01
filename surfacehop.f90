@@ -581,7 +581,7 @@ module mod_sh
       do ist1=1,nstate-1
          do ist2=ist1+1,nstate
             if(tocalc(ist1,ist2).eq.0)then
-               write(*,*)'Not computing NACM(tocalc=0) for states',ist1,ist2
+               write(*,*)'Not computing NACM for states',ist1,ist2
                dotproduct(ist1,ist2,itrj)=0.0d0
                dotproduct(ist2,ist1,itrj)=0.0d0
             endif

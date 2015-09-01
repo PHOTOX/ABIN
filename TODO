@@ -1,11 +1,15 @@
 FOR 1.0 version
+
+opravit multiplejobs based on new RecalcGeometries.sh
+umoznit vstup poc. rychlosti ze souboru
+
 test QMMM one more time with luciferin
 rename abin.dev to abin.v1
 test PIMD and PIGLE for nab water,
 
 optimize the value of tau0, test for different temperatures.
 Check this value for larger clusters.
-in terachem, they use 1000fs, but with a bit different definition, so it translates intu our 
+in terachem, they use 1000fs, but with a bit different definition, so it translates into our 
 tau=0.159
 I should really test this for larger system.....
 
