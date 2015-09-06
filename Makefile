@@ -13,10 +13,14 @@ CC = gcc
 # if you have FFTW libraries available, set it to TRUE
 # if not, some ABIN functionality will be limited
 FFTW =TRUE 
+CP2K =TRUE
+BLASPATH = -L/usr/local/lib/acml5.3.1/gfortran64/lib -lacml
+CP2KPATH = /usr/local/src/cp2k-2.6.1/lib/Linux-x86-64-gfortran/sopt/
 
 # -----------------------------------------------------------------------
 
-FFLAGS :=  -g -fopenmp  -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
+FFLAGS := -g
+#FFLAGS :=  -g -fopenmp  -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS :=  -g -INAB/include #-Wno-unused-result " 
 
 LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a WATERMODELS/libttm.a
@@ -31,7 +35,7 @@ export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
 F_OBJS := utils.o interfaces.o random.o shake.o nosehoover.o transform.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
-force_mm.o nab.o force_bound.o force_guillot.o water.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
+force_mm.o nab.o force_bound.o force_guillot.o water.o force_cp2k.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
 minimizer.o arrays.o init.o mdstep.o 
 
 C_OBJS := nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o  EWALD/ewaldf.o
@@ -40,6 +44,14 @@ ifeq ($(FFTW),TRUE)
 LDLIBS := -lfftw3 ${LDLIBS}
 FFLAGS := -DUSEFFTW ${FFLAGS}
 F_OBJS := fftw_interface.o ${F_OBJS}
+endif
+
+ifeq ($(CP2K),TRUE)
+LDLIBS := -L${CP2KPATH} ${BLASPATH} -lcp2k -lcp2kbase  -lfftw3 ${LDLIBS}
+#LDLIBS := ${LDLIBS} -lcp2ksubsys -lcp2kstart -lcp2kcommon -lcp2kinput -lcp2kmain -lcp2kmachine -lcp2kmotion -lcp2kma -lcp2kao -lcp2kfm -lcp2kgrid \
+	-lcp2kmpiwrap -lcp2kpw -lcp2ktmc -lcp2kxc
+FFLAGS := -DCP2K ${FFLAGS}
+#F_OBJS := ${F_OBJS} force_cp2k.o 
 endif
 
 F_OBJS := modules.o ${F_OBJS}

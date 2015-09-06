@@ -314,13 +314,16 @@ subroutine finish(values1,values2)
    use mod_estimators, only: h
    use mod_harmon, only: hess
 #ifdef USEFFTW
-   use mod_fftw3
+   use mod_fftw3,  only: fftw_end
+#endif
+#ifdef CP2K
+   use mod_cp2k,   only: cp2k_finalize
 #endif
    implicit none
    integer,dimension(8),intent(in)  :: values1
    integer,dimension(8),intent(out) :: values2
    real(DP) :: TIME
-   integer  :: i
+   integer  :: i, ierr
    logical  :: lopen
 !   integer :: iter=-3
 
@@ -335,8 +338,11 @@ subroutine finish(values1,values2)
 !--------------CLEANING-------------------------
    if (ihess.eq.1) deallocate ( hess )
    if (ihess.eq.1.and.pot.eq.'nab') deallocate ( h )
-#ifdef USEMPI
+#ifdef USEFFTW
    if (istage.eq.2) call fftw_end()
+#endif
+#ifdef CP2K
+  if(pot.eq.'_cp2k_') call cp2k_finalize()
 #endif
 
    if(inose.eq.1)then

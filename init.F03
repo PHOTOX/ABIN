@@ -35,6 +35,9 @@ subroutine init(dt)
 #ifdef USEFFTW
       use mod_fftw3,    only: fftw_init
 #endif
+#ifdef CP2K
+      use mod_cp2k,     only: cp2k_init
+#endif
       implicit none
       real(DP),intent(out) :: dt
       real(DP) :: masses(MAXTYPES)
@@ -52,6 +55,7 @@ subroutine init(dt)
       REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
 !      REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
       REAL, POINTER  :: REALPTR => NULL ()
+      integer :: ierr, f_env_id
 
       namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
@@ -194,6 +198,16 @@ subroutine init(dt)
 #ifdef USEFFTW
       if(istage.eq.2) call fftw_init(nwalk)
 #endif
+
+      if(pot.eq."_cp2k_")then
+#ifdef CP2K
+        call cp2k_init()
+#else
+        write(*,*)'Error: ABIN was not compiled with CP2K interface.'
+        write(*,*)''
+        stop 1
+#endif
+      end if
 
 
 !     allocate all basic arrays and set them to 0.0d0
