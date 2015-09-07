@@ -24,7 +24,6 @@ end subroutine cp2k_init
 subroutine cp2k_finalize()
 !   deallocate( pos )
 !   deallocate( force )
-write(*,*)'I am here.'
    CALL cp_finalize_cp2k(1, ierr)
    IF (ierr/=0) STOP "finalize_cp2k"
 end subroutine cp2k_finalize

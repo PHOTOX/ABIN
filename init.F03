@@ -321,8 +321,8 @@ if (nwritev.gt.0)then
 endif
 
 if (ipimd.ne.1)then
-   open(1,file='energies.dat',access=chaccess,action='write')
-   write(1,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+   open(19,file='energies.dat',access=chaccess,action='write')
+   write(19,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
 end if
 if(ipimd.eq.1.or.icv.eq.1)then
   open(7,file='est_energy.dat',access=chaccess,action='write')
