@@ -6,20 +6,20 @@
 # WARNING: dependecies on *.mod files are hidden!
 # If you change modules, you should recompile the whole thing i.e. make clean;make
 
-OUT = abin.dev
+OUT = abin.cp2k.ssmp
 # You actually have to use gfortran and gcc, because of precompiled NAB libraries
 FC = gfortran
 CC = gcc
-# if you have FFTW libraries available, set it to TRUE
-# if not, some ABIN functionality will be limited
 FFTW =TRUE 
 CP2K =TRUE
-BLASPATH = -L/usr/local/lib/acml5.3.1/gfortran64/lib -lacml
-CP2KPATH = /usr/local/src/cp2k-2.6.1/lib/Linux-x86-64-gfortran/sopt/
+BLASPATH = /usr/local/lib/acml5.3.1/gfortran64/
+CP2KPATH = /usr/local/src/cp2k-2.6.1/lib/Linux-x86-64-gfortran/ssmp/
 
 # -----------------------------------------------------------------------
 
-FFLAGS := -g
+FFLAGS := -O2 -ffast-math -ffree-form -ffree-line-length-none \
+	-fopenmp -ftree-vectorize -funroll-loops\
+	-mtune=native\
 #FFLAGS :=  -g -fopenmp  -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS :=  -g -INAB/include #-Wno-unused-result " 
 
@@ -41,17 +41,20 @@ minimizer.o arrays.o init.o mdstep.o
 C_OBJS := nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o  EWALD/ewaldf.o
 
 ifeq ($(FFTW),TRUE)
-LDLIBS := -lfftw3 ${LDLIBS}
+#LDLIBS := -lfftw3 ${LDLIBS}
 FFLAGS := -DUSEFFTW ${FFLAGS}
 F_OBJS := fftw_interface.o ${F_OBJS}
 endif
 
 ifeq ($(CP2K),TRUE)
-LDLIBS := -L${CP2KPATH} ${BLASPATH} -lcp2k -lcp2kbase  -lfftw3 ${LDLIBS}
-#LDLIBS := ${LDLIBS} -lcp2ksubsys -lcp2kstart -lcp2kcommon -lcp2kinput -lcp2kmain -lcp2kmachine -lcp2kmotion -lcp2kma -lcp2kao -lcp2kfm -lcp2kgrid \
-	-lcp2kmpiwrap -lcp2kpw -lcp2ktmc -lcp2kxc
-FFLAGS := -DCP2K ${FFLAGS}
-#F_OBJS := ${F_OBJS} force_cp2k.o 
+FFTWPATH   := /usr/lib/x86_64-linux-gnu/
+FFTW_INC   := /usr/include
+FFTW_LIB   := ${FFTWPATH}
+FFLAGS := -DCP2K -I${FFTW_INC} -I$(BLASPATH)/include ${FFLAGS}
+LDLIBS := -L${CP2KPATH} -lcp2k \
+      -L${BLASPATH}/lib $(BLASPATH)/lib/libacml.a \
+      ${FFTW_LIB}/libfftw3.a  ${FFTW_LIB}/libfftw3_threads.a\
+      ${LDLIBS}
 endif
 
 F_OBJS := modules.o ${F_OBJS}

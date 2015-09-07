@@ -462,7 +462,7 @@ endif
     &  set  iknow=1 (namelist general) to proceed.'
 
       !we should exclude all non-abinitio options, but whatever....
-!$    if(nthreads.gt.1.and.(ipimd.ne.1.or.pot.eq.'nab'))then
+!$    if(nthreads.gt.1.and.(ipimd.ne.1.and.pot.ne.'_cp2k_'))then
 !$     write(*,*)'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
 !$     call abinerror('init')
 !$    endif
@@ -514,18 +514,20 @@ endif
        error=1
       endif
 !----------HERE we check for errors in input.      
-      if (nproc.gt.nwalk)then
-         write(*,*)'ERROR: Nproc greater than nwalk. That does not make sense.'
-         write(*,*)'Set nproc <= nwalk.'
-         error=1
-      end if
-      if (nproc.le.0)then
-         write(*,*)'ERROR: Nproc must be a positive integer.'
-         error=1
-      end if
-      if (modulo(nwalk,nproc).ne.0)then
-         write(*,*)'ERROR: Nwalk is not divisible by nproc. This is not a wise usage of your computer time.'
-         error=1
+      if (pot.ne.'_cp2k_')then
+         if (nproc.gt.nwalk)then
+            write(*,*)'ERROR: Nproc greater than nwalk. That does not make sense.'
+            write(*,*)'Set nproc <= nwalk.'
+            error=1
+         end if
+         if (nproc.le.0)then
+            write(*,*)'ERROR: Nproc must be a positive integer.'
+            error=1
+         end if
+         if (modulo(nwalk,nproc).ne.0)then
+            write(*,*)'ERROR: Nwalk is not divisible by nproc. This is not a wise usage of your computer time.'
+            error=1
+         end if
       end if
       if(pot.eq.'none')then
        write(*,*)'FATAL: Variable "pot" not specified.Exiting now...'

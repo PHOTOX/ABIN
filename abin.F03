@@ -292,6 +292,9 @@ print *,commit
 #ifdef USEFFTW
    write(*,*)'Compiled with FFTW support.'
 #endif
+#ifdef CP2K
+   write(*,*)'Compiled with in-built CP2K interface.'
+#endif
 print *,' '
 
 #if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
