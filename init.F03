@@ -43,7 +43,7 @@ subroutine init(dt)
       integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
       character(len=2) :: massnames(MAXTYPES)
       character(len=10)   :: chaccess
-      character(len=200)  :: chinput, chcoords
+      character(len=200)  :: chinput, chcoords, chveloc
       character(len=200)  :: chiomsg
       LOGICAL :: file_exists
       real(DP)  :: wnw=5.0d-5
@@ -70,7 +70,8 @@ subroutine init(dt)
 
       chcoords='mini.dat'
       chinput='input.in'
-      call Get_cmdline(chinput, chcoords)
+      chveloc=''
+      call Get_cmdline(chinput, chcoords, chveloc)
       write(*,*)'I will read parameters from input file ',chinput
       write(*,*)'I will read xyz coordinates from file ',chcoords
 
@@ -93,6 +94,10 @@ subroutine init(dt)
        initNHC=1
        scaleveloc=1
       endif
+      
+      if (chveloc.ne.'')then
+         scaleveloc=0
+      end if
 
       ! We have to initialize here, because we read them from input
       allocate( names( natom )     )
@@ -373,12 +378,24 @@ endif
 
 !-----SETTING initial velocities according to the Maxwell-Boltzmann distribution
 !     TODO: odstraneni rotace
-      if(irest.eq.0)then
+      if(irest.eq.0.and.chveloc.eq.'')then
          if (temp0.ge.0)then
             call vinit(TEMP0,am,vx,vy,vz)
          else
             call vinit(TEMP,am,vx,vy,vz)
          end if
+      end if
+
+      if (chveloc.ne.'')then
+         write(*,*)'Reading initial velocities in a.u. from external file:'
+         write(*,*)chveloc 
+         open(500,file=chveloc, status='OLD', action = "READ")
+         read(500,*)
+         do iw=1,natom
+            do iat=1,natom
+               read(500,*)vx(iat,iw), vy(iat,iw), vz(iat, iw)
+            end do
+         end do
       end if
 
       if(conatom.gt.0)then

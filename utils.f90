@@ -94,8 +94,8 @@ module mod_utils
 
    end subroutine printf
 
-   subroutine Get_cmdline(chinput, chcoords )
-   character(len=*),intent(inout)   :: chinput, chcoords
+   subroutine Get_cmdline(chinput, chcoords, chveloc )
+   character(len=*),intent(inout)   :: chinput, chcoords, chveloc
    character(len=len(chinput))   :: arg
    integer            :: i
    logical            :: lexist
@@ -123,7 +123,11 @@ module mod_utils
          call get_command_argument(i, arg)
          read(arg,'(A)')chcoords
          chcoords=trim(chcoords)
-
+      case ('-v')
+         i=i+1
+         call get_command_argument(i, arg)
+         read(arg,'(A)')chveloc
+         chveloc=trim(chveloc)
       case default
          write(*,*)'Invalid command line argument!'
          call abinerror('Get_cmdline')
@@ -146,19 +150,29 @@ module mod_utils
       stop 1
    end if
 
+   if (chveloc.ne.'')then
+      inquire(file=chveloc,exist=lexist)
+      if (.not.lexist)then
+         write(*,*)'FATAL: The following input file does not exists!'
+         write(*,*)chveloc
+         stop 1
+      end if
+   end if
+
    end subroutine Get_cmdline
 
 
    subroutine PrintHelp()
    implicit none
-    print '(a)', 'ABIN: Multipurpose ab initio BOMD program.'
-    print '(a)', 'Without cmdline options, the program uses sensible default values.'
+    print '(a)', 'ABIN: Multipurpose ab initio MD program.'
     print '(a)', ''
     print '(a)', 'cmdline options:'
     print '(a)', ''
-    print '(a)', '  -h, --help             print help and exit'
+    print '(a)', '  -h, --help               print help and exit'
     print '(a)', '  -i <input_parameters>    default: input.in'
     print '(a)', '  -x <input_coordinates>   default: mini.dat'
+    print '(a)', '  -v <input_velocities>    no default'
+    print '(a)', ''
    end subroutine PrintHelp
 
 end module mod_utils
