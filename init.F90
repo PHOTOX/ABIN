@@ -46,7 +46,7 @@ subroutine init(dt)
       integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
       character(len=2) :: massnames(MAXTYPES)
       character(len=10)   :: chaccess
-      character(len=200)  :: chinput, chcoords
+      character(len=200)  :: chinput, chcoords, chveloc
       character(len=200)  :: chiomsg
       LOGICAL :: file_exists
       real(DP)  :: wnw=5.0d-5
@@ -74,7 +74,8 @@ subroutine init(dt)
 
       chcoords='mini.dat'
       chinput='input.in'
-      call Get_cmdline(chinput, chcoords)
+      chveloc=''
+      call Get_cmdline(chinput, chcoords, chveloc)
       write(*,*)'I will read parameters from input file ',chinput
       write(*,*)'I will read xyz coordinates from file ',chcoords
 
@@ -97,6 +98,10 @@ subroutine init(dt)
        initNHC=1
        scaleveloc=1
       endif
+      
+      if (chveloc.ne.'')then
+         scaleveloc=0
+      end if
 
       ! We have to initialize here, because we read them from input
       allocate( names( natom )     )
@@ -387,12 +392,24 @@ endif
 
 !-----SETTING initial velocities according to the Maxwell-Boltzmann distribution
 !     TODO: odstraneni rotace
-      if(irest.eq.0)then
+      if(irest.eq.0.and.chveloc.eq.'')then
          if (temp0.ge.0)then
             call vinit(TEMP0,am,vx,vy,vz)
          else
             call vinit(TEMP,am,vx,vy,vz)
          end if
+      end if
+
+      if (chveloc.ne.'')then
+         write(*,*)'Reading initial velocities in a.u. from external file:'
+         write(*,*)chveloc 
+         open(500,file=chveloc, status='OLD', action = "READ")
+         read(500,*)
+         do iw=1,natom
+            do iat=1,natom
+               read(500,*)vx(iat,iw), vy(iat,iw), vz(iat, iw)
+            end do
+         end do
       end if
 
       if(conatom.gt.0)then
@@ -423,32 +440,34 @@ endif
 
       if (iqmmm.eq.3.or.pot.eq.'mm') write(*,nml=qmmm)
 
+#ifdef NAB
       if (pot.eq."nab".or.iqmmm.eq.2)then
-       if (alpha_pme.lt.0) alpha_pme = pi/cutoff
-       if (kappa_pme.lt.0) kappa_pme = alpha_pme
-       call nab_init(alpha_pme,cutoff,nsnb,ipbc,ips,iqmmm) !C function...see nabinit.c
+         if (alpha_pme.lt.0) alpha_pme = pi/cutoff
+         if (kappa_pme.lt.0) kappa_pme = alpha_pme
+         call nab_init(alpha_pme,cutoff,nsnb,ipbc,ips,iqmmm) !C function...see nabinit.c
 
-       if(ipbc.eq.1)then
-        allocate ( charges(natom) )
-        if (nchain.eq.1) f=3
-        call nab_getbox(boxx,boxy,boxz) !see nabinit.c
-        call nab_getcharges(charges) !see nabinit.c
+         if(ipbc.eq.1)then
+            allocate ( charges(natom) )
+         if (nchain.eq.1) f=3
+            call nab_getbox(boxx,boxy,boxz) !see nabinit.c
+            call nab_getcharges(charges) !see nabinit.c
 
-        do iat=1,natom
-         charges(iat)=charges(iat)*ambtoau*sqrt(167100.75d0)  !for macsimus units
-        enddo
-        write(*,*)'Box sizes[Ang]: ',boxx,boxy,boxz
-        write(*,*)'Half of box size: ',boxx2,boxy2,boxz2
-!       write(*,*)x(iat,1)/ang,y(iat,1)/ang,z(iat,1)/ang,charges(iat)
-        call ewald(VECPTR,VECPTR,charges,REALPTR,boxx,boxy,boxz,cutoff,alpha_pme,kappa_pme,epsinf,natom,ipom2)
-        boxx=boxx*ang
-        boxy=boxy*ang
-        boxz=boxz*ang
-        boxx2=0.5d0*boxx
-        boxy2=0.5d0*boxy
-        boxz2=0.5d0*boxz
-       endif
+            do iat=1,natom
+               charges(iat)=charges(iat)*ambtoau*sqrt(167100.75d0)  !for macsimus units
+            enddo
+            write(*,*)'Box sizes[Ang]: ',boxx,boxy,boxz
+            write(*,*)'Half of box size: ',boxx2,boxy2,boxz2
+!           write(*,*)x(iat,1)/ang,y(iat,1)/ang,z(iat,1)/ang,charges(iat)
+            call ewald(VECPTR,VECPTR,charges,REALPTR,boxx,boxy,boxz,cutoff,alpha_pme,kappa_pme,epsinf,natom,ipom2)
+            boxx=boxx*ang
+            boxy=boxy*ang
+            boxz=boxz*ang
+            boxx2=0.5d0*boxx
+            boxy2=0.5d0*boxy
+            boxz2=0.5d0*boxz
+         endif
       endif
+#endif
 
 
 !--------END OF INITIALIZATION-------------------
@@ -473,6 +492,13 @@ endif
          error=1
 !$       end if
       end if
+
+#ifndef NAB
+      if(pot.eq.'nab')then
+         write(*,*)'FATAL ERROR: The program was not compiled with NAB libraries.'
+         stop 1
+      end if
+#endif
 
 #ifndef USEFFTW
       if(istage.eq.2)then

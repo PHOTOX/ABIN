@@ -194,22 +194,21 @@ module mod_sh
    iunit1 = 600; iunit2 = 601
    open(iunit1,file='nacmrest.dat',action="write")
    if (phase.eq.1) open(iunit2,file='phaserest.dat',action="write")
+
    do itrj=1, ntraj
 
    do ist1=1,nstate-1
 
       do ist2=ist1+1,nstate
    
-         if(tocalc(ist1,ist2).eq.1)then
+         if(tocalc(ist1,ist2).eq.1.and.inac.eq.0)then
    
             write(iunit1,*)'NACME between states',ist1,ist2
             do iat=1,natqm              ! reading only for QM atoms
                write(iunit1,*)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
             enddo
    
-   !--------if tocalc 
          endif
-
    
       enddo
    enddo
@@ -244,7 +243,7 @@ module mod_sh
    character(len=60) :: chrestart
    iunit1=600; iunit2=601
 
-   write(*,*)'Reading NACME from nacmrest.dat'
+   if (inac.eq.0) write(*,*)'Reading NACME from nacmrest.dat'
    open(iunit1,file='nacmrest.dat',action="read")
    if (phase.eq.1)then
       write(*,*)'Reading phase from phaserest.dat'
@@ -257,7 +256,7 @@ module mod_sh
 
       do ist2=ist1+1,nstate
    
-         if(tocalc(ist1,ist2).eq.1)then
+         if(tocalc(ist1,ist2).eq.1.and.inac.eq.0)then
    
             read(iunit1,*, iostat=iost)
             do iat=1,natqm              ! reading only for QM atoms

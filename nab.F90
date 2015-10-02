@@ -138,7 +138,9 @@
 
       if(ihess.eq.1.and.modulo(it,ncalc).eq.0)then
 !!$OMP CRITICAL (neco)
+#ifdef NAB
        energy=mme2(xyz,grad,h,dummy1,dummy2,idum1,idum2,idum3,idum4,idum5,idum6,idum7,idum8,iter,dummy3)
+#endif
 !!$OMP END CRITICAL (neco)
        pom=1
        do iat1=1,natom*3
@@ -154,7 +156,9 @@
       else    !only forces
 
 !!$OMP CRITICAL (neco)
+#ifdef NAB
        energy = mme( xyz, grad, iter ); ! set iter=-1 for detailed energy info
+#endif
 !!$OMP END CRITICAL (neco)
 
       endif
@@ -191,8 +195,9 @@
         else  
                 iter=-5  !we dont update nblist for QM part!!!!
         endif
-
+#ifdef NAB              
         energy=energy-mme_qmmm( xyz, grad, iter) !grad se nemusi nulovat
+#endif
 
 !       if(ihess.eq.1)then
 !        energy=energy-mme2(xyz,grad,h,dummy1,dummy2,idum1,idum2,idum3,idum4,idum5,idum6,idum7,idum8,iter,dummy3)

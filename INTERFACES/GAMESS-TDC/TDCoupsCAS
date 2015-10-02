@@ -17,25 +17,17 @@ DEBUG=0
 runoverlap=/home/slavicek/GAMESS11A/gamess/rungms
 rungms2=/home/sistik/GAMESS/INSTAL/gamess/rungms
 
-#  Check the input files
-STRFILE1=strTDC_1.str
-if [ -e $STRFILE1 ]; then
-  NAtom1=`head -n 1 $STRFILE1 | awk -F" " '{print $1}'`
-else
-  echo "*** ERROR: The file $STRFILE1 cannot be found"
-  echo "*** Program will now exit"
-  exit 1
+#   Clearing the energy file if there is any
+if [ -e fomo_sten.dat ]; then
+  rm -r fomo_sten.dat
 fi
+
+STRFILE1=strTDC_1.str
 STRFILE2=strTDC_2.str
 if [ -e $STRFILE2 ]; then
-  NAtom2=`head -n 1 $STRFILE2 | awk -F" " '{print $1}'`
+  NAtom=`head -n 1 $STRFILE2 | awk -F" " '{print $1}'`
 else
   echo "*** ERROR: The file $STRFILE2 cannot be found"
-  echo "*** Program will now exit"
-  exit 1
-fi
-if [[ "$NAtom1" -ne "$NAtom2" ]]; then
-  echo "*** ERROR: Number of atoms in STR files is not equal!"
   echo "*** Program will now exit"
   exit 1
 fi
@@ -120,6 +112,7 @@ echo "1.0" >> wstate.tmp
 #
 #   time: t+h
 if [ -d TIME2 ]; then
+   cp -r TIME2 TIME2-OLD
   rm -r TIME2
   mkdir TIME2
 else
@@ -137,7 +130,7 @@ echo "$BAZE" >> orb_tdc2.inp
 echo ' $DATA' >> orb_tdc2.inp
 echo " tdc-cas orb time: t+h" >> orb_tdc2.inp
 echo " C1" >> orb_tdc2.inp
-/home/sistik/utility/GAMConvStr ../$STRFILE2 | tail -n $NAtom1 >> orb_tdc2.inp
+/home/sistik/utility/GAMConvStr ../$STRFILE2 | tail -n $NAtom >> orb_tdc2.inp
 echo ' $END' >> orb_tdc2.inp
 #
 #   now is the time to run orb_tdc2.inp
@@ -180,7 +173,7 @@ echo "  PRTTOL=0.0005 ITERMX=500
  \$DATA
  CASSCF for time: t+h
  C1" >> cas_tdc2.inp
-/home/sistik/utility/GAMConvStr ../$STRFILE2 | tail -n $NAtom1 >> cas_tdc2.inp
+/home/sistik/utility/GAMConvStr ../$STRFILE2 | tail -n $NAtom >> cas_tdc2.inp
 echo ' $END' >> cas_tdc2.inp
 cat orb_tdc2.orb >> cas_tdc2.inp
 #
@@ -210,7 +203,7 @@ echo " \$DRT GROUP=C1 FORS=.TRUE. NMCC=$NFrozen NDOC=$NOccu NVAL=$NOpen \$END" >
 echo " \$DATA
  CASSCF for time: t+h
  C1" >> guga_tdc2.inp
-/home/sistik/utility/GAMConvStr ../$STRFILE2 | tail -n $NAtom1 >> guga_tdc2.inp
+/home/sistik/utility/GAMConvStr ../$STRFILE2 | tail -n $NAtom >> guga_tdc2.inp
 echo ' $END' >> guga_tdc2.inp
 cat ../orbold.orb >> guga_tdc2.inp
 #
@@ -225,113 +218,6 @@ fi
 #
 cd ..
 #
-#   time: t
-IniCalc1=1
-if [ ! -e orb_tdc1.temp ] || [ ! -e ci_tdc1.temp ]; then
-  if [ ! -d TIME1 ]; then
-    mkdir TIME1
-  else
-    rm -r TIME1
-    mkdir TIME1
-  fi
-else
-  IniCalc1=0
-fi
-if [ "$IniCalc1" -eq "1" ]; then
-  cd TIME1
-  cp ../orbold.orb orb_tdc1.orb
-#
-#   making input file for CASSCF on FOMO orbitals
-  echo ' $CONTRL SCFTYP=MCSCF COORD=UNIQUE
- RUNTYP=ENERGY NOSYM=1' > cas_tdc1.inp
-  echo " ICHARG=$CHARGE MULT=$MULT ISPHER=1" >> cas_tdc1.inp
-  echo ' $END
- $SYSTEM MWORDS=100 $END' >> cas_tdc1.inp
-  echo "$BAZE" >> cas_tdc1.inp
-  echo " \$GUESS  GUESS=MOREAD  NORB=$NMOrb \$END" >> cas_tdc1.inp
-  echo ' $MCSCF CISTEP=ALDET MAXIT=200 $END' >> cas_tdc1.inp
-  echo " \$DET SZ=$SZ NSTATE=$NStates IROOT=1 NCORE=$NFrozen NACT=$(( $NOccu + $NOpen ))" >> cas_tdc1.inp
-  cat ../wstate.tmp >> cas_tdc1.inp
-  echo "  PRTTOL=0.0005 ITERMX=500
-  NELS=$(( $NOccu * 2 )) \$END
- \$DATA
- CASSCF for time: t
- C1" >> cas_tdc1.inp
-  /home/sistik/utility/GAMConvStr ../$STRFILE1 | tail -n $NAtom1 >> cas_tdc1.inp
-  echo ' $END' >> cas_tdc1.inp
-  cat orb_tdc1.orb >> cas_tdc1.inp
-#
-#   now is the time to run cas_tdc1.inp
-  $rungms2 cas_tdc1.inp > cas_tdc1.out 2>../err.tdc1_cas.tmp
-  Grace12=`grep "ddikick.x: exited gracefully." cas_tdc1.out`
-  if [ -z "$Grace12" ]; then
-    echo "Fail to finish cas1 calculation."
-    exit  1
-  fi
-#
-#   making input file for CASSCF on CASSCF orbitals for GUGA
-  echo ' $CONTRL SCFTYP=MCSCF COORD=UNIQUE
- RUNTYP=ENERGY NOSYM=1' > guga_tdc1.inp
-  echo " ICHARG=$CHARGE MULT=$MULT ISPHER=1" >> guga_tdc1.inp
-  echo ' $END
- $SYSTEM MWORDS=100 $END' >> guga_tdc1.inp
-  echo "$BAZE" >> guga_tdc1.inp
-  echo " \$GUESS GUESS=MOREAD  NORB=$NMOrb \$END" >> guga_tdc1.inp
-  echo ' $MCSCF CISTEP=GUGA MAXIT=200 $END' >> guga_tdc1.inp
-  echo " \$GUGDIA NSTATE=$ForceState ITERMX=300 \$END" >> guga_tdc1.inp
-  echo " \$GUGDM2 " >> guga_tdc1.inp
-  cat ../wstate.tmp >> guga_tdc1.inp
-  echo " \$END " >> guga_tdc1.inp
-  echo " \$DRT GROUP=C1 FORS=.TRUE. NMCC=$NFrozen NDOC=$NOccu NVAL=$NOpen \$END" >> guga_tdc1.inp
-  echo " \$DATA
- CASSCF for time: t+h
- C1" >> guga_tdc1.inp
-/home/sistik/utility/GAMConvStr ../$STRFILE1 | tail -n $NAtom1 >> guga_tdc1.inp
-  echo ' $END' >> guga_tdc1.inp
-  cat orb_tdc1.orb >> guga_tdc1.inp
-#
-#   now is the time to run guga_tdc1.inp
-  $rungms2 guga_tdc1.inp > guga_tdc1.out 2>../err.tdc1_guga.tmp
-  Grace13=`grep "ddikick.x: exited gracefully." guga_tdc1.out`
-  if [ -z "$Grace13" ]; then
-    echo "Fail to finish guga1 calculation."
-    exit 1
-  fi
-#
-#
-  cd ..
-fi
-#
-#  now the Overlap calculation 
-if [ -d OVERLAP ]; then
-  rm -r OVERLAP
-  mkdir OVERLAP
-else
-  mkdir OVERLAP
-fi
-cd OVERLAP
-echo ' $CONTRL SCFTYP=RHF
-  RUNTYP=ENERGY' > overlap.inp
-echo "  NOSYM=1 ICHARG=$(( $CHARGE * 2 ))
-  MULT=$MULT NPRINT=3
- \$END
- \$SYSTEM MWORDS=50 \$END" >> overlap.inp
-echo "$BAZE" >> overlap.inp
-echo ' $DATA
- overlap (t,t+h)
- C1' >> overlap.inp
-/home/sistik/utility/GAMConvStr ../$STRFILE1 | tail -n $NAtom1 >> overlap.inp
-/home/sistik/utility/GAMConvStr ../$STRFILE2 | tail -n $NAtom1 >> overlap.inp
-echo ' $END' >> overlap.inp
-#
-#   now is the time to run overlap.inp
-$runoverlap overlap.inp > overlap.out 2>err.over.tmp
-Grace3=`grep "ddikick.x: exited gracefully." overlap.out`
-if [ -z "$Grace3" ]; then
-  echo "Fail to finish overlap calculation."
-  exit 1
-fi
-cd ..
 #
 ###########################################################
 ###########################################################
@@ -353,86 +239,7 @@ else
 fi
 NGrep=$(( ( $NAOrb + $CoeffGrep ) * NMult ))
 # 
-#   First, the TIME1 data files (MO and CI expansion) if they are not presented from previous calculation
-if [ "$IniCalc1" -eq "1" ]; then
-  cd TIME1
-  echo "$NOrbCelk  $NAOrb" > ../orb_tdc1.temp
-  grep "$OrbGrepString" cas_tdc1.out -A$NGrep | tail -n $(( $NGrep - 1 )) >> ../orb_tdc1.temp
-#
-#   CSFs from fomo file
-  echo "$ForceState" > ../csf_tdc1.temp 
-  NLineCI=`grep -n ' 1  ENERGY' guga_tdc1.out | tail -n 1 | awk -F":" '{print $1}'`
-  IniDirectDiag=`grep "SOLUTION FOUND WITH DIRECT METHOD" guga_tdc1.out | grep DIRECT`
-  NLineDens=`grep -n 'DENSITY MATRIX OVER ACTIVE MO-S' guga_tdc1.out | awk -F":" '{print $1}'`
-  NLineDiff=$(( $NLineDens - $NLineCI - 1 ))
-  grep ' 1  ENERGY' guga_tdc1.out -A$NLineDiff | tail -n $(( $NLineDiff + 1 )) > ci.tmp
-  for ((i=1; i<=$ForceState; i++)); do
-    EnCSF1[$i]=`grep " $i  ENERGY" ci.tmp | awk -F" " '{print $6}'`
-#j#    EnCSF1[$i]=`echo "scale=6; ${EnCSF1[$i]}/1.0" | bc`
-    NLineS1=`grep -n " $i  ENERGY =" ci.tmp | awk -F":" '{print $1}'`
-    if [[ "$i" == "$ForceState" ]]; then
-      NLineS2=`wc -l ci.tmp | awk -F" " '{print $1}'`
-      NLineS2=$(( $NLineS2 + 1 ))
-    else
-      NLineS2=`grep -n " $(( $i + 1 ))  ENERGY =" ci.tmp | awk -F":" '{print $1}'`
-    fi
-    NDiffLine=$(( $NLineS2 - $NLineS1 - 2 ))
-    NCIVect=$(( $NDiffLine - 3 ))
-    echo "$i   $NCIVect   ${EnCSF1[$i]}" >> ../csf_tdc1.temp
-    grep " $i  ENERGY =" ci.tmp -A$NDiffLine | tail -n $NCIVect >> ../csf_tdc1.temp
-  done
-  EnCSF1[$(( $ForceState + 1 ))]=0.1
-  rm ci.tmp
-#
-#   determinants
-  echo "$ForceState $(( $NFrozen + 1 ))  $NOrbCelk  $SZ" > ../ci_tdc1.temp
-  NLineCI=`grep -n '\-MCCI\- BASED ON OPTIMIZED ORBITALS' cas_tdc1.out | awk -F":" '{print $1}'`
-  NLineDens=`grep -n 'DENSITY MATRIX OVER ACTIVE MO-S' cas_tdc1.out | awk -F":" '{print $1}'`
-  NLineDiff=$(( $NLineDens - $NLineCI - 1 ))
-  grep '\-MCCI\- BASED ON OPTIMIZED ORBITALS' cas_tdc1.out -A$NLineDiff > ci.tmp
-  AktIndx=1
-  for ((i=1; i<=$NStates; i++)); do
-    Energy=`grep -w "$i  ENERGY=" ci.tmp | awk -F" " '{print $4}'`
-    StateSZ=`grep -w "$i  ENERGY=" ci.tmp | awk -F" " '{print $6}'`
-##  PorovEn=`echo "scale=8; $Energy/${EnCSF1[$AktIndx]}" | bc | awk -F" " '{printf "%.7f", $1}'`
-##  PorovEn=`echo "$PorovEn == 1" | bc`
-    echo "in1: $i   $Energy   ${EnCSF1[$AktIndx]}    $PorovEn     $StateSZ" >> infstate.tmp
-##  if [[ "$PorovEn" != 1 ]]; then
-##    continue
-##  fi
-    SZAkt=`echo "scale=7; $StateSZ^2" | bc | awk '{printf "%.0f",$1}'`
-    SZAkt=`echo "scale=7; sqrt($SZAkt)" | bc | awk '{printf "%.0f",$1}'`
-    if [[ "$SZAkt" != "$SZ" ]]; then
-      continue
-    fi
-    NLineS1=`grep -nw "$i  ENERGY=" ci.tmp | tail -n 1 | awk -F":" '{print $1}'`
-    if [[ "$i" == "$NStates" ]]; then
-      NLineS2=`wc -l ci.tmp | awk -F" " '{print $1}'`
-      NLineS2=$(( $NLineS2 + 1 ))
-    else
-      NLineS2=`grep -nw "$(( $i + 1 ))  ENERGY=" ci.tmp | tail -n 1 | awk -F":" '{print $1}'`
-    fi
-    NDiffLine=$(( $NLineS2 - $NLineS1 - 2 ))
-    NCIVect=$(( $NDiffLine - 3 ))
-    echo "$i   $Energy   $NCIVect   $StateSZ" >> ../ci_tdc1.temp
-    grep -w "$i  ENERGY=" ci.tmp -A$NDiffLine | tail -n $NCIVect > state.tmp
-    for ((j=1; j<=$NCIVect; j++)); do
-      Alpha=`head -n $j state.tmp | tail -n 1 | awk -F"|" '{print $1}' | sed 's/0/ 0/g' | sed 's/1/ 1/g'`
-      Beta=`head -n $j state.tmp | tail -n 1 | awk -F"|" '{print $2}' | sed 's/0/ 0/g' | sed 's/1/ 1/g'`
-      Coeff=`head -n $j state.tmp | tail -n 1 | awk -F"|" '{print $3}'`
-      echo "$Alpha  |  $Beta  | $Coeff" >> ../ci_tdc1.temp
-    done
-    AktIndx=$(( $AktIndx + 1 ))
-  done
-  if [[ "$AktIndx" -le "$ForceState" ]]; then
-    echo "Line 425: Not enough states of the desired spin!"
-    exit 1
-  fi
-  rm ci.tmp state.tmp
-  cd ..
-fi
-# 
-#   Second, the TIME2 data files (MO and CI expansion)
+#   The TIME2 data files (MO and CI expansion)
 cd TIME2
 echo "$NOrbCelk  $NAOrb" > ../orb_tdc2.temp
 grep "$OrbGrepString" cas_tdc2.out -A$NGrep | tail -n $(( $NGrep - 1 )) >> ../orb_tdc2.temp
@@ -484,9 +291,9 @@ for ((i=1; i<=$NStates; i++)); do
     continue
   fi
   NLineS1=`grep -nw "$i  ENERGY=" ci.tmp | awk -F":" '{print $1}'`
-  if [[ "$i" == "$NStates" ]]; then
+  if [[ "$i" -eq "$NStates" ]]; then
     NLineS2=`wc -l ci.tmp | awk -F" " '{print $1}'`
-    NLineS2=$(( $NLineS2 + 1 ))
+    let NLineS2++
   else
     NLineS2=`grep -nw "$(( $i + 1 ))  ENERGY=" ci.tmp | awk -F":" '{print $1}'`
   fi
@@ -509,30 +316,6 @@ if [[ "$AktIndx" -le "$ForceState" ]]; then
 fi
 cd ..
 #
-#   Last, extracting the Overlap matrix
-cd OVERLAP
-NLineS1=`grep -n "OVERLAP MATRIX" overlap.out | head -n 1 | awk -F":" '{print $1}'`
-NLineS2=`grep -n "BARE NUCLEUS HAMILTONIAN INTEGRALS" overlap.out | awk -F":" '{print $1}'`
-NDiffLine=$(( $NLineS2 - $NLineS1 - 1 ))
-grep -w " OVERLAP MATRIX" overlap.out -A$NDiffLine > ../over_tdc.temp 
-cd ..
-#
-#   Clearing the energy file if there is any
-if [ -e fomo_sten.dat ]; then
-  rm -r fomo_sten.dat
-fi
-#
-#   Running the FORTRAN part
-./fTDCoups > asym_tdcoups.dat
-#
-#   Running the FORTRAN part (symetric formula, need asimetric tdcoups from previous run)
-if [ -e before_asym_tdcoups.dat ]; then
-  ./fTDCoups_sym > tdcoups.dat
-else
-  cp asym_tdcoups.dat tdcoups.dat
-fi
-#
-###########################################################
 ###########################################################
 #   For simulations one needs the gradient (analytical forces, numerical too slow)
 #    first we create template for force calculation 
@@ -552,7 +335,7 @@ echo " \$CPMCHF GCRODR=.TRUE. MICIT=30 KICIT=10 RECLIN=.FALSE. MAXIT=500 \$END" 
 echo " \$DATA
  CASSCF analytical forces
  C1" >> forceTDC.inp
-/home/sistik/utility/GAMConvStr $STRFILE2 | tail -n $NAtom1 >> forceTDC.inp
+/home/sistik/utility/GAMConvStr $STRFILE2 | tail -n $NAtom >> forceTDC.inp
 echo ' $END' >> forceTDC.inp
 if [ -e orbold.orb ]; then
   cat orbold.orb >> forceTDC.inp
@@ -571,22 +354,88 @@ if [ -z "$GraceF" ]; then
 fi
 echo $ForceState > anforce.dat
 for ((i=1; i<=$ForceState; i++)); do
-  grep "$i (OVERALL STATE" forceTDC.out -A$(( $NAtom2 + 3 )) | tail -n $(( $NAtom2 + 1 )) | sed  's/[a-z,A-Z]//g' >> anforce.dat
+  grep "$i (OVERALL STATE" forceTDC.out -A$(( $NAtom + 3 )) | tail -n $(( $NAtom + 1 )) | sed  's/[a-z,A-Z]//g' >> anforce.dat
   echo " " >> anforce.dat
 done
+###########################################################
+
+# Now check, whether we have data from previous time step
+if [ ! -e orb_tdc1.temp ] || [ ! -e ci_tdc1.temp ] || [ ! -e $STRFILE1 ]; then
+   echo "No data from previous step."
+   echo "Setting TDC to zero and exiting."
+   echo "$ForceState" > fomo_sten.dat
+   grep '  ENERGY =' TIME2/guga_tdc2.out | tail -$ForceState | awk '{print $6}' >> fomo_sten.dat
+   mv orb_tdc2.temp orb_tdc1.temp
+   mv ci_tdc2.temp ci_tdc1.temp
+   mv csf_tdc2.temp csf_tdc1.temp
+   mv strTDC_2.str strTDC_1.str
+   echo "0th time step: TDC set to 0." >  tdcoups.dat
+   echo "0th time step: TDC set to 0." >>  tdcoups.dat
+   for ((i=1;i<=$ForceState;i++)){
+      echo -n "$i " >> tdcoups.dat
+      for ((j=1;j<=$ForceState;j++)){
+      echo -n " 0.00000000 " >> tdcoups.dat
+      }
+      echo "" >> tdcoups.dat
+   }
+   exit 0
+fi
+#  now the Overlap calculation 
+if [ -d OVERLAP ]; then
+  rm -r OVERLAP
+  mkdir OVERLAP
+else
+  mkdir OVERLAP
+fi
+cd OVERLAP
+echo ' $CONTRL SCFTYP=RHF
+  RUNTYP=ENERGY' > overlap.inp
+echo "  NOSYM=1 ICHARG=$(( $CHARGE * 2 ))
+  MULT=$MULT NPRINT=3
+ \$END
+ \$SYSTEM MWORDS=50 \$END" >> overlap.inp
+echo "$BAZE" >> overlap.inp
+echo ' $DATA
+ overlap (t,t+h)
+ C1' >> overlap.inp
+/home/sistik/utility/GAMConvStr ../$STRFILE1 | tail -n $NAtom >> overlap.inp
+/home/sistik/utility/GAMConvStr ../$STRFILE2 | tail -n $NAtom >> overlap.inp
+echo ' $END' >> overlap.inp
+#
+#   now is the time to run overlap.inp
+$runoverlap overlap.inp > overlap.out 2>err.over.tmp
+Grace3=`grep "ddikick.x: exited gracefully." overlap.out`
+if [ -z "$Grace3" ]; then
+  echo "Fail to finish overlap calculation."
+  exit 1
+fi
+# Extracting information
+NLineS1=`grep -n "OVERLAP MATRIX" overlap.out | head -n 1 | awk -F":" '{print $1}'`
+NLineS2=`grep -n "BARE NUCLEUS HAMILTONIAN INTEGRALS" overlap.out | awk -F":" '{print $1}'`
+NDiffLine=$(( $NLineS2 - $NLineS1 - 1 ))
+grep -w " OVERLAP MATRIX" overlap.out -A$NDiffLine > ../over_tdc.temp 
+cd ..
+#
+#
+#   Running the FORTRAN part
+./fTDCoups > asym_tdcoups.dat
+#
+#   Running the FORTRAN part (symetric formula, need asimetric tdcoups from previous run)
+if [ -e before_asym_tdcoups.dat ]; then
+  ./fTDCoups_sym > tdcoups.dat
+else
+  cp asym_tdcoups.dat tdcoups.dat
+fi
+#
+###########################################################
 #
 #
 #   Cleaning and preparing for the next run (if there is any)
 cp TIME2/orb_tdc2.orb force_orb.tmp
-#rm -r TIME2
 
 if [[ $DEBUG -ne "1" ]];then
-#   cleaning
-rm -r force_orb.tmp wstate.tmp
-rm -r forceTDC.*
-if [ -d TIME1 ]; then
-  rm -r TIME1
-fi
+   rm -r force_orb.tmp wstate.tmp
+   rm -r forceTDC.*
    rm -r OVERLAP over_tdc.temp
 fi
 

@@ -44,7 +44,7 @@ export scrhome=$GAUSS_SCRDIR
 export LD_LIBRARY_PATH=$GAUSS_EXEDIR
 mkdir -p $GAUSS_SCRDIR
 
-$GAUSS_EXEDIR/g09 $input.com
+$GAUSSEXE $input.com
 if [[ $? -eq 0 ]];then
    cp $input.log $input.log.old
 else

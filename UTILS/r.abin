@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script for launching an ABIN simulation on cluster nodes.
+# This is a sample script for launching ABIN simulations in cluster environments.
 # 1. Copy all data from CWD to the node's scratch.
 # 2. Launch ABIN.
 # 3. Copy data back (only newer files are copied!).
@@ -8,14 +8,15 @@
 
 # SETUP --------------------------------
 OUTPUT=output
-ABINEXE=./abin.dev
-JOBNAME=ABIN_$$
+ABINEXE=/home/hollas/PHOTOX/bin/abin.v1.0
+JOBNAME=ABIN_${JOB_ID}_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
 delscratch=true
 ########################################
 
 # The following line is neccessary for SetEnvironment.sh to work.
+export PATH=/home/hollas/PHOTOX/LAUNCH:$PATH
 #$ -V
 
 SCRDIR=/scratch/$USER/$JOBNAME

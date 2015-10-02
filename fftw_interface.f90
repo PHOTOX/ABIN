@@ -1,7 +1,7 @@
 
 module mod_fftw3
    use, intrinsic :: iso_c_binding
-   include 'fftw3.f03'
+   include 'fftw3.f90'
    type(C_PTR) :: plan_utox,plan_xtou
    real(C_DOUBLE), dimension(:), allocatable :: x_in, y_in, z_in
    complex(C_DOUBLE_COMPLEX), dimension(:), allocatable :: cx, cy, cz
@@ -10,6 +10,7 @@ module mod_fftw3
 
    subroutine fftw_init(nwalk)
       use mod_const, only: DP
+      use mod_utils, only: abinerror
       integer :: nwalk
 
       if(DP.ne.C_DOUBLE)then
