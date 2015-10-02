@@ -426,32 +426,34 @@ endif
 
       if (iqmmm.eq.3.or.pot.eq.'mm') write(*,nml=qmmm)
 
+#ifdef NAB
       if (pot.eq."nab".or.iqmmm.eq.2)then
-       if (alpha_pme.lt.0) alpha_pme = pi/cutoff
-       if (kappa_pme.lt.0) kappa_pme = alpha_pme
-       call nab_init(alpha_pme,cutoff,nsnb,ipbc,ips,iqmmm) !C function...see nabinit.c
+         if (alpha_pme.lt.0) alpha_pme = pi/cutoff
+         if (kappa_pme.lt.0) kappa_pme = alpha_pme
+         call nab_init(alpha_pme,cutoff,nsnb,ipbc,ips,iqmmm) !C function...see nabinit.c
 
-       if(ipbc.eq.1)then
-        allocate ( charges(natom) )
-        if (nchain.eq.1) f=3
-        call nab_getbox(boxx,boxy,boxz) !see nabinit.c
-        call nab_getcharges(charges) !see nabinit.c
+         if(ipbc.eq.1)then
+            allocate ( charges(natom) )
+         if (nchain.eq.1) f=3
+            call nab_getbox(boxx,boxy,boxz) !see nabinit.c
+            call nab_getcharges(charges) !see nabinit.c
 
-        do iat=1,natom
-         charges(iat)=charges(iat)*ambtoau*sqrt(167100.75d0)  !for macsimus units
-        enddo
-        write(*,*)'Box sizes[Ang]: ',boxx,boxy,boxz
-        write(*,*)'Half of box size: ',boxx2,boxy2,boxz2
-!       write(*,*)x(iat,1)/ang,y(iat,1)/ang,z(iat,1)/ang,charges(iat)
-        call ewald(VECPTR,VECPTR,charges,REALPTR,boxx,boxy,boxz,cutoff,alpha_pme,kappa_pme,epsinf,natom,ipom2)
-        boxx=boxx*ang
-        boxy=boxy*ang
-        boxz=boxz*ang
-        boxx2=0.5d0*boxx
-        boxy2=0.5d0*boxy
-        boxz2=0.5d0*boxz
-       endif
+            do iat=1,natom
+               charges(iat)=charges(iat)*ambtoau*sqrt(167100.75d0)  !for macsimus units
+            enddo
+            write(*,*)'Box sizes[Ang]: ',boxx,boxy,boxz
+            write(*,*)'Half of box size: ',boxx2,boxy2,boxz2
+!           write(*,*)x(iat,1)/ang,y(iat,1)/ang,z(iat,1)/ang,charges(iat)
+            call ewald(VECPTR,VECPTR,charges,REALPTR,boxx,boxy,boxz,cutoff,alpha_pme,kappa_pme,epsinf,natom,ipom2)
+            boxx=boxx*ang
+            boxy=boxy*ang
+            boxz=boxz*ang
+            boxx2=0.5d0*boxx
+            boxy2=0.5d0*boxy
+            boxz2=0.5d0*boxz
+         endif
       endif
+#endif
 
 
 !--------END OF INITIALIZATION-------------------
@@ -476,6 +478,13 @@ endif
          error=1
 !$       end if
       end if
+
+#ifndef NAB
+      if(pot.eq.'nab')then
+         write(*,*)'FATAL ERROR: The program was not compiled with NAB libraries.'
+         stop 1
+      end if
+#endif
 
 #ifndef USEFFTW
       if(istage.eq.2)then

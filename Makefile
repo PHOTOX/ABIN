@@ -7,22 +7,20 @@
 # If you change modules, you should recompile the whole thing i.e. make clean;make
 
 OUT = abin.dev
-# You actually have to use gfortran and gcc, because of precompiled NAB libraries
+#FC = /usr/local/programs/common/intel/compiler/2013.5.192/bin/ifort
 FC = gfortran
 CC = gcc
 # if you have FFTW libraries available, set it to TRUE
 # if not, some ABIN functionality will be limited
-FFTW =TRUE 
+FFTW = TRUE 
+# Should we compile with NAB libraries (AMBER force field)
+# Currently only possible with gfortran
+NAB  = TRUE
 
 # -----------------------------------------------------------------------
 
-FFLAGS :=  -g -fopenmp  -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
-CFLAGS :=  -g -INAB/include #-Wno-unused-result " 
-
-LIBS = NAB/libnab.a  NAB/arpack.a  NAB/blas.a WATERMODELS/libttm.a
-LDLIBS = -lm -lstdc++ ${LIBS}
-
-
+FFLAGS :=  -g  -fopenmp # -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
+CFLAGS :=   -g #-Wno-unused-result " 
 
 export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
@@ -34,28 +32,40 @@ F_OBJS := utils.o interfaces.o random.o shake.o nosehoover.o transform.o potenti
 force_mm.o nab.o force_bound.o force_guillot.o water.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
 minimizer.o arrays.o init.o mdstep.o 
 
-C_OBJS := nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o  EWALD/ewaldf.o
+C_OBJS := EWALD/ewaldf.o
+
+LIBS = WATERMODELS/libttm.a
+
+ifeq ($(NAB),TRUE)
+  C_OBJS += nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o
+  LIBS += NAB/libnab.a  NAB/arpack.a  NAB/blas.a
+  CFLAGS +=  -INAB/include  
+  FFLAGS +=  -DNAB
+endif
 
 ifeq ($(FFTW),TRUE)
-LDLIBS := -lfftw3 ${LDLIBS}
-FFLAGS := -DUSEFFTW ${FFLAGS}
-F_OBJS := fftw_interface.o ${F_OBJS}
+ LIBS := -lfftw3 ${LIBS}
+ FFLAGS := -DUSEFFTW ${FFLAGS}
+ F_OBJS := fftw_interface.o ${F_OBJS}
 endif
+
+LDLIBS = -lm -lstdc++ ${LIBS}
 
 F_OBJS := modules.o ${F_OBJS}
 
 ALLDEPENDS = ${C_OBJS} ${F_OBJS}
+
 
 # This is the default target
 ${OUT} : abin.o
 	cd WATERMODELS && make all 
 	${FC} ${FFLAGS} WATERMODELS/water_interface.o ${ALLDEPENDS}  $< ${LDLIBS} -o $@
 
-#Always recompile abin.F03 to get current date and commit
-abin.o : abin.F03 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
+# Always recompile abin.F90 to get current date and commit
+abin.o : abin.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
 	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
-	$(FC) $(FFLAGS) -c abin.F03
+	$(FC) $(FFLAGS) -c abin.F90
 
 clean :
 	/bin/rm -f *.o *.mod
@@ -64,17 +74,28 @@ cleanall :
 	/bin/rm -f *.o *.mod NAB/*.o
 	cd WATERMODELS && make clean
 
+# Run all tests (this is currently compiler dependent)
+# You might expect some machine precision differences
 test :
 	/bin/bash ./test.sh ${OUT} all
+# Test only surface hopping.
 testsh :
 	/bin/bash ./test.sh ${OUT} sh
+# Clean all test folders.
 testcl :
 	/bin/bash ./test.sh ${OUT} clean
 
+# This will automatically generate new reference data for tests
 makeref :
 	/bin/bash ./test.sh ${OUT} makeref
 
-.PHONY: clean test testsh testcl makeref
+# Dummy target for debugging purposes
+debug: 
+	echo ${LIBS}
+	echo ${C_OBJS}
+	echo ${CFLAGS}
+
+.PHONY: clean test testsh testcl makeref debug
 
 .SUFFIXES: .F90 .f90 .f95 .f03 .F03
 
