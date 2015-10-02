@@ -13,6 +13,7 @@ JOBNAME=ABIN_${JOB_ID}_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
 delscratch=true
+mpi=true
 ########################################
 
 # The following line is neccessary for SetEnvironment.sh to work.
@@ -20,6 +21,11 @@ export PATH=/home/hollas/PHOTOX/LAUNCH:$PATH
 #$ -V
 
 SCRDIR=/scratch/$USER/$JOBNAME
+
+# The following is needed for MPICH version
+if [[ $mpi = "true" ]];then
+   export LD_LIBRARY_PATH=/usr/local/programs/common/intel/compiler/2011.5.220/composerxe-2011.5.220/compiler/lib/intel64/:$LD_LIBRARY_PATH
+fi
 
 echo "Job started at: " >> $OUTPUT
 date >> $OUTPUT

@@ -20,6 +20,9 @@ module mod_forces
       use mod_interfaces, only: force_abin
       use mod_water,    only: watpot
       use mod_cp2k,     only: force_cp2k
+#ifdef MPI
+!      use mod_terampi
+#endif
       real(DP),intent(inout) ::  x(:,:),y(:,:),z(:,:)
       real(DP),intent(inout) ::  fx(:,:),fy(:,:),fz(:,:)
       real(DP),intent(out)   ::  energy
@@ -88,6 +91,8 @@ module mod_forces
           call force_nab(transx,transy,transz,fxab,fyab,fzab,eclas)
         case ("_cp2k_")
           call force_cp2k(transx,transy,transz,fxab,fyab,fzab,eclas)
+!        case ("_tera_")
+!          call  get_tc_forces(transx, transy, transz, fxab, fyab, fzab, eclas)
         case DEFAULT
           call force_abin(transx,transy,transz,fxab,fyab,fzab,eclas)
           eclas=eclas/nwalk

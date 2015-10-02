@@ -6,20 +6,23 @@
 # WARNING: dependecies on *.mod files are hidden!
 # If you change modules, you should recompile the whole thing i.e. make clean;make
 
-OUT = abin.cp2k.ssmp
+OUT = abin.mpi
 
 # Determine compilers
-#FC = gfortran
-FC = /usr/local/programs/common/intel/compiler/2013.2.146/bin/ifort
+FC = gfortran
+#FC = /usr/local/programs/common/intel/compiler/2013.2.146/bin/ifort
 CC = gcc
 
-# if you have FFTW libraries available, set it to TRUE
-# if not, some ABIN functionality will be limited
-FFTW = TRUE 
+# Should we compile mpi version?
+MPI = TRUE
 
 # Should we compile with NAB libraries (AMBER force field)
 # Currently only possible with gfortran
 #NAB  = TRUE
+
+# if you have FFTW libraries available, set it to TRUE
+# if not, some ABIN functionality will be limited
+FFTW = TRUE 
 
 # Compile with direct interface to CP2K?
 # This needs working CP2K installation
@@ -75,6 +78,17 @@ ifeq ($(CP2K),TRUE)
       ${LDLIBS}
 endif
 
+#MPI STUFF
+ifeq  ($(MPI),TRUE) 
+#MPIPATH = /usr/local/programs/common/openmpi/openmpi-1.6.5/arch/x86_64-gcc_4.4.5/
+#MPILIBS = -L${MPIPATH}/lib -lmpi
+MPIPATH = /home/hollas/programes/mpich-3.1.3/arch/x86_64-intel_2013.2.146/
+MPILIBS = -L$(MPIPATH)/lib -lmpich -lmpl 
+FC = $(MPIPATH)/bin/mpif90
+MPIINC = -DMPI -I$(MPIPATH)/include/
+export LD_LIBRARY_PATH = /usr/local/programs/common/intel/compiler/2011.5.220/composerxe-2011.5.220/compiler/lib/intel64/
+endif
+
 LDLIBS = -lm -lstdc++ ${LIBS}
 
 F_OBJS := modules.o ${F_OBJS}
@@ -85,13 +99,13 @@ ALLDEPENDS = ${C_OBJS} ${F_OBJS}
 # This is the default target
 ${OUT} : abin.o
 	cd WATERMODELS && make all 
-	${FC} ${FFLAGS} WATERMODELS/water_interface.o ${ALLDEPENDS}  $< ${LDLIBS} -o $@
+	${FC} ${FFLAGS} WATERMODELS/water_interface.o ${ALLDEPENDS}  $< ${LDLIBS} ${MPILIBS} -o $@
 
 # Always recompile abin.F90 to get current date and commit
 abin.o : abin.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
 	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
-	$(FC) $(FFLAGS) -c abin.F90
+	$(FC) $(FFLAGS) $(MPIINC) -c abin.F90
 
 clean :
 	/bin/rm -f *.o *.mod

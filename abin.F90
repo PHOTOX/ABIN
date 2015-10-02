@@ -30,7 +30,12 @@ program abin_dyn
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
    use mod_forces,   only: force_clas, force_quantum
+#ifdef MPI
    implicit none
+   include 'mpif.h'
+#else
+   implicit none
+#endif
    real(DP)    :: dt=20.0d0,eclas,equant
    integer     :: iat, iw, itrj
    LOGICAL     :: file_exists
@@ -38,6 +43,11 @@ program abin_dyn
    character(len=40) :: chrestart
    integer,dimension(8) :: values2,values1
 !$ integer :: nthreads,omp_get_max_threads
+
+#ifdef MPI
+   integer ierr
+   call MPI_INIT ( ierr )
+#endif
 
      call PrintLogo(values1)
      call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
@@ -295,6 +305,10 @@ print *,commit
 #ifdef CP2K
    write(*,*)'Compiled with in-built CP2K interface.'
 #endif
+#ifdef MPI
+write(*,*)'Compiled with MPI support.'
+write(*,*)'(Currenty used for direct CP2K a TeraChem interfaces.)'
+#endif
 print *,' '
 
 #if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
@@ -316,19 +330,36 @@ subroutine finish(values1,values2)
    use mod_nhc
    use mod_estimators, only: h
    use mod_harmon, only: hess
+
 #ifdef USEFFTW
    use mod_fftw3,  only: fftw_end
 #endif
+
 #ifdef CP2K
    use mod_cp2k,   only: cp2k_finalize
 #endif
+
+#ifdef MPI
+!   use mod_terampi, only: tc_finalize
    implicit none
+   include "mpif.h"
+   integer :: errmpi
+#else
+   implicit none
+#endif
+
    integer,dimension(8),intent(in)  :: values1
    integer,dimension(8),intent(out) :: values2
    real(DP) :: TIME
    integer  :: i, ierr
    logical  :: lopen
 !   integer :: iter=-3
+
+#ifdef MPI
+!      if (terampi.eq.1) call tc_finalize()
+      call MPI_FINALIZE ( errmpi )
+      write(*,*)'Signal from MPI_FINALIZE: ', errmpi
+#endif
 
    call deallocate_arrays( )
 
