@@ -9,9 +9,9 @@
 OUT = abin.mpi
 
 # Determine compilers
-FC = gfortran
-#FC = /usr/local/programs/common/intel/compiler/2013.2.146/bin/ifort
-CC = gcc
+#FC = gfortran
+FC = /usr/local/programs/common/intel/compiler/2013.2.146/bin/ifort
+CC = icc
 
 # Should we compile mpi version?
 MPI = TRUE
@@ -34,8 +34,8 @@ CP2KPATH = /usr/local/src/cp2k-2.6.1/lib/Linux-x86-64-gfortran/ssmp/
 # FLAGS used to compile CP2K
 #FFLAGS := -O2 -ffast-math -ffree-form -ffree-line-length-none \
 	-fopenmp -ftree-vectorize -funroll-loops\
-	-mtune=native\
-FFLAGS :=  -g  #-fopenmp # -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
+	-mtune=native
+FLAGS :=  -g  -fopenmp  -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS :=   -g #-Wno-unused-result " 
 
 export SHELL=/bin/bash
@@ -44,8 +44,8 @@ ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
-F_OBJS := utils.o interfaces.o random.o shake.o nosehoover.o transform.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
-force_mm.o nab.o force_bound.o force_guillot.o water.o force_cp2k.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
+F_OBJS :=  random.o shake.o nosehoover.o transform.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
+nab.o force_bound.o force_guillot.o water.o force_cp2k.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
 minimizer.o arrays.o init.o mdstep.o 
 
 C_OBJS := EWALD/ewaldf.o
@@ -80,18 +80,20 @@ endif
 
 #MPI STUFF
 ifeq  ($(MPI),TRUE) 
-#MPIPATH = /usr/local/programs/common/openmpi/openmpi-1.6.5/arch/x86_64-gcc_4.4.5/
-#MPILIBS = -L${MPIPATH}/lib -lmpi
-MPIPATH = /home/hollas/programes/mpich-3.1.3/arch/x86_64-intel_2013.2.146/
-MPILIBS = -L$(MPIPATH)/lib -lmpich -lmpl 
-FC = $(MPIPATH)/bin/mpif90
-MPIINC = -DMPI -I$(MPIPATH)/include/
-export LD_LIBRARY_PATH = /usr/local/programs/common/intel/compiler/2011.5.220/composerxe-2011.5.220/compiler/lib/intel64/
+  #MPIPATH = /usr/local/programs/common/openmpi/openmpi-1.6.5/arch/x86_64-gcc_4.4.5/
+  #MPILIBS = -L${MPIPATH}/lib -lmpi
+  MPIPATH = /home/hollas/programes/mpich-3.1.3/arch/x86_64-intel_2013.2.146/
+  MPILIBS = -L$(MPIPATH)/lib -lmpich -lmpl 
+  FC = $(MPIPATH)/bin/mpif90
+  MPIINC = -DMPI -I$(MPIPATH)/include/
+  export LD_LIBRARY_PATH = /usr/local/programs/common/intel/compiler/2011.5.220/composerxe-2011.5.220/compiler/lib/intel64/
+  F_OBJS := force_tera.o ${F_OBJS}
 endif
 
 LDLIBS = -lm -lstdc++ ${LIBS}
 
-F_OBJS := modules.o ${F_OBJS}
+# This hack is needed for force_tera.o and fftw_interface.o
+F_OBJS := modules.o utils.o interfaces.o force_mm.o ${F_OBJS}
 
 ALLDEPENDS = ${C_OBJS} ${F_OBJS}
 
@@ -134,6 +136,7 @@ debug:
 	echo ${LIBS}
 	echo ${C_OBJS}
 	echo ${CFLAGS}
+	echo ${F_OBJS}
 
 .PHONY: clean test testsh testcl makeref debug
 
@@ -141,17 +144,17 @@ debug:
 
 .F90.o:
 	echo "${F_OBJS}"
-	$(FC) $(FFLAGS) -c $<
+	$(FC) $(FFLAGS) -c ${MPIINC} $<
 
 .f90.o:
-	$(FC) $(FFLAGS) -c $<
+	$(FC) $(FFLAGS) -c ${MPIINC} $<
 
 .f95.o:
-	$(FC) $(FFLAGS) -c $<
+	$(FC) $(FFLAGS) -c ${MPIINC} $<
 
 .f03.o:
-	$(FC) $(FFLAGS) -c $<
+	$(FC) $(FFLAGS) -c ${MPIINC} $<
 
 .F03.o:
-	$(FC) $(FFLAGS) -c $<
+	$(FC) $(FFLAGS) -c ${MPIINC} $<
 

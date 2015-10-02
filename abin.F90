@@ -47,6 +47,10 @@ program abin_dyn
 #ifdef MPI
    integer ierr
    call MPI_INIT ( ierr )
+   if (ierr.ne.0)then
+      write(*,*)'Bad signal from MPI_INIT:', ierr
+      stop 1
+   end if
 #endif
 
      call PrintLogo(values1)
@@ -68,7 +72,6 @@ program abin_dyn
       call sh_init(x, y, z, vx, vy, vz, dt)
      endif
 
-      write(*,*)''
 !$    nthreads=omp_get_max_threads()
 !$    write(*,*)'Number of threads used = ',nthreads
 !$    write(*,*)''
@@ -307,7 +310,7 @@ print *,commit
 #endif
 #ifdef MPI
 write(*,*)'Compiled with MPI support.'
-write(*,*)'(Currenty used for direct CP2K a TeraChem interfaces.)'
+write(*,*)'(Currently used for direct CP2K a TeraChem interfaces.)'
 #endif
 print *,' '
 
@@ -340,7 +343,7 @@ subroutine finish(values1,values2)
 #endif
 
 #ifdef MPI
-!   use mod_terampi, only: tc_finalize
+   use mod_terampi, only: tc_finalize
    implicit none
    include "mpif.h"
    integer :: errmpi
@@ -356,9 +359,12 @@ subroutine finish(values1,values2)
 !   integer :: iter=-3
 
 #ifdef MPI
-!      if (terampi.eq.1) call tc_finalize()
+      if (pot.eq.'_tera_') call tc_finalize()
       call MPI_FINALIZE ( errmpi )
-      write(*,*)'Signal from MPI_FINALIZE: ', errmpi
+      if (errmpi.ne.0)then
+         write(*,*)'Bad signa from MPI_FINALIZE: ', errmpi
+         ! Let's try to continue
+      end if
 #endif
 
    call deallocate_arrays( )

@@ -70,12 +70,13 @@ module mod_utils
    end function LowerToUpper
 
    subroutine abinerror(chcaller)
+      ! TODO: call finalize routine before exiting.
    character(len=*),intent(in)   :: chcaller
    open(unit=500,file='ERROR')
    write(500,*)'FATAL ERROR encountered in subroutine: ',chcaller
    write(500,*)'Check standard output for further information. Exiting now...'
    close(unit=500)
-   call flush
+   call flush(6)
    stop 1
    end subroutine abinerror
 

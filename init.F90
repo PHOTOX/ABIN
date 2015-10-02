@@ -33,7 +33,7 @@ subroutine init(dt)
       use mod_analysis, only: restin
       use mod_water,    only: watpot, check_water
 #ifdef MPI
-!      use mod_terampi
+      use mod_terampi
 #endif
 #ifdef USEFFTW
       use mod_fftw3,    only: fftw_init
@@ -62,7 +62,7 @@ subroutine init(dt)
 
       namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-               parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot !, teraport
+               parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot , teraport
 
       namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
                         scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
@@ -473,7 +473,7 @@ endif
 #endif
 
 #ifdef MPI
-!   if(pot.eq.'_tera_') call connect_to_terachem()
+   if(pot.eq.'_tera_') call connect_to_terachem()
 #else
    if(pot.eq.'_tera_')then
       write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
@@ -484,8 +484,7 @@ endif
 
 
 !--------END OF INITIALIZATION-------------------
-
-   call flush()
+   call flush(6)
 
    contains
 
