@@ -272,7 +272,7 @@ include 'date.inc'
 integer,dimension(8),intent(out) :: values1
 call date_and_time(VALUES=values1)
 
-print '(a)','                    _____      _     _       _ '
+print '(a)','                    _____      _     _      _ '
 print '(a)','        /\         |  _  \    | |   |  \   | |'
 print '(a)','       /  \        | |_|  |   | |   | | \  | |'
 print '(a)','      / /\ \       |     /    | |   | |\ \ | |'
@@ -283,7 +283,7 @@ print '(a)','  /_/        \_\   |_____/    |_|   |_|    \_|'
 print '(a)',' '
 
 print '(a)','     version 1.0'
-print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek       2014'
+print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek 2011-2015'
 print '(a)',' '
 
 print *,'Compiled at  ',date
