@@ -9,8 +9,8 @@
 OUT = abin.cp2k.ssmp
 
 # Determine compilers
-FC = gfortran
-#FC = /usr/local/programs/common/intel/compiler/2013.5.192/bin/ifort
+#FC = gfortran
+FC = /usr/local/programs/common/intel/compiler/2013.2.146/bin/ifort
 CC = gcc
 
 # if you have FFTW libraries available, set it to TRUE
@@ -19,20 +19,20 @@ FFTW = TRUE
 
 # Should we compile with NAB libraries (AMBER force field)
 # Currently only possible with gfortran
-NAB  = TRUE
+#NAB  = TRUE
 
 # Compile with direct interface to CP2K?
 # This needs working CP2K installation
-CP2K = TRUE
+CP2K = FALSE
 BLASPATH = /usr/local/lib/acml5.3.1/gfortran64/
 CP2KPATH = /usr/local/src/cp2k-2.6.1/lib/Linux-x86-64-gfortran/ssmp/
 
 # -----------------------------------------------------------------------
 # FLAGS used to compile CP2K
-FFLAGS := -O2 -ffast-math -ffree-form -ffree-line-length-none \
+#FFLAGS := -O2 -ffast-math -ffree-form -ffree-line-length-none \
 	-fopenmp -ftree-vectorize -funroll-loops\
 	-mtune=native\
-#FFLAGS :=  -g  -fopenmp # -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
+FFLAGS :=  -g  #-fopenmp # -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
 CFLAGS :=   -g #-Wno-unused-result " 
 
 export SHELL=/bin/bash

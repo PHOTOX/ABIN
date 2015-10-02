@@ -164,6 +164,7 @@ module mod_utils
 
    subroutine PrintHelp()
    implicit none
+    print '(a)', ''
     print '(a)', 'ABIN: Multipurpose ab initio MD program.'
     print '(a)', ''
     print '(a)', 'cmdline options:'

@@ -208,7 +208,7 @@ subroutine init(dt)
 #ifdef CP2K
         call cp2k_init()
 #else
-        write(*,*)'Error: ABIN was not compiled with CP2K interface.'
+        write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
         write(*,*)''
         stop 1
 #endif

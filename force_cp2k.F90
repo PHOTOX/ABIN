@@ -6,9 +6,9 @@ module mod_cp2k
   real(DP), dimension(:), pointer :: pos, force 
 
 
-#ifdef CP2K
 CONTAINS
 
+#ifdef CP2K
 subroutine cp2k_init()
     use mod_general, only: natom
     CALL cp_init_cp2k(1,ierr)
@@ -27,6 +27,7 @@ subroutine cp2k_finalize()
    CALL cp_finalize_cp2k(1, ierr)
    IF (ierr/=0) STOP "finalize_cp2k"
 end subroutine cp2k_finalize
+#endif
 
 subroutine force_cp2k(x,y,z,fx,fy,fz,eclas)
       use mod_general
@@ -62,6 +63,7 @@ subroutine force_cp2k(x,y,z,fx,fy,fz,eclas)
         ind=ind+3
        end do
 
+#ifdef CP2K
      call cp_set_pos(f_env_id, pos, natom*3,ierr) 
      IF (ierr/=0) STOP "Error when passing coordinates to CP2K"
 
@@ -73,6 +75,7 @@ subroutine force_cp2k(x,y,z,fx,fy,fz,eclas)
 
      call cp_get_force(f_env_id, force, natom*3, ierr)
        IF (ierr/=0) STOP "Error when getting CP2K forces."
+#endif
 
      eclas = eclas + e0
 !     write(*,*)e0
@@ -92,8 +95,6 @@ subroutine force_cp2k(x,y,z,fx,fy,fz,eclas)
     end do
 
 end subroutine force_cp2k
-
-#endif
 
 end module mod_cp2k
 
