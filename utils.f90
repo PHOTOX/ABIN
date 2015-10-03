@@ -70,8 +70,8 @@ module mod_utils
    end function LowerToUpper
 
    subroutine abinerror(chcaller)
-      ! TODO: call finalize routine before exiting.
    character(len=*),intent(in)   :: chcaller
+   call finish(1)
    open(unit=500,file='ERROR')
    write(500,*)'FATAL ERROR encountered in subroutine: ',chcaller
    write(500,*)'Check standard output for further information. Exiting now...'
@@ -141,14 +141,14 @@ module mod_utils
    if (.not.lexist)then
       write(*,*)'FATAL: Input file does not exists!'
       write(*,*)chcoords
-      stop 1
+      call abinerror('Get_Cmdline')
    end if
 
    inquire(file=chinput,exist=lexist)
    if (.not.lexist)then
       write(*,*)'FATAL: The following input file does not exists!'
       write(*,*)chinput
-      stop 1
+      call abinerror('Get_Cmdline')
    end if
 
    if (chveloc.ne.'')then
@@ -156,7 +156,7 @@ module mod_utils
       if (.not.lexist)then
          write(*,*)'FATAL: The following input file does not exists!'
          write(*,*)chveloc
-         stop 1
+         call abinerror('Get_Cmdline')
       end if
    end if
 

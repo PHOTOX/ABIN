@@ -62,6 +62,7 @@ contains
   subroutine gle_init(dt)
     use mod_const, only: AUtoEV
     use mod_general,only: natom,nwalk
+    use mod_utils, only: abinerror
     use mod_nhc,only: temp,inose
     implicit none
     real(DP), intent(in)  :: dt
@@ -85,7 +86,7 @@ contains
     if (ios.ne.0)then
        write(0,*) "Error: could not read GLE-A file!"
        write(0,*) "Exiting..."
-       stop 1
+       call abinerror('gle_init')
     end if
     read(121,*) ns
 
@@ -136,7 +137,7 @@ contains
        read(121,*) cns
        if (cns.ne.ns)then
            write(0,*) " Error: size mismatch between given GLE-A and GLE-C!"
-           stop 1
+           call abinerror('gle_init')
        endif
        do i=1,ns+1
           read(121,*) gC(i,:)

@@ -119,6 +119,10 @@ subroutine get_tc_forces(x, y, z, fx, fy, fz, eclas)
    ! Begin receiving data from terachem
    ! -----------------------------------
 
+   ! DH TODO: we need to somehow make sure that we don't wait forever if
+   ! terachem crashes
+   ! At this moment, this is ensured at the bash script level
+
    ! Energy
    if ( idebug > 2 ) then
       write(6,'(a)') 'Waiting to receive scf energy from TeraChem...'

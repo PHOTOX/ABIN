@@ -7,6 +7,7 @@ module mod_water
    save
    contains
    subroutine check_water(natom, names)
+   use mod_utils, only: abinerror
    integer, intent(in)  :: natom
    character(len=2)     :: names(:)
    integer              :: error, iat
@@ -28,14 +29,15 @@ module mod_water
 
    if(error.eq.1)then
       write(*,*)'This is not pure water. Exiting...'
-      stop 1
+      call abinerror('check_water')
    end if
 
    if (watpot.lt.1.or.watpot.gt.4)then
       write(*,*)'Error: parameter watpot must be 0,1,2,3 or 4.'
-      stop 1
+      call abinerror('check_water')
    end if
 
    end subroutine check_water
 
 end module mod_water
+

@@ -42,6 +42,7 @@ program abin_dyn
    character(len=20) :: chit
    character(len=40) :: chrestart
    integer,dimension(8) :: values2,values1
+   real(DP) :: TIME
 !$ integer :: nthreads,omp_get_max_threads
 
 #ifdef MPI
@@ -49,7 +50,7 @@ program abin_dyn
    call MPI_INIT ( ierr )
    if (ierr.ne.0)then
       write(*,*)'Bad signal from MPI_INIT:', ierr
-      stop 1
+      call abinerror('MPI_INIT')
    end if
 #endif
 
@@ -110,7 +111,7 @@ if(idebug.eq.1)then
        call Utox(x,y,z,transx,transy,transz)
         write(*,*)'Positions after back transform'
         call printf(transx,transy,transz)
-        stop 1
+        call abinerror('Only debug')
 endif
       endif
 
@@ -274,7 +275,24 @@ endif
 !   minimization endif
       endif
 
-      call finish(values1,values2)
+      call finish(0)
+
+!---------TIMING-------------------------------
+   call cpu_time(TIME)
+   write(*,*)' Total cpu time [s] (does not include ab initio calculations)'
+   write(*,*)TIME
+   write(*,*)' Total cpu time [hours] (does not include ab initio calculations)'
+   write(*,*)TIME/3600.
+
+   call date_and_time(VALUES=values2)
+   write(*,*)'Job started at:'
+   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
+        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
+        values1(1)
+   write(*,*)'Job finished at:'
+   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values2(5),':',&
+        values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
+        values2(1)
 
 end 
 
@@ -327,7 +345,7 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
 
 end subroutine PrintLogo
 
-subroutine finish(values1,values2)
+subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general
    use mod_nhc
@@ -351,10 +369,8 @@ subroutine finish(values1,values2)
    implicit none
 #endif
 
-   integer,dimension(8),intent(in)  :: values1
-   integer,dimension(8),intent(out) :: values2
    real(DP) :: TIME
-   integer  :: i, ierr
+   integer  :: i, ierr, error_code
    logical  :: lopen
 !   integer :: iter=-3
 
@@ -376,56 +392,36 @@ subroutine finish(values1,values2)
    end do
 
 !--------------CLEANING-------------------------
-   if (ihess.eq.1) deallocate ( hess )
-   if (ihess.eq.1.and.pot.eq.'nab') deallocate ( h )
+   if (allocated(hess)) deallocate ( hess )
+   if (allocated(h)) deallocate ( h )
+
 #ifdef USEFFTW
    if (istage.eq.2) call fftw_end()
 #endif
 #ifdef CP2K
-  if(pot.eq.'_cp2k_') call cp2k_finalize()
+   if(pot.eq.'_cp2k_') call cp2k_finalize()
 #endif
 
-   if(inose.eq.1)then
-    deallocate( w )
-    deallocate( Qm )
-    deallocate( ms )
-    if (imasst.eq.1)then
-      deallocate( pnhx )
-      deallocate( pnhy )
-      deallocate( pnhz )
-      deallocate( xi_x )
-      deallocate( xi_y )
-      deallocate( xi_z )
-     else
-      deallocate( pnhx )
-      deallocate( xi_x )
-    endif
-   endif
+   if(allocated(w))     deallocate( w )
+   if(allocated(Qm))    deallocate( Qm )
+   if(allocated(ms))    deallocate( ms )
+   if(allocated(pnhx))  deallocate( pnhx )
+   if(allocated(pnhy))  deallocate( pnhy )
+   if(allocated(pnhz))  deallocate( pnhz )
+   if(allocated(xi_x))  deallocate( xi_x )
+   if(allocated(xi_y))  deallocate( xi_y )
+   if(allocated(xi_z))  deallocate( xi_z )
 !TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
 
    write(*,*)''
-   write(*,*)' Job finished!'
+   if (error_code.eq.0)then
+      write(*,*)' Job finished!'
+   else
+      write(*,*)'Error encountered. See file ERROR for more information.'
+   end if
    write(*,*)''
 
-   write(*,*)''
-
-!---------TIMING-------------------------------
-   call cpu_time(TIME)
-   write(*,*)' Total cpu time [s] (does not include ab initio calculations)'
-   write(*,*)TIME
-   write(*,*)' Total cpu time [hours] (does not include ab initio calculations)'
-   write(*,*)TIME/3600.
-
-   call date_and_time(VALUES=values2)
-   write(*,*)'Job started at:'
-   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
-        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
-        values1(1)
-   write(*,*)'Job finished at:'
-   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values2(5),':',&
-        values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
-        values2(1)
 end subroutine finish
 
 

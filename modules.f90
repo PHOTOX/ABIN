@@ -58,6 +58,8 @@ end module
 !-----Some information about simulated system, especially for distributions and shake
       module mod_system
       use mod_const, only: DP
+      ! cannot use this
+!      use mod_utils, only: abinerror
       implicit none
       real(DP),allocatable  :: am(:)
       character(len=2), allocatable :: names(:)
@@ -265,7 +267,7 @@ end module
       do i=1,natom
         if(am(i).le.0)then
            write(*,*)'ERROR: Some masses were not specified. Exiting...'
-           stop 1
+           call finish(1)
         end if
       end do
 
@@ -294,7 +296,7 @@ end module
                   if((masses(i).gt.0.or.masses(j).gt.0))then
                      write(*,*)'ERROR: ambiguous user input for masses.'
                      write(*,*)'Please, take a hard look at the input arrays "masses" and "massnames"'
-                     stop 1
+                     call finish(1)
                   end if
                end if
              end do

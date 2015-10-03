@@ -90,6 +90,20 @@ subroutine init(dt)
       read(150,general)
       rewind(150)
 
+! We need to connect as soon as possible,
+! because we want to shut down TeraChem in case something goes wrong during init.
+#ifdef MPI
+   if(pot.eq.'_tera_') call connect_to_terachem()
+#else
+   if(pot.eq.'_tera_')then
+      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
+      write(*,*)'You cannot use direct interface to TeraChem.'
+      call abinerror('init')
+   end if
+#endif
+
+
+
       if(irest.eq.1)then
        readnhc=1   !readnhc has precedence before initNHC
        readQT=1
@@ -213,7 +227,7 @@ subroutine init(dt)
 #else
         write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
         write(*,*)''
-        stop 1
+        call abinerror('init')
 #endif
       end if
 
@@ -472,17 +486,6 @@ endif
       endif
 #endif
 
-#ifdef MPI
-   if(pot.eq.'_tera_') call connect_to_terachem()
-#else
-   if(pot.eq.'_tera_')then
-      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
-      write(*,*)'You cannot use direct interface to TeraChem.'
-      call abinerror('init')
-   end if
-#endif
-
-
 !--------END OF INITIALIZATION-------------------
    call flush(6)
 
@@ -508,7 +511,7 @@ endif
 #ifndef NAB
       if(pot.eq.'nab')then
          write(*,*)'FATAL ERROR: The program was not compiled with NAB libraries.'
-         stop 1
+         call abinerror('init')
       end if
 #endif
 
@@ -516,7 +519,7 @@ endif
       if(istage.eq.2)then
          write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
          write(*,*)'Normal mode transformations cannot be performed.'
-         stop 1
+         call abinerror('init')
       end if
 #endif
 
@@ -569,7 +572,7 @@ endif
       end if
       if(pot.eq.'none')then
        write(*,*)'FATAL: Variable "pot" not specified.Exiting now...'
-       stop 1
+       error=1
       endif
       if(ipimd.eq.1.and.nwalk.le.1)then
        write(*,*)'Number of walkers for PIMD (nwalk) <=1 !'
