@@ -90,19 +90,9 @@ subroutine init(dt)
       read(150,general)
       rewind(150)
 
-! We need to connect as soon as possible,
-! because we want to shut down TeraChem in case something goes wrong during init.
-#ifdef MPI
-   if(pot.eq.'_tera_') call connect_to_terachem()
-#else
-   if(pot.eq.'_tera_')then
-      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
-      write(*,*)'You cannot use direct interface to TeraChem.'
-      call abinerror('init')
-   end if
-#endif
-
-
+      if(iqmmm.eq.0.and.pot.ne.'mm')then
+              natqm=natom
+      endif
 
       if(irest.eq.1)then
        readnhc=1   !readnhc has precedence before initNHC
@@ -134,6 +124,52 @@ subroutine init(dt)
       ishake1 = 0
       ishake2 = 0
 
+!     allocate all basic arrays and set them to 0.0d0
+      call allocate_arrays( natom, nwalk+1 )
+
+!-----READING GEOMETRY
+      open(111,file=chcoords,status = "old", action = "read") 
+      read(111,*)natom1
+      if(natom1.ne.natom)then
+        write(*,'(A,A)')'No. of atoms in ',chinput
+        write(*,'(A,A)')'and in ',chcoords
+        write(*,*)'do not match.'
+        ! WARNING: If we end here, TeraChem will not be shutdown properly if
+        ! pot.eq._tera_
+        call abinerror('init')
+      endif
+      read(111,*)
+      do iat=1,natom
+
+        read(111,*)names(iat),x(iat,1),y(iat,1),z(iat,1)
+        names(iat)=LowerToUpper(names(iat))
+        x(iat,1)=x(iat,1)*ang
+        y(iat,1)=y(iat,1)*ang
+        z(iat,1)=z(iat,1)*ang
+
+      enddo 
+      close(111)
+
+      do iw=1,nwalk
+       do iat=1,natom
+       x(iat,iw)=x(iat,1)
+       y(iat,iw)=y(iat,1)
+       z(iat,iw)=z(iat,1)
+       enddo
+      enddo
+!-----END OF READING GEOMETRY      
+
+! We need to connect to TeraChem as soon as possible,
+! because we want to shut down TeraChem nicely in case something goes wrong during.
+#ifdef MPI
+   if(pot.eq.'_tera_') call connect_to_terachem()
+#else
+   if(pot.eq.'_tera_')then
+      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
+      write(*,*)'You cannot use direct interface to TeraChem.'
+      call abinerror('init')
+   end if
+#endif
 
       ! the namelist system does not need to be present
       read(150,system,iostat=iost,iomsg=chiomsg)
@@ -201,9 +237,6 @@ subroutine init(dt)
                         !we should probably copy shake to velocity verlet
                         !algorithm as well
       endif
-      if(iqmmm.eq.0.and.pot.ne.'mm')then
-              natqm=natom
-      endif
 
 !for surface hopping      
       if(ipimd.eq.2)then
@@ -232,38 +265,6 @@ subroutine init(dt)
       end if
 
 
-!     allocate all basic arrays and set them to 0.0d0
-      call allocate_arrays( natom, nwalk+1 )
-
-!-----READING GEOMETRY
-      open(111,file=chcoords,status = "old", action = "read") 
-      read(111,*)natom1
-      if(natom1.ne.natom)then
-        write(*,'(A,A)')'No. of atoms in ',chinput
-        write(*,'(A,A)')'and in ',chcoords
-        write(*,*)'do not match.'
-        call abinerror('init')
-      endif
-      read(111,*)
-      do iat=1,natom
-
-        read(111,*)names(iat),x(iat,1),y(iat,1),z(iat,1)
-        names(iat)=LowerToUpper(names(iat))
-        x(iat,1)=x(iat,1)*ang
-        y(iat,1)=y(iat,1)*ang
-        z(iat,1)=z(iat,1)*ang
-
-      enddo 
-      close(111)
-
-      do iw=1,nwalk
-       do iat=1,natom
-       x(iat,iw)=x(iat,1)
-       y(iat,iw)=y(iat,1)
-       z(iat,iw)=z(iat,1)
-       enddo
-      enddo
-!-----END OF READING GEOMETRY      
 
 !-----conversion of temperature from K to au
       if (inose.ne.0) write(*,*)'Target temperature in Kelvins =',temp
