@@ -5,7 +5,7 @@
 ! Compile as: gfortran abin-randomint.f90 ../random.f90 -o abin-randomint
 ! See subroutine  PrintHelp for more information.
 
-program abin-randomint
+program abin_randomint
 use mod_random
 implicit none
 integer              :: iseed0, iseed1, nran, i
