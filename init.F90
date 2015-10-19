@@ -167,7 +167,14 @@ subroutine init(dt)
 ! We need to connect to TeraChem as soon as possible,
 ! because we want to shut down TeraChem nicely in case something goes wrong during.
 #ifdef MPI
-   if(pot.eq.'_tera_') call connect_to_terachem()
+   if(pot.eq.'_tera_')then
+      if (nwalk.gt.1)then
+         write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
+         write(*,*)'You should have "integrator reset" or "integrator regular" in&
+ the TeraChem input file'
+      end if
+      call connect_to_terachem()
+   end if
 #else
    if(pot.eq.'_tera_')then
       write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'

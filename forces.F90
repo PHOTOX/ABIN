@@ -93,7 +93,7 @@ module mod_forces
           call force_cp2k(transx,transy,transz,fxab,fyab,fzab,eclas)
 #ifdef MPI
         case ("_tera_")
-          call  get_tc_forces(transx, transy, transz, fxab, fyab, fzab, eclas)
+          call  force_tera(transx, transy, transz, fxab, fyab, fzab, eclas)
 #endif
         case DEFAULT
           call force_abin(transx,transy,transz,fxab,fyab,fzab,eclas)

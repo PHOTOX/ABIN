@@ -3,6 +3,7 @@ module mod_terampi
 ! Interface for TeraChem based QM and QM/MM MD.
 ! Perform MPI communications with terachem. Requires MPI 2.0 or above to use
 ! So far, I was not able to make it work with OpenMPI.
+! (but now that we use file based tera_port, it should work as well)
 !
 ! Currently supports:
 ! pure QM
@@ -16,14 +17,15 @@ module mod_terampi
 ! ----------------------------------------------------------------
   implicit none
   private
-  public :: teraport, tc_finalize, connect_to_terachem, get_tc_forces
+  public :: teraport, tc_finalize, connect_to_terachem, force_tera
+  ! This does not work at this moment.
   character*50  ::  teraport = 'terachem_port'
   integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
   save
 
 contains
 
-subroutine get_tc_forces(x, y, z, fx, fy, fz, eclas)
+subroutine force_tera(x, y, z, fx, fy, fz, eclas)
    use mod_const, only: DP, ANG
    use mod_general, only: idebug, nwalk, DP
    use mod_system, only: names
@@ -47,14 +49,14 @@ subroutine get_tc_forces(x, y, z, fx, fy, fz, eclas)
    integer             :: i, status(MPI_STATUS_SIZE)
    integer             :: ierr, iw, iat
 
-!   write(*,*)'I am here.'
-!   call flush(6)
 
-   !DH WARNING, initial hack
+   !DH WARNING, initial hack, we do not support QM/MM yet
    natmm=0
 
-   !populate qmcooords, so far only for one bead
+   ! DHnote: we cannot use Niklasson's propagator if nwalk > 1
+   ! This is the responsibility of the user
    do iw=1,nwalk
+
       do iat=1,natqm
          qmcoords(1,iat)=x(iat,iw)/ANG
          qmcoords(2,iat)=y(iat,iw)/ANG
@@ -65,7 +67,6 @@ subroutine get_tc_forces(x, y, z, fx, fy, fz, eclas)
          mmcoords(2,iat)=y(iat+natqm,iw)
          mmcoords(3,iat)=z(iat+natqm,iw)
       end do
-   end do
 
    ! -----------------------------------------
    ! Begin sending data each step to terachem
@@ -184,16 +185,17 @@ subroutine get_tc_forces(x, y, z, fx, fy, fz, eclas)
       call flush(6)
    end if
 
-   iw=1
    do iat=1,natqm+natmm
       fx(iat,iw)=-dxyz_all(1,iat)
       fy(iat,iw)=-dxyz_all(2,iat)
       fz(iat,iw)=-dxyz_all(3,iat)
    end do
 
-   eclas=escf
+   eclas = eclas + escf / nwalk
+   ! nwalk end do
+   end do
 
-end subroutine get_tc_forces
+end subroutine force_tera
 
 subroutine connect_to_terachem( )
    use mod_qmmm,  only: natqm
@@ -258,8 +260,8 @@ subroutine connect_to_terachem( )
     call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
 
     write(*,'(/,a)') 'Sending QM atom types: '
-    ! DH WARNING: FOR QMMM WE WILL NEED TO send only part of names()K
-    ! is it safe to send the whole array?
+    ! DH WARNING: FOR QMMM WE WILL NEED TO send only part of names()
+    ! Is it safe to send the whole array?(it should be, it is passed by reference)
     call MPI_Send( names, 2*size(names), MPI_CHARACTER, 0, 2, newcomm, ierr )
 
   end subroutine connect_to_terachem
@@ -276,3 +278,4 @@ subroutine connect_to_terachem( )
 
 
 end module mod_terampi
+
