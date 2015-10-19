@@ -1,0 +1,32 @@
+# Name of the Abin binary
+OUT = abin
+
+# Determine compilers
+FC = gfortran
+CC = gcc 
+FFLAGS :=   -O2 -fopenmp  
+
+#C compiler is used for NAB library, do not change this
+CFLAGS :=   -O2  # do not use any other fancy stuff and no fopenmp for this
+
+# Should we compile mpi version?
+MPI = TRUE
+MPIPATH = YOUR_PATH TO MPI INSTALLATION
+MPILIBS = -L$(MPIPATH)/lib -lmpich -lmpl # This works for MPICH, but not for OPENMPI 
+
+# Should we compile with NAB libraries (AMBER force field)
+# Currently only possible with gfortran
+NAB  = TRUE
+
+# if you have FFTW libraries available, set it to TRUE
+# if not, some ABIN functionality will be limited
+FFTW = TRUE 
+
+# Compile with direct interface to CP2K?
+# This needs working CP2K library
+# For CP2K, you will need to modify Makefile as well
+CP2K = FALSE
+# The following needs to point to libraries needed by CP2K
+BLASPATH = /home/hollas/programes/acml/acml5.3.1/gfortran64/
+CP2KPATH = /home/hollas/programes/src/cp2k-2.6.2/lib/Linux-x86-64-gfortran/sopt/
+

@@ -2,41 +2,13 @@
 #
 # Simply type "make" and you should get the binary named $OUT
 # Before recompiling, it is wise to clean up by "make clean"
+#
+# The machine-dependent variables are included from make.vars
+# No user modification to this file should be necessary.
 
 # WARNING: dependecies on *.mod files are hidden!
 # If you change modules, you should recompile the whole thing i.e. make clean;make
-
-OUT = abin.mpi
-
-# Determine compilers
-#FC = gfortran
-FC = /usr/local/programs/common/intel/compiler/2013.2.146/bin/ifort
-CC = icc
-
-# Should we compile mpi version?
-MPI = TRUE
-
-# Should we compile with NAB libraries (AMBER force field)
-# Currently only possible with gfortran
-#NAB  = TRUE
-
-# if you have FFTW libraries available, set it to TRUE
-# if not, some ABIN functionality will be limited
-FFTW = TRUE 
-
-# Compile with direct interface to CP2K?
-# This needs working CP2K installation
-CP2K = FALSE
-BLASPATH = /usr/local/lib/acml5.3.1/gfortran64/
-CP2KPATH = /usr/local/src/cp2k-2.6.1/lib/Linux-x86-64-gfortran/ssmp/
-
-# -----------------------------------------------------------------------
-# FLAGS used to compile CP2K
-#FFLAGS := -O2 -ffast-math -ffree-form -ffree-line-length-none \
-	-fopenmp -ftree-vectorize -funroll-loops\
-	-mtune=native
-FLAGS :=  -g  -fopenmp  -Wall -Wextra -fbounds-check -ffpe-trap=invalid,zero,overflow #static # -O2 -ip -ipo  #-fno-underscoring -fopenmp
-CFLAGS :=   -g #-Wno-unused-result " 
+include make.vars
 
 export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
@@ -80,13 +52,8 @@ endif
 
 #MPI STUFF
 ifeq  ($(MPI),TRUE) 
-  #MPIPATH = /usr/local/programs/common/openmpi/openmpi-1.6.5/arch/x86_64-gcc_4.4.5/
-  #MPILIBS = -L${MPIPATH}/lib -lmpi
-  MPIPATH = /home/hollas/programes/mpich-3.1.3/arch/x86_64-intel_2013.2.146/
-  MPILIBS = -L$(MPIPATH)/lib -lmpich -lmpl 
   FC = $(MPIPATH)/bin/mpif90
   MPIINC = -DMPI -I$(MPIPATH)/include/
-  export LD_LIBRARY_PATH = /usr/local/programs/common/intel/compiler/2011.5.220/composerxe-2011.5.220/compiler/lib/intel64/
   F_OBJS := force_tera.o ${F_OBJS}
 endif
 
@@ -112,7 +79,7 @@ abin.o : abin.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 clean :
 	/bin/rm -f *.o *.mod
 
-cleanall :
+distclean :
 	/bin/rm -f *.o *.mod NAB/*.o
 	cd WATERMODELS && make clean
 
@@ -124,7 +91,7 @@ test :
 testsh :
 	/bin/bash ./test.sh ${OUT} sh
 # Clean all test folders.
-testcl :
+testclean :
 	/bin/bash ./test.sh ${OUT} clean
 
 # This will automatically generate new reference data for tests
@@ -138,7 +105,7 @@ debug:
 	echo ${CFLAGS}
 	echo ${F_OBJS}
 
-.PHONY: clean test testsh testcl makeref debug
+.PHONY: clean distclean test testsh testclean makeref debug
 
 .SUFFIXES: .F90 .f90 .f95 .f03 .F03
 

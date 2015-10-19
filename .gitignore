@@ -1,4 +1,5 @@
 *mod
+make.vars
 abin.dev*
 *.o
 date.inc
