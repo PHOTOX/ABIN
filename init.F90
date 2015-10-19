@@ -62,7 +62,12 @@ subroutine init(dt)
 
       namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-               parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot , teraport
+               parrespa,dime,ncalc,idebug,enmini,rho,iknow, & 
+!#ifdef MPI  
+!               watpot , teraport       ! teraport is not really used at this moment
+!#else
+               watpot
+!#endif
 
       namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
                         scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
@@ -423,7 +428,7 @@ endif
          write(*,*)chveloc 
          open(500,file=chveloc, status='OLD', action = "READ")
          read(500,*)
-         do iw=1,natom
+         do iw=1,nwalk
             do iat=1,natom
                read(500,*)vx(iat,iw), vy(iat,iw), vz(iat, iw)
             end do
