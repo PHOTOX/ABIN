@@ -17,7 +17,7 @@ module mod_terampi
 ! ----------------------------------------------------------------
   implicit none
   private
-  public :: teraport, tc_finalize, connect_to_terachem, force_tera
+  public :: teraport, finalize_terachem, initialize_terachem, connect_terachem, force_tera
   ! This does not work at this moment.
   character*50  ::  teraport = 'terachem_port'
   integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
@@ -197,13 +197,9 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
 
 end subroutine force_tera
 
-subroutine connect_to_terachem( )
-   use mod_qmmm,  only: natqm
-   use mod_system,only: names
+subroutine connect_terachem( )
    use mod_utils, only: abinerror
    include 'mpif.h'
-!  character(len=3) , intent(in) :: iw
-
    character(255)  :: port_name
    real*8          :: timer
    integer         :: ierr
@@ -214,67 +210,78 @@ subroutine connect_to_terachem( )
     ! Look for server_name, get port name
     ! After 60 seconds, exit if not found
     ! -----------------------------------
-     server_name = trim(teraport)  !//'.'//trim(id)
-     write(*,*)''
-     write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
-     call flush(6)
+!     server_name = trim(teraport)  !//'.'//trim(id)
+!     write(*,*)''
+!     write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
+!     call flush(6)
 
-    timer = MPI_WTIME(ierr)
-    do while (done .eqv. .false.)
+!    timer = MPI_WTIME(ierr)
+!    do while (done .eqv. .false.)
 
-    ! DH hack, since MPI_LOOKUP_NAME does not work:
-    open(500, file="port.txt", action="read")
-    read(500, *)port_name
-    close(500)
-    done = .true.
+!    done = .true.
 
 !      call MPI_LOOKUP_NAME(server_name, MPI_INFO_NULL, port_name, ierr)
 !      if (ierr == MPI_SUCCESS) then
 !        if ( idebug > 1 ) then
 !          write(6,'(2a)') 'Found port: ', trim(port_name)
 !          call flush(6)
- !       end if
+!        end if
 !        done=.true.
 
 !      else
 !         write(*,*)'Error in MPI_LOOKUP_NAME. Error code:', ierr
 !      end if
 
-      if ( (MPI_WTIME(ierr)-timer) > 60 ) then ! Time out after 60 seconds
-              write(*,*)'Port"'//trim(server_name)//'" not found. Timed out after 60 seconds.'
-              call abinerror("connect_to_terachem")
-      end if
+!      if ( (MPI_WTIME(ierr)-timer) > 60 ) then ! Time out after 60 seconds
+!              write(*,*)'Port"'//trim(server_name)//'" not found. Timed out after 60 seconds.'
+!              call abinerror("connect_to_terachem")
+!      end if
 
-    end do
+!    end do
 
+    ! DH hack, since MPI_LOOKUP_NAME does not work:
+    write(6,'(A)') 'Reading TeraChem port name from file port.txt...'
+    open(500, file="port.txt", action="read")
+    read(500, *)port_name
+    close(500)
+    write(6,'(2a)') 'Looking up TeraChem port under name:', trim(port_name)
     ! ----------------------------------------
     ! Establish new communicator via port name
     ! ----------------------------------------
     write(*,*)'Establishing connection...'
+    call flush(6)
     call MPI_COMM_CONNECT(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
     write(6,'(a,i0)') 'Established new communicator:', newcomm
 
+  end subroutine connect_terachem
 
-    write(*,'(/, a, i0)') 'Sending number of QM atoms...' 
+  subroutine initialize_terachem()
+   use mod_qmmm,  only: natqm
+   use mod_system,only: names
+   use mod_utils, only: abinerror
+   include 'mpif.h'
+    integer :: ierr
+
+    write(*,'(/, a, i0)') 'Sending number of QM atoms to TeraChem.' 
     call flush(6)
     call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
 
-    write(*,'(/,a)') 'Sending QM atom types: '
+    write(*,'(/,a)') 'Sending QM atom types... '
     ! DH WARNING: FOR QMMM WE WILL NEED TO send only part of names()
-    ! Is it safe to send the whole array?(it should be, it is passed by reference)
+    ! Is it safe to send the whole array? (it should be, it is passed by reference)
     call MPI_Send( names, 2*size(names), MPI_CHARACTER, 0, 2, newcomm, ierr )
 
-  end subroutine connect_to_terachem
+  end subroutine initialize_terachem
 
 
-  subroutine tc_finalize()
+  subroutine finalize_terachem()
    include 'mpif.h'
     integer :: ierr
     real*8  :: empty
 
     write(*,*)'Shutting down TeraChem.'
     call MPI_Send( empty, 1, MPI_DOUBLE_PRECISION, 0, 0, newcomm, ierr )
-  end subroutine tc_finalize
+  end subroutine finalize_terachem
 
 
 end module mod_terampi

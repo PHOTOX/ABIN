@@ -94,10 +94,30 @@ subroutine init(dt)
       open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
       read(150,general)
       rewind(150)
+      pot=UpperToLower(pot)
 
       if(iqmmm.eq.0.and.pot.ne.'mm')then
               natqm=natom
       endif
+
+! We need to connect to TeraChem as soon as possible,
+! because we want to shut down TeraChem nicely in case something goes wrong during.
+#ifdef MPI
+   if(pot.eq.'_tera_')then
+      if (nwalk.gt.1)then
+         write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
+         write(*,*)'You should have "integrator reset" or "integrator regular" in&
+ the TeraChem input file'
+      end if
+      call connect_terachem()
+   end if
+#else
+   if(pot.eq.'_tera_')then
+      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
+      write(*,*)'You cannot use direct interface to TeraChem.'
+      call abinerror('init')
+   end if
+#endif
 
       if(irest.eq.1)then
        readnhc=1   !readnhc has precedence before initNHC
@@ -133,53 +153,47 @@ subroutine init(dt)
       call allocate_arrays( natom, nwalk+1 )
 
 !-----READING GEOMETRY
-      open(111,file=chcoords,status = "old", action = "read") 
-      read(111,*)natom1
+      open(111,file=chcoords,status = "old", action = "read", iostat=iost) 
+      read(111,*, iostat=iost)natom1
+      if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.")
       if(natom1.ne.natom)then
         write(*,'(A,A)')'No. of atoms in ',chinput
         write(*,'(A,A)')'and in ',chcoords
         write(*,*)'do not match.'
-        ! WARNING: If we end here, TeraChem will not be shutdown properly if
-        ! pot.eq._tera_
         call abinerror('init')
       endif
       read(111,*)
       do iat=1,natom
 
-        read(111,*)names(iat),x(iat,1),y(iat,1),z(iat,1)
-        names(iat)=LowerToUpper(names(iat))
-        x(iat,1)=x(iat,1)*ang
-        y(iat,1)=y(iat,1)*ang
-        z(iat,1)=z(iat,1)*ang
+        read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
+        if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates')
+        names(iat) = LowerToUpper(names(iat))
+        x(iat,1) = x(iat,1) * ANG
+        y(iat,1) = y(iat,1) * ANG
+        z(iat,1) = z(iat,1) * ANG
 
       enddo 
       close(111)
 
       do iw=1,nwalk
        do iat=1,natom
-       x(iat,iw)=x(iat,1)
-       y(iat,iw)=y(iat,1)
-       z(iat,iw)=z(iat,1)
+       x(iat,iw) = x(iat,1)
+       y(iat,iw) = y(iat,1)
+       z(iat,iw) = z(iat,1)
        enddo
       enddo
 !-----END OF READING GEOMETRY      
+     call mass_init(masses, massnames)
+     ! Lower the second character of atom name.
+     ! This is because of TeraChem.
+      do iat=1,natom
+         names(iat)(2:2)=UpperToLower(names(iat)(2:2))
+      end do
 
-! We need to connect to TeraChem as soon as possible,
-! because we want to shut down TeraChem nicely in case something goes wrong during.
+
 #ifdef MPI
    if(pot.eq.'_tera_')then
-      if (nwalk.gt.1)then
-         write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
-         write(*,*)'You should have "integrator reset" or "integrator regular" in&
- the TeraChem input file'
-      end if
-      call connect_to_terachem()
-   end if
-#else
-   if(pot.eq.'_tera_')then
-      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
-      write(*,*)'You cannot use direct interface to TeraChem.'
-      call abinerror('init')
+      call initialize_terachem()
    end if
 #endif
 
@@ -209,7 +223,6 @@ subroutine init(dt)
       read(150,nhcopt)
       rewind(150)
 
-      pot=UpperToLower(pot)
       if(ipimd.eq.2)then
          read(150,sh)
          rewind(150)
@@ -300,15 +313,6 @@ subroutine init(dt)
       endif
 
      call dist_init() !zeroing distribution arrays
-
-!----In case of big systems, we don't want to manually set am and names arrays.
-!----Currently supported for most of the elements
-     call mass_init(masses, massnames)
-     !lower the second character of atom name
-     !this is because of terachem
-      do iat=1,natom
-         names(iat)(2:2)=UpperToLower(names(iat)(2:2))
-      end do
 
       if (pot.eq.'mmwater') call check_water(natom, names)
 
@@ -434,10 +438,12 @@ endif
          write(*,*)'Reading initial velocities in a.u. from external file:'
          write(*,*)chveloc 
          open(500,file=chveloc, status='OLD', action = "READ")
-         read(500,*)
+         read(500,*, IOSTAT=iost)
+         if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
          do iw=1,nwalk
             do iat=1,natom
-               read(500,*)vx(iat,iw), vy(iat,iw), vz(iat, iw)
+               read(500,*, IOSTAT=iost)vx(iat,iw), vy(iat,iw), vz(iat, iw)
+               if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
             end do
          end do
       end if
@@ -912,6 +918,14 @@ endif
 
 
    end subroutine check_inputsanity
+
+   subroutine err_read(chfile, chmsg)
+   character(len=*), intent(in)  :: chmsg, chfile
+   write(*,'(2A)')'Error when reading file ', chfile
+   write(*,'(A)')chmsg
+
+   call abinerror('init')
+   end subroutine err_read
 
 end subroutine init
 

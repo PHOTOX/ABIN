@@ -78,10 +78,10 @@ abin.o : abin.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 
 clean :
 	/bin/rm -f *.o *.mod
+	cd WATERMODELS && make clean
 
 distclean :
 	/bin/rm -f *.o *.mod NAB/*.o
-	cd WATERMODELS && make clean
 
 # Run all tests (this is currently compiler dependent)
 # You might expect some machine precision differences

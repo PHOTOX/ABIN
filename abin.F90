@@ -361,7 +361,7 @@ subroutine finish(error_code)
 #endif
 
 #ifdef MPI
-   use mod_terampi, only: tc_finalize
+   use mod_terampi, only: finalize_terachem
    implicit none
    include "mpif.h"
    integer :: errmpi
@@ -375,7 +375,7 @@ subroutine finish(error_code)
 !   integer :: iter=-3
 
 #ifdef MPI
-      if (pot.eq.'_tera_') call tc_finalize()
+      if (pot.eq.'_tera_') call finalize_terachem()
       call MPI_FINALIZE ( errmpi )
       if (errmpi.ne.0)then
          write(*,*)'Bad signa from MPI_FINALIZE: ', errmpi
