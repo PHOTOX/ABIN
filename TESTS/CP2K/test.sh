@@ -1,5 +1,5 @@
 #/bin/bash
 
-rm restart.xyz WATER* movie.xyz cp2k.out
+rm -f restart.xyz WATER* movie.xyz cp2k.out
 
-../../abin.dev
+../../abin.cp2k

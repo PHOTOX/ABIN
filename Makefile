@@ -22,38 +22,36 @@ minimizer.o arrays.o init.o mdstep.o
 
 C_OBJS := EWALD/ewaldf.o
 
-LIBS = WATERMODELS/libttm.a
+LIBS += WATERMODELS/libttm.a
 
 ifeq ($(NAB),TRUE)
   C_OBJS += nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o
-  LIBS += NAB/libnab.a  NAB/arpack.a  NAB/blas.a
+  LIBS   += NAB/libnab.a  NAB/arpack.a  NAB/blas.a
   CFLAGS +=  -INAB/include  
-  FFLAGS +=  -DNAB
+  DFLAGS +=  -DNAB
 endif
 
 ifeq ($(FFTW),TRUE)
-  LIBS := -lfftw3 ${LIBS}
-  FFLAGS := -DUSEFFTW ${FFLAGS}
+  ifneq ($(CP2K),TRUE)
+   LIBS := -lfftw3 ${LIBS}
+  endif
+  DFLAGS := -DUSEFFTW ${FFLAGS}
   F_OBJS := fftw_interface.o ${F_OBJS}
 endif
 
 ifeq ($(CP2K),TRUE)
   # The following variables should be the same that were used to compile CP2K.
-  # Also , be carefull with FFTW clashes
-  FFTWPATH   := /usr/lib/x86_64-linux-gnu/
-  FFTW_INC   := /usr/include
-  FFTW_LIB   := ${FFTWPATH}
-  FFLAGS := -DCP2K -I${FFTW_INC} -I$(BLASPATH)/include ${FFLAGS}
-  LDLIBS := -L${CP2KPATH} -lcp2k \
-      -L${BLASPATH}/lib $(BLASPATH)/lib/libacml.a \
-      ${FFTW_LIB}/libfftw3.a  ${FFTW_LIB}/libfftw3_threads.a\
-      ${LDLIBS}
+  # Also, be carefull with FFTW clashes
+  DFLAGS += -DCP2K 
+  LIBS += -L${CP2KPATH} -lcp2k ${CP2K_LIBS} 
 endif
 
 #MPI STUFF
 ifeq  ($(MPI),TRUE) 
-  FC = $(MPIPATH)/bin/mpif90
-  MPIINC = -DMPI -I$(MPIPATH)/include/
+  FC = $(MPI_PATH)/bin/mpifort
+  DFLAGS += -DMPI
+  INC    += $(MPI_INC)
+  LIBS   += $(MPI_LIBS)
   F_OBJS := force_tera.o ${F_OBJS}
 endif
 
@@ -68,13 +66,13 @@ ALLDEPENDS = ${C_OBJS} ${F_OBJS}
 # This is the default target
 ${OUT} : abin.o
 	cd WATERMODELS && make all 
-	${FC} ${FFLAGS} WATERMODELS/water_interface.o ${ALLDEPENDS}  $< ${LDLIBS} ${MPILIBS} -o $@
+	${FC} ${FFLAGS} WATERMODELS/water_interface.o ${ALLDEPENDS} $< ${LDLIBS} -o $@
 
 # Always recompile abin.F90 to get current date and commit
 abin.o : abin.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
 	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
-	$(FC) $(FFLAGS) $(MPIINC) -c abin.F90
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c abin.F90
 
 clean :
 	/bin/rm -f *.o *.mod
@@ -101,8 +99,11 @@ makeref :
 # Dummy target for debugging purposes
 debug: 
 	echo ${LIBS}
-	echo ${C_OBJS}
+	echo ${INC}
+	echo ${DFLAGS}
 	echo ${CFLAGS}
+	echo ${FFLAGS}
+	echo ${C_OBJS}
 	echo ${F_OBJS}
 
 .PHONY: clean distclean test testsh testclean makeref debug
@@ -110,18 +111,17 @@ debug:
 .SUFFIXES: .F90 .f90 .f95 .f03 .F03
 
 .F90.o:
-	echo "${F_OBJS}"
-	$(FC) $(FFLAGS) -c ${MPIINC} $<
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
 
 .f90.o:
-	$(FC) $(FFLAGS) -c ${MPIINC} $<
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
 
 .f95.o:
-	$(FC) $(FFLAGS) -c ${MPIINC} $<
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
 
 .f03.o:
-	$(FC) $(FFLAGS) -c ${MPIINC} $<
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
 
 .F03.o:
-	$(FC) $(FFLAGS) -c ${MPIINC} $<
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
 

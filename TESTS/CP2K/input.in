@@ -17,7 +17,7 @@ nproc=1
 nwrite=10,		! how often some output should be printed (estimators etc.)
 nwritex=10,		! how often should we print coordinates?
 nrest=10,		! how often we print restart files?
-irest=1,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
 
 isbc=0,			! spherical boundary conditions
 rb_sbc=10.9d0,              ! radius of the cluster for sbc

@@ -11,8 +11,9 @@ CFLAGS :=   -O2  # do not use any other fancy stuff and no fopenmp for this
 
 # Should we compile mpi version?
 MPI = TRUE
-MPIPATH = YOUR_PATH TO MPI INSTALLATION
-MPILIBS = -L$(MPIPATH)/lib -lmpich -lmpl # This works for MPICH, but not for OPENMPI 
+MPI_PATH = YOUR_PATH TO MPI INSTALLATION
+MPI_LIBS = -L$(MPIPATH)/lib -lmpich -lmpl # This works for MPICH, but not for OPENMPI 
+MPI_INC  = -I$(MPIPATH)/include/
 
 # Should we compile with NAB libraries (AMBER force field)
 # Currently only possible with gfortran
@@ -22,11 +23,26 @@ NAB  = TRUE
 # if not, some ABIN functionality will be limited
 FFTW = TRUE 
 
+
 # Compile with direct interface to CP2K?
 # This needs working CP2K library
-# For CP2K, you will need to modify Makefile as well
+# combination of CP2K = TRUE and  FFTW = TRUE was not tested, in principle should work
 CP2K = FALSE
 # The following needs to point to libraries needed by CP2K
-BLASPATH = /home/hollas/programes/acml/acml5.3.1/gfortran64/
-CP2KPATH = /home/hollas/programes/src/cp2k-2.6.2/lib/Linux-x86-64-gfortran/sopt/
+# Basically, this is the copy from CP2K arch file
+CP2KPATH   = /home/hollas/programes/src/cp2k-2.6.2/lib/Linux-x86-64-gfortran-mkl/sopt/
+MYLIBS     = /home/hollas/programes/
+MKL        = $(MYLIBS)/intel/parallel_studio_2015_update5/mkl/lib/intel64/
+LIBINT_LIB = $(MYLIBS)/libint/1.1.4-gcc/lib
+FFTW_LIB   = $(MYLIBS)/fftw/3.3.4-gcc/lib/
+LIBXC_LIB  = $(MYLIBS)/libxc/2.1.2-gcc/lib
+MKL_LIBS   = -ldl -L$(MKL) -lmkl_blas95_lp64 -lmkl_lapack95_lp64\
+            -Wl,--start-group ${MKL}/libmkl_intel_lp64.a ${MKL}/libmkl_sequential.a\
+             ${MKL}/libmkl_core.a -Wl,--end-group -lpthread
+
+CP2K_LIBS    = $(MKL_LIBS) \
+             $(FFTW_LIB)/libfftw3.a\
+             $(LIBXC_LIB)/libxc.a\
+             $(LIBINT_LIB)/libderiv.a\
+             $(LIBINT_LIB)/libint.a
 
