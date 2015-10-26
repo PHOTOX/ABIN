@@ -6,6 +6,9 @@ input=input$ibead
 geom=../geom.dat.$ibead
 natom=$(cat $geom | wc -l )
 
+# Automatic setting of path's to your program
+source ../SetEnvironment.sh your_program
+
 # TEMPLATE FOR AB INITIO DYNAMICS with ABIN
 # MODIFY accordingly and set pot='dyn' in input.in
 
@@ -23,7 +26,7 @@ cat $geom >> geom.xyz  #only xyz coordinates
 #SETTING PROGRAM VARIABLES
 #DON'T FORGET TO DISTINGUISH THE SCRATCH DIRECTORIES BY $ibead FOR PARALLEL JOBS
 
-PATH_TO_PROGRAM/dyn $input.com > $input.com.out
+$DYNEXE $input.com > $input.com.out
 #check whether all is ok
 if [[ $? -eq 0 ]];then
    cp $input.com.out $input.com.out.old

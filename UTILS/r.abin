@@ -8,24 +8,17 @@
 
 # SETUP --------------------------------
 OUTPUT=output
-ABINEXE=/home/hollas/PHOTOX/bin/abin.v1.0
+ABINEXE=/home/hollas/PHOTOX/bin/abin
 JOBNAME=ABIN_${JOB_ID}_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
 delscratch=true
-mpi=true
+INPUTVELOC=
 ########################################
 
-# The following line is neccessary for SetEnvironment.sh to work.
-export PATH=/home/hollas/PHOTOX/LAUNCH:$PATH
 #$ -V
 
 SCRDIR=/scratch/$USER/$JOBNAME
-
-# The following is needed for MPICH version
-if [[ $mpi = "true" ]];then
-   export LD_LIBRARY_PATH=/usr/local/programs/common/intel/compiler/2011.5.220/composerxe-2011.5.220/compiler/lib/intel64/:$LD_LIBRARY_PATH
-fi
 
 echo "Job started at: " >> $OUTPUT
 date >> $OUTPUT
@@ -48,12 +41,20 @@ else
    mkdir $SCRDIR
 fi
 
+if [[ ! -f SetEnvironment.sh ]];then
+   where=$(which SetEnvironment.sh)
+   cp $where .
+fi
 
 cp -upr * $SCRDIR/.
 
 cd $SCRDIR
 
-$ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+if [[ -z $INPUTVELOC ]];then
+   $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+else
+   $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+fi
 
 cp -upr * $KDE/.
 if [[ $? -ne "0" ]];then
@@ -69,3 +70,5 @@ cd ..
 if [[ $delscratch -eq "true" ]];then
    rm -r $JOBNAME
 fi
+
+

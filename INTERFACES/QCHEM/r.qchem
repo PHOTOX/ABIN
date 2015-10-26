@@ -1,7 +1,7 @@
 #!/bin/bash
 cd QCHEM
 
-source SetEnvironment.sh QCHEM
+source ../SetEnvironment.sh QCHEM
 
 timestep=$1
 ibead=$2

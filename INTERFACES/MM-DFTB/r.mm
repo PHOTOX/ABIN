@@ -1,7 +1,6 @@
 #!/bin/bash
 cd MM
-source SetEnvironment.sh DFTB
-EXE=$DFTBEXE
+source ../SetEnvironment.sh DFTB
 
 timestep=$1
 ibead=$2
@@ -46,7 +45,7 @@ fi
 
 rm -f detailed.out
 
-$EXE  &> $input.out
+$DFTBEXE  &> $input.out
 ################################
 cp $input.out $input.out.old
 
