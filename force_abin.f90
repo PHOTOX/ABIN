@@ -198,7 +198,7 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
    use mod_qmmm,     only: natqm
    use mod_utils,    only: abinerror
    implicit none
-   real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(in)      :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)   :: fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)   :: eclas
    integer, intent(in)    :: iw
@@ -253,6 +253,7 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
            call abinerror('oniom')
    endif
 
+!$OMP ATOMIC
    eclas=eclas+temp1
 
 !----READING energy gradients from engrad.dat
@@ -305,6 +306,7 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
            call abinerror('oniom')
    endif
 
+!$OMP ATOMIC
    eclas=eclas-temp1
 
 !----READING gradients from engrad_mm.dat
