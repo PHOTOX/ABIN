@@ -6,7 +6,7 @@ input=input$ibead.com
 natom=$(cat ../geom.dat.$ibead | wc -l )
 
 
-source SetEnvironment.sh TERA
+source ../SetEnvironment.sh TERACHEM # dev  # uncomment this for development version
 
 
 ########  USER INPUT FOR  TERACHEM  ################

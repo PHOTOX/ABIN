@@ -5,7 +5,7 @@ ibead=$2
 input=input$ibead
 nacaccu=$3
 
-source SetEnvironment.sh MOLPRO
+source ../SetEnvironment.sh MOLPRO
 
 #----USER INPUT--------------------------
 basis="6-31g*" # for Pople basis sets and df-casscf, fitting DF basis must be specified manually

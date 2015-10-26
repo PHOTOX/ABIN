@@ -370,7 +370,7 @@ subroutine finish(error_code)
 #endif
 
 #ifdef MPI
-   use mod_terampi, only: tc_finalize
+   use mod_terampi, only: finalize_terachem
    implicit none
    include "mpif.h"
    integer :: errmpi
@@ -384,14 +384,16 @@ subroutine finish(error_code)
 !   integer :: iter=-3
 
 #ifdef MPI
-   if (pot.eq.'_tera_') call tc_finalize()
+   if (pot.eq.'_tera_') call finalize_terachem()
 #ifndef CP2K
    call MPI_FINALIZE ( errmpi )
    if (errmpi.ne.0)then
       write(*,*)'Bad signal from MPI_FINALIZE: ', errmpi
+      write(*,*)'Please, check manually that TeraChem server ended.'
       ! Let's try to continue
    end if
 #else
+!  MPI_FINALIZE is called in this routine as well
    if(pot.eq.'_cp2k_') call cp2k_finalize()
 #endif
 
