@@ -58,15 +58,12 @@ subroutine init(dt)
       REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
 !      REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
       REAL, POINTER  :: REALPTR => NULL ()
-      integer :: ierr, f_env_id
 
       namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
                nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-               parrespa,dime,ncalc,idebug,enmini,rho,iknow, & 
+               parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot
 !#ifdef MPI  
 !               watpot , teraport       ! teraport is not really used at this moment
-!#else
-               watpot
 !#endif
 
       namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &

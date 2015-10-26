@@ -43,7 +43,7 @@ program abin_dyn
    character(len=40) :: chrestart
    integer,dimension(8) :: values2,values1
    real(DP) :: TIME
-   integer  :: my_rank, ierr
+   integer  :: my_rank=0, ierr
 !$ integer  :: nthreads,omp_get_max_threads
 
 #ifdef MPI
@@ -54,17 +54,14 @@ program abin_dyn
       call abinerror('MPI_INIT')
    end if
    ! call funtion to determine my rank
+   ! call MPI_...
 #endif
-#else
-   my_rank=0
 #endif
 
-     if(my_rank.eq.0)then
-        ! we should move this to init
-        ! Otherwise, it will be printed more than once by cp2k.popt interface
-        call PrintLogo(values1)
-        call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
-     endif
+     ! we should move this to init
+     ! Otherwise, it will be printed more than once by cp2k.popt interface
+     call PrintLogo(values1)
+     call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
 
 
 !-   INPUT AND INITIALIZATION SECTION      
@@ -287,21 +284,23 @@ endif
       call finish(0)
 
 !---------TIMING-------------------------------
-   call cpu_time(TIME)
-   write(*,*)' Total cpu time [s] (does not include ab initio calculations)'
-   write(*,*)TIME
-   write(*,*)' Total cpu time [hours] (does not include ab initio calculations)'
-   write(*,*)TIME/3600.
-
-   call date_and_time(VALUES=values2)
-   write(*,*)'Job started at:'
-   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
-        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
-        values1(1)
-   write(*,*)'Job finished at:'
-   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values2(5),':',&
-        values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
-        values2(1)
+   if (my_rank.eq.0)then
+      call cpu_time(TIME)
+      write(*,*)' Total cpu time [s] (does not include ab initio calculations)'
+      write(*,*)TIME
+      write(*,*)' Total cpu time [hours] (does not include ab initio calculations)'
+      write(*,*)TIME/3600.
+ 
+      call date_and_time(VALUES=values2)
+      write(*,*)'Job started at:'
+      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
+           values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
+           values1(1)
+      write(*,*)'Job finished at:'
+      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values2(5),':',&
+           values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
+           values2(1)
+   end if
 
 end 
 

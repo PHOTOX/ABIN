@@ -38,7 +38,7 @@ ifeq ($(FFTW),TRUE)
   ifneq ($(CP2K),TRUE)
    LIBS := -lfftw3 ${LIBS}
   endif
-  DFLAGS := -DUSEFFTW ${FFLAGS}
+  DFLAGS += -DUSEFFTW
   F_OBJS := fftw_interface.o ${F_OBJS}
 endif
 

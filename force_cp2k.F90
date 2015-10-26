@@ -31,29 +31,19 @@ end subroutine cp2k_finalize
 
 subroutine force_cp2k(x,y,z,fx,fy,fz,eclas)
       use mod_general
-      use mod_system,   only: names
-      use mod_qmmm,     only: natqm
-      use mod_utils,    only: abinerror, printf
+      use mod_utils,    only: abinerror
       use mod_interfaces, only: oniom
       implicit none
-      real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
-      real(DP),intent(out)   :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(in)    :: x(:,:),  y(:,:),  z(:,:)
+      real(DP),intent(out)   :: fx(:,:), fy(:,:), fz(:,:)
       real(DP),intent(out)   :: eclas
       real(DP)  :: e0
-      character(len=100) :: chsystem
-      character(len=20) :: chgeom,chforce,chhess,fgeom
-      logical :: file_exists
-      integer :: iat,iw,iat1,iat2,itest 
-      integer :: ist1,ist2,iost, ISTATUS, ierr, ind
+      integer :: iat,iw
+      integer :: ierr, ind
 
      eclas=0.0d0
 
      do iw=1,nwalk
-!     call cp_get_pos(f_env_id, pos, natom*3,ierr) 
-
-!     do iat=1,natom*3
-!     write(*,*)pos(iat)
-!     end do
 
        ind=1
        do iat=1,natom
@@ -78,7 +68,6 @@ subroutine force_cp2k(x,y,z,fx,fy,fz,eclas)
 #endif
 
      eclas = eclas + e0
-!     write(*,*)e0
 
      ind = 1
      do iat = 1, natom
@@ -87,8 +76,6 @@ subroutine force_cp2k(x,y,z,fx,fy,fz,eclas)
         fz(iat, iw) = force(ind + 2)
         ind = ind + 3
      end do
-
-!     call printf(fx, fy, fz)
 
      if (iqmmm.eq.1) call oniom(x, y, z, fx, fy, fz, eclas, iw)
 
