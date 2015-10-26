@@ -1,7 +1,10 @@
 FOR 1.0 version
 
 opravit multiplejobs based on new RecalcGeometries.sh
-umoznit vstup poc. rychlosti ze souboru
+upravit randomint if iseed <0 ....make it more random
+time is not so random, if you start close to each other 
+http://stackoverflow.com/questions/3062746/special-simple-random-number-generator
+
 
 test QMMM one more time with luciferin
 rename abin.dev to abin.v1

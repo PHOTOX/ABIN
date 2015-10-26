@@ -8,6 +8,9 @@
 
 # WARNING: dependecies on *.mod files are hidden!
 # If you change modules, you should recompile the whole thing i.e. make clean;make
+#
+# For compilation with static system libraries, see:
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46539
 include make.vars
 
 export SHELL=/bin/bash
@@ -56,6 +59,8 @@ ifeq  ($(MPI),TRUE)
 endif
 
 LDLIBS = -lm -lstdc++ ${LIBS}
+# The following line does not seem to work
+#LDLIBS = ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
 
 # This hack is needed for force_tera.o and fftw_interface.o
 F_OBJS := modules.o utils.o interfaces.o force_mm.o ${F_OBJS}

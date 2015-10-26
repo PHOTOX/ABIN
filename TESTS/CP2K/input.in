@@ -7,16 +7,16 @@ ipimd=0,		!classical simulation 0, quantum simulation 1
 nwalk=1,		!number of random walkers 
 imini=0,		!equilibration period,!not properly implemented yet
 istage=0,		!staging transformation (1), without staging (0)
-nstep=50000,
+nstep=5,
 dt=20.,			!number of steps and timestep
 irandom=131313,  	!random seed
 nabin=50,		! what is the gap between ab initio calculations?
 
 nproc=1
 
-nwrite=10,		! how often some output should be printed (estimators etc.)
-nwritex=10,		! how often should we print coordinates?
-nrest=10,		! how often we print restart files?
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=1,		! how often should we print coordinates?
+nrest=1,		! how often we print restart files?
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
 
 isbc=0,			! spherical boundary conditions

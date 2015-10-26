@@ -80,6 +80,7 @@ subroutine init(dt)
       namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
       namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
 
+
       chcoords='mini.dat'
       chinput='input.in'
       chveloc=''
@@ -94,6 +95,16 @@ subroutine init(dt)
       open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
       read(150,general)
       rewind(150)
+
+      if(pot.eq."_cp2k_")then
+#ifdef CP2K
+        call cp2k_init()
+#else
+        write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
+        write(*,*)''
+        call abinerror('init')
+#endif
+      end if
 
       if(iqmmm.eq.0.and.pot.ne.'mm')then
               natqm=natom
@@ -266,16 +277,6 @@ subroutine init(dt)
       if(istage.eq.2) call fftw_init(nwalk)
 #endif
 
-      if(pot.eq."_cp2k_")then
-#ifdef CP2K
-        call cp2k_init()
-#else
-        write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
-        write(*,*)''
-        call abinerror('init')
-#endif
-      end if
-
 
 
 !-----conversion of temperature from K to au
@@ -406,6 +407,8 @@ if(icv.eq.1)then
 endif
 
 !------------------------------------------------------
+
+
 
       pid=GetPID()
       write(*,*)'Pid of the current proccess is:',pid

@@ -43,19 +43,28 @@ program abin_dyn
    character(len=40) :: chrestart
    integer,dimension(8) :: values2,values1
    real(DP) :: TIME
-!$ integer :: nthreads,omp_get_max_threads
+   integer  :: my_rank, ierr
+!$ integer  :: nthreads,omp_get_max_threads
 
 #ifdef MPI
-   integer ierr
+#ifndef CP2K
    call MPI_INIT ( ierr )
    if (ierr.ne.0)then
       write(*,*)'Bad signal from MPI_INIT:', ierr
       call abinerror('MPI_INIT')
    end if
+   ! call funtion to determine my rank
+#endif
+#else
+   my_rank=0
 #endif
 
-     call PrintLogo(values1)
-     call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+     if(my_rank.eq.0)then
+        ! we should move this to init
+        ! Otherwise, it will be printed more than once by cp2k.popt interface
+        call PrintLogo(values1)
+        call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+     endif
 
 
 !-   INPUT AND INITIALIZATION SECTION      
@@ -375,13 +384,19 @@ subroutine finish(error_code)
 !   integer :: iter=-3
 
 #ifdef MPI
-      if (pot.eq.'_tera_') call tc_finalize()
-      call MPI_FINALIZE ( errmpi )
-      if (errmpi.ne.0)then
-         write(*,*)'Bad signa from MPI_FINALIZE: ', errmpi
-         ! Let's try to continue
-      end if
+   if (pot.eq.'_tera_') call tc_finalize()
+#ifndef CP2K
+   call MPI_FINALIZE ( errmpi )
+   if (errmpi.ne.0)then
+      write(*,*)'Bad signal from MPI_FINALIZE: ', errmpi
+      ! Let's try to continue
+   end if
+#else
+   if(pot.eq.'_cp2k_') call cp2k_finalize()
 #endif
+
+#endif
+
 
    call deallocate_arrays( )
 
@@ -397,9 +412,6 @@ subroutine finish(error_code)
 
 #ifdef USEFFTW
    if (istage.eq.2) call fftw_end()
-#endif
-#ifdef CP2K
-   if(pot.eq.'_cp2k_') call cp2k_finalize()
 #endif
 
    if(allocated(w))     deallocate( w )
