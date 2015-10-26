@@ -6,14 +6,14 @@ module mod_terampi
 ! (but now that we use file based tera_port, it should work as well)
 !
 ! Currently supports:
-! pure QM
+! pure QM and ONIOM
 ! Adapted from Sander (Amber14)
 !
 ! Original Author: Andreas Goetz (agoetz@sdsc.edu)
 !
 ! Date: November 2010
 ! Modified by Dan Hollas hollas@vscht.cz
-! Date: September 2014
+! Date: September 2014 - September 2015
 ! ----------------------------------------------------------------
   implicit none
   private
@@ -21,16 +21,20 @@ module mod_terampi
   ! This does not work at this moment.
   character*50  ::  teraport = 'terachem_port'
   integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
+!DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
+  integer     ::  natmm_tera=0
+  character(len=2), allocatable :: names_qm(:)
   save
 
 contains
 
 subroutine force_tera(x, y, z, fx, fy, fz, eclas)
    use mod_const, only: DP, ANG
-   use mod_general, only: idebug, nwalk, DP
-   use mod_system, only: names
-   use mod_qmmm, only: natqm, natmm
+   use mod_general, only: idebug, iqmmm, nwalk, DP
+!   use mod_system, only: names
+   use mod_qmmm, only: natqm
    use mod_utils, only: printf
+   use mod_interfaces, only: oniom
    include 'mpif.h'
    real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)   ::  fx(:,:),fy(:,:),fz(:,:)
@@ -40,32 +44,46 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
    real*8 :: dxyzqm(3,natqm)   ! SCF QM force
    real*8              :: dipmom(4,3)          ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
    real*8              :: qmcharges(natqm)  ! QM charges from population analysis
-   real*8              :: mmcharges(natmm)  ! QM charges from population analysis
+   real*8              :: mmcharges(natmm_tera)  ! QM charges from population analysis
    real*8               :: qmcoords(3,natqm) 
-   real*8               :: mmcoords(3,natmm) 
+   real*8               :: mmcoords(3,natmm_tera) 
 !   real*8,   :: clcoords(4,nqmatoms)
 
-   real*8              :: dxyz_all(3,natmm+natqm)
-   integer             :: i, status(MPI_STATUS_SIZE)
-   integer             :: ierr, iw, iat
+   real*8              :: dxyz_all(3,natmm_tera+natqm)
+   integer             :: status(MPI_STATUS_SIZE)
+   integer             :: ierr, iw, iat, natmm_tera
 
 
-   !DH WARNING, initial hack, we do not support QM/MM yet
-   natmm=0
+! DHnote: we cannot use Niklasson's propagator if nwalk > 1
+! This is the responsibility of the user
 
-   ! DHnote: we cannot use Niklasson's propagator if nwalk > 1
-   ! This is the responsibility of the user
+! For parallel terachem servers, we would need to read multiple port.txt
+! files and newcomm would be an array. That's not implemented at this moment.
+!!$ nteraservers=1
+!!$ call OMP_SET_NESTED(TRUE)
+!!$ if (OMP_GET_NESTED().ne.TRUE.and.parallel_qmmm.eq.1)then
+!!$   write(*,*)'Nested parallelism is not supported by this compiler.'
+!!$   write(*,*)'Please set parallel_qmmm=0.'
+!!$   call abinerror('force_tera')
+!!$ end if
+
+!!$ OMP PARALLEL DO PRIVATE(qmcoords, mmcoords, ierr, iat, dxyz_all, escf) & !qmcharges,mmcharges and dipmom are not used at this point 
+!!$     IF(nwalk.gt.1.and.nteraservers.gt.1) NUM_THREADS(nteraservers)
    do iw=1,nwalk
 
+
+!!$OMP PARALLEL SECTIONS IF(parallel_qmmm.eq.true) NUM_THREADS(2)
+!!$OMP_SECTION
+
       do iat=1,natqm
-         qmcoords(1,iat)=x(iat,iw)/ANG
-         qmcoords(2,iat)=y(iat,iw)/ANG
-         qmcoords(3,iat)=z(iat,iw)/ANG
+         qmcoords(1,iat) = x(iat,iw)/ANG
+         qmcoords(2,iat) = y(iat,iw)/ANG
+         qmcoords(3,iat) = z(iat,iw)/ANG
       end do
-      do iat=1,natmm
-         mmcoords(1,iat)=x(iat+natqm,iw)
-         mmcoords(2,iat)=y(iat+natqm,iw)
-         mmcoords(3,iat)=z(iat+natqm,iw)
+      do iat=1,natmm_tera
+         mmcoords(1,iat) = x(iat+natqm,iw)
+         mmcoords(2,iat) = y(iat+natqm,iw)
+         mmcoords(3,iat) = z(iat+natqm,iw)
       end do
 
    ! -----------------------------------------
@@ -82,39 +100,41 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
 
    if ( idebug > 1 ) then
       write(6,'(/,a)') 'Sending QM atom types: '
+      write(*,*)(names_qm(iat), iat=1,natqm)
+      call flush(6)
    end if
-   call MPI_Send( names, 2*size(names), MPI_CHARACTER, 0, 2, newcomm, ierr )
+   call MPI_Send( names_qm, 2*size(names_qm), MPI_CHARACTER, 0, 2, newcomm, ierr )
 
    ! Send QM coordinate array
    if ( idebug > 1 ) then
       write(6,'(a)') 'Sending QM coords: '
    end if
-   do i=1, natqm
-      if ( idebug > 2 ) then
-         write(6,*) 'Atom ',i,': ',qmcoords(:,i)
+   if ( idebug > 1) then
+      do iat=1, natqm
+         write(6,*) 'Atom ',iat,': ',qmcoords(:,iat)
          call flush(6)
-      end if
-   end do 
+      end do 
+   end if
    call MPI_Send( qmcoords, 3*natqm, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
 
    ! Send natmm and the charge of each atom
    if ( idebug > 2 ) then
-      write(6,'(a, i0)') 'Sending natmm = ', natmm
+      write(6,'(a, i0)') 'Sending natmm = ', natmm_tera
       call flush(6)
    end if
-   call MPI_Send( natmm, 1, MPI_INTEGER, 0, 2, newcomm, ierr ) 
+   call MPI_Send( natmm_tera, 1, MPI_INTEGER, 0, 2, newcomm, ierr ) 
 
    if ( idebug > 2 ) then
       write(6,'(a)') 'Sending charges: '
    end if
-   call MPI_Send( mmcharges, natmm, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call MPI_Send( mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
 
    ! Send MM point charge coordinate array
    if ( idebug > 2 ) then
       write(6,'(a)') 'Sending charges coords: '
    end if
 
-   call MPI_Send( mmcoords, 3*natmm, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call MPI_Send( mmcoords, 3*natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
 
    ! -----------------------------------
    ! Begin receiving data from terachem
@@ -142,8 +162,8 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
    call MPI_Recv( qmcharges(:), natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
    if ( idebug > 2 ) then
       write(6,'(a)') 'Received the following charges from server:'
-      do i=1, natqm
-         write(6,*) 'Atom ',i, ': ', qmcharges(i)
+      do iat=1, natqm
+         write(6,*) 'Atom ',iat, ': ', qmcharges(iat)
       end do
       call flush(6)
    end if
@@ -175,25 +195,37 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
    if ( idebug > 1 ) then
          write(*,'(a)') 'Waiting to receive gradients...'
    end if
-   call MPI_Recv( dxyz_all, 3*(natqm+natmm), MPI_DOUBLE_PRECISION, &
+   call MPI_Recv( dxyz_all, 3*(natqm+natmm_tera), MPI_DOUBLE_PRECISION, &
         MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
    if ( idebug > 1 ) then
       write(6,'(a)') 'Received the following gradients from server:'
-      do i=1, natqm+natmm
-         write(6,*) 'Atom ',i, ': ',dxyz_all(:,i)
+      do iat=1, natqm+natmm_tera
+         write(6,*) 'Atom ',iat, ': ',dxyz_all(:,iat)
       end do
       call flush(6)
    end if
-
-   do iat=1,natqm+natmm
+!!$OMP CRITICAL
+   do iat=1,natqm+natmm_tera
       fx(iat,iw)=-dxyz_all(1,iat)
       fy(iat,iw)=-dxyz_all(2,iat)
       fz(iat,iw)=-dxyz_all(3,iat)
    end do
+!!$OMP END CRITICAL
 
+!!$OMP ATOMIC
    eclas = eclas + escf / nwalk
+
+!!$OMP SECTION
+
+!!$OMP SECTION
+   ! ONIOM was not yet tested!!
+   if (iqmmm.eq.1) call oniom(x, y, z, fx, fy, fz, eclas, iw)
+!!$OMP SECTION
+!!$OMP END PARALLEL SECTIONS
    ! nwalk end do
    end do
+!!$OMP END PARALLEL DO
+
 
 end subroutine force_tera
 
@@ -255,23 +287,33 @@ subroutine connect_terachem( )
 
   end subroutine connect_terachem
 
-  subroutine initialize_terachem()
+   subroutine initialize_terachem()
+   use mod_general, only: natom
    use mod_qmmm,  only: natqm
    use mod_system,only: names
    use mod_utils, only: abinerror
    include 'mpif.h'
-    integer :: ierr
+   integer :: ierr, iat
 
-    write(*,'(/, a, i0)') 'Sending number of QM atoms to TeraChem.' 
-    call flush(6)
-    call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
+   write(*,'(/, a, i0)') 'Sending number of QM atoms to TeraChem.' 
+   call flush(6)
+   call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
 
-    write(*,'(/,a)') 'Sending QM atom types... '
-    ! DH WARNING: FOR QMMM WE WILL NEED TO send only part of names()
-    ! Is it safe to send the whole array? (it should be, it is passed by reference)
-    call MPI_Send( names, 2*size(names), MPI_CHARACTER, 0, 2, newcomm, ierr )
+   write(*,'(/,a)') 'Sending QM atom types... '
+   ! DH WARNING: FOR QMMM WE WILL NEED TO send only part of names()
+   ! Is it safe to send the whole array? (it should be, it is passed by reference)
+   allocate(names_qm(natqm))
+   do iat=1,natqm
+      names_qm(iat) = names(iat)
+   end do
+   write(*,*)natqm, names(iat)
+   do iat=1,natqm
+      write(*,*)names_qm(iat), names(iat)
+   end do
+   call flush(6)
+   call MPI_Send( names_qm, 2*natqm, MPI_CHARACTER, 0, 2, newcomm, ierr )
 
-  end subroutine initialize_terachem
+   end subroutine initialize_terachem
 
 
   subroutine finalize_terachem()
@@ -279,6 +321,7 @@ subroutine connect_terachem( )
     integer :: ierr
     real*8  :: empty
 
+    deallocate( names_qm )
     write(*,*)'Shutting down TeraChem.'
     call MPI_Send( empty, 1, MPI_DOUBLE_PRECISION, 0, 0, newcomm, ierr )
   end subroutine finalize_terachem

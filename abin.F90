@@ -378,7 +378,8 @@ subroutine finish(error_code)
       if (pot.eq.'_tera_') call finalize_terachem()
       call MPI_FINALIZE ( errmpi )
       if (errmpi.ne.0)then
-         write(*,*)'Bad signa from MPI_FINALIZE: ', errmpi
+         write(*,*)'Bad signal from MPI_FINALIZE: ', errmpi
+         write(*,*)'Please, check manually that TeraChem server ended.'
          ! Let's try to continue
       end if
 #endif

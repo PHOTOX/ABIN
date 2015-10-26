@@ -191,12 +191,6 @@ subroutine init(dt)
       end do
 
 
-#ifdef MPI
-   if(pot.eq.'_tera_')then
-      call initialize_terachem()
-   end if
-#endif
-
       ! the namelist system does not need to be present
       read(150,system,iostat=iost,iomsg=chiomsg)
       rewind(150)
@@ -248,6 +242,12 @@ subroutine init(dt)
 
 !$    call OMP_set_num_threads(nproc)
 !$    nthreads=omp_get_max_threads()
+
+#ifdef MPI
+   if(pot.eq.'_tera_')then
+      call initialize_terachem()
+   end if
+#endif
 
 !-----HERE WE CHECK FOR ERRORS IN INPUT-----------------------------------------------
       call check_inputsanity()
