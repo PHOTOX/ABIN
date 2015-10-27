@@ -36,14 +36,14 @@ program abin_dyn
 #else
    implicit none
 #endif
-   real(DP)    :: dt=20.0d0,eclas,equant
+   real(DP)    :: dt=20.0d0, eclas, equant
    integer     :: iat, iw, itrj
    LOGICAL     :: file_exists
    character(len=20) :: chit
    character(len=40) :: chrestart
-   integer,dimension(8) :: values2,values1
+   integer,dimension(8) :: values1, values2
    real(DP) :: TIME
-   integer  :: my_rank=0, ierr
+   integer  :: ierr
 !$ integer  :: nthreads,omp_get_max_threads
 
 #ifdef MPI
@@ -53,170 +53,167 @@ program abin_dyn
       write(*,*)'Bad signal from MPI_INIT:', ierr
       call abinerror('MPI_INIT')
    end if
-   ! call funtion to determine my rank
-   ! call MPI_...
 #endif
 #endif
-
-     ! we should move this to init
-     ! Otherwise, it will be printed more than once by cp2k.popt interface
-     call PrintLogo(values1)
-     call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
-
 
 !-   INPUT AND INITIALIZATION SECTION      
-     call init(dt) 
-     if(irest.eq.1)then
-        write (chit,*)it
-        chrestart='cp restart.xyz restart.xyz.'//adjustl(chit)
-        write(*,*)'Making backup of the current restart file.'
-        write(*,*)chrestart
-        call system(chrestart)  
-     end if
+   call init(dt, values1) 
+
+   if(my_rank.eq.0)then
+      call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+      if(irest.eq.1.and.my_rank.eq.0)then
+         write (chit,*)it
+         chrestart='cp restart.xyz restart.xyz.'//adjustl(chit)
+         write(*,*)'Making backup of the current restart file.'
+         write(*,*)chrestart
+         call system(chrestart)  
+      end if
+   end if
 
 !-------SH initialization -- 
-     if(ipimd.eq.2)then
+   if(ipimd.eq.2)then
       call sh_init(x, y, z, vx, vy, vz, dt)
-     endif
+   endif
 
-!$    nthreads=omp_get_max_threads()
-!$    write(*,*)'Number of threads used = ',nthreads
-!$    write(*,*)''
+!$ nthreads=omp_get_max_threads()
+!$ write(*,*)'Number of threads used = ',nthreads
+!$ write(*,*)''
 
-! Stage transformation
-! Masses, velocities and positions are transformed here into a new set of u variables
-! See Tuckermann's article in "Quantum Simulations of Complex Many Body Systems'. 
-      if(istage.eq.1)then
-         call XtoQ(x,y,z,transx,transy,transz)
-         x=transx
-         y=transy
-         z=transz
-         call XtoQ(vx,vy,vz,transxv,transyv,transzv)
-         vx=transxv
-         vy=transyv
-         vz=transzv
-      endif
+!  Stage transformation
+!  Masses, velocities and positions are transformed here into a new set of u variables
+!  See Tuckermann's article in "Quantum Simulations of Complex Many Body Systems'. 
+   if(istage.eq.1)then
+      call XtoQ(x,y,z,transx,transy,transz)
+      x=transx
+      y=transy
+      z=transz
+      call XtoQ(vx,vy,vz,transxv,transyv,transzv)
+      vx=transxv
+      vy=transyv
+      vz=transzv
+   endif
 !------NORMAL MODE TRANSFORMATION-------------
-      if(istage.eq.2)then
-if(idebug.eq.1)then
-        write(*,*)'Positions before transform'
+   if(istage.eq.2)then
+      if(idebug.eq.1)then
+         write(*,*)'Positions before transform'
 !        call printf(vx,vy,vz)
-        call printf(x,y,z)
-endif
-       call XtoU(x,y,z,transx,transy,transz)
-       x=transx
-       y=transy
-       z=transz
-       call XtoU(vx,vy,vz,transxv,transyv,transzv)
-       vx=transxv
-       vy=transyv
-       vz=transzv
-if(idebug.eq.1)then
-        write(*,*)'Positions after transform'
-        call printf(x,y,z)
-       call Utox(x,y,z,transx,transy,transz)
-        write(*,*)'Positions after back transform'
-        call printf(transx,transy,transz)
-        call abinerror('Only debug')
-endif
+         call printf(x,y,z)
       endif
+      call XtoU(x,y,z,transx,transy,transz)
+      x=transx
+      y=transy
+      z=transz
+      call XtoU(vx,vy,vz,transxv,transyv,transzv)
+      vx=transxv
+      vy=transyv
+      vz=transzv
+      if(idebug.eq.1)then
+         write(*,*)'Positions after transform'
+         call printf(x,y,z)
+         call Utox(x,y,z,transx,transy,transz)
+         write(*,*)'Positions after back transform'
+         call printf(transx,transy,transz)
+         call abinerror('Only debug')
+      endif
+   endif
 
-      call init_mass(amg,amt)
+   call init_mass(amg, amt)
 !-----End of transformations
 
 !-----Note that amt equals am if staging is off
-      px=amt*vx   
-      py=amt*vy   
-      pz=amt*vz  
+   px = amt * vx   
+   py = amt * vy   
+   pz = amt * vz  
 
 
-      if (ipimd.eq.3)then
+   if (ipimd.eq.3)then
 
-       call minimize(x,y,z,fxc,fyc,fzc,eclas)
+      call minimize(x, y, z, fxc, fyc, fzc, eclas)
        
-      else
+   else
 
 
-      write(*,*)'#      Step     Time [fs]'
+      if (my_rank.eq.0)then
+         write(*,*)
+         write(*,*)'#      Step     Time [fs]'
+      end if
 !---------------- PROPAGATION-----------------------------------
 
 !----getting initial forces and energies
-   call force_clas(fxc,fyc,fzc,x,y,z,eclas)
-   if (ipimd.eq.1) call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
+      call force_clas(fxc,fyc,fzc,x,y,z,eclas)
+      if (ipimd.eq.1) call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 !----setting initial values for surface hoping
-   if(ipimd.eq.2)then
-      do itrj=1, ntraj
-         if (it.eq.0) call get_nacm(itrj)
-         call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
-      end do
-   end if
+      if(ipimd.eq.2)then
+         do itrj=1, ntraj
+            if (it.eq.0) call get_nacm(itrj)
+            call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
+         end do
+      end if
 
 !---------LOOP OVER TIME STEPS
 !-----it variable is set to 0 or read from restart.xyz in subroutine init
       it=it+1
       do it=(it),nstep
 
-      INQUIRE(FILE="EXIT", EXIST=file_exists)
-      if(file_exists)then
-       write(*,*)'Found file EXIT. Exiting...'
-       call system('rm EXIT')
-       if (istage.gt.0)then
-
-        if(istage.eq.1)then     
-         call QtoX(vx,vy,vz,transxv,transyv,transzv)
-         call QtoX(x,y,z,transx,transy,transz)
-        endif
-        if(istage.eq.2)then
-         call UtoX(x,y,z,transx,transy,transz)
-         call UtoX(vx,vy,vz,transxv,transyv,transzv)
-        endif
-
-        call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
-       else
-        call restout(x,y,z,vx,vy,vz,it-1)
-       endif
-       exit                                          !break from time loop
-      endif
-
-      if(idebug.eq.2)then
-         write(*,*)'positions',it
-         call printf(x,y,z)
-         write(*,*)'momenta',it
-         call printf(px,py,pz)
-         write(*,*)'forces',it
-         call printf(fxc,fyc,fzc)
-      end if
+         INQUIRE(FILE="EXIT", EXIST=file_exists)
+         if(file_exists)then
+          write(*,*)'Found file EXIT. Exiting...'
+          call system('rm EXIT')
+          if (istage.gt.0)then
+       
+           if(istage.eq.1)then     
+            call QtoX(vx,vy,vz,transxv,transyv,transzv)
+            call QtoX(x,y,z,transx,transy,transz)
+           endif
+           if(istage.eq.2)then
+            call UtoX(x,y,z,transx,transy,transz)
+            call UtoX(vx,vy,vz,transxv,transyv,transzv)
+           endif
+       
+           call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
+          else
+           call restout(x,y,z,vx,vy,vz,it-1)
+          endif
+          exit                                          !break from time loop
+         endif
+       
+         if(idebug.eq.2)then
+            write(*,*)'positions',it
+            call printf(x,y,z)
+            write(*,*)'momenta',it
+            call printf(px,py,pz)
+            write(*,*)'forces',it
+            call printf(fxc,fyc,fzc)
+         end if
 
 
 !-----CALL RESPA or VELOCITY VERLET--------------
-      if(nshake.eq.0)then
-       if (md.eq.1) call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-       if (md.eq.2) call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
-      else
-       call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-      endif
-
-      !TODO: call Update_vel()
-!      vx=px/amt
-!      vy=py/amt
-!      vz=pz/amt
-      do iw=1,nwalk
-       do iat=1,natom
-        vx(iat,iw)=px(iat,iw)/amt(iat,iw)
-        vy(iat,iw)=py(iat,iw)/amt(iat,iw)
-        vz(iat,iw)=pz(iat,iw)/amt(iat,iw)
-       enddo
-      enddo
+         if(nshake.eq.0)then
+          if (md.eq.1) call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+          if (md.eq.2) call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
+         else
+          call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+         endif
+       
+         !TODO: call Update_vel()
+!         vx=px/amt
+!         vy=py/amt
+!         vz=pz/amt
+         do iw=1,nwalk
+            do iat=1,natom
+               vx(iat,iw)=px(iat,iw)/amt(iat,iw)
+               vy(iat,iw)=py(iat,iw)/amt(iat,iw)
+               vz(iat,iw)=pz(iat,iw)/amt(iat,iw)
+            enddo
+         enddo
 
 !-------SURFACE HOPPING SECTION----------------------------      
-      if(ipimd.eq.2)then
-
-      call surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt, eclas)
-      px=amt*vx
-      py=amt*vy
-      pz=amt*vz
-
-      endif
+         if(ipimd.eq.2)then
+            call surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt, eclas)
+            px=amt*vx
+            py=amt*vy
+            pz=amt*vz
+         endif
 
 
 !--------------------SECTION of trajectory ANALYSIS
@@ -224,38 +221,41 @@ endif
 ! Transformed (cartesian) coordinates are stored in trans matrices.
 ! DHmod-21.12.2012 enter this section only every ncalc step
 
-      if(modulo(it,ncalc).ne.0) cycle
+! maybe we should visit this section only when my_rank.eq.0
+! this would not be the case for REMD
 
-      if(istage.eq.1)then     
-       call QtoX(vx,vy,vz,transxv,transyv,transzv)
-       call QtoX(x,y,z,transx,transy,transz)
-       call FQtoFX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
-      endif
-
-      if(istage.eq.2)then
-       call UtoX(x,y,z,transx,transy,transz)
-       call UtoX(vx,vy,vz,transxv,transyv,transzv)
-       call UtoX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
-       if(idebug.eq.1) then
-        write(*,*)'Back transformed forces'
-        call printf(transfxc,transfyc,transfzc)
-       endif
-      endif
-
-      call temperature(px,py,pz,amt,dt,eclas)
-
-      if(istage.eq.1.or.istage.eq.2)then
-        call analysis (transx,transy,transz,transxv,transyv,transzv,  &
-                      transfxc,transfyc,transfzc,amt,eclas,equant,dt)
-       else
-        call analysis (x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
-      endif
+         if(modulo(it,ncalc).ne.0) cycle
       
-
-      if(modulo(it,nwrite).eq.0)then
-        write(*,'(I20,F15.2)')it,it*dt*AUtoFS
-        call flush(6)
-      endif
+         if(istage.eq.1)then     
+            call QtoX(vx,vy,vz,transxv,transyv,transzv)
+            call QtoX(x,y,z,transx,transy,transz)
+            call FQtoFX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
+         endif
+      
+         if(istage.eq.2)then
+            call UtoX(x,y,z,transx,transy,transz)
+            call UtoX(vx,vy,vz,transxv,transyv,transzv)
+            call UtoX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
+            if(idebug.eq.1) then
+               write(*,*)'Back transformed forces'
+               call printf(transfxc,transfyc,transfzc)
+            endif
+         endif
+      
+         call temperature(px,py,pz,amt,dt,eclas)
+      
+         if(istage.eq.1.or.istage.eq.2)then
+            call analysis (transx,transy,transz,transxv,transyv,transzv,  &
+                         transfxc,transfyc,transfzc,amt,eclas,equant,dt)
+         else
+            call analysis (x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
+         endif
+         
+      
+         if(modulo(it,nwrite).eq.0.and.my_rank.eq.0)then
+           write(*,'(I20,F15.2)')it,it*dt*AUtoFS
+           call flush(6)
+         endif
 
       !------------------------------------------------------------------------
 !   Time step loop      
@@ -264,24 +264,24 @@ endif
 !DUMP restart file at the end of a run even if the final step is not compatible with nrest
 !Because ncalc might be >1, we have to perform transformation to get the most
 !recent coordinates and velocities
-       if (istage.gt.0)then
-        if(istage.eq.1)then     
-         call QtoX(vx,vy,vz,transxv,transyv,transzv)
-         call QtoX(x,y,z,transx,transy,transz)
-        endif
-        if(istage.eq.2)then
-         call UtoX(x,y,z,transx,transy,transz)
-         call UtoX(vx,vy,vz,transxv,transyv,transzv)
-        endif
-        call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
-       else
-        call restout(x,y,z,vx,vy,vz,it-1)
-       endif
-
-!   minimization endif
+      if (istage.gt.0)then
+         if(istage.eq.1)then     
+            call QtoX(vx,vy,vz,transxv,transyv,transzv)
+            call QtoX(x,y,z,transx,transy,transz)
+         endif
+         if(istage.eq.2)then
+            call UtoX(x,y,z,transx,transy,transz)
+            call UtoX(vx,vy,vz,transxv,transyv,transzv)
+         endif
+         call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
+      else
+         call restout(x,y,z,vx,vy,vz,it-1)
       endif
 
-      call finish(0)
+!   minimization endif
+   endif
+
+   call finish(0)
 
 !---------TIMING-------------------------------
    if (my_rank.eq.0)then
@@ -305,53 +305,6 @@ endif
 end 
 
 
-subroutine PrintLogo(values1)
-use iso_fortran_env
-include 'date.inc'
-integer,dimension(8),intent(out) :: values1
-call date_and_time(VALUES=values1)
-
-print '(a)','                    _____      _     _      _ '
-print '(a)','        /\         |  _  \    | |   |  \   | |'
-print '(a)','       /  \        | |_|  |   | |   | | \  | |'
-print '(a)','      / /\ \       |     /    | |   | |\ \ | |'
-print '(a)','     / /__\ \      |=====|    | |   | | \ \| |'
-print '(a)','    / /____\ \     |  _   \   | |   | |  \ | |'
-print '(a)','   / /      \ \    | |_|  |   | |   | |   \  |'
-print '(a)','  /_/        \_\   |_____/    |_|   |_|    \_|'
-print '(a)',' '
-
-print '(a)','     version 1.0'
-print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek 2011-2015'
-print '(a)',' '
-
-print *,'Compiled at  ',date
-print *,commit
-!$ print *,'Compiled with parallel OpenMP support for PIMD.'
-#ifdef USEFFTW
-   write(*,*)'Compiled with FFTW support.'
-#endif
-#ifdef CP2K
-   write(*,*)'Compiled with in-built CP2K interface.'
-#endif
-#ifdef MPI
-write(*,*)'Compiled with MPI support.'
-write(*,*)'(Currently used for direct CP2K a TeraChem interfaces.)'
-#endif
-print *,' '
-
-#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
-print *, 'This file was compiled by ',  &
-             compiler_version(), ' using the options: '
-print *,     compiler_options()
-#endif
-
-write(*,*)'Job started at:'
-write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
-        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
-        values1(1)
-
-end subroutine PrintLogo
 
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
@@ -427,13 +380,15 @@ subroutine finish(error_code)
 !TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
 
-   write(*,*)''
-   if (error_code.eq.0)then
-      write(*,*)' Job finished!'
-   else
-      write(*,*)'Error encountered. See file ERROR for more information.'
+   if (my_rank.eq.0)then
+      write(*,*)''
+      if (error_code.eq.0)then
+         write(*,*)' Job finished!'
+      else
+         write(*,*)'Error encountered. See file ERROR for more information.'
+         write(*,*)''
+      end if
    end if
-   write(*,*)''
 
 end subroutine finish
 

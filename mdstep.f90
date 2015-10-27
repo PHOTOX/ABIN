@@ -6,7 +6,7 @@ module mod_mdstep
    use mod_transform
    implicit none
    private
-   public :: verletstep,respastep,respashake
+   public :: verletstep, respastep, respashake
 
    contains
 

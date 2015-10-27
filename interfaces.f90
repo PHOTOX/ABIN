@@ -3,9 +3,10 @@ module mod_interfaces
    use mod_const, only: DP
    INTERFACE
 
-   subroutine init(dt)
+   subroutine init(dt, values1)
    IMPORT :: DP
    real(DP),intent(out) :: dt
+   integer,dimension(8) :: values1
    end subroutine init
 
    !has to be here or in its own module, as it depends on mod_sh

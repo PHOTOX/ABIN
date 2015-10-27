@@ -9,113 +9,118 @@
 ! Surface hopping is NOT initialized here.
 ! Daniel Hollas,9.2.2012 
 
-subroutine init(dt)
-      use mod_const
-      use mod_arrays
-      use mod_array_size
-      use mod_general
-      use mod_system
-      use mod_nhc
-      use mod_estimators
-      use mod_harmon
-      use mod_sh
-      use mod_qmmm
-      use mod_gle
-      use mod_nab
-      use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
-      use mod_random
-      use mod_guillot,  only: inames_guillot
-      use mod_utils
-      use mod_vinit,    only: vinit, scalevelocities
-      use mod_density
-      use mod_shake
-      use mod_minimize, only: gamm, gammthr
-      use mod_analysis, only: restin
-      use mod_water,    only: watpot, check_water
-#ifdef MPI
-      use mod_terampi
-#endif
+subroutine init(dt, values1)
+   use mod_const
+   use mod_arrays
+   use mod_array_size
+   use mod_general
+   use mod_system
+   use mod_nhc
+   use mod_estimators
+   use mod_harmon
+   use mod_sh
+   use mod_qmmm
+   use mod_gle
+   use mod_nab
+   use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
+   use mod_random
+   use mod_guillot,  only: inames_guillot
+   use mod_utils
+   use mod_vinit,    only: vinit, scalevelocities
+   use mod_density
+   use mod_shake
+   use mod_minimize, only: gamm, gammthr
+   use mod_analysis, only: restin
+   use mod_water,    only: watpot, check_water
 #ifdef USEFFTW
-      use mod_fftw3,    only: fftw_init
+   use mod_fftw3,    only: fftw_init
 #endif
 #ifdef CP2K
-      use mod_cp2k,     only: cp2k_init
+   use mod_cp2k,     only: cp2k_init
 #endif
-      implicit none
-      real(DP),intent(out) :: dt
-      real(DP) :: masses(MAXTYPES)
-      real(DP)  :: rans(10)
-      integer :: iw,iat,natom1,imol,shiftdihed=1, iost
-      integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
-      character(len=2) :: massnames(MAXTYPES)
-      character(len=10)   :: chaccess
-      character(len=200)  :: chinput, chcoords, chveloc
-      character(len=200)  :: chiomsg
-      LOGICAL :: file_exists
-      real(DP)  :: wnw=5.0d-5
-!$    integer :: nthreads,omp_get_max_threads
+#ifdef MPI
+   use mod_terampi
+   implicit none
+   include 'mpif.h'
+#else
+   implicit none
+#endif
+   real(DP),intent(out) :: dt
+   integer,dimension(8) :: values1
+   real(DP) :: masses(MAXTYPES)
+   real(DP)  :: rans(10)
+   integer :: iw,iat,natom1,imol,shiftdihed=1, iost
+   integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
+   character(len=2) :: massnames(MAXTYPES)
+   character(len=10)   :: chaccess
+   character(len=200)  :: chinput, chcoords, chveloc
+   character(len=200)  :: chiomsg
+   LOGICAL :: file_exists
+   real(DP)  :: wnw=5.0d-5
+   integer :: ierr
+!$ integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
-      REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
-!      REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
-      REAL, POINTER  :: REALPTR => NULL ()
+   REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
+!   REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
+   REAL, POINTER  :: REALPTR => NULL ()
 
-      namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
-               nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-               parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot
+   namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
+            nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
+            parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot
 !#ifdef MPI  
 !               watpot , teraport       ! teraport is not really used at this moment
 !#endif
 
-      namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
-                        scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
-      namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
-                        nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
-                        k,r0,k1,k2,k3,De,a, &
-                        Nshake,ishake1,ishake2,shake_tol
-      namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
-                        nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
-      namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
-      namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
+   namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
+                     scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
+   namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
+                     nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
+                     k,r0,k1,k2,k3,De,a, &
+                     Nshake,ishake1,ishake2,shake_tol
+   namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
+                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
+   namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
+   namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
 
 
-      chcoords='mini.dat'
-      chinput='input.in'
-      chveloc=''
-      call Get_cmdline(chinput, chcoords, chveloc)
-      write(*,*)'I will read parameters from input file ',chinput
-      write(*,*)'I will read xyz coordinates from file ',chcoords
+   chcoords='mini.dat'
+   chinput='input.in'
+   chveloc=''
+   dt=-1  
+   error=0
 
-      dt=-1  
-      error=0
-      !-READING INPUT----------------------------------------- 
+   call Get_cmdline(chinput, chcoords, chveloc)
 
-      open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
-      read(150,general)
-      rewind(150)
-      pot=UpperToLower(pot)
+   !-READING INPUT----------------------------------------- 
 
-      if(pot.eq."_cp2k_")then
+   open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
+   read(150,general)
+   rewind(150)
+   pot=UpperToLower(pot)
+
+   if(pot.eq."_cp2k_")then
 #ifdef CP2K
-        call cp2k_init()
+      call cp2k_init()
 #else
-        write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
-        write(*,*)''
-        call abinerror('init')
+      write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
+      write(*,*)''
+      call abinerror('init')
 #endif
-      end if
+   end if
 
-      if(iqmmm.eq.0.and.pot.ne.'mm')then
-              natqm=natom
-      endif
+   if(iqmmm.eq.0.and.pot.ne.'mm')then
+      natqm=natom
+   endif
 
 ! We need to connect to TeraChem as soon as possible,
 ! because we want to shut down TeraChem nicely in case something goes wrong during.
 #ifdef MPI
+   call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
    if(pot.eq.'_tera_')then
       if (nwalk.gt.1)then
          write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
-         write(*,*)'You should have "integrator reset" or "integrator regular" in&
- the TeraChem input file'
+         write(*,*)'You should have "integrator reset" or "integrator regular" in &
+& the TeraChem input file'
       end if
       call connect_terachem()
    end if
@@ -126,6 +131,12 @@ subroutine init(dt)
       call abinerror('init')
    end if
 #endif
+
+   if (my_rank.eq.0)then
+      write(*,*)'Reading parameters from input file ',chinput
+      write(*,*)'Reading xyz coordinates from file ',chcoords
+      call PrintLogo(values1)
+   end if
 
       if(irest.eq.1)then
        readnhc=1   !readnhc has precedence before initNHC
@@ -184,11 +195,11 @@ subroutine init(dt)
       close(111)
 
       do iw=1,nwalk
-       do iat=1,natom
-       x(iat,iw) = x(iat,1)
-       y(iat,iw) = y(iat,1)
-       z(iat,iw) = z(iat,1)
-       enddo
+         do iat=1,natom
+            x(iat,iw) = x(iat,1)
+            y(iat,iw) = y(iat,1)
+            z(iat,iw) = z(iat,1)
+         enddo
       enddo
 !-----END OF READING GEOMETRY      
      call mass_init(masses, massnames)
@@ -204,7 +215,7 @@ subroutine init(dt)
       rewind(150)
       !check, whether we hit End-Of-File or other error
       if(IS_IOSTAT_END(iost))then  !fortran intrinsic for EOF
-         write(*,*)'Namelist "system" not found. Ignoring...'
+         if (my_rank.eq.0) write(*,*)'Namelist "system" not found. Ignoring...'
       else if (iost.ne.0)then
          write(*,*)'ERROR when reading namelist "system".'
          write(*,*)chiomsg
@@ -246,10 +257,10 @@ subroutine init(dt)
       end if
 
       close(150)
-!-----END OF READING INPUT----------------------------------------- 
+!--END OF READING INPUT---------------
 
-!$    call OMP_set_num_threads(nproc)
-!$    nthreads=omp_get_max_threads()
+!$ call OMP_set_num_threads(nproc)
+!$ nthreads=omp_get_max_threads()
 
 #ifdef MPI
    if(pot.eq.'_tera_')then
@@ -257,30 +268,32 @@ subroutine init(dt)
    end if
 #endif
 
-!-----HERE WE CHECK FOR ERRORS IN INPUT-----------------------------------------------
+!-----HERE WE CHECK FOR ERRORS IN INPUT-----------
       call check_inputsanity()
 
 !     resetting number of walkers to 1 in case of classical simulation      
       if(ipimd.eq.0)then
-              write(*,*)'ipimd=0,Resetting number of walkers to 1.'
-              write(*,*)'ipimd=0,Using velocity Verlet integrator'
-              md=2
-              nwalk=1
-              nabin=1   !TODO:safety for respashake code
-                        !we should probably copy shake to velocity verlet
-                        !algorithm as well
+         if(my_rank.eq.0)then
+            write(*,*)'ipimd=0,Resetting number of walkers to 1.'
+            write(*,*)'ipimd=0,Using velocity Verlet integrator'
+         end if
+         md=2
+         nwalk=1
+         nabin=1   ! TODO:safety for respashake code
+                   ! We should probably copy shake to velocity verlet
+                   ! algorithm as well
       endif
 
 !for surface hopping      
       if(ipimd.eq.2)then
-              nwalk=ntraj
-              md=2
-              nabin=1
+         nwalk=ntraj
+         md=2
+         nabin=1
       endif
 
       if(ipimd.eq.1)then
-              write(*,*)'ipimd=1,using RESPA integrator'
-              md=1
+         if (my_rank.eq.0) write(*,*)'ipimd=1,using RESPA integrator'
+         md=1
       endif
 
 #ifdef USEFFTW
@@ -288,9 +301,8 @@ subroutine init(dt)
 #endif
 
 
-
 !-----conversion of temperature from K to au
-      if (inose.ne.0) write(*,*)'Target temperature in Kelvins =',temp
+      if (inose.ne.0.and.my_rank.eq.0) write(*,*)'Target temperature in Kelvins =', temp
       temp=temp/autok
 
       if (ihess.eq.1)then 
@@ -306,14 +318,13 @@ subroutine init(dt)
 
 !----SHAKE initialization,determining the constrained bond lenghts
       if(nshake.ge.1)then
-       write(*,*)'Setting distances for SHAKE from mini.dat'
-       call shake_init(x,y,z)
+         if (my_rank.eq.0) write(*,*)'Setting distances for SHAKE from mini.dat'
+         call shake_init(x,y,z)
       endif
 
-     call dist_init() !zeroing distribution arrays
+      call dist_init() !zeroing distribution arrays
 
       if (pot.eq.'mmwater') call check_water(natom, names)
-
 
 !-----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
@@ -327,14 +338,6 @@ subroutine init(dt)
 !----performing RESTART from restart.xyz
      if(irest.eq.1) call restin(x,y,z,vx,vy,vz,it)
 
-     write(*,*)
-     write(*,*)'-------SIMULATION PARAMETERS---------------'
-     write(*,nml=general)
-     write(*,*)
-     write(*,nml=system)
-     if ( inose.ge.1 ) write(*,nml=nhcopt)
-     if ( ipimd.eq.2 ) write(*,nml=sh)
-     write(*,*)
 
 !------------END OF INPUT SECTION---------------------
 
@@ -411,9 +414,6 @@ endif
 
 
 
-      pid=GetPID()
-      write(*,*)'Pid of the current proccess is:',pid
-
 
 
       if(pot.eq.'2dho')then
@@ -449,7 +449,7 @@ endif
       end if
 
       if(conatom.gt.0)then
-         write(*,*)'Removing initial velocity of constrained atoms.'
+         if (my_rank.eq.0) write(*,*)'Removing initial velocity of constrained atoms.'
          call constrainP(vx,vy,vz)
       endif
 
@@ -474,7 +474,25 @@ endif
          call ABr_init()
       endif
 
+   if(my_rank.eq.0)then
+      write(*,*)
+      write(*,*)'--------------SIMULATION PARAMETERS--------------'
+      write(*,nml=general)
+      write(*,*)
+      write(*,nml=system)
+      if ( inose.ge.1 ) write(*,nml=nhcopt)
+      write(*,*)
+      if ( ipimd.eq.2 ) write(*,nml=sh)
+      write(*,*)
       if (iqmmm.eq.3.or.pot.eq.'mm') write(*,nml=qmmm)
+      write(*,*)
+   end if
+   call flush(6)
+
+   call MPI_Barrier(MPI_COMM_WORLD, ierr)
+   pid=GetPID()
+   write(*,*)'Pid of the current proccess is:',pid
+
 
 #ifdef NAB
       if (pot.eq."nab".or.iqmmm.eq.2)then
@@ -495,12 +513,12 @@ endif
             write(*,*)'Half of box size: ',boxx2,boxy2,boxz2
 !           write(*,*)x(iat,1)/ang,y(iat,1)/ang,z(iat,1)/ang,charges(iat)
             call ewald(VECPTR,VECPTR,charges,REALPTR,boxx,boxy,boxz,cutoff,alpha_pme,kappa_pme,epsinf,natom,ipom2)
-            boxx=boxx*ang
-            boxy=boxy*ang
-            boxz=boxz*ang
-            boxx2=0.5d0*boxx
-            boxy2=0.5d0*boxy
-            boxz2=0.5d0*boxz
+            boxx = boxx * ANG
+            boxy = boxy * ANG
+            boxz = boxz * ANG
+            boxx2 = 0.5d0 * boxx
+            boxy2 = 0.5d0 * boxy
+            boxz2 = 0.5d0 * boxz
          endif
       endif
 #endif
@@ -926,6 +944,54 @@ endif
 
    call abinerror('init')
    end subroutine err_read
+
+   subroutine PrintLogo(values1)
+   use iso_fortran_env
+   include 'date.inc'
+   integer,dimension(8),intent(out) :: values1
+   call date_and_time(VALUES=values1)
+
+print '(a)','                    _____      _     _      _ '
+print '(a)','        /\         |  _  \    | |   |  \   | |'
+print '(a)','       /  \        | |_|  |   | |   | | \  | |'
+print '(a)','      / /\ \       |     /    | |   | |\ \ | |'
+print '(a)','     / /__\ \      |=====|    | |   | | \ \| |'
+print '(a)','    / /____\ \     |  _   \   | |   | |  \ | |'
+print '(a)','   / /      \ \    | |_|  |   | |   | |   \  |'
+print '(a)','  /_/        \_\   |_____/    |_|   |_|    \_|'
+print '(a)',' '
+
+print '(a)','     version 1.0'
+print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek 2011-2015'
+print '(a)',' '
+
+print *,'Compiled at  ',date
+print *,commit
+!$ print *,'Compiled with parallel OpenMP support for PIMD.'
+#ifdef USEFFTW
+   write(*,*)'Compiled with FFTW support.'
+#endif
+#ifdef CP2K
+   write(*,*)'Compiled with in-built CP2K interface.'
+#endif
+#ifdef MPI
+write(*,*)'Compiled with MPI support.'
+write(*,*)'(Currently used for direct CP2K a TeraChem interfaces.)'
+#endif
+print *,' '
+
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+print *, 'This file was compiled by ',  &
+             compiler_version(), ' using the options: '
+print *,     compiler_options()
+#endif
+
+write(*,*)'Job started at:'
+write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
+        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
+        values1(1)
+
+   end subroutine PrintLogo
 
 end subroutine init
 

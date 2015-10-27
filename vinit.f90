@@ -32,7 +32,7 @@ module mod_vinit
 !
 !------------------------------------------------------------------------
 SUBROUTINE vinit(TEMP, MASS, vx, vy, vz)
-   use mod_general, only: natom, pot, nwalk
+   use mod_general, only: natom, pot, nwalk, my_rank
    use mod_random,  only: gautrg
    real(DP),intent(out)    :: vx(:,:), vy(:,:), vz(:,:)
    real(DP),intent(in)     :: mass(:)
@@ -94,8 +94,8 @@ SUBROUTINE vinit(TEMP, MASS, vx, vy, vz)
       endif
 
    end do !nwalk
-   write(*,*)'Removing center of mass velocity'
 
+   if(my_rank.eq.0) write(*,*)'Removing center of mass velocity'
 
    RETURN
 END subroutine vinit
@@ -104,7 +104,7 @@ END subroutine vinit
 ! or if restarting to different temperature
 subroutine ScaleVelocities(vx,vy,vz)
    use mod_const,   only: autok
-   use mod_general, only: natom, nwalk
+   use mod_general, only: natom, nwalk, my_rank
    use mod_system,  only: dime, f, conatom
    use mod_nhc,     only: scaleveloc, temp
    use mod_kinetic, only: ekin_v
@@ -120,12 +120,12 @@ subroutine ScaleVelocities(vx,vy,vz)
       temp_mom=0.0d0
    end if
 
-   write(*,*)'Initial temperature [K]:',temp_mom*autok
+   if (my_rank.eq.0) write(*,*)'Initial temperature [K]:',temp_mom*autok
 
 ! TODO: pro normal modes nemusi nutne fungovat!
    if(scaleveloc.eq.1.and.temp_mom.gt.0.1e-10)then
 
-      write(*,*)'Scaling velocities to correct temperature.'
+      if (my_rank.eq.0) write(*,*) 'Scaling velocities to correct temperature.'
       scal = sqrt(temp/temp_mom)
       vx = vx * scal 
       vy = vy * scal
@@ -133,7 +133,7 @@ subroutine ScaleVelocities(vx,vy,vz)
 
       ekin_mom=ekin_v(vx, vy, vz)
       temp_mom=2*ekin_mom/(dime*nwalk*natom-nshake-f-dime*conatom*nwalk)
-      write(*,*)'Temperature after scaling [K]:',temp_mom*autok
+      if (my_rank.eq.0) write(*,*)'Temperature after scaling [K]:',temp_mom*autok
    end if
 
 end subroutine ScaleVelocities
