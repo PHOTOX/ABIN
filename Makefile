@@ -55,7 +55,7 @@ ifeq  ($(MPI),TRUE)
   DFLAGS += -DMPI
   INC    += $(MPI_INC)
   LIBS   += $(MPI_LIBS)
-  F_OBJS := force_tera.o ${F_OBJS}
+  F_OBJS := force_tera.o remd.o ${F_OBJS}
 endif
 
 LDLIBS = -lm -lstdc++ ${LIBS}

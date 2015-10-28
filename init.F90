@@ -39,6 +39,7 @@ subroutine init(dt, values1)
    use mod_cp2k,     only: cp2k_init
 #endif
 #ifdef MPI
+   use mod_remd,     only: nswap, deltaT, iremd, remd_init
    use mod_terampi
    implicit none
    include 'mpif.h'
@@ -66,10 +67,13 @@ subroutine init(dt, values1)
 
    namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-            parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot
-!#ifdef MPI  
-!               watpot , teraport       ! teraport is not really used at this moment
-!#endif
+            parrespa,dime,ncalc,idebug, enmini, rho, iknow, &
+#ifdef MPI  
+            watpot, iremd  ! ,teraport  : not really used at this moment
+   namelist /remd/   nswap, deltaT
+#else
+            watpot
+#endif
 
    namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
                      scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
@@ -237,13 +241,31 @@ subroutine init(dt, values1)
       rewind(150)
 
       if(ipimd.eq.2)then
-         read(150,sh)
+         read(150, sh)
          rewind(150)
-         integ=UpperToLower(integ)
+         integ = UpperToLower(integ)
+      end if
+
+   if(iremd.eq.1)then
+#ifdef MPI
+      read(150, remd)
+      rewind(150)
+      call remd_init()
+      call flush(6)
+      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      temp = temp+my_rank*deltaT
+      ! not sure about this
+      if (temp0.gt.0) temp0 = temp0+my_rank*deltaT
+      write(*,*)'Temperature of replica ', my_rank,'is ', temp
+#else
+      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
+      write(*,*)'You cannot do REMD.'
+      call abinerror('init')
+#endif
       end if
 
       if(iqmmm.gt.0.or.pot.eq.'mm')then
-         read(150,qmmm)
+         read(150, qmmm)
          rewind(150)
       end if
 
@@ -252,7 +274,7 @@ subroutine init(dt, values1)
          allocate ( natmol(natom) )
 #endif
          natmol = 0
-         read(150,nab)
+         read(150, nab)
          rewind(150)
       end if
 
@@ -302,8 +324,17 @@ subroutine init(dt, values1)
 
 
 !-----conversion of temperature from K to au
-      if (inose.ne.0.and.my_rank.eq.0) write(*,*)'Target temperature in Kelvins =', temp
-      temp=temp/autok
+      if (my_rank.eq.0)then
+         if (temp0.gt.0)then
+            write(*,*)'Initial temperature in Kelvins =', temp0
+         else
+            write(*,*)'Initial temperature in Kelvins =', temp
+         end if
+         if (inose.ne.0) write(*,*)'Target temperature in Kelvins =', temp
+      end if
+
+      temp = temp/autok
+      temp0 = temp0/autok
 
       if (ihess.eq.1)then 
        allocate ( hess(natom*3,natom*3,nwalk) )

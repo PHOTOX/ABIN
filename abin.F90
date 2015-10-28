@@ -31,6 +31,7 @@ program abin_dyn
    use mod_analysis, only: analysis, restout
    use mod_forces,   only: force_clas, force_quantum
 #ifdef MPI
+   use mod_remd, only: iremd, nswap, remd_swap
    implicit none
    include 'mpif.h'
 #else
@@ -209,12 +210,16 @@ program abin_dyn
 
 !-------SURFACE HOPPING SECTION----------------------------      
          if(ipimd.eq.2)then
-            call surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt, eclas)
+            call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
             px=amt*vx
             py=amt*vy
             pz=amt*vz
          endif
 
+#ifdef MPI
+! stub for REMD
+         if (iremd.eq.1.and.modulo(it,nswap).eq.nswap) call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
+#endif
 
 !--------------------SECTION of trajectory ANALYSIS
 ! In order to analyze the output, we have to perform the back transformation
