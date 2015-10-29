@@ -110,6 +110,14 @@ subroutine init(dt, values1)
       write(*,*)''
       call abinerror('init')
 #endif
+#ifdef MPI
+   else
+      call MPI_INIT ( ierr )
+      if (ierr.ne.0)then
+         write(*,*)'Bad signal from MPI_INIT:', ierr
+         call abinerror('MPI_INIT')
+      end if
+#endif
    end if
 
    if(iqmmm.eq.0.and.pot.ne.'mm')then
@@ -257,6 +265,7 @@ subroutine init(dt, values1)
       ! not sure about this
       if (temp0.gt.0) temp0 = temp0+my_rank*deltaT
       write(*,*)'Temperature of replica ', my_rank,'is ', temp
+      deltaT = deltaT / AUTOK
 #else
       write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
       write(*,*)'You cannot do REMD.'

@@ -19,7 +19,7 @@ ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
-F_OBJS :=  random.o shake.o nosehoover.o transform.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
+F_OBJS :=  transform.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
 nab.o force_bound.o force_guillot.o water.o force_cp2k.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
 minimizer.o arrays.o init.o mdstep.o 
 
@@ -63,7 +63,7 @@ LDLIBS = -lm -lstdc++ ${LIBS}
 #LDLIBS = ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
 
 # This hack is needed for force_tera.o and fftw_interface.o
-F_OBJS := modules.o utils.o interfaces.o force_mm.o ${F_OBJS}
+F_OBJS := modules.o utils.o interfaces.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
 
 ALLDEPENDS = ${C_OBJS} ${F_OBJS}
 

@@ -6,6 +6,9 @@ time is not so random, if you start close to each other
 http://stackoverflow.com/questions/3062746/special-simple-random-number-generator
 
 Test that temp0 works correctly.
+refacter make test, to allow arbitrary tests
+i.e.
+make test FOLDER=CP2K
 
 
 test QMMM one more time with luciferin

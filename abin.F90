@@ -47,16 +47,6 @@ program abin_dyn
    integer  :: ierr
 !$ integer  :: nthreads,omp_get_max_threads
 
-#ifdef MPI
-#ifndef CP2K
-   call MPI_INIT ( ierr )
-   if (ierr.ne.0)then
-      write(*,*)'Bad signal from MPI_INIT:', ierr
-      call abinerror('MPI_INIT')
-   end if
-#endif
-#endif
-
 !-   INPUT AND INITIALIZATION SECTION      
    call init(dt, values1) 
 
@@ -217,8 +207,8 @@ program abin_dyn
          endif
 
 #ifdef MPI
-! stub for REMD
-         if (iremd.eq.1.and.modulo(it,nswap).eq.nswap) call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
+! REMD not working yet
+         if (iremd.eq.1.and.modulo(it,nswap).eq.0) call remd_swap(x, y, z, x, y, z, fxc, fyc, fzc, eclas)
 #endif
 
 !--------------------SECTION of trajectory ANALYSIS
