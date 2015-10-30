@@ -15,16 +15,22 @@ module mod_terampi
 ! Modified by Dan Hollas hollas@vscht.cz
 ! Date: September 2014 - September 2015
 ! ----------------------------------------------------------------
-  implicit none
-  private
-  public :: teraport, finalize_terachem, initialize_terachem, connect_terachem, force_tera
-  ! This does not work at this moment.
-  character*50  ::  teraport = 'terachem_port'
-  integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
-!DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
-  integer     ::  natmm_tera=0
-  character(len=2), allocatable :: names_qm(:)
-  save
+   use mod_const, only: DP
+   implicit none
+   private
+   public :: teraport, finalize_terachem, initialize_terachem, connect_terachem, force_tera
+   ! This does not work at this moment.
+   character*50  ::  teraport = 'terachem_port'
+   integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
+!  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
+   integer, parameter     ::  natmm_tera=0
+   character(len=2), allocatable :: names_qm(:)
+   real(DP), allocatable :: qmcharges(:)  ! QM charges from population analysis
+   real(DP), allocatable :: mmcharges(:)  ! QM charges from population analysis
+   real(DP), allocatable :: qmcoords(:,:)
+   real(DP), allocatable :: mmcoords(:,:) 
+   real(DP), allocatable :: dxyz_all(:,:)
+   save
 
 contains
 
@@ -40,19 +46,11 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
    real(DP),intent(inout)   ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)   ::  eclas
 !   integer, intent(in) :: qmtypes(natqm)    ! QM atom types (nuclear charge in au)
-   real*8 :: escf                 ! SCF energy
-   real*8 :: dxyzqm(3,natqm)   ! SCF QM force
-   real*8              :: dipmom(4,3)          ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
-   real*8              :: qmcharges(natqm)  ! QM charges from population analysis
-   real*8              :: mmcharges(natmm_tera)  ! QM charges from population analysis
-   real*8               :: qmcoords(3,natqm) 
-   real*8               :: mmcoords(3,natmm_tera) 
-!   real*8,   :: clcoords(4,nqmatoms)
-
-   real*8              :: dxyz_all(3,natmm_tera+natqm)
-   integer             :: status(MPI_STATUS_SIZE)
-   integer             :: ierr, iw, iat, natmm_tera
-
+   real(DP) :: escf                 ! SCF energy
+   real(DP) :: dipmom(4,3)          ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
+   real(DP) :: dummy=1.0d0
+   integer  :: status(MPI_STATUS_SIZE)
+   integer  :: ierr, iw, iat
 
 ! DHnote: we cannot use Niklasson's propagator if nwalk > 1
 ! This is the responsibility of the user
@@ -96,14 +94,14 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
       write(6,'(/, a, i0)') 'Sending natqm = ', natqm
       call flush(6)
    end if
-   call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
+   call MPI_SSend( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
 
    if ( idebug > 1 ) then
       write(6,'(/,a)') 'Sending QM atom types: '
       write(*,*)(names_qm(iat), iat=1,natqm)
       call flush(6)
    end if
-   call MPI_Send( names_qm, 2*size(names_qm), MPI_CHARACTER, 0, 2, newcomm, ierr )
+   call MPI_SSend( names_qm, 2*size(names_qm), MPI_CHARACTER, 0, 2, newcomm, ierr )
 
    ! Send QM coordinate array
    if ( idebug > 1 ) then
@@ -115,26 +113,28 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
          call flush(6)
       end do 
    end if
-   call MPI_Send( qmcoords, 3*natqm, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call MPI_SSend( qmcoords, size(qmcoords), MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
 
+if(natmm_tera.gt.0)then
    ! Send natmm and the charge of each atom
-   if ( idebug > 2 ) then
+   if ( idebug > 1 ) then
       write(6,'(a, i0)') 'Sending natmm = ', natmm_tera
       call flush(6)
    end if
    call MPI_Send( natmm_tera, 1, MPI_INTEGER, 0, 2, newcomm, ierr ) 
 
-   if ( idebug > 2 ) then
+   if ( idebug > 1 ) then
       write(6,'(a)') 'Sending charges: '
    end if
    call MPI_Send( mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
 
    ! Send MM point charge coordinate array
-   if ( idebug > 2 ) then
+   if ( idebug > 1 ) then
       write(6,'(a)') 'Sending charges coords: '
    end if
 
    call MPI_Send( mmcoords, 3*natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+end if
 
    ! -----------------------------------
    ! Begin receiving data from terachem
@@ -233,10 +233,10 @@ subroutine connect_terachem( )
    use mod_utils, only: abinerror
    include 'mpif.h'
    character(255)  :: port_name
-   real*8          :: timer
    integer         :: ierr
-   logical         :: done=.false.
-   character(len=50) :: server_name
+!   real*8          :: timer
+!   logical         :: done=.false.
+!   character(len=50) :: server_name
 
     ! -----------------------------------
     ! Look for server_name, get port name
@@ -288,29 +288,28 @@ subroutine connect_terachem( )
   end subroutine connect_terachem
 
    subroutine initialize_terachem()
-   use mod_general, only: natom
    use mod_qmmm,  only: natqm
    use mod_system,only: names
    use mod_utils, only: abinerror
    include 'mpif.h'
    integer :: ierr, iat
 
-   write(*,'(/, a, i0)') 'Sending number of QM atoms to TeraChem.' 
-   call flush(6)
+   if (natmm_tera.gt.0)then
+      allocate(mmcharges(natmm_tera), mmcoords(3, natmm_tera))
+   end if
+   allocate( qmcoords(3, natqm), qmcharges(natqm))
+   allocate( dxyz_all(3, natqm+natmm_tera) )
+
+   write(*,*)'Sending initial number of QM atoms to TeraChem.'
    call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
 
-   write(*,'(/,a)') 'Sending QM atom types... '
    ! DH WARNING: FOR QMMM WE WILL NEED TO send only part of names()
    ! Is it safe to send the whole array? (it should be, it is passed by reference)
    allocate(names_qm(natqm))
    do iat=1,natqm
       names_qm(iat) = names(iat)
    end do
-   write(*,*)natqm, names(iat)
-   do iat=1,natqm
-      write(*,*)names_qm(iat), names(iat)
-   end do
-   call flush(6)
+   write(*,*)'Sending initial QM atom names to TeraChem.'
    call MPI_Send( names_qm, 2*natqm, MPI_CHARACTER, 0, 2, newcomm, ierr )
 
    end subroutine initialize_terachem

@@ -3,5 +3,5 @@ charge   	0
 spinmult	1
 method 		blyp
 gpus		1
-amber 		yes
+integrator      reversible_d
 end
