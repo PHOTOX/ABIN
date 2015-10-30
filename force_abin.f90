@@ -1,64 +1,69 @@
-      subroutine force_abin(x,y,z,fx,fy,fz,eclas)
-      use mod_const,    only: DP, ANG
-      use mod_general
-      use mod_system,   only: names
-      use mod_harmon,   only: hess
-      use mod_sh,       only: nac_accu1, tocalc, en_array, istate, nstate
-      use mod_qmmm,     only: natqm
-      use mod_utils,    only: abinerror,lowertoupper
-      use mod_interfaces, only: oniom
-      implicit none
-      real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
-      real(DP),intent(out)   :: fx(:,:),fy(:,:),fz(:,:)
-      real(DP),intent(out)   :: eclas
-      real(DP)  :: temp1
-      character(len=100) :: chsystem
-      character(len=20) :: chgeom,chforce,chhess,fgeom
-      logical :: file_exists
-      integer :: iat,iw,iat1,iat2,itest !,nthreads=1, ithread
-      integer :: ist1,ist2,iost, ISTATUS
-      integer :: system
-!!$    integer :: omp_get_max_threads,OMP_get_thread_num
+subroutine force_abin(x, y, z, fx, fy, fz, eclas)
+   use mod_const,    only: DP, ANG
+   use mod_general
+   use mod_system,   only: names
+   use mod_harmon,   only: hess
+   use mod_sh,       only: nac_accu1, tocalc, en_array, istate, nstate
+   use mod_qmmm,     only: natqm
+   use mod_utils,    only: abinerror,lowertoupper
+   use mod_interfaces, only: oniom
+   implicit none
+   real(DP),intent(in)    :: x(:,:), y(:,:), z(:,:)
+   real(DP),intent(out)   :: fx(:,:),fy(:,:),fz(:,:)
+   real(DP),intent(out)   :: eclas
+   real(DP)  :: temp1
+   character(len=100) :: chsystem
+   character(len=20) :: chgeom,chforce,chhess,fgeom
+   logical :: file_exists
+   integer :: iat, iw, iat1, iat2, itest !,nthreads=1, ithread
+   integer :: ist1, ist2, iost, ISTATUS
+   integer :: system
+!!$ integer :: omp_get_max_threads,OMP_get_thread_num
 
-!!$    nthreads=omp_get_max_threads()
+!!$ nthreads=omp_get_max_threads()
 
-     eclas=0.0d0
+   eclas=0.0d0
 
 !----Format for geom.dat; needed,so that Molpro can read it
-     fgeom='(A2,3E25.17E2)'
+   fgeom='(A2,3E25.17E2)'
 
 !$OMP PARALLEL  ! REDUCTION(+:eclas) alternativa k atomic
 !$OMP DO PRIVATE(temp1,chsystem,chgeom,chforce,chhess,itest,file_exists,iost)
-     do iw=1,nwalk
+   do iw=1,nwalk
 
 !!$   ithread=OMP_get_thread_num()
-     write(chgeom,'(A,I3.3)')'geom.dat.',iw
-     write(chforce,'(A,I3.3)')'engrad.dat.',iw
-     write(chhess,'(A,I3.3)')'hessian.dat.',iw
+      write(chgeom,'(A,I3.3)')'geom.dat.',iw
+      write(chforce,'(A,I3.3)')'engrad.dat.',iw
+      write(chhess,'(A,I3.3)')'hessian.dat.',iw
+      if(iremd.eq.1)then
+         write(chgeom,'(A,I2.2)')trim(chgeom)//'.',my_rank
+         write(chforce,'(A,I2.2)')trim(chforce)//'.',my_rank
+         write(chhess,'(A,I2.2)')trim(chhess)//'.',my_rank
+      end if
 
 !----WRITING GEOMETRY IN ANGSTROMS
-     open(unit=20+iw,file=chgeom)
-      do iat=1,natqm
-       write(20+iw,fgeom)names(iat),x(iat,iw)/ang,y(iat,iw)/ang,z(iat,iw)/ang
-      enddo
-     close(unit=20+iw)
+      open(unit=20+iw,file=chgeom, action='write', access='SEQUENTIAL')
+         do iat=1,natqm
+            write(20+iw,fgeom)names(iat),x(iat,iw)/ang,y(iat,iw)/ang,z(iat,iw)/ang
+         enddo
+      close(unit=20+iw)
 
 !---- SH     
       if(ipimd.eq.2)then
-       open(unit=20+iw+2*nwalk,file='state.dat')
-       write(20+iw+2*nwalk,'(I2)')istate(iw)
-       write(20+iw+2*nwalk,'(I2)')nstate
+         open(unit=20+iw+2*nwalk,file='state.dat')
+         write(20+iw+2*nwalk,'(I2)')istate(iw)
+         write(20+iw+2*nwalk,'(I2)')nstate
 
 ! upper triangular matrix without diagonal
 ! tocalc(,)=1 -> compute NA couplings
 ! tocalc(,)=0 -> do NOT compute NA cooupligs
-       do ist1=1,nstate-1
-        do ist2=ist1+1,nstate
-         write(20+iw+2*nwalk,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
-        enddo
-       enddo
-       close(20+iw+2*nwalk) 
-       endif
+         do ist1=1,nstate-1
+            do ist2=ist1+1,nstate
+               write(20+iw+2*nwalk,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
+            enddo
+         enddo
+         close(20+iw+2*nwalk) 
+      endif
 
 
 
@@ -77,6 +82,8 @@
 !-First argument is time step
 !-Second argument is the bead index, neccessary for parallel calculations
   write(chsystem,'(A40,I13,I4.3)')chsystem,it,iw
+
+  if(iremd.eq.1) write(chsystem,'(A,I2.2)')trim(chsystem)//'.', my_rank
 
 !-for SH, pass the 4th parameter:precision of NACME as 10^(-nac_accu1)
    if(ipimd.eq.2)then

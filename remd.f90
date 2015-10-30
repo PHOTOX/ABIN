@@ -6,7 +6,7 @@ module mod_remd
   include "mpif.h"
   public
   private :: swap_replicas
-  integer :: iremd=0, nreplica, nswap=-1
+  integer :: nreplica, nswap=-1
   integer :: MAX_REPLICA=50
   real(DP) :: deltaT=-1
   save
@@ -181,24 +181,38 @@ CONTAINS
    end subroutine swap_replicas
 
    subroutine remd_init()
-   use mod_general, only: pot, my_rank
+   use mod_general, only: pot, my_rank, ipimd
    integer :: ierr
+
+   ! First, do sanity check
    if(nswap.lt.0)then
+      write(*,*)'ERROR: nswap must be a positive integer!'
       call abinerror('remd_init')
    end if
+
    if(deltaT.lt.0)then
+      write(*,*)'ERROR: deltaT must be a positive real number!'
       call abinerror('remd_init')
    end if
+   
+   if(pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
+      call abinerror('remd_init')
+   end if
+
+   if(ipimd.gt.0)then
+      write(*,*)'REMD is currently implemented only for classical dynamics (ipimd.eq.0)!'
+      call abinerror('remd_init')
+   end if
+
    ! determine number of replicas via MPI call
    call MPI_Comm_size(MPI_COMM_WORLD, nreplica, ierr)
    if (my_rank.eq.0) write(*,*)'Number of REMD replicas: ', nreplica
+
    if(nreplica.le.1)then
       write(*,*)'You cannot do REMD with just one replica!'
       call abinerror('remd_init')
    end if
-!   if(pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
-!      call abinerror('remd_init')
-!   end if
+
    end subroutine remd_init
 
 end module mod_remd

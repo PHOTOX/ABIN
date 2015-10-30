@@ -31,7 +31,7 @@ program abin_dyn
    use mod_analysis, only: analysis, restout
    use mod_forces,   only: force_clas, force_quantum
 #ifdef MPI
-   use mod_remd, only: iremd, nswap, remd_swap
+   use mod_remd, only: nswap, remd_swap
    implicit none
    include 'mpif.h'
 #else
@@ -42,6 +42,7 @@ program abin_dyn
    LOGICAL     :: file_exists
    character(len=20) :: chit
    character(len=40) :: chrestart
+   character(len=200) :: chsystem
    integer,dimension(8) :: values1, values2
    real(DP) :: TIME
    integer  :: ierr
@@ -50,15 +51,20 @@ program abin_dyn
 !-   INPUT AND INITIALIZATION SECTION      
    call init(dt, values1) 
 
-   if(my_rank.eq.0)then
-      call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
-      if(irest.eq.1.and.my_rank.eq.0)then
-         write (chit,*)it
-         chrestart='cp restart.xyz restart.xyz.'//adjustl(chit)
-         write(*,*)'Making backup of the current restart file.'
-         write(*,*)chrestart
-         call system(chrestart)  
+   ! TODO: move this bit to init
+   if(my_rank.eq.0) call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+
+   if(irest.eq.1)then
+      write (chit,*)it
+      if(iremd.eq.1)then
+         write(chrestart,'(A,I2.2)')'restart.xyz.',my_rank
+      else
+         chrestart='restart.xyz'
       end if
+      chsystem='cp '//trim(chrestart)//'  '//trim(chrestart)//'.'//adjustl(chit)
+      write(*,*)'Making backup of the current restart file.'
+      write(*,*)chsystem
+      call system(chsystem)  
    end if
 
 !-------SH initialization -- 
@@ -207,7 +213,6 @@ program abin_dyn
          endif
 
 #ifdef MPI
-! REMD not working yet
          if (iremd.eq.1.and.modulo(it,nswap).eq.0) call remd_swap(x, y, z, x, y, z, fxc, fyc, fzc, eclas)
 #endif
 

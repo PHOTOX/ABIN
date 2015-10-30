@@ -137,12 +137,6 @@ module mod_utils
    end do
    !check for existence of input files
 
-   inquire(file=chcoords,exist=lexist)
-   if (.not.lexist)then
-      write(*,*)'FATAL: Input file does not exists!'
-      write(*,*)chcoords
-      call abinerror('Get_Cmdline')
-   end if
 
    inquire(file=chinput,exist=lexist)
    if (.not.lexist)then
@@ -151,6 +145,13 @@ module mod_utils
       call abinerror('Get_Cmdline')
    end if
 
+#ifndef MPI
+   inquire(file=chcoords,exist=lexist)
+   if (.not.lexist)then
+      write(*,*)'FATAL: Input file does not exists!'
+      write(*,*)chcoords
+      call abinerror('Get_Cmdline')
+   end if
    if (chveloc.ne.'')then
       inquire(file=chveloc,exist=lexist)
       if (.not.lexist)then
@@ -159,6 +160,7 @@ module mod_utils
          call abinerror('Get_Cmdline')
       end if
    end if
+#endif
 
    end subroutine Get_cmdline
 

@@ -46,7 +46,7 @@ module mod_general
    integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0
    integer :: icv=0,irest=0,anal_ext=0,idebug=0
    integer :: irandom=156873,natom=0,pid
-   integer :: iqmmm=0
+   integer :: iqmmm=0, iremd=0
    integer :: parrespa=0 
    integer :: my_rank=0
    save

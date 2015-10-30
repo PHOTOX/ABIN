@@ -39,7 +39,7 @@ subroutine init(dt, values1)
    use mod_cp2k,     only: cp2k_init
 #endif
 #ifdef MPI
-   use mod_remd,     only: nswap, deltaT, iremd, remd_init
+   use mod_remd,     only: nswap, deltaT, remd_init
    use mod_terampi
    implicit none
    include 'mpif.h'
@@ -55,7 +55,7 @@ subroutine init(dt, values1)
    character(len=2) :: massnames(MAXTYPES)
    character(len=10)   :: chaccess
    character(len=200)  :: chinput, chcoords, chveloc
-   character(len=200)  :: chiomsg
+   character(len=200)  :: chiomsg, chout
    LOGICAL :: file_exists
    real(DP)  :: wnw=5.0d-5
    integer :: ierr
@@ -184,6 +184,8 @@ subroutine init(dt, values1)
       call allocate_arrays( natom, nwalk+1 )
 
 !-----READING GEOMETRY
+      if(iremd.eq.1) write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank
+
       open(111,file=chcoords,status = "old", action = "read", iostat=iost) 
       read(111,*, iostat=iost)natom1
       if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.")
@@ -397,58 +399,78 @@ else
 endif
 
 if (nwritev.gt.0)then
-   open(13,file='vel.dat',access=chaccess,action='write')
-endif
-
-if (ipimd.ne.1)then
-   open(19,file='energies.dat',access=chaccess,action='write')
-   write(19,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
-end if
-if(ipimd.eq.1.or.icv.eq.1)then
-  open(7,file='est_energy.dat',access=chaccess,action='write')
-  write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
-endif
-
-open(2,file='temper.dat',access=chaccess,action='write')
-write(2,*)'#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
-
-if(ipimd.eq.2)then
-  open(3,file='pop.dat',access=chaccess,action='write')
-  write(3,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
-  open(4,file='prob.dat',access=chaccess,action='write')
-  write(4,*)'#    Time[fs] CurrentState   Probabilities'
-  open(8,file='PES.dat',access=chaccess,action='write')
-  write(8,*)'#    Time[fs] Potential energies'
-  open(14,file='nacm_all.dat',access=chaccess,action='write')
-  open(15,file='dotprod.dat',access=chaccess,action='write')
-  write(15,*)'#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'
-  if(idebug.gt.1)then
-   open(16,file='bkl.dat',access=chaccess,action='write')
-   write(16,*)'# Hopping probabilities - bkl(i) [i=1,nstate]'
-   open(17,file='coef.dat',access=chaccess,action='write')
-   write(17,*)'# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
-   if(phase.eq.1)then
-      open(18,file='phase.dat',access=chaccess,action='write')
-      write(18,*)'# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
+   if(iremd.eq.1)then
+      write(chout,'(A,I2.2)')'vel.dat.',my_rank
+   else
+      chout='vel.dat'
    end if
-  endif
+   open(13,file=chout,access=chaccess,action='write')
 endif
 
-if(isbc.eq.1)then
- open(11,file='r.dat',access=chaccess,action='write')
- write(11,*)'#TimeStep     Radius[ANG]    density[kg.m^3]'
-endif
+   if (ipimd.ne.1)then
+      if(iremd.eq.1)then
+         write(chout,'(A,I2.2)')'energies.dat.',my_rank
+      else
+         chout='energies.dat'
+      end if
+      open(19,file=chout,access=chaccess,action='write')
+      write(19,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+   end if
+   if(ipimd.eq.1.or.icv.eq.1)then
+      open(7,file='est_energy.dat',access=chaccess,action='write')
+      write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
+   endif
 
-if(icv.eq.1)then
- open(122,file='cv.dat',access=chaccess,action='write')
- write(122,*)'#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
- close(122)
- if(ihess.eq.1)then
-  open(123,file='cv_dcv.dat',access=chaccess,action='write')
-  write(123,*)'#         Time[fs]  Cv-DCV   Cv-DCV'
-  close(123)
- endif
-endif
+   if(iremd.eq.1)then
+      write(chout,'(A,I2.2)')'temper.dat.',my_rank
+   else
+      chout='temper.dat'
+   end if
+   open(2,file=chout, access=chaccess, action='write')
+   write(2,*)'#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
+
+   if(ipimd.eq.2)then
+      open(3,file='pop.dat',access=chaccess,action='write')
+      write(3,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
+      open(4,file='prob.dat',access=chaccess,action='write')
+      write(4,*)'#    Time[fs] CurrentState   Probabilities'
+      open(8,file='PES.dat',access=chaccess,action='write')
+      write(8,*)'#    Time[fs] Potential energies'
+      open(14,file='nacm_all.dat',access=chaccess,action='write')
+      open(15,file='dotprod.dat',access=chaccess,action='write')
+      write(15,*)'#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'
+      if(idebug.gt.1)then
+         open(16,file='bkl.dat',access=chaccess,action='write')
+         write(16,*)'# Hopping probabilities - bkl(i) [i=1,nstate]'
+         open(17,file='coef.dat',access=chaccess,action='write')
+         write(17,*)'# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
+         if(phase.eq.1)then
+            open(18,file='phase.dat',access=chaccess,action='write')
+            write(18,*)'# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
+         end if
+      endif
+   endif
+
+   if(isbc.eq.1)then
+      if(iremd.eq.1)then
+         write(chout,'(A,I2.2)')'r.dat.',my_rank
+      else
+         chout='r.dat'
+      end if
+      open(11,file='r.dat',access=chaccess,action='write')
+      write(11,*)'#TimeStep     Radius[ANG]    density[kg.m^3]'
+   endif
+
+   if(icv.eq.1)then
+      open(122,file='cv.dat',access=chaccess,action='write')
+      write(122,*)'#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
+      close(122)
+      if(ihess.eq.1)then
+         open(123,file='cv_dcv.dat',access=chaccess,action='write')
+         write(123,*)'#         Time[fs]  Cv-DCV   Cv-DCV'
+         close(123)
+      endif
+   endif
 
 !------------------------------------------------------
 
@@ -477,6 +499,7 @@ endif
       if (chveloc.ne.'')then
          write(*,*)'Reading initial velocities in a.u. from external file:'
          write(*,*)chveloc 
+         if(iremd.eq.1) write(chveloc,'(A,I2.2)')trim(chveloc)//'.',my_rank
          open(500,file=chveloc, status='OLD', action = "READ")
          read(500,*, IOSTAT=iost)
          if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
@@ -946,25 +969,35 @@ endif
        if(iknow.ne.1) error=1
       endif
 
-      INQUIRE(FILE="movie.xyz", EXIST=file_exists)
+      if(iremd.eq.1)then
+         write(chout, '(A,I2.2)')'movie.xyz.',my_rank
+      else
+         chout='movie.xyz'
+      end if
+      INQUIRE(FILE=chout, EXIST=file_exists)
       if(file_exists)then
        if(irest.eq.0)then
-        write(*,*)'File "movie.xyz" exists.Please (re)move it or set irest=1.'
+        write(*,*)'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
         error=1
        else
         write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
        endif
       endif
 
-      INQUIRE(FILE="restart.xyz", EXIST=file_exists)
+      if(iremd.eq.1)then
+         write(chout, '(A,I2.2)')'restart.xyz.',my_rank
+      else
+         chout='restart.xyz'
+      end if
+      INQUIRE(FILE=chout, EXIST=file_exists)
       if(file_exists)then
        if(irest.eq.0)then
-        write(*,*)'File "restart.xyz" exists. Please (re)move it or set irest=1.'
+        write(*,*)'File ',trim(chout),' exists. Please (re)move it or set irest=1.'
         error=1
        endif
       else
        if(irest.eq.1)then
-         write(*,*)'File restart.xyz not found.' 
+         write(*,*)'File ', trim(chout), ' not found.' 
          error=1
        endif 
       endif

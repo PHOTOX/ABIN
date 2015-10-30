@@ -8,7 +8,7 @@ input=input$ibead
 geom=../geom.dat.$ibead
 
 natom=`cat $geom | wc -l`
-WRKDIR=OUT$ibead.$natom
+WRKDIR=OUT$ibead
 mkdir -p $WRKDIR ; cd $WRKDIR
 
 # You have to specify, which elements are present in your system

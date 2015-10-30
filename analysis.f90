@@ -72,18 +72,24 @@ module mod_analysis
 
    subroutine trajout(x,y,z,it)
      use mod_const, only: ANG
-     use mod_general, only: imini,nwalk,natom
+     use mod_general, only: imini,nwalk,natom, iremd, my_rank
      use mod_system, ONLY: names
      implicit none
      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
      integer,intent(in) :: it
      integer            :: iat,iw
-     character(len=20)  :: fgeom
+     character(len=20)  :: fgeom, chout
      
+     if(iremd.eq.1)then
+        write(chout, '(A,I2.2)')'movie.xyz.', my_rank
+     else
+        chout='movie.xyz'
+     end if
+
      if(it.le.imini)then
            open(101,file='movie_mini.xyz',access='append')
      else
-           open(101,file='movie.xyz',access='append')
+           open(101,file=chout,access='append')
      endif
 !printing with slightly lower precision for saving space
      fgeom='(A2,3E18.10E2)'
@@ -118,7 +124,7 @@ module mod_analysis
    end subroutine velout
 
    subroutine restout(x,y,z,vx,vy,vz,it)
-     use mod_general,only:icv, ihess, nwalk, ipimd, natom
+     use mod_general,only:icv, ihess, nwalk, ipimd, natom, iremd, my_rank
      use mod_nhc,    only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
      use mod_estimators
      use mod_kinetic,only: entot_cumul, est_temp_cumul
@@ -130,12 +136,19 @@ module mod_analysis
      integer,intent(in) :: it
      integer :: iat,iw,inh,itrj,ist1,is
      LOGICAL :: file_exists
+     character(len=200)    :: chout, chsystem
 
+     if(iremd.eq.1)then
+        write(chout, '(A,I2.2)')'restart.xyz.', my_rank
+     else
+        chout='restart.xyz'
+     end if
 
-     INQUIRE(FILE='restart.xyz', EXIST=file_exists)
-     if(file_exists) call system('cp restart.xyz restart.xyz.old')
+     INQUIRE(FILE=chout, EXIST=file_exists)
+     chsystem='cp '//trim(chout)//'  '//trim(chout)//'.old'
+     if(file_exists) call system(chsystem)
 
-     open(102,file='restart.xyz',action='WRITE')
+     open(102, file=chout, action='WRITE')
 
      write(102,*)it
 
@@ -231,7 +244,7 @@ module mod_analysis
    ! Subroutine that reads from restart.xyz during restart
    ! It is called from subroutine init.
    subroutine restin(x,y,z,vx,vy,vz,it)
-     use mod_general,only: icv, ihess, nwalk, ipimd, natom
+     use mod_general,only: icv, ihess, nwalk, ipimd, natom, iremd, my_rank
      use mod_nhc,    only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
      use mod_estimators
      use mod_kinetic,only: entot_cumul, est_temp_cumul
@@ -244,12 +257,19 @@ module mod_analysis
      integer :: iat,iw,inh,itrj,ist1,is
      character(len=100) :: chtemp
      logical :: prngread
+     character(len=20)  :: chin
 
      prngread=.false. 
 
+     if(iremd.eq.1)then
+        write(chin, '(A,I2.2)')'restart.xyz.', my_rank
+     else
+        chin='restart.xyz'
+     end if
+
      write(*,*)'irest=1, Reading geometry, velocities and other information from restart.xyz.'
 
-     open(111,file='restart.xyz',status = "OLD", action = "READ")
+     open(111,file=chin,status = "OLD", action = "READ")
      read(111,*)it
      read(111,'(A)')chtemp
      call checkchar(chtemp, chcoords)
