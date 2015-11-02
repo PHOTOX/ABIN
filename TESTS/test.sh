@@ -1,6 +1,8 @@
 #!/bin/bash
 ABINEXE="$PWD/$1 -x mini.dat"
 
+cd TESTS 
+
 function dif_files {
 local status=0
 local cont
@@ -9,17 +11,20 @@ cont_no=1
 for file in $* 
 do
    if [[ -e $file.ref ]];then
-      diff  $file $file.ref > $file.diff
+      diff -y -W 200  $file $file.ref > $file.diff
+      if [[ $? -ge 1 ]];then
+         ../numdiff.py $file.diff
+      fi
       if [[ $? -ge 1 && $cont_no -eq 1 ]];then
          status=1
          echo "File $file differ. Continue? [y/n]"
          while true 
          do
             read cont
-            if [[ $cont = "n" ]];then
+            if [[ $cont = "n" || $cont = "no" ]];then
                echo "Exiting..."
                exit 1
-            elif [[ $cont = "y" ]];then
+            elif [[ $cont = "y" || $cont = "yes" ]];then
                echo "Continuing..."
                cont_no=0
                break
@@ -51,19 +56,41 @@ if [[ -e "restart.xyz.0.ref" ]];then
 fi
 }
 
-
-cd TESTS
 err=0
 
 files=( bkl.dat phase.dat coef.dat phaserest.dat phaserest.?? nacmrest.dat nacmrest.dat.?? minimize.dat geom.mini.xyz temper.dat r.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? DYN/OUT* MM/OUT* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie_mini.xyz restart.xyz.old restart.xyz restart.xyz.?? restart.xyz.? )
 
 #EULER should check wf_thresh conditions
+# TODO: Make test_readme.txt, with specifications of every test
+# TODO: by default, use mmwater as a potential instead of NAB
+# Make tests for NAB, MPI and CP2K
 if [[ $2 == "sh" ]];then
-folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
+   folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
+elif  [[ $2 = "all" || $2 = "clean" ]];then
+   folders=( CMD GLE SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE SH_TDC PIGLE PIMD ABINITIO SHAKE HARMON MINI QMMM )
+   if [[ $3 = "TRUE" ]];then
+      let index=${#folders[@]}+1
+      folders[index]=NAB
+   fi
+   if [[ $4 = "TRUE" ]];then
+      let index=${#folders[@]}+1
+      folders[index]=MPI
+   fi
+   if [[ $5 = "TRUE" ]];then
+      let index=${#folders[@]}+1
+      folders[index]=CP2K
+   fi
+   if [[ $6 = "TRUE" ]];then
+      let index=${#folders[@]}+1
+      folders[index]=FFTW
+   fi
 else
-folders=( CMD GLE SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE SH_TDC PIGLE PIMD ABINITIO SHAKE HARMON MINI QMMM )
-#folders=( SHAKE )
+   folders=$2
 fi
+#folders=( SHAKE )
+
+echo "Running tests in directories:"
+echo ${folders[@]}
 
 for dir in ${folders[@]}
 do
@@ -88,7 +115,7 @@ do
       $ABINEXE -i input.in2 >> output
    fi
 
-   if [[ $2 = "makeref" ]];then
+   if [[ $7 = "makeref" ]];then
 
       makeref ${files[@]}
 

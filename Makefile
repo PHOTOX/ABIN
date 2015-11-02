@@ -12,6 +12,7 @@
 # For compilation with static system libraries, see:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46539
 include make.vars
+TEST = all
 
 export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
@@ -86,21 +87,17 @@ clean :
 distclean :
 	/bin/rm -f *.o *.mod NAB/*.o
 
-# Run all tests (this is currently compiler dependent)
-# You might expect some machine precision differences
+# Run tests 
 test :
-	/bin/bash ./test.sh ${OUT} all
-# Test only surface hopping.
-testsh :
-	/bin/bash ./test.sh ${OUT} sh
+	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW}
 # Clean all test folders.
 testclean :
-	/bin/bash ./test.sh ${OUT} clean
+	/bin/bash TESTS/test.sh ${OUT} clean 
 
 # This will automatically generate new reference data for tests
 makeref :
-	/bin/bash ./test.sh ${OUT} makeref
-
+	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} makeref
+ 
 # Dummy target for debugging purposes
 debug: 
 	echo ${LIBS}

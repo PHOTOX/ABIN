@@ -22,3 +22,4 @@ tau=0.159
 I should really test this for larger system.....
 
 ! For using GLE with REMD, we need to input multiple seeds...make irandom an array
+! REMD with ab initio does not yet work
