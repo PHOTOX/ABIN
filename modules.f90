@@ -270,6 +270,7 @@ module mod_system
      if(am(i).le.0)then
         write(*,*)'ERROR: Some masses were not specified. Exiting...'
         call finish(1)
+        stop 1
      end if
    end do
 

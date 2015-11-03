@@ -216,12 +216,6 @@ subroutine init(dt, values1)
          enddo
       enddo
 !-----END OF READING GEOMETRY      
-     call mass_init(masses, massnames)
-     ! Lower the second character of atom name.
-     ! This is because of TeraChem.
-      do iat=1,natom
-         names(iat)(2:2)=UpperToLower(names(iat)(2:2))
-      end do
 
 
       ! the namelist system does not need to be present
@@ -239,6 +233,13 @@ subroutine init(dt, values1)
             massnames(iat)=LowerToUpper(massnames(iat))
          end do
       end if
+
+     call mass_init(masses, massnames)
+     ! Lower the second character of atom name.
+     ! This is because of TeraChem.
+      do iat=1,natom
+         names(iat)(2:2)=UpperToLower(names(iat)(2:2))
+      end do
 
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
       allocate ( natmolt(natom)  )
@@ -551,8 +552,9 @@ endif
       write(*,*)
    end if
    call flush(6)
-
+#ifdef MPI
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
    pid=GetPID()
    write(*,*)'Pid of the current proccess is:',pid
 
