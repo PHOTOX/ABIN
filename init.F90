@@ -552,6 +552,7 @@ endif
       write(*,*)
    end if
    call flush(6)
+
 #ifdef MPI
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif

@@ -21,7 +21,7 @@ export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
 F_OBJS :=  transform.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
-nab.o force_bound.o force_guillot.o water.o force_cp2k.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
+force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
 minimizer.o arrays.o init.o mdstep.o 
 
 C_OBJS := EWALD/ewaldf.o

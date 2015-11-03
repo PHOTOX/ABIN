@@ -54,7 +54,8 @@ program abin_dyn
    ! TODO: move this bit to init
    if(my_rank.eq.0) call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
 
-   if(irest.eq.1)then
+   ! TODO: in case of _cp2k_, this needs to be done only by rank0
+   if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then
       write (chit,*)it
       if(iremd.eq.1)then
          write(chrestart,'(A,I2.2)')'restart.xyz.',my_rank
@@ -152,26 +153,36 @@ program abin_dyn
       it=it+1
       do it=(it),nstep
 
+#ifdef MPI
+! This is needed, because all ranks need to see EXIT
+         call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
          INQUIRE(FILE="EXIT", EXIST=file_exists)
          if(file_exists)then
-          write(*,*)'Found file EXIT. Exiting...'
-          call system('rm EXIT')
-          if (istage.gt.0)then
+            write(*,*)'Found file EXIT. Exiting...'
+            if (istage.gt.0)then
        
-           if(istage.eq.1)then     
-            call QtoX(vx,vy,vz,transxv,transyv,transzv)
-            call QtoX(x,y,z,transx,transy,transz)
-           endif
-           if(istage.eq.2)then
-            call UtoX(x,y,z,transx,transy,transz)
-            call UtoX(vx,vy,vz,transxv,transyv,transzv)
-           endif
+               if(istage.eq.1)then     
+                  call QtoX(vx,vy,vz,transxv,transyv,transzv)
+                  call QtoX(x,y,z,transx,transy,transz)
+               endif
+               if(istage.eq.2)then
+                  call UtoX(x,y,z,transx,transy,transz)
+                  call UtoX(vx,vy,vz,transxv,transyv,transzv)
+               endif
        
-           call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
-          else
-           call restout(x,y,z,vx,vy,vz,it-1)
-          endif
-          exit                                          !break from time loop
+               call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
+            else
+               call restout(x,y,z,vx,vy,vz,it-1)
+            endif
+
+#ifdef MPI
+            call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
+            if (my_rank.eq.0) call system('rm EXIT')
+
+            exit                                          !break from time loop
+
          endif
        
          if(idebug.eq.2)then
@@ -337,24 +348,12 @@ subroutine finish(error_code)
 
 #ifdef MPI
    if (pot.eq.'_tera_') call finalize_terachem()
-#ifndef CP2K
-   call MPI_FINALIZE ( errmpi )
-   if (errmpi.ne.0)then
-      write(*,*)'Bad signal from MPI_FINALIZE: ', errmpi
-      write(*,*)'Please, check manually that TeraChem server ended.'
-      ! Let's try to continue
-   end if
-#else
-!  MPI_FINALIZE is called in this routine as well
-   if(pot.eq.'_cp2k_') call cp2k_finalize()
-#endif
-
 #endif
 
 
    call deallocate_arrays( )
 
-   close(1);close(2);close(3)
+   close(2);close(3)
    do i=7,20
       inquire(unit=i,opened=lopen)
       if (lopen.and.i.ne.5.and.i.ne.6) close(i)
@@ -389,6 +388,22 @@ subroutine finish(error_code)
          write(*,*)''
       end if
    end if
+
+#ifdef MPI
+   if (error_code.eq.0.and.pot.ne."_cp2k_")then
+      call MPI_FINALIZE ( errmpi )
+      if (errmpi.ne.0)then
+         write(*,*)'Bad signal from MPI_FINALIZE: ', errmpi
+         ! Let's try to continue
+      end if
+   else if (error_code.gt.0)then
+      call MPI_Abort(MPI_COMM_WORLD, ierr)
+   end if
+#endif
+#ifdef CP2K
+!  MPI_FINALIZE is called in this routine as well
+   if(pot.eq.'_cp2k_') call cp2k_finalize()
+#endif
 
 end subroutine finish
 

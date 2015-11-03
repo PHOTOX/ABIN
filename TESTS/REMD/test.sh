@@ -1,7 +1,8 @@
 #/bin/bash
 source SetEnvironment.sh CP2K
 
-rm -f restart.xyz WATER* movie.xyz cp2k.out
+rm -f  movie.xyz* cp2k.out temper.dat.* energies.dat.* fort.*
+rm -f restart.xyz*
 
-$MPIRUN -np 3 ../../abin.remd
-#$MPIRUN -np 2 xterm -e gdb ../../abin.cp2k.popt
+$MPIRUN  -np 2 ../../abin.mpi
+#$MPIRUN -np 2 xterm -e gdb ../../abin.mpi

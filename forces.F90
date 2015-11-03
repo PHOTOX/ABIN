@@ -37,18 +37,17 @@ module mod_forces
 
 ! Initialization
       do iw=1,nwalk
-       do iat=1,natom
-       fx(iat,iw)=0.0d0
-       fy(iat,iw)=0.0d0
-       fz(iat,iw)=0.0d0
-       fxab(iat,iw)=0.0d0
-       fyab(iat,iw)=0.0d0
-       fzab(iat,iw)=0.0d0
-       enddo
+         do iat=1,natom
+            fx(iat,iw)=0.0d0
+            fy(iat,iw)=0.0d0
+            fz(iat,iw)=0.0d0
+            fxab(iat,iw)=0.0d0
+            fyab(iat,iw)=0.0d0
+            fzab(iat,iw)=0.0d0
+         enddo
       enddo
 
       eclas=0.0d0
-
 
 ! Back stage transformation,cartesian coordinates are kept in trans
 ! matrices(even if staging is OFF!)
@@ -105,6 +104,8 @@ module mod_forces
 
 !---------QMMM SECTION-----------------
 !- ONIOM method (iqmmm=1) is called in force_abin
+
+!  The following are not really working.
      if(iqmmm.eq.2) call force_nab(transx,transy,transz,fxab,fyab,fzab,eclas)
      if(iqmmm.eq.3) call force_LJCoul(transx,transy,transz,fxab,fyab,fzab,eclas)
 

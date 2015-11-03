@@ -1,0 +1,72 @@
+#!/bin/bash
+# This is a sample script for launching ABIN simulations in cluster environments.
+# using internal CP2K interface.
+# 1. Copy all data from CWD to the node's scratch.
+# 2. Launch ABIN.
+# 3. Copy data back (only newer files are copied!).
+# 4. Remove scratch directory. (if delscratch = true)
+
+
+# SETUP --------------------------------
+NPROC=1
+OUTPUT=output
+ABINEXE=/home/hollas/PHOTOX/bin/abin.cp2k
+JOBNAME=ABIN_${JOB_ID}_$$
+INPUTPARAM=input.in
+INPUTGEOM=mini.dat
+delscratch=true
+INPUTVELOC=
+########################################
+
+#$ -V
+source SetEnvironment.sh CP2K
+
+SCRDIR=/scratch/$USER/$JOBNAME
+
+echo "Job started at: " >> $OUTPUT
+date >> $OUTPUT
+echo "Running on node:" >> $OUTPUT
+uname -n >> $OUTPUT
+echo "Working directory:" >> $OUTPUT
+echo "$SCRDIR" >> $OUTPUT
+echo " " >> $OUTPUT
+uname -n > job.log
+echo "$SCRDIR" >> job.log
+
+KDE=`pwd`
+
+if [[ -d $SCRDIR ]];then
+   echo "Job direcory $SCRDIR already exist!"
+   echo "Perhaps it's a leftover from some old job, you could probably delete it."
+   echo "Exiting..."
+   exit 1
+else
+   mkdir $SCRDIR
+fi
+
+cp -upr * $SCRDIR/.
+
+cd $SCRDIR
+
+if [[ -z $INPUTVELOC ]];then
+   $MPIRUN -np $NPROC $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+else
+   $MPIRUN -np $NPROC $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+fi
+
+cp -upr * $KDE/.
+if [[ $? -ne "0" ]];then
+   echo "Error when copying the data from scratch back to the server."
+   echo "I will keep the directory $SCRDIR on node:"
+   uname -a
+   exit 1
+fi
+
+
+cd ..
+
+if [[ $delscratch -eq "true" ]];then
+   rm -r $JOBNAME
+fi
+
+
