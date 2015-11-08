@@ -1,5 +1,7 @@
 #!/bin/bash
-# This is a sample script for launching ABIN simulations in cluster environments.
+# This is a sample script for launching ABIN simulations in cluster environments
+# using MPI TeraChem interface.
+
 # 1. Copy all data from CWD to the node's scratch.
 # 2. Launch ABIN.
 # 3. Copy data back (only newer files are copied!).

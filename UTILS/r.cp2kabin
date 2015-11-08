@@ -1,6 +1,8 @@
 #!/bin/bash
-# This is a sample script for launching ABIN simulations in cluster environments.
+# This is a sample script for launching ABIN simulations in cluster environments
 # using internal CP2K interface.
+# The input for CP2K must be in file cp2k.inp
+
 # 1. Copy all data from CWD to the node's scratch.
 # 2. Launch ABIN.
 # 3. Copy data back (only newer files are copied!).

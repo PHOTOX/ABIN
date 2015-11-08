@@ -119,9 +119,9 @@ real*8,allocatable  :: r(:), delta(:), alfa(:)
 real*8,allocatable  :: bins_dist(:,:), bins_ang(:,:),bins_dih(:,:)
 integer,allocatable :: dists(:,:), angles(:,:), dihs(:,:)
 integer,allocatable :: ignore(:)
-real*8  :: distmin=0.5d0, distmax=5.0d0, get_distance
-real*8  :: dihmin=-180.0d0, dihmax=180.0d0, get_dihedral
-real*8  :: angmin=0.0d0, angmax=180.0d0, get_angle
+real*8  :: distmin=0.5d0, distmax=5.0d0
+real*8  :: dihmin=-180.0d0, dihmax=180.0d0
+real*8  :: angmin=0.0d0, angmax=180.0d0
 real*8  :: shiftdih=0.0d0
 integer :: nbin_dist=1000, nbin_ang=180, nbin_dih=180
 integer :: ndist=0, nang=0, ndih=0

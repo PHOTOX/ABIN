@@ -27,7 +27,7 @@ echo '$end
 
 $rem'>>$input
 
-if [ "$istep" -ne "1" ]; then
+if [[ $timestep -ne 1 ]]; then
   echo 'SCF_GUESS read'>>$input
 fi
 
