@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 import argparse
+import decimal
 from sys import exit
-from decimal import *
+#from decimal import *
 
-getcontext().prec = 14
+decimal.getcontext().prec = 16
 
 parser = argparse.ArgumentParser()
 parser.add_argument('inpfile', metavar='input_file.diff', help='Text file generetad by diff -y command' )
@@ -13,12 +14,19 @@ inpfile = opts.inpfile
 def compare(numbers1, numbers2):
     """Compare each element of numbers1 and numbers2"""
     for i in range(len(numbers1)):
-        dec1 = Decimal(numbers1[i])*Decimal(1)
-        dec2 = Decimal(numbers2[i])*Decimal(1)
-        if dec1 != dec2:
-            print 'Comparison failed'
-            print numbers1[i], numbers2[i]
-            exit(1)
+       try:
+          dec1 = decimal.Decimal(numbers1[i])*decimal.Decimal(1)
+          dec2 = decimal.Decimal(numbers2[i])*decimal.Decimal(1)
+       except decimal.InvalidOperation:
+          print("Non-numerical difference found!")
+          exit(1)
+
+       if dec1 != dec2:
+          print('Comparison failed')
+          print('Differing numbers: '+str(numbers1[i])+"  "+numbers2[i])
+          delta = float(numbers1[i]) - float(numbers2[i])
+          print('Delta = ',delta)
+          exit(1)
 
 
 with open(inpfile, 'r') as f:
