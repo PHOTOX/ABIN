@@ -71,12 +71,12 @@ module mod_utils
 
    subroutine abinerror(chcaller)
    character(len=*),intent(in)   :: chcaller
-   call finish(1)
-   open(unit=500,file='ERROR')
+   open(unit=500, file='ERROR', action='write', access='sequential')
    write(500,*)'FATAL ERROR encountered in subroutine: ',chcaller
    write(500,*)'Check standard output for further information. Exiting now...'
    close(unit=500)
    call flush(6)
+   call finish(1)
    stop 1
    end subroutine abinerror
 

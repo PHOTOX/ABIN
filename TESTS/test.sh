@@ -11,8 +11,9 @@ cont_no=1
 for file in $* 
 do
    if [[ -e $file.ref ]];then
-      diff -y -W 200  $file $file.ref > $file.diff
+      diff $file $file.ref > $file.diff
       if [[ $? -ge 1 ]];then
+         diff -y -W 200  $file $file.ref > $file.diff
          ../numdiff.py $file.diff
       fi
       if [[ $? -ge 1 && $cont_no -eq 1 ]];then
@@ -105,6 +106,7 @@ do
    clean ${files[@]}
 
    if [[ $2 = "clean" ]];then
+      echo "Cleaning files in directory $dir "
       cd ../
       continue
    fi
