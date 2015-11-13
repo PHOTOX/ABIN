@@ -1,5 +1,8 @@
 # Super simple Makefile for ABIN		Daniel Hollas,2014
 #
+# The user defined variables are included from file make.vars,
+# which is not under version control
+#
 # Simply type "make" and you should get the binary named $OUT
 # Before recompiling, it is wise to clean up by "make clean"
 #
@@ -11,8 +14,9 @@
 #
 # For compilation with static system libraries, see:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46539
+#
+TEST=all
 include make.vars
-TEST = all
 
 export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
@@ -63,6 +67,7 @@ LDLIBS = -lm -lstdc++ ${LIBS}
 # The following line does not seem to work
 #LDLIBS = ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
 
+# Adding rest of the Fortran objects
 # This hack is needed for force_tera.o and fftw_interface.o
 F_OBJS := modules.o utils.o interfaces.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
 
@@ -81,15 +86,17 @@ abin.o : abin.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c abin.F90
 
 clean :
-	/bin/rm -f *.o *.mod
+	/bin/rm -f *.o *.mod $(OUT)
 	cd WATERMODELS && make clean
 
+# Remove NAB objects as well
 distclean :
 	/bin/rm -f *.o *.mod NAB/*.o
 
-# Run tests 
+# Run test suite 
 test :
 	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW}
+
 # Clean all test folders.
 testclean :
 	/bin/bash TESTS/test.sh ${OUT} clean 

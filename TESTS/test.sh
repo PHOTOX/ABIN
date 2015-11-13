@@ -13,7 +13,7 @@ do
    if [[ -e $file.ref ]];then
       diff $file $file.ref > $file.diff
       if [[ $? -ge 1 ]];then
-         diff -y -W 200  $file $file.ref > $file.diff
+         diff -y -W 320  $file $file.ref | grep '|' > $file.diff
          ../numdiff.py $file.diff
       fi
       if [[ $? -ge 1 && $cont_no -eq 1 ]];then

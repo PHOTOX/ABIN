@@ -19,6 +19,8 @@ TESTS/*/restart.xyz.old
 TESTS/*/restart.xyz.10
 TESTS/*/debug.nacm
 TESTS/*/nacmrest.dat.10
+TESTS/SH_EULER/ERROR
+TESTS/SH_BUTCHER/geom.?.?.?
 WATERMODELS/libttm.a
 DOC/*.log
 DOC/*.bbl
