@@ -41,6 +41,9 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
          write(chhess,'(A,I2.2)')trim(chhess)//'.',my_rank
       end if
 
+!     Delete the last geometry
+      open(unit=20+iw, file=chgeom)
+      close(unit=20+iw, status='delete')
 !----WRITING GEOMETRY IN ANGSTROMS
       open(unit=20+iw,file=chgeom, action='write', access='SEQUENTIAL')
       do iat=1,natqm
@@ -281,7 +284,7 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
    enddo
 
 
-   close(unit=20+iw,status='delete')
+   close(unit=20+iw, status='delete')
 
 !-----------------MM, only model QM part-------------------------- 
 

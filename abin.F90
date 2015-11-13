@@ -137,24 +137,32 @@ program abin_dyn
       end if
 !---------------- PROPAGATION-----------------------------------
 
+#ifdef MPI
+!     Without this Barrier, ranks > 0 do not write geom.dat in force_clas
+!     I don't know why the hell not.
+      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
 !----getting initial forces and energies
-      call force_clas(fxc,fyc,fzc,x,y,z,eclas)
-      if (ipimd.eq.1) call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas)
+      if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
 !----setting initial values for surface hoping
       if(ipimd.eq.2)then
          do itrj=1, ntraj
             if (it.eq.0) call get_nacm(itrj)
-            call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
+            call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
          end do
       end if
 
 !---------LOOP OVER TIME STEPS
-!-----it variable is set to 0 or read from restart.xyz in subroutine init
+!---- "it" variable is set to 0 or read from restart.xyz in subroutine init
       it=it+1
       do it=(it),nstep
 
 #ifdef MPI
 ! This is needed, because all ranks need to see EXIT
+! Maybe we should get rid of it for performance reasons
+! We could still call Abort from rank0,but we would not be sure that we are on
+! the same timestep. Does it matter??
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
          INQUIRE(FILE="EXIT", EXIST=file_exists)
@@ -218,9 +226,9 @@ program abin_dyn
 !-------SURFACE HOPPING SECTION----------------------------      
          if(ipimd.eq.2)then
             call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
-            px=amt*vx
-            py=amt*vy
-            pz=amt*vz
+            px = amt * vx
+            py = amt * vy
+            pz = amt * vz
          endif
 
 #ifdef MPI
