@@ -74,8 +74,10 @@ program abin_dyn
    endif
 
 !$ nthreads=omp_get_max_threads()
-!$ write(*,*)'Number of threads used = ',nthreads
-!$ write(*,*)''
+   if (my_rank.eq.0)then
+!$    write(*,*)'Number of threads used = ',nthreads
+      write(*,*)''
+   end if
 
 !  Stage transformation
 !  Masses, velocities and positions are transformed here into a new set of u variables
@@ -212,16 +214,9 @@ program abin_dyn
          endif
        
          !TODO: call Update_vel()
-!         vx=px/amt
-!         vy=py/amt
-!         vz=pz/amt
-         do iw=1,nwalk
-            do iat=1,natom
-               vx(iat,iw)=px(iat,iw)/amt(iat,iw)
-               vy(iat,iw)=py(iat,iw)/amt(iat,iw)
-               vz(iat,iw)=pz(iat,iw)/amt(iat,iw)
-            enddo
-         enddo
+         vx = px / amt
+         vy = py / amt
+         vz = pz / amt
 
 !-------SURFACE HOPPING SECTION----------------------------      
          if(ipimd.eq.2)then
@@ -232,7 +227,9 @@ program abin_dyn
          endif
 
 #ifdef MPI
-         if (iremd.eq.1.and.modulo(it,nswap).eq.0) call remd_swap(x, y, z, x, y, z, fxc, fyc, fzc, eclas)
+         if (iremd.eq.1.and.modulo(it,nswap).eq.0.and.it.gt.imini)then
+            call remd_swap(x, y, z, x, y, z, fxc, fyc, fzc, eclas)
+         end if
 #endif
 
 !--------------------SECTION of trajectory ANALYSIS

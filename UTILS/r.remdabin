@@ -11,7 +11,7 @@
 
 # SETUP --------------------------------
 OUTPUT=output
-ABINEXE=/home/hollas/PHOTOX/bin/abin.cp2k
+ABINEXE=/home/hollas/PHOTOX/bin/abin.mpi
 JOBNAME=ABIN_${JOB_ID}_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
@@ -20,6 +20,7 @@ INPUTVELOC=
 ########################################
 
 #$ -V
+# We assume here that ABIN was compiled by the same MPI compiler as CP2K
 source SetEnvironment.sh CP2K
 
 SCRDIR=/scratch/$USER/$JOBNAME

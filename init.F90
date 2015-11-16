@@ -39,12 +39,8 @@ subroutine init(dt, values1)
    use mod_cp2k,     only: cp2k_init
 #endif
 #ifdef MPI
-   use mod_remd,     only: nswap, deltaT, remd_init
+   use mod_remd
    use mod_terampi
-   implicit none
-   include 'mpif.h'
-#else
-   implicit none
 #endif
    real(DP),intent(out) :: dt
    integer,dimension(8) :: values1
@@ -67,23 +63,23 @@ subroutine init(dt, values1)
 
    namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-            parrespa,dime,ncalc,idebug, enmini, rho, iknow, &
-#ifdef MPI  
-            watpot, iremd  ! ,teraport  : not really used at this moment
-   namelist /remd/   nswap, deltaT
-#else
-            watpot
-#endif
+            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd 
+
+   namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
    namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
                      scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
+
    namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
                      nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
                      k,r0,k1,k2,k3,De,a, &
                      Nshake,ishake1,ishake2,shake_tol
+
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
                      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
+
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
+
    namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
 
 
@@ -261,14 +257,7 @@ subroutine init(dt, values1)
 #ifdef MPI
       read(150, remd)
       rewind(150)
-      call remd_init()
-      call flush(6)
-      call MPI_Barrier(MPI_COMM_WORLD, ierr)
-      temp = temp+my_rank*deltaT
-      ! not sure about this
-      if (temp0.gt.0) temp0 = temp0+my_rank*deltaT
-      write(*,*)'Temperature of replica ', my_rank,'is ', temp
-      deltaT = deltaT / AUTOK
+      call remd_init(temp, temp0)
 #else
       write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
       write(*,*)'You cannot do REMD.'
@@ -407,6 +396,7 @@ if (nwritev.gt.0)then
    end if
    open(13,file=chout,access=chaccess,action='write')
 endif
+
 
    if (ipimd.ne.1)then
       if(iremd.eq.1)then
@@ -552,7 +542,6 @@ endif
       write(*,*)
    end if
    call flush(6)
-
 #ifdef MPI
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif

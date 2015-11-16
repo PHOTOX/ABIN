@@ -56,7 +56,6 @@ endif
 
 #MPI STUFF
 ifeq  ($(MPI),TRUE) 
-  FC = $(MPI_PATH)/bin/mpifort
   DFLAGS += -DMPI
   INC    += $(MPI_INC)
   LIBS   += $(MPI_LIBS)
