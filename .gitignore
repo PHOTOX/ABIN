@@ -6,6 +6,7 @@ date.inc
 *temp
 TESTS/*/*diff
 TESTS/*/*dat
+!TESTS/*/mini.dat
 TESTS/*/*out
 TESTS/*/*dat.0?
 TESTS/*/*xyz
