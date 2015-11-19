@@ -428,9 +428,9 @@ module mod_sh
       end if
 
       if (abs(popsum-1.0d0).gt.popsumthr)then
-         write(*,*)'ERROR:Sum of populations=',popsum, &
-          'which differs from 1.0 by more than popsumthr=',popsumthr
-         write(*,*)'Increase number of substeps or use more accurate integrator.'
+         write(*,*)'ERROR:Sum of electronic populations = ',popsum
+         write(*,*)'which differs from 1.0 by more than popsumthr = ',popsumthr
+         write(*,*)'Increase the number of substeps or use more accurate integrator.'
          call abinerror('surfacehop')
       end if
    end subroutine check_popsum

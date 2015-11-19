@@ -2,7 +2,7 @@ This is a sample input file for ABIN
 NOTE: order of input sections matters!!
 
 &general
-pot='nab'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
+pot='mmwater'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
 ipimd=0,		!classical simulation 0, quantum simulation 1
 nwalk=1,		!number of random walkers 
 imini=0,		!equilibration period,!not properly implemented yet

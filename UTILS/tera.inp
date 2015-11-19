@@ -1,0 +1,7 @@
+basis 		6-31g*
+charge   	0	
+spinmult	1
+method 		blyp
+gpus		1
+integrator      reversible_d
+end

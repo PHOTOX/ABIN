@@ -995,7 +995,7 @@ int mme_init_sff(PARMSTRUCT_T * prm_in, int *frozen_in, int *constrained_in,
   }
 
    //DHmod: initialization of cutoff and nb and IPS
-   // stupidly done through pme.h, since we have somhow get from nabinit here
+   // stupidly done through pme.h, since we have to somehow get from nabinit here
    // i.e. I had to bypass mme_init
    cut=cut_pme;
    nsnb=nsnb_pme;

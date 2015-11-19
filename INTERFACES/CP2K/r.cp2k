@@ -2,25 +2,25 @@
 cd CP2K
 timestep=$1
 ibead=$2
-input=dyn-$ibead-input
+input=input$ibead.inp
 natom=`cat ../geom.dat.$ibead | wc -l` 
 let lines=natom+2
 
-source SetEnvironment.sh CP2K
+source ../SetEnvironment.sh CP2K
 
-echo "$natom" > dyn-$ibead-geom.xyz
-echo " " >> dyn-$ibead-geom.xyz
-cat ../geom.dat.$ibead >> dyn-$ibead-geom.xyz  #only xyz coordinates
+echo "$natom" > input$ibead.xyz
+echo " " >> input$ibead.xyz
+cat ../geom.dat.$ibead >> input$ibead.xyz  #only xyz coordinates
 
 # TEMPLATE FOR AB INITIO DYNAMICS with CP2K
 # MODIFY accordingly and set pot='cp2k' in input.in
 
 # Number of processors
-nproc=8
+nproc=16
 
-cat > $input.inp << EOF
+cat > $input << EOF
 &GLOBAL
-	PROJECT dyn-$ibead
+	PROJECT input$ibead
 	PREFERRED_FFT_LIBRARY FFTW
 	FFTW_PLAN_TYPE MEASURE
 	RUN_TYPE ENERGY_FORCE
@@ -30,12 +30,12 @@ cat > $input.inp << EOF
 &FORCE_EVAL
 
     &DFT
-        CHARGE 0
+        CHARGE 1
         BASIS_SET_FILE_NAME BASIS_MOLOPT
         POTENTIAL_FILE_NAME GTH_POTENTIALS
 
         &MGRID
-            CUTOFF 500
+            CUTOFF 400
             NGRIDS 5
         &END MGRID
 
@@ -47,7 +47,7 @@ cat > $input.inp << EOF
 
             SCF_GUESS RESTART
             MAX_SCF 20
-            EPS_SCF 5.0E-7
+            EPS_SCF 1.0E-6
 
             &OT
                 MINIMIZER DIIS
@@ -56,7 +56,7 @@ cat > $input.inp << EOF
 
             &OUTER_SCF
                 MAX_SCF 100
-                EPS_SCF 5.0E-7
+                EPS_SCF 1.0E-6
             &END OUTER_SCF
 
             &PRINT
@@ -77,8 +77,8 @@ cat > $input.inp << EOF
             &END XC_FUNCTIONAL
 
             &XC_GRID
-                XC_SMOOTH_RHO NN10
-                XC_DERIV SPLINE2_SMOOTH
+               XC_SMOOTH_RHO NN10
+               XC_DERIV NN10_SMOOTH
             &END XC_GRID
 
 
@@ -88,7 +88,7 @@ cat > $input.inp << EOF
 
     &SUBSYS
         &TOPOLOGY
-            COORD_FILE_NAME dyn-$ibead-geom.xyz
+            COORD_FILE_NAME input$ibead.xyz
             COORD_FILE_FORMAT XYZ
         &END TOPOLOGY
         &CELL
@@ -96,15 +96,15 @@ cat > $input.inp << EOF
         &END CELL
         &KIND H
             BASIS_SET DZVP-MOLOPT-SR-GTH
-            POTENTIAL GTH-PBE-q1
+            POTENTIAL GTH-BLYP-q1
         &END KIND
         &KIND O
             BASIS_SET DZVP-MOLOPT-SR-GTH
-            POTENTIAL GTH-PBE-q6
+            POTENTIAL GTH-BLYP-q6
         &END KIND
         &KIND N
             BASIS_SET DZVP-MOLOPT-SR-GTH
-            POTENTIAL GTH-PBE-q5
+            POTENTIAL GTH-BLYP-q5
         &END KIND
     &END SUBSYS
 
@@ -121,7 +121,7 @@ EOF
 
 #######LAUNCHING PROGRAM###########
 
-mpirun -np $nproc $CP2KEXE $input.inp > $input.out
+$MPIRUN -np $nproc $CP2KEXE_MPI $input > $input.out
 
 #check whether all is ok
 if [[ $? -eq 0 ]];then

@@ -1,7 +1,6 @@
 #!/bin/bash
 cd MM
-source SetEnvironment.sh DFTB
-EXE=$DFTBEXE
+source ../SetEnvironment.sh DFTB
 
 timestep=$1
 ibead=$2
@@ -46,12 +45,12 @@ fi
 
 rm -f detailed.out
 
-$EXE  &> $input.out
+$DFTBEXE  &> $input.out
 ################################
 cp $input.out $input.out.old
 
 ### EXTRACTING ENERGY AND FORCES
-grep 'Total energy:' detailed.out | awk '{print $3}' >> ../../engrad_mm.dat.$ibead
+grep 'Total energy:' detailed.out | awk '{print $3}' > ../../engrad_mm.dat.$ibead
 awk -v natom=$natom '{if ($2=="Forces"){for (i=1;i<=natom;i++){getline;printf"%3.15e %3.15e %3.15e \n",-$1,-$2,-$3}}}' \
  detailed.out >> ../../engrad_mm.dat.$ibead
 

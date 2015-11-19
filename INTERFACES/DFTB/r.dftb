@@ -1,6 +1,6 @@
 #!/bin/bash
 cd DFTB
-source SetEnvironment.sh DFTB
+source ../SetEnvironment.sh DFTB
 
 timestep=$1
 ibead=$2
@@ -8,7 +8,7 @@ input=input$ibead
 geom=../geom.dat.$ibead
 
 natom=`cat $geom | wc -l`
-WRKDIR=OUT$ibead.$natom
+WRKDIR=OUT$ibead
 mkdir -p $WRKDIR ; cd $WRKDIR
 
 # You have to specify, which elements are present in your system
@@ -50,7 +50,7 @@ $DFTBEXE  &> $input.out
 cp $input.out $input.out.old
 
 ### EXTRACTING ENERGY AND FORCES
-grep 'Total energy:' detailed.out | awk '{print $3}' >> ../../engrad.dat.$ibead
+grep 'Total energy:' detailed.out | awk '{print $3}' > ../../engrad.dat.$ibead
 awk -v natom=$natom '{if ($2=="Forces"){for (i=1;i<=natom;i++){getline;printf"%3.15e %3.15e %3.15e \n",-$1,-$2,-$3}}}' \
  detailed.out >> ../../engrad.dat.$ibead
 

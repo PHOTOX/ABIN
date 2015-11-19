@@ -1,6 +1,9 @@
 !- Simple subroutine for calculation of Coulomb na Lennard-Jones forces and energies
 !- Daniel Hollas                        2013
 !------------------------------------------------------
+
+! TODO: This module should be probably split into to
+! We need some master module for QMMM models
 module mod_qmmm
    use mod_const, only: DP
    use mod_array_size, only: MAXTYPES

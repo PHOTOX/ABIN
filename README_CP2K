@@ -1,0 +1,1 @@
+gfortran f_diff_low.f90 -L/usr/local/src/cp2k-2.6.1/lib/Linux-x86-64-gfortran/sopt/ -lcp2k -lcp2kbase -L/usr/local/lib/acml5.3.1/gfortran64/lib -lacml -lfftw3

@@ -6,7 +6,7 @@ input=input$ibead
 natom=$(cat ../geom.dat.$ibead | wc -l )
 natom1=`expr $natom + 1`
 
-source SetEnvironment.sh TURBO
+source ../SetEnvironment.sh TURBOMOLE
 
 #NOTE: this SCRIPT WAS NOT EXTENSIVELY TESTED.
 # USE WITH CARE!!!

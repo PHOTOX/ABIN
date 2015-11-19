@@ -9,79 +9,142 @@
 ! Surface hopping is NOT initialized here.
 ! Daniel Hollas,9.2.2012 
 
-subroutine init(dt)
-      use mod_const
-      use mod_arrays
-      use mod_array_size
-      use mod_general
-      use mod_system
-      use mod_nhc
-      use mod_estimators
-      use mod_harmon
-      use mod_sh
-      use mod_qmmm
-      use mod_gle
-      use mod_nab
-      use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
-      use mod_random
-      use mod_guillot,  only: inames_guillot
-      use mod_utils
-      use mod_vinit,    only: vinit, scalevelocities
-      use mod_density
-      use mod_shake
-      use mod_minimize, only: gamm, gammthr
-      use mod_analysis, only: restin
-      use mod_water,    only: watpot, check_water
+subroutine init(dt, values1)
+   use mod_const
+   use mod_arrays
+   use mod_array_size
+   use mod_general
+   use mod_system
+   use mod_nhc
+   use mod_estimators
+   use mod_harmon
+   use mod_sh
+   use mod_qmmm
+   use mod_gle
+   use mod_nab
+   use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
+   use mod_random
+   use mod_guillot,  only: inames_guillot
+   use mod_utils
+   use mod_vinit,    only: vinit, scalevelocities
+   use mod_density
+   use mod_shake
+   use mod_minimize, only: gamm, gammthr
+   use mod_analysis, only: restin
+   use mod_water,    only: watpot, check_water
 #ifdef USEFFTW
-      use mod_fftw3,    only: fftw_init
+   use mod_fftw3,    only: fftw_init
 #endif
-      implicit none
-      real(DP),intent(out) :: dt
-      real(DP) :: masses(MAXTYPES)
-      real(DP)  :: rans(10)
-      integer :: iw,iat,natom1,imol,shiftdihed=1, iost
-      integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
-      character(len=2) :: massnames(MAXTYPES)
-      character(len=10)   :: chaccess
-      character(len=200)  :: chinput, chcoords, chveloc
-      character(len=200)  :: chiomsg
-      LOGICAL :: file_exists
-      real(DP)  :: wnw=5.0d-5
-!$    integer :: nthreads,omp_get_max_threads
+#ifdef CP2K
+   use mod_cp2k,     only: cp2k_init
+#endif
+#ifdef MPI
+   use mod_remd
+   use mod_terampi
+#endif
+   real(DP),intent(out) :: dt
+   integer,dimension(8) :: values1
+   real(DP) :: masses(MAXTYPES)
+   real(DP)  :: rans(10)
+   integer :: iw,iat,natom1,imol,shiftdihed=1, iost
+   integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
+   character(len=2) :: massnames(MAXTYPES)
+   character(len=10)   :: chaccess
+   character(len=200)  :: chinput, chcoords, chveloc
+   character(len=200)  :: chiomsg, chout
+   LOGICAL :: file_exists
+   real(DP)  :: wnw=5.0d-5
+   integer :: ierr
+!$ integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
-      REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
-!      REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
-      REAL, POINTER  :: REALPTR => NULL ()
+   REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
+!   REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
+   REAL, POINTER  :: REALPTR => NULL ()
 
-      namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
-               nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-               parrespa,dime,ncalc,idebug,enmini,rho,iknow, watpot
+   namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
+            nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
+            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd 
 
-      namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
-                        scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
-      namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
-                        nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
-                        k,r0,k1,k2,k3,De,a, &
-                        Nshake,ishake1,ishake2,shake_tol
-      namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
-                        nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
-      namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
-      namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
+   namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
-      chcoords='mini.dat'
-      chinput='input.in'
-      chveloc=''
-      call Get_cmdline(chinput, chcoords, chveloc)
-      write(*,*)'I will read parameters from input file ',chinput
-      write(*,*)'I will read xyz coordinates from file ',chcoords
+   namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
+                     scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
 
-      dt=-1  
-      error=0
-      !-READING INPUT----------------------------------------- 
+   namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
+                     nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
+                     k,r0,k1,k2,k3,De,a, &
+                     Nshake,ishake1,ishake2,shake_tol
 
-      open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
-      read(150,general)
-      rewind(150)
+   namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
+                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
+
+   namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
+
+   namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
+
+
+   chcoords='mini.dat'
+   chinput='input.in'
+   chveloc=''
+   dt=-1  
+   error=0
+
+   call Get_cmdline(chinput, chcoords, chveloc)
+
+   !-READING INPUT----------------------------------------- 
+
+   open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
+   read(150,general)
+   rewind(150)
+   pot=UpperToLower(pot)
+
+   if(pot.eq."_cp2k_")then
+#ifdef CP2K
+      call cp2k_init()
+#else
+      write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
+      write(*,*)''
+      call abinerror('init')
+#endif
+#ifdef MPI
+   else
+      call MPI_INIT ( ierr )
+      if (ierr.ne.0)then
+         write(*,*)'Bad signal from MPI_INIT:', ierr
+         call abinerror('MPI_INIT')
+      end if
+#endif
+   end if
+
+   if(iqmmm.eq.0.and.pot.ne.'mm')then
+      natqm=natom
+   endif
+
+! We need to connect to TeraChem as soon as possible,
+! because we want to shut down TeraChem nicely in case something goes wrong during.
+#ifdef MPI
+   call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
+   if(pot.eq.'_tera_')then
+      if (nwalk.gt.1)then
+         write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
+         write(*,*)'You should have "integrator reset" or "integrator regular" in &
+& the TeraChem input file'
+      end if
+      call connect_terachem()
+   end if
+#else
+   if(pot.eq.'_tera_')then
+      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
+      write(*,*)'You cannot use direct interface to TeraChem.'
+      call abinerror('init')
+   end if
+#endif
+
+   if (my_rank.eq.0)then
+      write(*,*)'Reading parameters from input file ',chinput
+      write(*,*)'Reading xyz coordinates from file ',chcoords
+      call PrintLogo(values1)
+   end if
 
       if(irest.eq.1)then
        readnhc=1   !readnhc has precedence before initNHC
@@ -113,13 +176,50 @@ subroutine init(dt)
       ishake1 = 0
       ishake2 = 0
 
+!     allocate all basic arrays and set them to 0.0d0
+      call allocate_arrays( natom, nwalk+1 )
+
+!-----READING GEOMETRY
+      if(iremd.eq.1) write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank
+
+      open(111,file=chcoords,status = "old", action = "read", iostat=iost) 
+      read(111,*, iostat=iost)natom1
+      if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.")
+      if(natom1.ne.natom)then
+        write(*,'(A,A)')'No. of atoms in ',chinput
+        write(*,'(A,A)')'and in ',chcoords
+        write(*,*)'do not match.'
+        call abinerror('init')
+      endif
+      read(111,*)
+      do iat=1,natom
+
+        read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
+        if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates')
+        names(iat) = LowerToUpper(names(iat))
+        x(iat,1) = x(iat,1) * ANG
+        y(iat,1) = y(iat,1) * ANG
+        z(iat,1) = z(iat,1) * ANG
+
+      enddo 
+      close(111)
+
+      do iw=1,nwalk
+         do iat=1,natom
+            x(iat,iw) = x(iat,1)
+            y(iat,iw) = y(iat,1)
+            z(iat,iw) = z(iat,1)
+         enddo
+      enddo
+!-----END OF READING GEOMETRY      
+
 
       ! the namelist system does not need to be present
       read(150,system,iostat=iost,iomsg=chiomsg)
       rewind(150)
       !check, whether we hit End-Of-File or other error
       if(IS_IOSTAT_END(iost))then  !fortran intrinsic for EOF
-         write(*,*)'Namelist "system" not found. Ignoring...'
+         if (my_rank.eq.0) write(*,*)'Namelist "system" not found. Ignoring...'
       else if (iost.ne.0)then
          write(*,*)'ERROR when reading namelist "system".'
          write(*,*)chiomsg
@@ -129,6 +229,13 @@ subroutine init(dt)
             massnames(iat)=LowerToUpper(massnames(iat))
          end do
       end if
+
+     call mass_init(masses, massnames)
+     ! Lower the second character of atom name.
+     ! This is because of TeraChem.
+      do iat=1,natom
+         names(iat)(2:2)=UpperToLower(names(iat)(2:2))
+      end do
 
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
       allocate ( natmolt(natom)  )
@@ -140,15 +247,26 @@ subroutine init(dt)
       read(150,nhcopt)
       rewind(150)
 
-      pot=UpperToLower(pot)
       if(ipimd.eq.2)then
-         read(150,sh)
+         read(150, sh)
          rewind(150)
-         integ=UpperToLower(integ)
+         integ = UpperToLower(integ)
+      end if
+
+   if(iremd.eq.1)then
+#ifdef MPI
+      read(150, remd)
+      rewind(150)
+      call remd_init(temp, temp0)
+#else
+      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
+      write(*,*)'You cannot do REMD.'
+      call abinerror('init')
+#endif
       end if
 
       if(iqmmm.gt.0.or.pot.eq.'mm')then
-         read(150,qmmm)
+         read(150, qmmm)
          rewind(150)
       end if
 
@@ -157,43 +275,48 @@ subroutine init(dt)
          allocate ( natmol(natom) )
 #endif
          natmol = 0
-         read(150,nab)
+         read(150, nab)
          rewind(150)
       end if
 
       close(150)
-!-----END OF READING INPUT----------------------------------------- 
+!--END OF READING INPUT---------------
 
-!$    call OMP_set_num_threads(nproc)
-!$    nthreads=omp_get_max_threads()
+!$ call OMP_set_num_threads(nproc)
+!$ nthreads=omp_get_max_threads()
 
-!-----HERE WE CHECK FOR ERRORS IN INPUT-----------------------------------------------
+#ifdef MPI
+   if(pot.eq.'_tera_')then
+      call initialize_terachem()
+   end if
+#endif
+
+!-----HERE WE CHECK FOR ERRORS IN INPUT-----------
       call check_inputsanity()
 
 !     resetting number of walkers to 1 in case of classical simulation      
       if(ipimd.eq.0)then
-              write(*,*)'ipimd=0,Resetting number of walkers to 1.'
-              write(*,*)'ipimd=0,Using velocity Verlet integrator'
-              md=2
-              nwalk=1
-              nabin=1   !TODO:safety for respashake code
-                        !we should probably copy shake to velocity verlet
-                        !algorithm as well
-      endif
-      if(iqmmm.eq.0.and.pot.ne.'mm')then
-              natqm=natom
+         if(my_rank.eq.0)then
+            write(*,*)'ipimd=0,Resetting number of walkers to 1.'
+            write(*,*)'ipimd=0,Using velocity Verlet integrator'
+         end if
+         md=2
+         nwalk=1
+         nabin=1   ! TODO:safety for respashake code
+                   ! We should probably copy shake to velocity verlet
+                   ! algorithm as well
       endif
 
 !for surface hopping      
       if(ipimd.eq.2)then
-              nwalk=ntraj
-              md=2
-              nabin=1
+         nwalk=ntraj
+         md=2
+         nabin=1
       endif
 
       if(ipimd.eq.1)then
-              write(*,*)'ipimd=1,using RESPA integrator'
-              md=1
+         if (my_rank.eq.0) write(*,*)'ipimd=1,using RESPA integrator'
+         md=1
       endif
 
 #ifdef USEFFTW
@@ -201,42 +324,18 @@ subroutine init(dt)
 #endif
 
 
-!     allocate all basic arrays and set them to 0.0d0
-      call allocate_arrays( natom, nwalk+1 )
-
-!-----READING GEOMETRY
-      open(111,file=chcoords,status = "old", action = "read") 
-      read(111,*)natom1
-      if(natom1.ne.natom)then
-        write(*,'(A,A)')'No. of atoms in ',chinput
-        write(*,'(A,A)')'and in ',chcoords
-        write(*,*)'do not match.'
-        call abinerror('init')
-      endif
-      read(111,*)
-      do iat=1,natom
-
-        read(111,*)names(iat),x(iat,1),y(iat,1),z(iat,1)
-        names(iat)=LowerToUpper(names(iat))
-        x(iat,1)=x(iat,1)*ang
-        y(iat,1)=y(iat,1)*ang
-        z(iat,1)=z(iat,1)*ang
-
-      enddo 
-      close(111)
-
-      do iw=1,nwalk
-       do iat=1,natom
-       x(iat,iw)=x(iat,1)
-       y(iat,iw)=y(iat,1)
-       z(iat,iw)=z(iat,1)
-       enddo
-      enddo
-!-----END OF READING GEOMETRY      
-
 !-----conversion of temperature from K to au
-      if (inose.ne.0) write(*,*)'Target temperature in Kelvins =',temp
-      temp=temp/autok
+      if (my_rank.eq.0)then
+         if (temp0.gt.0)then
+            write(*,*)'Initial temperature in Kelvins =', temp0
+         else
+            write(*,*)'Initial temperature in Kelvins =', temp
+         end if
+         if (inose.ne.0) write(*,*)'Target temperature in Kelvins =', temp
+      end if
+
+      temp = temp/autok
+      temp0 = temp0/autok
 
       if (ihess.eq.1)then 
        allocate ( hess(natom*3,natom*3,nwalk) )
@@ -251,23 +350,13 @@ subroutine init(dt)
 
 !----SHAKE initialization,determining the constrained bond lenghts
       if(nshake.ge.1)then
-       write(*,*)'Setting distances for SHAKE from mini.dat'
-       call shake_init(x,y,z)
+         if (my_rank.eq.0) write(*,*)'Setting distances for SHAKE from mini.dat'
+         call shake_init(x,y,z)
       endif
 
-     call dist_init() !zeroing distribution arrays
-
-!----In case of big systems, we don't want to manually set am and names arrays.
-!----Currently supported for most of the elements
-     call mass_init(masses, massnames)
-     !lower the second character of atom name
-     !this is because of terachem
-      do iat=1,natom
-         names(iat)(2:2)=UpperToLower(names(iat)(2:2))
-      end do
+      call dist_init() !zeroing distribution arrays
 
       if (pot.eq.'mmwater') call check_water(natom, names)
-
 
 !-----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
@@ -281,14 +370,6 @@ subroutine init(dt)
 !----performing RESTART from restart.xyz
      if(irest.eq.1) call restin(x,y,z,vx,vy,vz,it)
 
-     write(*,*)
-     write(*,*)'-------SIMULATION PARAMETERS---------------'
-     write(*,nml=general)
-     write(*,*)
-     write(*,nml=system)
-     if ( inose.ge.1 ) write(*,nml=nhcopt)
-     if ( ipimd.eq.2 ) write(*,nml=sh)
-     write(*,*)
 
 !------------END OF INPUT SECTION---------------------
 
@@ -308,63 +389,83 @@ else
 endif
 
 if (nwritev.gt.0)then
-   open(13,file='vel.dat',access=chaccess,action='write')
-endif
-
-if (ipimd.ne.1)then
-   open(1,file='energies.dat',access=chaccess,action='write')
-   write(1,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
-end if
-if(ipimd.eq.1.or.icv.eq.1)then
-  open(7,file='est_energy.dat',access=chaccess,action='write')
-  write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
-endif
-
-open(2,file='temper.dat',access=chaccess,action='write')
-write(2,*)'#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
-
-if(ipimd.eq.2)then
-  open(3,file='pop.dat',access=chaccess,action='write')
-  write(3,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
-  open(4,file='prob.dat',access=chaccess,action='write')
-  write(4,*)'#    Time[fs] CurrentState   Probabilities'
-  open(8,file='PES.dat',access=chaccess,action='write')
-  write(8,*)'#    Time[fs] Potential energies'
-  open(14,file='nacm_all.dat',access=chaccess,action='write')
-  open(15,file='dotprod.dat',access=chaccess,action='write')
-  write(15,*)'#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'
-  if(idebug.gt.1)then
-   open(16,file='bkl.dat',access=chaccess,action='write')
-   write(16,*)'# Hopping probabilities - bkl(i) [i=1,nstate]'
-   open(17,file='coef.dat',access=chaccess,action='write')
-   write(17,*)'# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
-   if(phase.eq.1)then
-      open(18,file='phase.dat',access=chaccess,action='write')
-      write(18,*)'# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
+   if(iremd.eq.1)then
+      write(chout,'(A,I2.2)')'vel.dat.',my_rank
+   else
+      chout='vel.dat'
    end if
-  endif
+   open(13,file=chout,access=chaccess,action='write')
 endif
 
-if(isbc.eq.1)then
- open(11,file='r.dat',access=chaccess,action='write')
- write(11,*)'#TimeStep     Radius[ANG]    density[kg.m^3]'
-endif
 
-if(icv.eq.1)then
- open(122,file='cv.dat',access=chaccess,action='write')
- write(122,*)'#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
- close(122)
- if(ihess.eq.1)then
-  open(123,file='cv_dcv.dat',access=chaccess,action='write')
-  write(123,*)'#         Time[fs]  Cv-DCV   Cv-DCV'
-  close(123)
- endif
-endif
+   if (ipimd.ne.1)then
+      if(iremd.eq.1)then
+         write(chout,'(A,I2.2)')'energies.dat.',my_rank
+      else
+         chout='energies.dat'
+      end if
+      open(19,file=chout,access=chaccess,action='write')
+      write(19,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+   end if
+   if(ipimd.eq.1.or.icv.eq.1)then
+      open(7,file='est_energy.dat',access=chaccess,action='write')
+      write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
+   endif
+
+   if(iremd.eq.1)then
+      write(chout,'(A,I2.2)')'temper.dat.',my_rank
+   else
+      chout='temper.dat'
+   end if
+   open(2,file=chout, access=chaccess, action='write')
+   write(2,*)'#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
+
+   if(ipimd.eq.2)then
+      open(3,file='pop.dat',access=chaccess,action='write')
+      write(3,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
+      open(4,file='prob.dat',access=chaccess,action='write')
+      write(4,*)'#    Time[fs] CurrentState   Probabilities'
+      open(8,file='PES.dat',access=chaccess,action='write')
+      write(8,*)'#    Time[fs] Potential energies'
+      open(14,file='nacm_all.dat',access=chaccess,action='write')
+      open(15,file='dotprod.dat',access=chaccess,action='write')
+      write(15,*)'#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'
+      if(idebug.gt.1)then
+         open(16,file='bkl.dat',access=chaccess,action='write')
+         write(16,*)'# Hopping probabilities - bkl(i) [i=1,nstate]'
+         open(17,file='coef.dat',access=chaccess,action='write')
+         write(17,*)'# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
+         if(phase.eq.1)then
+            open(18,file='phase.dat',access=chaccess,action='write')
+            write(18,*)'# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
+         end if
+      endif
+   endif
+
+   if(isbc.eq.1)then
+      if(iremd.eq.1)then
+         write(chout,'(A,I2.2)')'r.dat.',my_rank
+      else
+         chout='r.dat'
+      end if
+      open(11,file='r.dat',access=chaccess,action='write')
+      write(11,*)'#TimeStep     Radius[ANG]    density[kg.m^3]'
+   endif
+
+   if(icv.eq.1)then
+      open(122,file='cv.dat',access=chaccess,action='write')
+      write(122,*)'#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
+      close(122)
+      if(ihess.eq.1)then
+         open(123,file='cv_dcv.dat',access=chaccess,action='write')
+         write(123,*)'#         Time[fs]  Cv-DCV   Cv-DCV'
+         close(123)
+      endif
+   endif
 
 !------------------------------------------------------
 
-      pid=GetPID()
-      write(*,*)'Pid of the current proccess is:',pid
+
 
 
 
@@ -389,17 +490,20 @@ endif
       if (chveloc.ne.'')then
          write(*,*)'Reading initial velocities in a.u. from external file:'
          write(*,*)chveloc 
+         if(iremd.eq.1) write(chveloc,'(A,I2.2)')trim(chveloc)//'.',my_rank
          open(500,file=chveloc, status='OLD', action = "READ")
-         read(500,*)
-         do iw=1,natom
+         read(500,*, IOSTAT=iost)
+         if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
+         do iw=1,nwalk
             do iat=1,natom
-               read(500,*)vx(iat,iw), vy(iat,iw), vz(iat, iw)
+               read(500,*, IOSTAT=iost)vx(iat,iw), vy(iat,iw), vz(iat, iw)
+               if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
             end do
          end do
       end if
 
       if(conatom.gt.0)then
-         write(*,*)'Removing initial velocity of constrained atoms.'
+         if (my_rank.eq.0) write(*,*)'Removing initial velocity of constrained atoms.'
          call constrainP(vx,vy,vz)
       endif
 
@@ -424,13 +528,32 @@ endif
          call ABr_init()
       endif
 
+   if(my_rank.eq.0)then
+      write(*,*)
+      write(*,*)'--------------SIMULATION PARAMETERS--------------'
+      write(*,nml=general)
+      write(*,*)
+      write(*,nml=system)
+      if ( inose.ge.1 ) write(*,nml=nhcopt)
+      write(*,*)
+      if ( ipimd.eq.2 ) write(*,nml=sh)
+      write(*,*)
       if (iqmmm.eq.3.or.pot.eq.'mm') write(*,nml=qmmm)
+      write(*,*)
+   end if
+   call flush(6)
+#ifdef MPI
+   call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
+   pid=GetPID()
+   write(*,*)'Pid of the current proccess is:',pid
+
 
 #ifdef NAB
       if (pot.eq."nab".or.iqmmm.eq.2)then
-         if (alpha_pme.lt.0) alpha_pme = pi/cutoff
+         if (alpha_pme.lt.0) alpha_pme = pi / cutoff
          if (kappa_pme.lt.0) kappa_pme = alpha_pme
-         call nab_init(alpha_pme,cutoff,nsnb,ipbc,ips,iqmmm) !C function...see nabinit.c
+         call nab_init(alpha_pme, cutoff, nsnb, ipbc, ips, iqmmm) !C function...see nabinit.c
 
          if(ipbc.eq.1)then
             allocate ( charges(natom) )
@@ -445,29 +568,27 @@ endif
             write(*,*)'Half of box size: ',boxx2,boxy2,boxz2
 !           write(*,*)x(iat,1)/ang,y(iat,1)/ang,z(iat,1)/ang,charges(iat)
             call ewald(VECPTR,VECPTR,charges,REALPTR,boxx,boxy,boxz,cutoff,alpha_pme,kappa_pme,epsinf,natom,ipom2)
-            boxx=boxx*ang
-            boxy=boxy*ang
-            boxz=boxz*ang
-            boxx2=0.5d0*boxx
-            boxy2=0.5d0*boxy
-            boxz2=0.5d0*boxz
+            boxx = boxx * ANG
+            boxy = boxy * ANG
+            boxz = boxz * ANG
+            boxx2 = 0.5d0 * boxx
+            boxy2 = 0.5d0 * boxy
+            boxz2 = 0.5d0 * boxz
          endif
       endif
 #endif
 
-
 !--------END OF INITIALIZATION-------------------
-
-   call flush()
+   call flush(6)
 
    contains
 
    subroutine check_inputsanity()
    character(len=*),parameter :: chknow='If you know what you are doing, &
-    &  set  iknow=1 (namelist general) to proceed.'
+    &set iknow=1 (namelist general) to proceed.'
 
       !we should exclude all non-abinitio options, but whatever....
-!$    if(nthreads.gt.1.and.(ipimd.ne.1.or.pot.eq.'nab'))then
+!$    if(nthreads.gt.1.and.(ipimd.ne.1.and.pot.ne.'_cp2k_'))then
 !$     write(*,*)'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
 !$     call abinerror('init')
 !$    endif
@@ -482,7 +603,7 @@ endif
 #ifndef NAB
       if(pot.eq.'nab')then
          write(*,*)'FATAL ERROR: The program was not compiled with NAB libraries.'
-         stop 1
+         call abinerror('init')
       end if
 #endif
 
@@ -490,7 +611,7 @@ endif
       if(istage.eq.2)then
          write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
          write(*,*)'Normal mode transformations cannot be performed.'
-         stop 1
+         call abinerror('init')
       end if
 #endif
 
@@ -526,22 +647,24 @@ endif
        error=1
       endif
 !----------HERE we check for errors in input.      
-      if (nproc.gt.nwalk)then
-         write(*,*)'ERROR: Nproc greater than nwalk. That does not make sense.'
-         write(*,*)'Set nproc <= nwalk.'
-         error=1
-      end if
-      if (nproc.le.0)then
-         write(*,*)'ERROR: Nproc must be a positive integer.'
-         error=1
-      end if
-      if (modulo(nwalk,nproc).ne.0)then
-         write(*,*)'ERROR: Nwalk is not divisible by nproc. This is not a wise usage of your computer time.'
-         error=1
+      if (pot.ne.'_cp2k_')then
+         if (nproc.gt.nwalk)then
+            write(*,*)'ERROR: Nproc greater than nwalk. That does not make sense.'
+            write(*,*)'Set nproc <= nwalk.'
+            error=1
+         end if
+         if (nproc.le.0)then
+            write(*,*)'ERROR: Nproc must be a positive integer.'
+            error=1
+         end if
+         if (modulo(nwalk,nproc).ne.0)then
+            write(*,*)'ERROR: Nwalk is not divisible by nproc. This is not a wise usage of your computer time.'
+            error=1
+         end if
       end if
       if(pot.eq.'none')then
        write(*,*)'FATAL: Variable "pot" not specified.Exiting now...'
-       stop 1
+       error=1
       endif
       if(ipimd.eq.1.and.nwalk.le.1)then
        write(*,*)'Number of walkers for PIMD (nwalk) <=1 !'
@@ -755,8 +878,8 @@ endif
       endif
       if(nyosh.le.1.and.inose.eq.1)then
        write(*,*)'It is strongly reccommended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh=3 or 7).'
-       write(*,*)chknow
-       if (iknow.ne.1)error=1
+       write(*,*)iknow, error, chknow
+       if (iknow.ne.1) error=1
       endif
       if(nrespnose.lt.3.and.inose.eq.1)then
        write(*,*)'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
@@ -838,25 +961,35 @@ endif
        if(iknow.ne.1) error=1
       endif
 
-      INQUIRE(FILE="movie.xyz", EXIST=file_exists)
+      if(iremd.eq.1)then
+         write(chout, '(A,I2.2)')'movie.xyz.',my_rank
+      else
+         chout='movie.xyz'
+      end if
+      INQUIRE(FILE=chout, EXIST=file_exists)
       if(file_exists)then
        if(irest.eq.0)then
-        write(*,*)'File "movie.xyz" exists.Please (re)move it or set irest=1.'
+        write(*,*)'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
         error=1
        else
         write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
        endif
       endif
 
-      INQUIRE(FILE="restart.xyz", EXIST=file_exists)
+      if(iremd.eq.1)then
+         write(chout, '(A,I2.2)')'restart.xyz.',my_rank
+      else
+         chout='restart.xyz'
+      end if
+      INQUIRE(FILE=chout, EXIST=file_exists)
       if(file_exists)then
        if(irest.eq.0)then
-        write(*,*)'File "restart.xyz" exists. Please (re)move it or set irest=1.'
+        write(*,*)'File ',trim(chout),' exists. Please (re)move it or set irest=1.'
         error=1
        endif
       else
        if(irest.eq.1)then
-         write(*,*)'File restart.xyz not found.' 
+         write(*,*)'File ', trim(chout), ' not found.' 
          error=1
        endif 
       endif
@@ -868,6 +1001,62 @@ endif
 
 
    end subroutine check_inputsanity
+
+   subroutine err_read(chfile, chmsg)
+   character(len=*), intent(in)  :: chmsg, chfile
+   write(*,'(2A)')'Error when reading file ', chfile
+   write(*,'(A)')chmsg
+
+   call abinerror('init')
+   end subroutine err_read
+
+   subroutine PrintLogo(values1)
+   use iso_fortran_env
+   include 'date.inc'
+   integer,dimension(8),intent(out) :: values1
+   call date_and_time(VALUES=values1)
+
+print '(a)','                    _____      _     _      _ '
+print '(a)','        /\         |  _  \    | |   |  \   | |'
+print '(a)','       /  \        | |_|  |   | |   | | \  | |'
+print '(a)','      / /\ \       |     /    | |   | |\ \ | |'
+print '(a)','     / /__\ \      |=====|    | |   | | \ \| |'
+print '(a)','    / /____\ \     |  _   \   | |   | |  \ | |'
+print '(a)','   / /      \ \    | |_|  |   | |   | |   \  |'
+print '(a)','  /_/        \_\   |_____/    |_|   |_|    \_|'
+print '(a)',' '
+
+print '(a)','     version 1.0'
+print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek 2011-2015'
+print '(a)',' '
+
+print *,'Compiled at  ',date
+print *,commit
+!$ print *,'Compiled with parallel OpenMP support for PIMD.'
+#ifdef USEFFTW
+   write(*,*)'Compiled with FFTW support.'
+#endif
+#ifdef CP2K
+   write(*,*)'Compiled with in-built CP2K interface.'
+#endif
+#ifdef MPI
+write(*,*)'Compiled with MPI support.'
+write(*,*)'(Currently used for direct CP2K a TeraChem interfaces.)'
+#endif
+print *,' '
+
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+print *, 'This file was compiled by ',  &
+             compiler_version(), ' using the options: '
+print *,     compiler_options()
+#endif
+
+write(*,*)'Job started at:'
+write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
+        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
+        values1(1)
+
+   end subroutine PrintLogo
 
 end subroutine init
 

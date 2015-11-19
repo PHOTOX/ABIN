@@ -6,6 +6,7 @@
 module mod_transform
    use mod_const, only: DP
    use mod_general, only:natom, nwalk
+   use mod_utils, only: abinerror
    implicit none
    private
    public :: UtoX, XtoU, QtoX, XtoQ, FXtoFQ, FQtoFX
@@ -256,7 +257,7 @@ module mod_transform
 #else
       write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
       write(*,*)'Normal mode transformations cannot be performed.'
-      stop 1
+      call abinerror('UtoX')
 #endif
 
    end subroutine UtoX
@@ -312,7 +313,7 @@ endif
 #else
       write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
       write(*,*)'Normal mode transformations cannot be performed.'
-      stop 1
+      call abinerror('XtoU')
 #endif
 
 

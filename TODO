@@ -1,11 +1,12 @@
 FOR 1.0 version
 
-opravit multiplejobs based on new RecalcGeometries.sh
-umoznit vstup poc. rychlosti ze souboru
+upravit randomint if iseed <0 ....make it more random
+time is not so random, if you start close to each other 
+http://stackoverflow.com/questions/3062746/special-simple-random-number-generator
+
+Test that temp0 works correctly.
 
 test QMMM one more time with luciferin
-rename abin.dev to abin.v1
-test PIMD and PIGLE for nab water,
 
 optimize the value of tau0, test for different temperatures.
 Check this value for larger clusters.
@@ -13,3 +14,5 @@ in terachem, they use 1000fs, but with a bit different definition, so it transla
 tau=0.159
 I should really test this for larger system.....
 
+! For using GLE with REMD, we need to input multiple seeds...make irandom an array
+! REMD with ab initio does not yet work

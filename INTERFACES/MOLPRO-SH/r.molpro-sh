@@ -5,7 +5,7 @@ ibead=$2
 input=input$ibead
 nacaccu=$3
 
-source SetEnvironment.sh MOLPRO
+source ../SetEnvironment.sh MOLPRO
 
 #----USER INPUT--------------------------
 basis="6-31g*" # for Pople basis sets and df-casscf, fitting DF basis must be specified manually
@@ -192,7 +192,7 @@ else
 
       if [[ $numerforce -eq "1" ]]; then
          echo "WARNING: Analytical forces failed us. Numerical forces will I try..."
-     	 echo "step: $timestep, Computing numerical gradient.">>../errors.dat
+     	 echo "step: $timestep, Computing numerical gradient."
 	 # compute numerical forces
 	 cat $input.pom1 > $input.com  #basic parameters and commands
          echo "SAVE,GRAD=-1" >> $input.com
@@ -211,7 +211,7 @@ else
       if [[ $gradlines -ne $natom ]];then
          #delete scratch and start over
          echo "WARNING: Molpro job failed. I will delete the scratch directory and try again."
-         echo "step: $timestep, deleting scratch and starting over.">>../errors.dat
+         echo "step: $timestep, deleting scratch and starting over."
          rm -r scratch$ibead ; $MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
       fi
 

@@ -83,16 +83,20 @@ module mod_arrays
    end subroutine allocate_arrays
 
    subroutine deallocate_arrays
-      deallocate( x ); deallocate( y ); deallocate( z );
-      deallocate( amt ); deallocate( amg )
-      deallocate( px ); deallocate( py ); deallocate( pz );
-      deallocate( vx ); deallocate( vy ); deallocate( vz );
-      deallocate( vx_old ); deallocate( vy_old ); deallocate( vz_old );
-      deallocate( transx ); deallocate( transy ); deallocate( transz );
-      deallocate( transxv ); deallocate( transyv ); deallocate( transzv );
-      deallocate( transfxc ); deallocate( transfyc ); deallocate( transfzc );
-      deallocate( fxc ); deallocate( fyc ); deallocate( fzc );
-      deallocate( fxq ); deallocate( fyq ); deallocate( fzq );
+      ! If x is allocated, all of them should be.
+      ! If not, something is horribly wrong anyway
+      if (allocated(x))then
+         deallocate( x ); deallocate( y ); deallocate( z );
+         deallocate( amt ); deallocate( amg )
+         deallocate( px ); deallocate( py ); deallocate( pz );
+         deallocate( vx ); deallocate( vy ); deallocate( vz );
+         deallocate( vx_old ); deallocate( vy_old ); deallocate( vz_old );
+         deallocate( transx ); deallocate( transy ); deallocate( transz );
+         deallocate( transxv ); deallocate( transyv ); deallocate( transzv );
+         deallocate( transfxc ); deallocate( transfyc ); deallocate( transfzc );
+         deallocate( fxc ); deallocate( fyc ); deallocate( fzc );
+         deallocate( fxq ); deallocate( fyq ); deallocate( fzq );
+      end if
    end subroutine deallocate_arrays
        
 
