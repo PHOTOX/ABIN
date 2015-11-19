@@ -49,7 +49,7 @@
     &END TOPOLOGY
     &CELL
 #	PERIODIC NONE
-	ABC 8.0 8.0 8.0
+	ABC 6.0 6.0 6.0
     &END CELL
     &KIND O
       BASIS_SET SZV-MOLOPT-GTH
@@ -60,9 +60,5 @@
       POTENTIAL GTH-PBE-q1
     &END KIND
   &END SUBSYS
-    &PRINT
-        &FORCES
-        &END FORCES
-    &END PRINT
 &END FORCE_EVAL
 

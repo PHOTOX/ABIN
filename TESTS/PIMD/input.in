@@ -7,7 +7,7 @@ irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working
 idebug=0
 iknow=0
 
-pot='nab'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
+pot='mmwater'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
 ipimd=1,		!classical simulation 0, quantum simulation 1
 nwalk=10,		!number of random walkers 
 imini=10000,		!equilibration period,!not properly implemented yet
@@ -34,13 +34,4 @@ temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 tau0=0.0015
 nrespnose=3
 nyosh=7
-/
-
-&nab
-ipbc=0,         ! turns on periodic boundary conditions
-cutoff=20.0,    ! non-bonded cutoff (both LJ and coulomb)
-nsnb=100000,        !update non-bonded list every nsnb steps
-ips=0,          !isotropic periodic sum 1-both LJ and coul, 2-coul 3- LJ
-
-alpha_pme=0,    ! parameter for ewald(TO DO)
 /

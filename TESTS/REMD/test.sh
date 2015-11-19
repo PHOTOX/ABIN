@@ -1,8 +1,13 @@
 #/bin/bash
 source SetEnvironment.sh CP2K
 
-rm -f  movie.xyz* cp2k.out temper.dat.* energies.dat.* fort.*
-rm -f restart.xyz*
+if [[ "$1" = "clean" ]];then
+   rm -f remd.out restart.xyz.??.old output output2 restart.xyz.?? restart.xyz.??.? geom.dat.?? movie.xyz.?? cp2k.out temper.dat.?? energies.dat.?? 
+   exit 0
+fi
 
-$MPIRUN  -np 2 ../../abin.cp2k.popt
+ABINEXE=$1
+
+$MPIRUN  -np 3 $ABINEXE -i input.in > output
+$MPIRUN  -np 3 $ABINEXE -i input.in2 >> output
 #$MPIRUN -np 2 xterm -e gdb ../../abin.mpi

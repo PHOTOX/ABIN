@@ -551,9 +551,9 @@ endif
 
 #ifdef NAB
       if (pot.eq."nab".or.iqmmm.eq.2)then
-         if (alpha_pme.lt.0) alpha_pme = pi/cutoff
+         if (alpha_pme.lt.0) alpha_pme = pi / cutoff
          if (kappa_pme.lt.0) kappa_pme = alpha_pme
-         call nab_init(alpha_pme,cutoff,nsnb,ipbc,ips,iqmmm) !C function...see nabinit.c
+         call nab_init(alpha_pme, cutoff, nsnb, ipbc, ips, iqmmm) !C function...see nabinit.c
 
          if(ipbc.eq.1)then
             allocate ( charges(natom) )
@@ -585,7 +585,7 @@ endif
 
    subroutine check_inputsanity()
    character(len=*),parameter :: chknow='If you know what you are doing, &
-    &  set  iknow=1 (namelist general) to proceed.'
+    &set iknow=1 (namelist general) to proceed.'
 
       !we should exclude all non-abinitio options, but whatever....
 !$    if(nthreads.gt.1.and.(ipimd.ne.1.and.pot.ne.'_cp2k_'))then
@@ -878,8 +878,8 @@ endif
       endif
       if(nyosh.le.1.and.inose.eq.1)then
        write(*,*)'It is strongly reccommended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh=3 or 7).'
-       write(*,*)chknow
-       if (iknow.ne.1)error=1
+       write(*,*)iknow, error, chknow
+       if (iknow.ne.1) error=1
       endif
       if(nrespnose.lt.3.and.inose.eq.1)then
        write(*,*)'Variable nrespnose < 3! Assuming this is an error in input and exiting.'

@@ -98,7 +98,7 @@ test :
 
 # Clean all test folders.
 testclean :
-	/bin/bash TESTS/test.sh ${OUT} clean 
+	/bin/bash TESTS/test.sh ${OUT} clean ${NAB} ${MPI} ${CP2K} ${FFTW}
 
 # This will automatically generate new reference data for tests
 makeref :

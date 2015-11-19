@@ -7,18 +7,23 @@ function dif_files {
 local status=0
 local cont
 local cont_no
+local files
+local f
 cont_no=1
-for file in $* 
+# Do comparison for all existing reference files
+files=$(ls *.ref)
+for f in $files   # $* 
 do
-   if [[ -e $file.ref ]];then
+   file=$(basename $f .ref)
+   if [[ -e $file.ref ]];then  # this should now be always true
       diff $file $file.ref > $file.diff
       if [[ $? -ge 1 ]];then
-         diff -y -W 320  $file $file.ref | grep '|' > $file.diff
-         ../numdiff.py $file.diff
+         diff -y -W 320  $file $file.ref | egrep -e '|' -e '<' -e '>' > $file.diff
+         ../numdiff.py $file.diff 2> /dev/null
       fi
       if [[ $? -ge 1 && $cont_no -eq 1 ]];then
          status=1
-         echo "File $file differ. Continue? [y/n]"
+         echo "File $file differ from the reference. Continue anyway? [y/n]"
          while true 
          do
             read cont
@@ -40,11 +45,18 @@ return $status
 }
 
 function makeref {
+local files
+local f
 echo "Making new reference files."
-for file in $* 
+files=$(ls *.ref)
+for f in $files 
 do
-   if [[ -e $file.ref ]];then
+   file=$(basename $f .ref)
+   if [[ -f $file.ref ]];then
       mv $file $file.ref
+   else
+      echo "Something horrible happened during makeref"
+      exit 1
    fi
 done
 }
@@ -59,12 +71,10 @@ fi
 
 err=0
 
-files=( bkl.dat phase.dat coef.dat phaserest.dat phaserest.?? nacmrest.dat nacmrest.dat.?? minimize.dat geom.mini.xyz temper.dat r.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? DYN/OUT* MM/OUT* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie_mini.xyz restart.xyz.old restart.xyz restart.xyz.?? restart.xyz.? )
+files=( WATER-RESTART.wfn* cp2k.out bkl.dat phase.dat coef.dat phaserest.dat phaserest.?? nacmrest.dat nacmrest.dat.?? nacm_all.dat minimize.dat geom.mini.xyz temper.dat temper.dat r.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? DYN/OUT* MM/OUT* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie.xyz movie_mini.xyz restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz )
 
-#EULER should check wf_thresh conditions
-# TODO: Make test_readme.txt, with specifications of every test
-# TODO: by default, use mmwater as a potential instead of NAB
-# Make tests for NAB, MPI and CP2K
+# EULER should check wf_thresh conditions
+# TODO: Make test_readme.txt, with specifications of every test, maybe include only in input.in
 if [[ $2 == "sh" ]];then
    folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
 elif  [[ $2 = "all" || $2 = "clean" ]];then
@@ -72,14 +82,23 @@ elif  [[ $2 = "all" || $2 = "clean" ]];then
    if [[ $3 = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=NAB
+      let index++
+      folders[index]=NAB_HESS
    fi
    if [[ $4 = "TRUE" ]];then
       let index=${#folders[@]}+1
-      folders[index]=MPI
+      folders[index]=REMD
+      let index++
+      folders[index]=TERA
+      # TODO: test terachem interface
    fi
    if [[ $5 = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=CP2K
+      if [[ $4 = "TRUE" ]];then
+         let index++
+         folders[index]=CP2K_MPI
+      fi
    fi
    if [[ $6 = "TRUE" ]];then
       let index=${#folders[@]}+1
@@ -103,7 +122,11 @@ do
    fi
    cd $dir 
 
-   clean ${files[@]}
+   if [[ -f "test.sh" ]];then
+      ./test.sh clean   # currently for REMD
+   else
+      clean ${files[@]}
+   fi
 
    if [[ $2 = "clean" ]];then
       echo "Cleaning files in directory $dir "
@@ -111,10 +134,17 @@ do
       continue
    fi
 
-   $ABINEXE > output #-i input.in
-   #for testing restart
-   if [[ -e input.in2 ]];then
-      $ABINEXE -i input.in2 >> output
+   # Redirection to dev/null apparently needed for CP2K tests.
+   # Otherwise, STDIN is screwed up. I have no idea why.
+   # http://stackoverflow.com/questions/1304600/read-error-0-resource-temporarily-unavailable
+   if [[ -f "test.sh" ]];then
+      ./test.sh $ABINEXE 2> /dev/null   # currently for REMD
+   else
+      $ABINEXE > output 2>/dev/null 
+      #for testing restart
+      if [[ -e input.in2 ]];then
+         $ABINEXE -i input.in2 2> /dev/null >> output
+      fi
    fi
 
    if [[ $7 = "makeref" ]];then

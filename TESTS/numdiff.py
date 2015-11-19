@@ -3,6 +3,8 @@ from optparse import OptionParser
 import decimal
 from sys import exit 
 from sys import argv
+# Workaround for STDIN problem for CP2K tests
+import readline
 
 # This scripts is for comparing differences between files,
 # while disregarding insignificant numerical differences
@@ -85,14 +87,14 @@ with open(inpfile, 'r') as f:
    f.seek(0)
    for line in f:
       split = line.split()
-      # Skip line if there is no difference
-      if '|' not in split:
-          continue 
       # Exit if there are non-numerical differences
       if "<" in split or ">" in split:
            print("There's an extra line!")
            print(line)
            exit(1)
+      # Skip line if there is no difference
+      if '|' not in split:
+          continue 
 
       split = line.split('|')
       diff1 = split[0].split()
