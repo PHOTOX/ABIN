@@ -38,6 +38,9 @@ subroutine init(dt, values1)
 #ifdef CP2K
    use mod_cp2k,     only: cp2k_init
 #endif
+#ifdef PLUM
+   use mod_plumed,   only: plumed, plumedfile, plumed_init
+#endif
 #ifdef MPI
    use mod_remd
    use mod_terampi
@@ -63,7 +66,7 @@ subroutine init(dt, values1)
 
    namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd 
+            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, plumed, plumedfile
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
@@ -88,6 +91,7 @@ subroutine init(dt, values1)
    chveloc=''
    dt=-1  
    error=0
+   plumed=0
 
    call Get_cmdline(chinput, chcoords, chveloc)
 
@@ -140,6 +144,19 @@ subroutine init(dt, values1)
    end if
 #endif
 
+#ifdef PLUM
+   if(plumed.eq.1) then
+      call plumed_init(dt)
+      write(*,*) 'PLUMED is on'
+      write(*,*) 'PLUMEDfile is ',plumedfile   
+    endif
+!add variable numtest=1
+!call plumed_f_ginitialized(numtest)
+! print *, numtest	
+#else
+      write(*,*)'FATAL ERROR: ABIN was not compiled with PLUMED.'
+#endif
+   
    if (my_rank.eq.0)then
       write(*,*)'Reading parameters from input file ',chinput
       write(*,*)'Reading xyz coordinates from file ',chcoords
@@ -1038,6 +1055,9 @@ print *,commit
 #endif
 #ifdef CP2K
    write(*,*)'Compiled with in-built CP2K interface.'
+#endif
+#ifdef PLUM
+   write(*,*)'Compiled with PLUMED (static lib).'
 #endif
 #ifdef MPI
 write(*,*)'Compiled with MPI support.'

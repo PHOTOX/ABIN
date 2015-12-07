@@ -20,6 +20,7 @@ module mod_forces
       use mod_interfaces, only: force_abin
       use mod_water,    only: watpot
       use mod_cp2k,     only: force_cp2k
+      use mod_plumed,   only: plumed, plumedfile
 #ifdef MPI
       use mod_terampi
 #endif
@@ -110,6 +111,11 @@ module mod_forces
      if(iqmmm.eq.3) call force_LJCoul(transx,transy,transz,fxab,fyab,fzab,eclas)
 
 !--------------------------------------
+
+!--------PLUMED SECTION---------------
+   if(plumed.eq.1) then
+   endif
+!------------------------------------
 
 ! Classical force without the stage transformation
 !  

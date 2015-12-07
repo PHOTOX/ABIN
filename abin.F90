@@ -30,6 +30,9 @@ program abin_dyn
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
    use mod_forces,   only: force_clas, force_quantum
+#ifdef PLUM
+   use mod_plumed, only: plumed
+#endif
 #ifdef MPI
    use mod_remd, only: nswap, remd_swap
    implicit none
@@ -147,6 +150,8 @@ program abin_dyn
 !----getting initial forces and energies
       call force_clas(fxc, fyc, fzc, x, y, z, eclas)
       if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
+!----PLUMED section
+     
 !----setting initial values for surface hoping
       if(ipimd.eq.2)then
          do itrj=1, ntraj
@@ -275,8 +280,8 @@ program abin_dyn
 
       !------------------------------------------------------------------------
 !   Time step loop      
-      enddo 
-
+      enddo
+ 
 !DUMP restart file at the end of a run even if the final step is not compatible with nrest
 !Because ncalc might be >1, we have to perform transformation to get the most
 !recent coordinates and velocities
@@ -296,7 +301,6 @@ program abin_dyn
 
 !   minimization endif
    endif
-
    call finish(0)
 
 !---------TIMING-------------------------------
@@ -335,6 +339,10 @@ subroutine finish(error_code)
 
 #ifdef CP2K
    use mod_cp2k,   only: cp2k_finalize
+#endif
+
+#ifdef PLUM
+   use mod_plumed, only: plumed,plumedfile
 #endif
 
 #ifdef MPI
@@ -410,6 +418,12 @@ subroutine finish(error_code)
    if(pot.eq.'_cp2k_') call cp2k_finalize()
 #endif
 
+!   PLUMED closing session
+#ifdef PLUMED
+    if (plumed.eq.1) then
+    call plumed_f_gfinalize()
+    end if
+#endif
 end subroutine finish
 
 

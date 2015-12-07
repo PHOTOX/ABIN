@@ -25,7 +25,7 @@ export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
 F_OBJS :=  transform.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
-force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
+force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o plumed.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
 minimizer.o arrays.o init.o mdstep.o 
 
 C_OBJS := EWALD/ewaldf.o
@@ -54,6 +54,12 @@ ifeq ($(CP2K),TRUE)
   LIBS += -L${CP2KPATH} -lcp2k ${CP2K_LIBS} 
 endif
 
+ifeq ($(PLUM),TRUE)
+ include ${PLUMLINK}
+ DFLAGS += -DPLUM
+ LIBS += ${PLUMED_STATIC_LOAD}
+endif
+
 #MPI STUFF
 ifeq  ($(MPI),TRUE) 
   DFLAGS += -DMPI
@@ -78,6 +84,7 @@ ${OUT} : abin.o
 	cd WATERMODELS && make all 
 	${FC} ${FFLAGS} WATERMODELS/water_interface.o ${ALLDEPENDS} $< ${LDLIBS} -o $@
 
+# The machine-dependent variables are included from make.vars
 # Always recompile abin.F90 to get current date and commit
 abin.o : abin.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
