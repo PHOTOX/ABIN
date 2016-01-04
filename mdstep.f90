@@ -62,9 +62,13 @@ module mod_mdstep
 !  which are only in respashake function
 !  GLE and NHC thermostats available at the moment
    subroutine verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
+   use mod_general, ONLY: pot, ipimd
    use mod_nhc, ONLY:inose, imasst, shiftNHC_yosh, shiftNHC_yosh_mass
    use mod_gle, ONLY:langham, gle_step, wn_step
-   use mod_forces, only: force_clas
+   use mod_interfaces, only: force_clas
+!#ifdef MPI
+!   use mod_terampi_sh, only: send_terash
+!#endif
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
    real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
@@ -96,8 +100,12 @@ module mod_mdstep
    call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
    if(conatom.gt.0) call constrainP (px,py,pz)
    
-   call shiftX(x,y,z,px,py,pz,amt,dt)
+   call shiftX(x, y, z, px, py, pz, amt, dt)
    
+!  we need to pass velocities to terachem
+!  this asumes that we have cartesian coordinates here
+!  DH initial hack px instead vx
+!  if(ipimd.eq.2.and.pot.eq."_tera_") call send_terash(x,y,z,px,py,pz)
    call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 
    call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
@@ -135,7 +143,7 @@ module mod_mdstep
    use mod_general,  only: istage, nabin
    use mod_nhc,      only: inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
    use mod_gle,      only: langham, gle_step
-   use mod_forces,   only: force_clas, force_quantum
+   use mod_interfaces, only: force_clas, force_quantum
    real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)  :: fxc(:,:),fyc(:,:),fzc(:,:)
    real(DP),intent(inout)  :: fxq(:,:),fyq(:,:),fzq(:,:)
@@ -286,7 +294,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
       use mod_general, ONLY: nabin
       use mod_nhc, ONLY:inose,shiftNHC_yosh,shiftNHC_yosh_mass
       use mod_shake, only: shake, nshake
-      use mod_forces,   only: force_clas, force_quantum
+      use mod_interfaces, only: force_clas, force_quantum
       real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
       real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
       real(DP),intent(in)    :: amg(:,:),amt(:,:)

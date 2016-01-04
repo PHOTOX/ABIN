@@ -16,7 +16,7 @@ module mod_minimize
       use mod_general,  only: natom, nwrite, nwritex, imini
       use mod_system,   only: names, conatom
       use mod_analysis, only: trajout
-      use mod_forces,   only: force_clas
+      use mod_interfaces, only: force_clas
       implicit none
       real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
       real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
