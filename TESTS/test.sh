@@ -89,8 +89,7 @@ elif  [[ $2 = "all" || $2 = "clean" ]];then
       let index=${#folders[@]}+1
       folders[index]=REMD
       let index++
-      folders[index]=TERA
-      # TODO: test terachem interface
+      #      folders[index]=TERAPI # does not yet work
    fi
    if [[ $5 = "TRUE" ]];then
       let index=${#folders[@]}+1
@@ -123,7 +122,7 @@ do
    cd $dir 
 
    if [[ -f "test.sh" ]];then
-      ./test.sh clean   # currently for REMD
+      ./test.sh clean 
    else
       clean ${files[@]}
    fi
@@ -138,7 +137,7 @@ do
    # Otherwise, STDIN is screwed up. I have no idea why.
    # http://stackoverflow.com/questions/1304600/read-error-0-resource-temporarily-unavailable
    if [[ -f "test.sh" ]];then
-      ./test.sh $ABINEXE 2> /dev/null   # currently for REMD
+      ./test.sh $ABINEXE 2> /dev/null
    else
       $ABINEXE > output 2>/dev/null 
       #for testing restart

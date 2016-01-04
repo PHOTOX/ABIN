@@ -19,7 +19,7 @@ delscratch=true
 INPUTVELOC=
 ########################################
 
-#$ -V
+#$ -V -cwd
 source SetEnvironment.sh CP2K
 
 SCRDIR=/scratch/$USER/$JOBNAME

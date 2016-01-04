@@ -18,7 +18,9 @@ module mod_terampi
    use mod_const, only: DP
    implicit none
    private
-   public :: teraport, finalize_terachem, initialize_terachem, connect_terachem, force_tera
+   public :: teraport, finalize_terachem, initialize_terachem, &
+          connect_terachem, force_tera, newcomm, &
+          qmcharges, qmcoords, dxyz_all ! for terash
    ! This does not work at this moment.
    character*50  ::  teraport = 'terachem_port'
    integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
@@ -68,7 +70,6 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
 !!$ OMP PARALLEL DO PRIVATE(qmcoords, mmcoords, ierr, iat, dxyz_all, escf) & !qmcharges,mmcharges and dipmom are not used at this point 
 !!$     IF(nwalk.gt.1.and.nteraservers.gt.1) NUM_THREADS(nteraservers)
    do iw=1,nwalk
-
 
 !!$OMP PARALLEL SECTIONS IF(parallel_qmmm.eq.true) NUM_THREADS(2)
 !!$OMP_SECTION
@@ -178,18 +179,18 @@ end if
       write(6,'(a,4es15.6)') 'Received QM  dipole moment from server:', dipmom(:,1)
       call flush(6)
    end if
-   ! MM dipole moment
-   call MPI_Recv( dipmom(:,2), 4, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
-   if ( idebug > 1 ) then
-      write(6,'(a,4es15.6)') 'Received MM  dipole moment from server:', dipmom(:,2)
-      call flush(6)
-   end if
+   ! MM dipole moment, disabled for now
+!   call MPI_Recv( dipmom(:,2), 4, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
+!   if ( idebug > 1 ) then
+!      write(6,'(a,4es15.6)') 'Received MM  dipole moment from server:', dipmom(:,2)
+!      call flush(6)
+!   end if
    ! TOT dipole moment
-   call MPI_Recv( dipmom(:,3), 4, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
-   if ( idebug > 1 ) then
-      write(6,'(a,4es15.6)') 'Received TOT dipole moment from server:', dipmom(:,3)
-      call flush(6)
-   end if
+!   call MPI_Recv( dipmom(:,3), 4, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
+!   if ( idebug > 1 ) then
+!      write(6,'(a,4es15.6)') 'Received TOT dipole moment from server:', dipmom(:,3)
+!      call flush(6)
+!   end if
    
    ! QM gradients
    if ( idebug > 1 ) then
@@ -228,6 +229,8 @@ end if
 
 
 end subroutine force_tera
+
+
 
 subroutine connect_terachem( )
    use mod_utils, only: abinerror
@@ -315,14 +318,31 @@ subroutine connect_terachem( )
    end subroutine initialize_terachem
 
 
-  subroutine finalize_terachem()
-   include 'mpif.h'
-    integer :: ierr
-    real*8  :: empty
+  subroutine finalize_terachem(error_code)
+  include 'mpif.h'
+  integer, intent(in) :: error_code
+  integer :: request
+  integer :: ierr
+  integer :: empty=0
 
-    deallocate( names_qm )
-    write(*,*)'Shutting down TeraChem.'
-    call MPI_Send( empty, 1, MPI_DOUBLE_PRECISION, 0, 0, newcomm, ierr )
+  if(allocated(names_qm)) deallocate( names_qm )
+  write(*,*)'Shutting down TeraChem.'
+  if (error_code.eq.0)then
+     call MPI_Send( empty, 1, MPI_INTEGER, 0, 0, newcomm, ierr )
+  else
+     ! Not sure whether this can lead to deadlock when terachem sends and not
+     ! receive. Maybe we should avoid this.
+     call MPI_Send( empty, 1, MPI_INTEGER, 0, 13, newcomm, ierr )
+     !call MPI_ISend( empty, 1, MPI_INTEGER, 0, 13, newcomm, request, ierr )
+     ! for some reason, non-blocking ISend does not work :(
+  end if
+  if (ierr.ne.0)then
+     write(*,*)'I got a MPI Error when I tried to shutdown TeraChem'
+     write(*,*)'Please, verify manually that the TeraChem server was terminated.'
+     write(*,*)'Error code was:', ierr
+  end if
+  ! Ugly, but portable for different compilers
+!  call system("sleep 5")
   end subroutine finalize_terachem
 
 

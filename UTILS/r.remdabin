@@ -19,8 +19,9 @@ delscratch=true
 INPUTVELOC=
 ########################################
 
-#$ -V
+#$ -V -cwd
 # We assume here that ABIN was compiled by the same MPI compiler as CP2K
+# Should change this to source SetEnvironment.sh MPICH
 source SetEnvironment.sh CP2K
 
 SCRDIR=/scratch/$USER/$JOBNAME
