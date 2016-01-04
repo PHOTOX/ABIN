@@ -19,9 +19,9 @@ isample=1
 nsample=100
 SKIPFOLDERS=( 6 74 )     # these trajectories will be excluded from analysis
 # The following variables are determined automatically from TRAJ.1
-nstate=$(awk -F"[,=]" '{if($1=="nstate")print $2}' $folder/TRAJ.1/input.in)
-dt=$(awk -F"[,=]" '{if($1=="dt")print $2}' $folder/TRAJ.1/input.in)
-nstep=$(awk -F"[,=]" '{if($1=="nstep")print $2}' $folder/TRAJ.1/input.in)
+nstate=$(awk -F"[! ,=]+" '{if($1=="nstate")print $2}' $folder/TRAJ.1/input.in)
+dt=$(awk -F"[! ,=]+" '{if($1=="dt")print $2}' $folder/TRAJ.1/input.in)
+nstep=$(awk -F"[! ,=]+" '{if($1=="nstep")print $2}' $folder/TRAJ.1/input.in)
 ##########END OF SETUP##########
 
 shopt -s expand_aliases
