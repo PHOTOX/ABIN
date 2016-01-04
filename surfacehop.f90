@@ -811,25 +811,28 @@ module mod_sh
      call set_tocalc(itrj)
 
      if(idebug.eq.1)then
-       if(it.eq.1)then
-         open(iunit,file='dotprodmatrix.dat')
-       else
-         open(iunit,file='dotprodmatrix.dat',access='append')
-       endif
-      write(iunit,*)'Step: ',it
-      do ist1=1,nstate
-       write(iunit,*)(dotproduct_int(ist1,ist2,itrj),ist2=1,nstate)
-      enddo
-      close(iunit)
-     endif
+        ! this is rarely needed, since we always print dotproduct into
+        ! dotprod.dat
+        ! this is only to check that the matrix is really symmetrical
+         if(it.eq.1)then
+            open(iunit,file='dotprodmatrix.dat')
+         else
+            open(iunit,file='dotprodmatrix.dat',access='append')
+         endif
+         write(iunit,*)'Step: ',it
+         do ist1=1,nstate
+            write(iunit,*)(dotproduct_int(ist1,ist2,itrj),ist2=1,nstate)
+         enddo
+         close(iunit)
+      endif
 
 
-      do ist1=1,nstate
-       popsum=popsum+pop(ist1,itrj)
-      enddo
+   do ist1=1,nstate
+      popsum=popsum+pop(ist1,itrj)
+   enddo
 
-     call check_popsum(itrj,popsum)
-     call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
+   call check_popsum(itrj,popsum)
+   call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
 
    if(modulo(it,nwrite).eq.0)then
       stepfs=it*dt*AUtoFS
@@ -852,7 +855,7 @@ module mod_sh
             end if
 
             if (inac.eq.0)then
-               write(14,*)'NACME between states:',ist1,ist2
+               write(14,*)'NACME between states:', ist1, ist2
                do iat=1,natom
                   write(14,'(3E20.10)')nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                enddo

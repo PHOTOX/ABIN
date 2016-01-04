@@ -205,7 +205,7 @@ else
 
    elif [[ $delscratch -eq 1 ]]; then
 
-      gradlines=$(grep "GRADIENT," $input.pun )
+      gradlines=$(grep "GRADIENT," $input.pun | wc -l)
       # If we do have gradient, do nothing, it's up to ABIN to get NAC with lower accuracy
 
       if [[ $gradlines -ne $natom ]];then

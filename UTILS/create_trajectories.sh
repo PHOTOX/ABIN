@@ -157,8 +157,8 @@ fi
 mkdir -p $folder
 cp iseed0 "$abin_input" $folder
 
-offset=0
-offsetvel=0
+let offset=natom2*isample-natom2
+let offsetvel=natom1*isample-natom1
 while [[ $i -le "$nsample" ]];do
 
    let offset=offset+natom2   # for mode=movie

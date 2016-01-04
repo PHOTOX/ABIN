@@ -27,7 +27,7 @@ nstep=$(awk -F"[,=]" '{if($1=="nstep")print $2}' $folder/TRAJ.1/input.in)
 shopt -s expand_aliases
 alias grp="grep -s -v -e \"#\" " # used for filtering out the "#" characters
 
-if [[ ! -e $folder ]];then
+if [[ ! -d $folder ]];then
    echo "Folder $folder does not exist. Exiting..."
    exit 1
 fi
