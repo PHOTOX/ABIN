@@ -31,7 +31,7 @@ program abin_dyn
    use mod_analysis, only: analysis, restout
    use mod_forces,   only: force_clas, force_quantum
 #ifdef PLUM
-   use mod_plumed, only: plumed
+   use mod_plumed
 #endif
 #ifdef MPI
    use mod_remd, only: nswap, remd_swap
@@ -150,7 +150,6 @@ program abin_dyn
 !----getting initial forces and energies
       call force_clas(fxc, fyc, fzc, x, y, z, eclas)
       if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
-!----PLUMED section
      
 !----setting initial values for surface hoping
       if(ipimd.eq.2)then
@@ -210,6 +209,9 @@ program abin_dyn
          end if
 
 
+#ifdef PLUM
+!          if(plumed.eq.1) call plumed_stepinfo(it,amt)
+#endif
 !-----CALL RESPA or VELOCITY VERLET--------------
          if(nshake.eq.0)then
           if (md.eq.1) call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
@@ -301,6 +303,7 @@ program abin_dyn
 
 !   minimization endif
    endif
+   
    call finish(0)
 
 !---------TIMING-------------------------------
@@ -342,7 +345,7 @@ subroutine finish(error_code)
 #endif
 
 #ifdef PLUM
-   use mod_plumed, only: plumed,plumedfile
+   use mod_plumed
 #endif
 
 #ifdef MPI
@@ -419,7 +422,7 @@ subroutine finish(error_code)
 #endif
 
 !   PLUMED closing session
-#ifdef PLUMED
+#ifdef PLUM
     if (plumed.eq.1) then
     call plumed_f_gfinalize()
     end if

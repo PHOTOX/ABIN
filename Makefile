@@ -58,6 +58,7 @@ ifeq ($(PLUM),TRUE)
  include ${PLUMLINK}
  DFLAGS += -DPLUM
  LIBS += ${PLUMED_STATIC_LOAD}
+ FFLAGS :=-g
 endif
 
 #MPI STUFF
