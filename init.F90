@@ -11,6 +11,7 @@
 
 subroutine init(dt, values1)
    use mod_const
+   use mod_files
    use mod_arrays
    use mod_array_size
    use mod_general
@@ -49,7 +50,7 @@ subroutine init(dt, values1)
    real(DP)  :: rans(10)
    integer :: iw,iat,natom1,imol,shiftdihed=1, iost
    integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
-   character(len=2) :: massnames(MAXTYPES)
+   character(len=2)    :: massnames(MAXTYPES), atom
    character(len=10)   :: chaccess
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
@@ -381,27 +382,33 @@ subroutine init(dt, values1)
 
 !----------------INITIALIZATION-----------------------
 
-!--Here we ensure, that previous files are deleted----
-if(irest.eq.0)then
-  open(10,file='movie_mini.xyz')
-  close(10,status='delete')
-  chaccess='SEQUENTIAL'
-!  if (nwritev.gt.0)then !I think its not needed
-!    open(13,file='vel.dat')
-!    close(13,status='delete')
-!  endif
-else
-  chaccess='APPEND'
-endif
-
-if (nwritev.gt.0)then
-   if(iremd.eq.1)then
-      write(chout,'(A,I2.2)')'vel.dat.',my_rank
+! TODO: move all this to modules.f90, mod_files, subroutine files_init()
+   !--Here we ensure, that previous files are deleted----
+   if(irest.eq.0)then
+     open(UMOVIE,file='movie_mini.xyz')
+     close(UMOVIE,status='delete')
+     chaccess='SEQUENTIAL'
    else
-      chout='vel.dat'
+     chaccess='APPEND'
+   endif
+
+   ! OPEN trajectory file
+   if(imini.gt.it)then
+      chout='movie_mini.xyz'
+   else
+      chout='movie.xyz'
    end if
-   open(13,file=chout,access=chaccess,action='write')
-endif
+   if(iremd.eq.1) write(chout,'(A,I2.2)')trim(chout)//'.', my_rank
+   open(UMOVIE,file=chout,access=chaccess,action='write')
+
+   if (nwritev.gt.0)then
+      if(iremd.eq.1)then
+         write(chout,'(A,I2.2)')'vel.dat.',my_rank
+      else
+         chout='vel.dat'
+      end if
+      open(UVELOC,file=chout,access=chaccess,action='write')
+   endif
 
 
    if (ipimd.ne.1)then
@@ -410,9 +417,11 @@ endif
       else
          chout='energies.dat'
       end if
-      open(19,file=chout,access=chaccess,action='write')
-      write(19,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+      open(UENERGY,file=chout,access=chaccess,action='write')
+      write(UENERGY,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
    end if
+
+   ! I don't get why we print this if icv.eq.1
    if(ipimd.eq.1.or.icv.eq.1)then
       open(7,file='est_energy.dat',access=chaccess,action='write')
       write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
@@ -493,20 +502,37 @@ endif
          end if
       end if
 
+!     Reading velocities from file
       if (chveloc.ne.'')then
+         if(iremd.eq.1) write(chveloc,'(A,I2.2)')trim(chveloc)//'.',my_rank
          write(*,*)'Reading initial velocities in a.u. from external file:'
          write(*,*)chveloc 
-         if(iremd.eq.1) write(chveloc,'(A,I2.2)')trim(chveloc)//'.',my_rank
          open(500,file=chveloc, status='OLD', action = "READ")
-         read(500,*, IOSTAT=iost)
-         if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
+
          do iw=1,nwalk
+            read(500,*, IOSTAT=iost)natom1
+            if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
+            if(natom1.ne.natom)then
+               write(*,'(A,A)')'No. of atoms in ',chinput
+               write(*,'(A,A)')'and in ',chcoords
+               write(*,*)'do not match.'
+               call abinerror('init')
+            endif
+            read(500,*, IOSTAT=iost)
+            if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
+          
             do iat=1,natom
-               read(500,*, IOSTAT=iost)vx(iat,iw), vy(iat,iw), vz(iat, iw)
+               read(500,*, IOSTAT=iost)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
                if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
+               if (atom.ne.names(iat)) call err_read(chveloc,"Inconsistent atom types in input velocities.")
             end do
          end do
+
+         close(500)
+
       end if
+
+!     END OF READING VELOCITIES--------------------
 
       if(conatom.gt.0)then
          if (my_rank.eq.0) write(*,*)'Removing initial velocity of constrained atoms.'

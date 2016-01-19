@@ -34,13 +34,25 @@ module mod_array_size
    save
 end module  
 
-! TODO: file units for writes
+! TODO: file units for writing to permanently opened files
 module mod_files
    implicit none
-   integer, parameter :: fenerg=1
-   integer, parameter :: fmovie=10
+   public
+   ! Defines maximum number of units available for permanently opened files
+   integer, parameter :: MAXUNITS=50 
+   integer, parameter :: UENERGY=19
+   integer, parameter :: UMOVIE=10, UVELOC=13
+   character(len=20)  :: CHFILES(MAXUNITS)
+   private            :: CHFILES
 !...
    save
+!   TODO: move from init
+!   CONTAINS
+!   subroutine files_init()
+!    chfiles(UVELOC)='vel.xyz'
+!    chfiles(UENERGY)='energies.dat'
+
+!   end subroutine files_init
 end module
 
 !------------------------------------------------------

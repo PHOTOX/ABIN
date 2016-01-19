@@ -72,6 +72,7 @@ module mod_analysis
 
    subroutine trajout(x,y,z,it)
      use mod_const, only: ANG
+     use mod_files, only: UMOVIE
      use mod_general, only: imini,nwalk,natom, iremd, my_rank
      use mod_system, ONLY: names
      implicit none
@@ -79,47 +80,49 @@ module mod_analysis
      integer,intent(in) :: it
      integer            :: iat,iw
      character(len=20)  :: fgeom, chout
-     
-     if(iremd.eq.1)then
-        write(chout, '(A,I2.2)')'movie.xyz.', my_rank
-     else
-        chout='movie.xyz'
-     end if
 
-     if(it.le.imini)then
-           open(101,file='movie_mini.xyz',access='append')
-     else
-           open(101,file=chout,access='append')
-     endif
-!printing with slightly lower precision for saving space
+     
+!    printing with slightly lower precision for saving space
      fgeom='(A2,3E18.10E2)'
 
      do iw=1,nwalk
-      write(101,*)natom
-      write(101,*)'Time step:',it
-      do iat=1,natom
-       write(101,fgeom)names(iat),x(iat,iw)/ang,y(iat,iw)/ang,z(iat,iw)/ang
-      enddo
+         write(UMOVIE,*)natom
+         write(UMOVIE,*)'Time step:',it
+         do iat=1,natom
+            write(UMOVIE,fgeom)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
+         enddo
      enddo
 
-     close(101)
-
+     ! when equillibration period ends, 
+     ! start wrinting to movie.xyz instead of movie_mini.xyz
+     if (imini.eq.it)then
+        close(UMOVIE)
+        chout='movie.xyz'
+        if(iremd.eq.1) write(chout, '(A,I2.2)')trim(chout)//'.', my_rank
+        open(UMOVIE, file=chout, access='append', action="write")
+     end if
 
    end subroutine trajout
 
+
    subroutine velout(vx,vy,vz)
-     use mod_general, only: nwalk, natom, it
-     real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
-     integer :: iat,iw
-     
-
-     write(13,*)'Time step:',it
-     do iw=1,nwalk
-      do iat=1,natom
-       write(13,*)vx(iat,iw),vy(iat,iw),vz(iat,iw)
+      use mod_general, only: nwalk, natom, it
+      use mod_system, ONLY: names
+      use mod_files,   only: UVELOC
+      real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
+      integer :: iat,iw
+      character(len=20)  :: fgeom
+      
+      
+      fgeom='(A2,3E18.10E2)'
+      write(UVELOC,*)natom
+      write(UVELOC,*)'Time step:',it
+      do iw=1,nwalk
+         do iat=1,natom
+            ! Printing in atomic units
+            write(UVELOC,fgeom)names(iat),vx(iat,iw),vy(iat,iw),vz(iat,iw)
+         enddo
       enddo
-     enddo
-
 
    end subroutine velout
 

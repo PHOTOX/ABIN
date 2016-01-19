@@ -1,5 +1,6 @@
 subroutine force_abin(x, y, z, fx, fy, fz, eclas)
    use mod_const,    only: DP, ANG
+   use mod_files,    only: MAXUNITS
    use mod_general
    use mod_system,   only: names
    use mod_harmon,   only: hess
@@ -42,29 +43,29 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
       end if
 
 !     Delete the last geometry
-      open(unit=20+iw, file=chgeom)
-      close(unit=20+iw, status='delete')
+      open(unit=MAXUNITS+iw, file=chgeom)
+      close(unit=MAXUNITS+iw, status='delete')
 !----WRITING GEOMETRY IN ANGSTROMS
-      open(unit=20+iw,file=chgeom, action='write', access='SEQUENTIAL')
+      open(unit=MAXUNITS+iw,file=chgeom, action='write', access='SEQUENTIAL')
       do iat=1,natqm
-         write(20+iw,fgeom,iostat=iost) names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
+         write(MAXUNITS+iw,fgeom,iostat=iost) names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
       end do
-      close(unit=20+iw)
+      close(unit=MAXUNITS+iw)
 !---- SH     
       if(ipimd.eq.2)then
-         open(unit=20+iw+2*nwalk,file='state.dat')
-         write(20+iw+2*nwalk,'(I2)')istate(iw)
-         write(20+iw+2*nwalk,'(I2)')nstate
+         open(unit=MAXUNITS+iw+2*nwalk,file='state.dat')
+         write(MAXUNITS+iw+2*nwalk,'(I2)')istate(iw)
+         write(MAXUNITS+iw+2*nwalk,'(I2)')nstate
 
 ! upper triangular matrix without diagonal
 ! tocalc(,)=1 -> compute NA couplings
 ! tocalc(,)=0 -> do NOT compute NA cooupligs
          do ist1=1,nstate-1
             do ist2=ist1+1,nstate
-               write(20+iw+2*nwalk,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
+               write(MAXUNITS+iw+2*nwalk,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
             end do
          end do
-         close(20+iw+2*nwalk) 
+         close(MAXUNITS+iw+2*nwalk) 
       endif
 
 
@@ -99,7 +100,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
       ! For some reason, exit status 1 turns to 256
       ! However, this one we get by default from bash, don't know why...
       ! see this thread for explanation:
-      ! http://coding.derkeiler.com/Archive/Fortran/comp.lang.fortran/2007-01/msg00085.html
+      ! http://coding.derkeiler.com/Archive/Fortran/comp.lang.fortran/MAXUNITS07-01/msg00085.html
       ! If the bash script wants to notify ABIN, it can use e.g. exit 2
       if(ISTATUS.ne.0.and.ISTATUS.ne.256)then
          write(*,*)'ERROR: Something went wrong during the execution of the ab initio external program.' 
@@ -118,14 +119,14 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
          itest = itest + 1
       end do
      
-      open(unit=20+iw,file=chforce,status='old',ACTION='READ', IOSTAT=iost)
+      open(unit=MAXUNITS+iw,file=chforce,status='old',ACTION='READ', IOSTAT=iost)
       if(iost.ne.0)then
          write(*,*)'Fatal problem when trying to open the file ', chforce
          call abinerror('force_abin')
       end if
 
 !-----READING ENERGY from engrad.dat
-      read(20+iw,*,IOSTAT=iost)temp1
+      read(MAXUNITS+iw,*,IOSTAT=iost)temp1
       if(iost.ne.0)then
          write(*,*)'Fatal problem with reading energy from file ', chforce
          write(*,*)'This usually means, that the ab initio program failed to converge.'
@@ -138,7 +139,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
       if(ipimd.eq.2)then
          en_array(1,iw) = temp1
          do ist1=2,nstate
-            read(20+iw,*)en_array(ist1,iw)
+            read(MAXUNITS+iw,*)en_array(ist1,iw)
          enddo
          eclas = en_array(istate(iw),iw)
       end if
@@ -146,7 +147,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
 
 !----READING energy gradients from engrad.dat
       do iat=1,natqm
-         read(20+iw,*,IOSTAT=iost)fx(iat,iw), fy(iat,iw), fz(iat,iw)
+         read(MAXUNITS+iw,*,IOSTAT=iost)fx(iat,iw), fy(iat,iw), fz(iat,iw)
          if(iost.ne.0)then
             write(*,*)'Fatal problem with reading gradients from file ', chforce
             write(*,*)'This usually means, that the ab initio program failed.'
@@ -172,11 +173,11 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
             itest = itest + 1
          end do
 
-         open(unit=20+iw+nwalk,file=chhess,status='old',ACTION='READ')
+         open(unit=MAXUNITS+iw+nwalk,file=chhess,status='old',ACTION='READ')
 
          do iat2=1,natqm*3
             do iat1=1,natqm*3,3
-               read(20+iw+nwalk,*)hess(iat1,iat2,iw),hess(iat1+1,iat2,iw),hess(iat1+2,iat2,iw)
+               read(MAXUNITS+iw+nwalk,*)hess(iat1,iat2,iw),hess(iat1+1,iat2,iw),hess(iat1+2,iat2,iw)
                hess(iat1,iat2,iw)=hess(iat1,iat2,iw)/nwalk
                hess(iat1+1,iat2,iw)=hess(iat1+1,iat2,iw)/nwalk
                hess(iat1+2,iat2,iw)=hess(iat1+2,iat2,iw)/nwalk
@@ -186,9 +187,9 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
       endif
 
 
-      close(unit=20+iw,status='delete')
+      close(unit=MAXUNITS+iw,status='delete')
       if(ihess.eq.1)then
-         close(unit=20+iw+nwalk,status='delete')
+         close(unit=MAXUNITS+iw+nwalk,status='delete')
       endif
 
       if (iqmmm.eq.1) call oniom(x, y, z, fx, fy, fz, eclas, iw)
@@ -205,6 +206,7 @@ end
 
 subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
    use mod_const,    only: DP, ANG
+   use mod_files,    only: MAXUNITS
    use mod_general,  only: natom, it
    use mod_system,   only: names
    use mod_qmmm,     only: natqm
@@ -236,11 +238,11 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
    write(chsystem,'(A20,I13,I4.3)')chsystem,it,iw
 
 !----WRITING GEOMETRY of the whole system
-   open(unit=20+iw,file=chgeom, action='write')
+   open(unit=MAXUNITS+iw,file=chgeom, action='write')
    do iat=1,natom
-      write(20+iw,fgeom)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
+      write(MAXUNITS+iw,fgeom)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
    enddo
-   close(unit=20+iw)
+   close(unit=MAXUNITS+iw)
 
    call system(chsystem)
 
@@ -254,10 +256,10 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
       itest = itest + 1
    end do
    
-   open(unit=20+iw,file=chforce,status='old',ACTION='READ')
+   open(unit=MAXUNITS+iw,file=chforce,status='old',ACTION='READ')
 
 !-------READING ENERGY from engrad_mm.dat
-   read(20+iw,*,IOSTAT=iost)temp1
+   read(MAXUNITS+iw,*,IOSTAT=iost)temp1
    if(iost.ne.0)then
       write(*,*)'Fatal problem with reading energy from file ', chforce
       write(*,*)'This usually means, that the a program failed.'
@@ -270,7 +272,7 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
 
 !----READING energy gradients from engrad.dat
    do iat=1,natom
-      read(20+iw,*,IOSTAT=iost)tempx, tempy, tempz
+      read(MAXUNITS+iw,*,IOSTAT=iost)tempx, tempy, tempz
       if(iost.ne.0)then
          write(*,'(2A)')'Fatal problem with reading gradients from file ', chforce
          write(*,*)'This usually means, that the ab initio program failed.'
@@ -284,16 +286,16 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
    enddo
 
 
-   close(unit=20+iw, status='delete')
+   close(unit=MAXUNITS+iw, status='delete')
 
 !-----------------MM, only model QM part-------------------------- 
 
 !----WRITING GEOMETRY of the QM part
-   open(unit=20+iw,file=chgeom)
+   open(unit=MAXUNITS+iw,file=chgeom)
    do iat=1,natqm
-      write(20+iw,fgeom)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
+      write(MAXUNITS+iw,fgeom)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
    enddo
-   close(unit=20+iw)
+   close(unit=MAXUNITS+iw)
 
    call system(chsystem)
 
@@ -307,10 +309,10 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
       itest = itest + 1
    end do
    
-   open(unit=20+iw,file=chforce,status='old',ACTION='READ')
+   open(unit=MAXUNITS+iw,file=chforce,status='old',ACTION='READ')
 
 !-------READING ENERGY from engrad_mm.dat
-   read(20+iw,*,IOSTAT=iost)temp1
+   read(MAXUNITS+iw,*,IOSTAT=iost)temp1
    if(iost.ne.0)then
       write(*,*)'Fatal problem with reading energy from file ', chforce
       write(*,*)'This usually means, that the external program failed.'
@@ -323,7 +325,7 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
 
 !----READING gradients from engrad_mm.dat
    do iat=1,natqm
-      read(20+iw,*,IOSTAT=iost)tempx, tempy, tempz
+      read(MAXUNITS+iw,*,IOSTAT=iost)tempx, tempy, tempz
       if(iost.ne.0)then
          write(*,'(2A)')'Fatal problem with reading gradients from file ',chforce
          write(*,*)'This usually means, that the external program failed.'
@@ -336,7 +338,7 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
       fz(iat,iw) = fz(iat,iw) + tempz
    end do
                                         
-   close(unit=20+iw, status='delete')
+   close(unit=MAXUNITS+iw, status='delete')
 
 end subroutine oniom
 

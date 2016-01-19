@@ -17,6 +17,7 @@ TESTS/REMD/DFTB/OUT*
 TESTS/*/output
 TESTS/*/restart.xyz
 TESTS/*/restart.xyz.?
+TESTS/REMD/restart.xyz.??.*
 TESTS/*/restart.xyz.old
 TESTS/*/restart.xyz.0?
 TESTS/*/restart.xyz.10
