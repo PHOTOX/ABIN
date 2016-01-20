@@ -12,9 +12,10 @@ module mod_kinetic
    subroutine temperature(px,py,pz,amt,dt,eclas)
       use mod_const, ONLY:AUtoFS,AUtoK
       use mod_general
-      use mod_system, ONLY: dime, f, conatom
-      use mod_nhc, ONLY: inose,nhcham,calc_nhcham
-      use mod_gle, ONLY:langham
+      use mod_system,ONLY: dime, f, conatom
+      use mod_files, ONLY: UTEMPER, UENERGY
+      use mod_nhc,   ONLY: inose,nhcham,calc_nhcham
+      use mod_gle,   ONLY: langham
       use mod_shake, only: nshake
       implicit none
       integer :: iw,iat
@@ -43,28 +44,26 @@ module mod_kinetic
 
       if(modulo(it,nwrite).eq.0)then
 
-         ! Printing to file temper.dat
          ! Temperature and conserved quantities of thermostats
-         write(2,'(F15.2,F10.2)',advance="no")it*dt*autofs,est_temp*autok
-         if(ipimd.ne.2) write(2,'(F10.2)',advance="no")est_temp_cumul*autok/it2
+         write(UTEMPER,'(F15.2,F10.2)',advance="no")it*dt*autofs,est_temp*autok
+         if(ipimd.ne.2) write(UTEMPER,'(F10.2)',advance="no")est_temp_cumul*autok/it2
 
          if(inose.eq.1)then
             call calc_nhcham()
-            write(2,'(E20.10)',advance="no")nhcham+ekin_mom+eclas
+            write(UTEMPER,'(E20.10)',advance="no")nhcham+ekin_mom+eclas
          else if (inose.eq.2)then
-            write(2,'(E20.10)',advance="no")langham+ekin_mom+eclas
+            write(UTEMPER,'(E20.10)',advance="no")langham+ekin_mom+eclas
          end if
 
-         write(2,*)
+         write(UTEMPER,*)
 
          if (ipimd.ne.1)then
             ! Printing to file energies.dat
-            write(19,'(F15.2,3E20.10)', advance='no')it*dt*autofs,eclas,ekin_mom,eclas+ekin_mom
-            if (ipimd.eq.0) write(19,'(E20.10)',advance="no")entot_cumul/it2
-            write(19,*)
+            write(UENERGY,'(F15.2,3E20.10)', advance='no')it*dt*autofs,eclas,ekin_mom,eclas+ekin_mom
+            if (ipimd.eq.0) write(UENERGY,'(E20.10)',advance="no")entot_cumul/it2
+            write(UENERGY,*)
          end if
 
-      !modulo endif
       endif
 
       RETURN

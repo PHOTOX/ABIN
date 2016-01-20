@@ -51,7 +51,6 @@ subroutine init(dt, values1)
    integer :: iw,iat,natom1,imol,shiftdihed=1, iost
    integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
    character(len=2)    :: massnames(MAXTYPES), atom
-   character(len=10)   :: chaccess
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
    LOGICAL :: file_exists
@@ -380,116 +379,20 @@ subroutine init(dt, values1)
 
 !------------END OF INPUT SECTION---------------------
 
+
+
 !----------------INITIALIZATION-----------------------
 
-! TODO: move all this to modules.f90, mod_files, subroutine files_init()
-   !--Here we ensure, that previous files are deleted----
-   if(irest.eq.0)then
-     open(UMOVIE,file='movie_mini.xyz')
-     close(UMOVIE,status='delete')
-     chaccess='SEQUENTIAL'
-   else
-     chaccess='APPEND'
-   endif
-
-   ! OPEN trajectory file
-   if(imini.gt.it)then
-      chout='movie_mini.xyz'
-   else
-      chout='movie.xyz'
-   end if
-   if(iremd.eq.1) write(chout,'(A,I2.2)')trim(chout)//'.', my_rank
-   open(UMOVIE,file=chout,access=chaccess,action='write')
-
-   if (nwritev.gt.0)then
-      if(iremd.eq.1)then
-         write(chout,'(A,I2.2)')'vel.dat.',my_rank
-      else
-         chout='vel.dat'
-      end if
-      open(UVELOC,file=chout,access=chaccess,action='write')
-   endif
-
-
-   if (ipimd.ne.1)then
-      if(iremd.eq.1)then
-         write(chout,'(A,I2.2)')'energies.dat.',my_rank
-      else
-         chout='energies.dat'
-      end if
-      open(UENERGY,file=chout,access=chaccess,action='write')
-      write(UENERGY,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
-   end if
-
-   ! I don't get why we print this if icv.eq.1
-   if(ipimd.eq.1.or.icv.eq.1)then
-      open(7,file='est_energy.dat',access=chaccess,action='write')
-      write(7,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
-   endif
-
-   if(iremd.eq.1)then
-      write(chout,'(A,I2.2)')'temper.dat.',my_rank
-   else
-      chout='temper.dat'
-   end if
-   open(2,file=chout, access=chaccess, action='write')
-   write(2,*)'#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
-
-   if(ipimd.eq.2)then
-      open(3,file='pop.dat',access=chaccess,action='write')
-      write(3,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
-      open(4,file='prob.dat',access=chaccess,action='write')
-      write(4,*)'#    Time[fs] CurrentState   Probabilities'
-      open(8,file='PES.dat',access=chaccess,action='write')
-      write(8,*)'#    Time[fs] Potential energies'
-      open(14,file='nacm_all.dat',access=chaccess,action='write')
-      open(15,file='dotprod.dat',access=chaccess,action='write')
-      write(15,*)'#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'
-      if(idebug.gt.1)then
-         open(16,file='bkl.dat',access=chaccess,action='write')
-         write(16,*)'# Hopping probabilities - bkl(i) [i=1,nstate]'
-         open(17,file='coef.dat',access=chaccess,action='write')
-         write(17,*)'# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
-         if(phase.eq.1)then
-            open(18,file='phase.dat',access=chaccess,action='write')
-            write(18,*)'# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
-         end if
-      endif
-   endif
-
-   if(isbc.eq.1)then
-      if(iremd.eq.1)then
-         write(chout,'(A,I2.2)')'r.dat.',my_rank
-      else
-         chout='r.dat'
-      end if
-      open(11,file='r.dat',access=chaccess,action='write')
-      write(11,*)'#TimeStep     Radius[ANG]    density[kg.m^3]'
-   endif
-
-   if(icv.eq.1)then
-      open(122,file='cv.dat',access=chaccess,action='write')
-      write(122,*)'#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
-      close(122)
-      if(ihess.eq.1)then
-         open(123,file='cv_dcv.dat',access=chaccess,action='write')
-         write(123,*)'#         Time[fs]  Cv-DCV   Cv-DCV'
-         close(123)
-      endif
-   endif
-
-!------------------------------------------------------
-
-
-
+!     Open files for writing
+      call files_init(isbc, phase)
 
 
       if(pot.eq.'2dho')then
-       f=0 !temporary hack
+         f=0 !temporary hack
       endif
       if(nchain.gt.1)then
-       f=0 !what about nchain=1?
-       !what about massive therm?
+         f=0 !what about nchain=1?
+         ! what about massive therm?
       endif
 
 !-----SETTING initial velocities according to the Maxwell-Boltzmann distribution
@@ -566,6 +469,7 @@ subroutine init(dt, values1)
       write(*,nml=general)
       write(*,*)
       write(*,nml=system)
+      write(*,*)
       if ( inose.ge.1 ) write(*,nml=nhcopt)
       write(*,*)
       if ( ipimd.eq.2 ) write(*,nml=sh)
@@ -613,13 +517,13 @@ subroutine init(dt, values1)
 !--------END OF INITIALIZATION-------------------
    call flush(6)
 
-   contains
+   CONTAINS
 
    subroutine check_inputsanity()
    character(len=*),parameter :: chknow='If you know what you are doing, &
     &set iknow=1 (namelist general) to proceed.'
 
-      !we should exclude all non-abinitio options, but whatever....
+   !  We should exclude all non-abinitio options, but whatever....
 !$    if(nthreads.gt.1.and.(ipimd.ne.1.and.pot.ne.'_cp2k_'))then
 !$     write(*,*)'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
 !$     call abinerror('init')
@@ -627,7 +531,7 @@ subroutine init(dt, values1)
 
       if(nproc.gt.1)then
 !$       if(.false.)then
-         write(*,*)'ERROR: This executable was not compiled with parallel support.'
+         write(*,*)'FATAL ERROR: This executable was not compiled with parallel support.'
          error=1
 !$       end if
       end if
@@ -646,6 +550,11 @@ subroutine init(dt, values1)
          call abinerror('init')
       end if
 #endif
+      if(irest.eq.1.and.chveloc.ne.'')then
+         write(*,*)'ERROR: Input velocities are not compatible with irest=1.'
+         write(*,*)chknow
+         if(iknow.ne.1) error=1
+      end if
 
       !-----Check,whether input variables don't exceeds array limits
       if(ntraj.gt.ntrajmax)then

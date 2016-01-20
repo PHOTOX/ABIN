@@ -4,9 +4,12 @@ module mod_arrays
    use mod_const, only: DP
    implicit none
    real(DP), allocatable  :: x(:,:),y(:,:),z(:,:)
+   real(DP), allocatable  :: x_old(:,:),y_old(:,:),z_old(:,:)
    real(DP), allocatable  :: amt(:,:),amg(:,:)
    real(DP), allocatable  :: fxc(:,:),fyc(:,:),fzc(:,:)
+   real(DP), allocatable  :: fxc_old(:,:),fyc_old(:,:),fzc_old(:,:)
    real(DP), allocatable  :: fxq(:,:),fyq(:,:),fzq(:,:)
+   real(DP), allocatable  :: fxq_old(:,:),fyq_old(:,:),fzq_old(:,:)
    real(DP), allocatable  :: vx(:,:),vy(:,:),vz(:,:)
    real(DP), allocatable  :: px(:,:),py(:,:),pz(:,:)
    real(DP), allocatable  :: transx(:,:),transy(:,:),transz(:,:)
@@ -27,6 +30,9 @@ module mod_arrays
          allocate( transx(natomalloc+1, nwalkalloc) )
          allocate( transy(natomalloc+1, nwalkalloc) )
          allocate( transz(natomalloc+1, nwalkalloc) )
+         allocate( x_old(natomalloc+1, nwalkalloc) )
+         allocate( y_old(natomalloc+1, nwalkalloc) )
+         allocate( z_old(natomalloc+1, nwalkalloc) )
       else
          allocate( x(natomalloc, nwalkalloc) )
          allocate( y(natomalloc, nwalkalloc) )
@@ -34,11 +40,17 @@ module mod_arrays
          allocate( transx(natomalloc, nwalkalloc) )
          allocate( transy(natomalloc, nwalkalloc) )
          allocate( transz(natomalloc, nwalkalloc) )
+         allocate( x_old(natomalloc, nwalkalloc) )
+         allocate( y_old(natomalloc, nwalkalloc) )
+         allocate( z_old(natomalloc, nwalkalloc) )
       end if
 
       x=0.0d0
       y=x
       z=x
+      x_old=0.0d0
+      y_old=x
+      z_old=x
       transx=x
       transy=transx
       transz=transx
@@ -69,9 +81,15 @@ module mod_arrays
       allocate( fxc(natomalloc, nwalkalloc) )
       allocate( fyc(natomalloc, nwalkalloc) )
       allocate( fzc(natomalloc, nwalkalloc) )
+      allocate( fxc_old(natomalloc, nwalkalloc) )
+      allocate( fyc_old(natomalloc, nwalkalloc) )
+      allocate( fzc_old(natomalloc, nwalkalloc) )
       allocate( fxq(natomalloc, nwalkalloc) )
       allocate( fyq(natomalloc, nwalkalloc) )
       allocate( fzq(natomalloc, nwalkalloc) )
+      allocate( fxq_old(natomalloc, nwalkalloc) )
+      allocate( fyq_old(natomalloc, nwalkalloc) )
+      allocate( fzq_old(natomalloc, nwalkalloc) )
       allocate( transfxc(natomalloc, nwalkalloc) )
       allocate( transfyc(natomalloc, nwalkalloc) )
       allocate( transfzc(natomalloc, nwalkalloc) )

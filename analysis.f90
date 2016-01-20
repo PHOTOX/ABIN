@@ -4,6 +4,7 @@
 
 module mod_analysis
    use mod_const, only: DP
+   use mod_files
    implicit none
    private 
    public :: trajout, restout, analysis, restin
@@ -236,6 +237,7 @@ module mod_analysis
       endif
      endif
 
+     ! write current state of PRNG
      call rsavef(102)
 
      close(102)

@@ -9,21 +9,26 @@
 ! Exact values for ANG,AUTOKCAL and AUTODEBYE,me,AUTOM,AUTOFS,AMU: 
 ! Mohr, Taylor, Newell, Rev. Mod. Phys. 80 (2008) 633-730
 ! and using the thermochemical calorie (1 cal = 4.184 J):'
+
+! ABIN uses atomic units internaly
 module mod_const
    implicit none
    INTEGER, PARAMETER  :: DP = KIND(1.0d0)
-   real(DP), parameter :: AMU=1822.888484264545d0,ANG=1.889726132873d0
-   real(DP), parameter :: AUTOFS=0.02418884326505d0,PI=3.14159265358979323846d0
+   real(DP), parameter :: AMU=1822.888484264545d0 ! atomic mass unit 
+   real(DP), parameter :: ANG=1.889726132873d0     ! nagstroms to bohrs
+   real(DP), parameter :: AUTOFS=0.02418884326505d0 !atomic units to femtosecs
+   real(DP), parameter :: PI=3.14159265358979323846d0
    real(DP), parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
    real(DP), parameter :: AUTOM=5.2917720859d-11 ! atomic length
    real(DP), parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
    real(DP), parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0
    real(DP), parameter :: AUTODEBYE =  2.54174623d0
-   real(DP), parameter :: KBinAU = 0.9999999748284666d0  !boltzmann units in au,not used
+   ! Boltzmann constant in a.u., assumed to be 1.0d0 in the program
+   real(DP), parameter :: KBinAU = 0.9999999748284666d0
    save
 end module  
 
-!-mod_array_size contains various array limits. Modify here if you need larger arrays.
+! mod_array_size contains various array limits. Modify here if you need larger arrays.
 ! Most of the arrays are allocated dynamically
 module mod_array_size
    use mod_const, only: DP 
@@ -34,28 +39,7 @@ module mod_array_size
    save
 end module  
 
-! TODO: file units for writing to permanently opened files
-module mod_files
-   implicit none
-   public
-   ! Defines maximum number of units available for permanently opened files
-   integer, parameter :: MAXUNITS=50 
-   integer, parameter :: UENERGY=19
-   integer, parameter :: UMOVIE=10, UVELOC=13
-   character(len=20)  :: CHFILES(MAXUNITS)
-   private            :: CHFILES
-!...
-   save
-!   TODO: move from init
-!   CONTAINS
-!   subroutine files_init()
-!    chfiles(UVELOC)='vel.xyz'
-!    chfiles(UENERGY)='energies.dat'
 
-!   end subroutine files_init
-end module
-
-!------------------------------------------------------
 
 !--General simulation parameters      
 module mod_general
@@ -74,6 +58,149 @@ module mod_general
    save
 end module
       
+! module for permanent file handling
+module mod_files
+   implicit none
+   public
+   private            :: CHFILES
+   ! Defines maximum number of units available for permanently opened files
+   integer, parameter :: MAXUNITS=50, MAXFILENAME=50 
+   character(len=MAXFILENAME)  :: CHFILES(MAXUNITS)
+
+   ! UNIT 1 is reserved for CP2K!!!
+   integer, parameter :: UMOVIE=10, UVELOC=2
+   integer, parameter :: UENERGY=3, UTEMPER=4
+   integer, parameter :: URADIUS=11
+   ! PIMD stuff
+   integer, parameter :: UESTENERGY=12, UCV=13, UCVDCV=14
+   ! Surface hopping stuff
+   integer, parameter :: UPOP=20, UPROB=21, UPES=22
+   integer, parameter :: UDOTPROD=23, UNACME=24, UWFCOEF=25
+   integer, parameter :: UPHASE=26, UBKL=27
+   save
+
+   CONTAINS
+
+   SUBROUTINE files_init(isbc, phase)
+   use mod_general
+   integer, intent(in)  :: isbc, phase
+   character(len=10)    :: chaccess
+   integer              :: i
+
+   do i=1, MAXUNITS
+      chfiles(i)=''
+   end do
+
+   chfiles(UVELOC)='vel.xyz'
+   chfiles(UENERGY)='energies.dat'
+   chfiles(UTEMPER)='temper.dat'
+
+!  radius for spherical boundary conditions
+   chfiles(URADIUS)='radius.dat'
+
+!  Files for PIMD estimators
+   chfiles(UESTENERGY)='est_energy.dat'
+   chfiles(UCV)='cv.dat'
+!  file for advanced cv estimator
+   chfiles(UCVDCV)='cv_dcv.dat'
+
+!  Files for Surface Hopping
+   chfiles(UPOP)='pop.dat'
+   chfiles(UPROB)='prob.dat'
+   chfiles(UPES)='PES.dat'
+   chfiles(UDOTPROD)='dotprod.dat'
+   chfiles(UNACME)='nacm_all.dat'
+   chfiles(UWFCOEF)='wfcoef.dat'
+   chfiles(UPHASE)='phase.dat'
+   chfiles(UBKL)='bkl.dat'
+
+   !--Here we ensure, that previous files are deleted----
+   if(irest.eq.0)then
+      open(UMOVIE,file='movie_mini.xyz')
+      close(UMOVIE,status='delete')
+      chaccess='SEQUENTIAL'
+   else
+      chaccess='APPEND'
+   endif
+
+   if(imini.gt.it)then
+      chfiles(UMOVIE)='movie_mini.xyz'
+   else
+      chfiles(UMOVIE)='movie.xyz'
+   end if
+
+   if(iremd.eq.1)then
+      do i=1, MAXUNITS
+         write(*,*)trim(chfiles(40))//'.'
+         write(chfiles(i),'(A,I2.2)')trim(chfiles(i))//'.', my_rank
+      end do
+   end if
+
+!  OPEN trajectory file
+   open(UMOVIE,file=chfiles(UMOVIE),access=chaccess,action='write')
+
+   if (nwritev.gt.0)then
+!      if(iremd.eq.1)then
+!         write(chout,'(A,I2.2)')'vel.dat.',my_rank
+!      else
+!         chout='vel.dat'
+!      end if
+      open(UVELOC,file=chfiles(UVELOC),access=chaccess,action='write')
+   endif
+
+
+   if (ipimd.ne.1)then
+      open(UENERGY,file=chfiles(UENERGY),access=chaccess,action='write')
+      write(UENERGY,*)'#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+   end if
+
+   if(ipimd.eq.1)then
+      open(UESTENERGY,file=chfiles(UESTENERGY),access=chaccess,action='write')
+      write(UESTENERGY,*)'#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
+   endif
+
+   open(UTEMPER,file=chfiles(UTEMPER), access=chaccess, action='write')
+   write(UTEMPER,*)'#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
+
+   if(ipimd.eq.2)then
+      open(UPOP,file=chfiles(UPOP),access=chaccess,action='write')
+      write(UPOP,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
+      open(UPROB,file=chfiles(UPROB),access=chaccess,action='write')
+      write(UPROB,*)'#    Time[fs] CurrentState   Probabilities'
+      open(UPES,file=chfiles(UPES),access=chaccess,action='write')
+      write(UPES,*)'#    Time[fs] Potential energies'
+      open(UNACME,file=chfiles(UNACME),access=chaccess,action='write')
+      open(UDOTPROD,file=chfiles(UDOTPROD),access=chaccess,action='write')
+      write(UDOTPROD,*)'#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'
+      if(idebug.gt.1)then
+         open(UBKL,file=chfiles(UBKL),access=chaccess,action='write')
+         write(UBKL,*)'# Hopping probabilities - bkl(i) [i=1,nstate]'
+         open(UWFCOEF,file=chfiles(UWFCOEF),access=chaccess,action='write')
+         write(UWFCOEF,*)'# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
+         if(phase.eq.1)then
+            open(UPHASE,file=chfiles(UPHASE),access=chaccess,action='write')
+            write(UPHASE,*)'# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
+         end if
+      endif
+   endif
+
+   if(isbc.eq.1)then
+      open(URADIUS,file=chfiles(URADIUS),access=chaccess,action='write')
+      write(URADIUS,*)'#TimeStep     Radius[ANG]   approximate density[kg.m^3]'
+   endif
+
+   if(icv.eq.1)then
+      open(UCV,file=chfiles(UCV),access=chaccess,action='write')
+      write(UCV,*)'#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
+      if(ihess.eq.1)then
+         open(UCVDCV,file=chfiles(UCVDCV),access=chaccess,action='write')
+         write(UCVDCV,*)'#         Time[fs]  Cv-DCV   Cv_cumul_DCV'
+      endif
+   endif
+
+   end subroutine files_init
+
+end module
 !------------------------------------------------------
 !------------------------------------------------------
 

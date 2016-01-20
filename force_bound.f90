@@ -79,6 +79,7 @@ MODULE mod_sbc
       use mod_const,  only: ANG
       use mod_general,only: natom, nwalk, it, nwrite
       use mod_system, ONLY: names 
+      use mod_files,  ONLY: URADIUS
       real(DP),intent(in)    :: x(:,:), y(:,:), z(:,:)
       real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
       real(DP)  :: r, frb, rmax, xcm, ycm, zcm
@@ -112,7 +113,7 @@ MODULE mod_sbc
       enddo
 
 !      if(idebug.eq.1)then
-       if(modulo(it,nwrite).eq.0) write(11,'(I12,2F15.3)')it,rmax/ang,mass_total/(4.0d0/3.0d0*pi*rmax**3)/fact
+       if(modulo(it,nwrite).eq.0) write(URADIUS,'(I12,2F15.3)')it,rmax/ang,mass_total/(4.0d0/3.0d0*pi*rmax**3)/fact
 !      endif
 
       return

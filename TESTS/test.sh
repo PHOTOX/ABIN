@@ -71,7 +71,7 @@ fi
 
 err=0
 
-files=( WATER-RESTART.wfn* cp2k.out bkl.dat phase.dat coef.dat phaserest.dat phaserest.?? nacmrest.dat nacmrest.dat.?? nacm_all.dat minimize.dat geom.mini.xyz temper.dat temper.dat r.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? DYN/OUT* MM/OUT* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie.xyz movie_mini.xyz restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz )
+files=( WATER-RESTART.wfn* cp2k.out bkl.dat phase.dat wfcoef.dat phaserest.dat phaserest.?? nacmrest.dat nacmrest.dat.?? nacm_all.dat minimize.dat geom.mini.xyz temper.dat temper.dat radius.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? DYN/OUT* MM/OUT* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie.xyz movie_mini.xyz restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz )
 
 # EULER should check wf_thresh conditions
 # TODO: Make test_readme.txt, with specifications of every test, maybe include only in input.in

@@ -59,7 +59,6 @@ module mod_sh
    allocate( nacy_old(natom, ntrajmax, nstate, nstate) )
    allocate( nacz_old(natom, ntrajmax, nstate, nstate) )
    nacx=0.0d0
-   !automatic allocation and data copying
    nacy=0.0d0
    nacz=0.0d0
    nacx_old=nacx
@@ -81,35 +80,36 @@ module mod_sh
 !--Determining the initial WF coefficients
    if(irest.ne.1)then
 
-!--automatic determination of initial state based on osc. streght
-!  NOT TESTED yet
-   if(istate_init.eq.-1)then
-      open(151,file='oscil.dat')
-   endif
-   do itrj=1,ntraj
-
+!--   automatic determination of initial state based on osc. streght
+!     NOT TESTED yet
       if(istate_init.eq.-1)then
-         do ist1=1,nstate
-            read(151,*)pom
-            if(pom.gt.maxosc)then
-               istate(itrj)=ist1
-               maxosc=pom
-            endif
-         enddo
-      else
-         istate(itrj)=istate_init
+         open(500,file='oscil.dat')
       endif
 
-      do ist1=1,nstate
-         cel_re(ist1,itrj)=0.0d0
-         cel_im(ist1,itrj)=0.0d0
+      do itrj=1,ntraj
+ 
+         if(istate_init.eq.-1)then
+            do ist1=1,nstate
+               read(500,*)pom
+               if(pom.gt.maxosc)then
+                  istate(itrj)=ist1
+                  maxosc=pom
+               endif
+            enddo
+         else
+            istate(itrj)=istate_init
+         endif
+ 
+         do ist1=1,nstate
+            cel_re(ist1,itrj)=0.0d0
+            cel_im(ist1,itrj)=0.0d0
+         enddo
+         cel_re(istate(itrj),itrj)=1.0d0
       enddo
-      cel_re(istate(itrj),itrj)=1.0d0
-   enddo
-
-   if(istate_init.eq.-1)then
-      close(151)
-   endif
+ 
+      if(istate_init.eq.-1)then
+         close(500)
+      endif
 !irest endif
    endif
 
@@ -348,6 +348,7 @@ module mod_sh
    return
    end function readnacm
 
+
    subroutine calcnacm(itrj)
    use mod_utils, only: LowerToUpper
    use mod_general, only: it, pot
@@ -374,7 +375,9 @@ module mod_sh
    write(chsystem,'(A20,I13,I4.3,I3,A12)')chsystem,it,itrj,nac_accu2,' < state.dat'
 
    call system(chsystem)
+
    end subroutine calcnacm
+
 
    subroutine move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
    use mod_general,only:natom
@@ -439,59 +442,60 @@ module mod_sh
 
 
    subroutine surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt,eclas)
-      use mod_const,   only: ANG, AUTOFS
-      use mod_general, only: natom, pot, nwrite, idebug, it
-      use mod_system,  ONLY: names
-      use mod_qmmm,    ONLY: natqm
-      use mod_random,  ONLY: vranf
-      use mod_kinetic, ONLY: ekin_v
-      real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
-      real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
-      real(DP),intent(inout) :: vx_old(:,:),vy_old(:,:),vz_old(:,:)
-      real(DP),intent(inout) :: eclas
-      real(DP),intent(in)    :: dt
-      real(DP)  :: vx_int(size(vx,1),size(vx,2))
-      real(DP)  :: vy_int(size(vy,1),size(vy,2))
-      real(DP)  :: vz_int(size(vz,1),size(vz,2))
-      real(DP)  :: vx_newint(size(vx,1),size(vx,2))
-      real(DP)  :: vy_newint(size(vy,1),size(vy,2))
-      real(DP)  :: vz_newint(size(vz,1),size(vz,2))
-      real(DP)  :: en_array_int(nstmax,ntrajmax),en_array_newint(nstmax,ntrajmax)
-      real(DP)  :: nacx_int(size(vx,1),ntrajmax,nstmax,nstmax)  
-      real(DP)  :: nacy_int(size(vx,1),ntrajmax,nstmax,nstmax)
-      real(DP)  :: nacz_int(size(vx,1),ntrajmax,nstmax,nstmax)
-      real(DP)  :: nacx_newint(size(vx,1),ntrajmax,nstmax,nstmax)
-      real(DP)  :: nacy_newint(size(vx,1),ntrajmax,nstmax,nstmax)
-      real(DP)  :: nacz_newint(size(vx,1),ntrajmax,nstmax,nstmax)
-      real(DP)  :: dotproduct_int(nstmax,nstmax,ntrajmax),dotproduct_newint(nstmax,nstmax,ntrajmax) !rename dotproduct_int
-      real(DP)  :: t(nstmax,nstmax)           !switching probabilities
-      real(DP)  :: t_tot(nstmax,nstmax)       !cumulative switching probabilities
-      real(DP)  :: ran(10)
-      real(DP)  :: pop(size(tocalc,1),ntrajmax),popsum !populations
-      integer :: iat,ist1,ist2,itrj,itp     !iteration counters
-      integer :: ist                    ! =istate(itrj)
-      real(DP)  :: vect_olap,fr,frd
-      real(DP)  :: ekin_mom,apom,edif,tau,fact,sum_norm
-      integer :: ihop,ijunk
-      real(DP)  :: pop0, a_re, a_im, prob(nstmax), cn, stepfs
-      character(len=500) :: formt
-      character(len=20) :: chist,chihop,chit
-      integer :: iost, iunit=600
+   use mod_const,    only: ANG, AUTOFS
+   use mod_general,  only: natom, pot, nwrite, idebug, it
+   use mod_system,   ONLY: names
+   use mod_files,    ONLY: UPOP,UPROB,UPES,UWFCOEF,UWFCOEF,UNACME, UBKL,UPHASE,UDOTPROD
+   use mod_qmmm,     ONLY: natqm
+   use mod_random,   ONLY: vranf
+   use mod_kinetic,  ONLY: ekin_v
+   real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
+   real(DP),intent(inout) :: vx_old(:,:),vy_old(:,:),vz_old(:,:)
+   real(DP),intent(inout) :: eclas
+   real(DP),intent(in)    :: dt
+   real(DP)  :: vx_int(size(vx,1),size(vx,2))
+   real(DP)  :: vy_int(size(vy,1),size(vy,2))
+   real(DP)  :: vz_int(size(vz,1),size(vz,2))
+   real(DP)  :: vx_newint(size(vx,1),size(vx,2))
+   real(DP)  :: vy_newint(size(vy,1),size(vy,2))
+   real(DP)  :: vz_newint(size(vz,1),size(vz,2))
+   real(DP)  :: en_array_int(nstmax,ntrajmax),en_array_newint(nstmax,ntrajmax)
+   real(DP)  :: nacx_int(size(vx,1),ntrajmax,nstmax,nstmax)  
+   real(DP)  :: nacy_int(size(vx,1),ntrajmax,nstmax,nstmax)
+   real(DP)  :: nacz_int(size(vx,1),ntrajmax,nstmax,nstmax)
+   real(DP)  :: nacx_newint(size(vx,1),ntrajmax,nstmax,nstmax)
+   real(DP)  :: nacy_newint(size(vx,1),ntrajmax,nstmax,nstmax)
+   real(DP)  :: nacz_newint(size(vx,1),ntrajmax,nstmax,nstmax)
+   real(DP)  :: dotproduct_int(nstmax,nstmax,ntrajmax),dotproduct_newint(nstmax,nstmax,ntrajmax) !rename dotproduct_int
+   real(DP)  :: t(nstmax,nstmax)           !switching probabilities
+   real(DP)  :: t_tot(nstmax,nstmax)       !cumulative switching probabilities
+   real(DP)  :: ran(10)
+   real(DP)  :: pop(size(tocalc,1),ntrajmax),popsum !populations
+   integer :: iat,ist1,ist2,itrj,itp     !iteration counters
+   integer :: ist                    ! =istate(itrj)
+   real(DP)  :: vect_olap,fr,frd
+   real(DP)  :: ekin_mom,apom,edif,tau,fact,sum_norm
+   integer :: ihop,ijunk
+   real(DP)  :: pop0, a_re, a_im, prob(nstmax), cn, stepfs
+   character(len=500) :: formt
+   character(len=20) :: chist,chihop,chit
+   integer :: iost, iunit=600
 
 
-      do itrj=1,ntraj
+do itrj=1,ntraj
 
-         call check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
-         call check_energydrift(vx, vy, vz, itrj)
+   call check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
+   call check_energydrift(vx, vy, vz, itrj)
 
-         t_tot=1.0d0
+   t_tot=1.0d0
 
-         popsum=0.0d0
+   popsum=0.0d0
 
 !-------READING NACM-----------------------     
-     if(inac.eq.0)then
+   if(inac.eq.0)then
 
-       do ist1=1,nstate-1
+      do ist1=1,nstate-1
          do ist2=ist1+1,nstate
             if(tocalc(ist1,ist2).eq.0)then
                write(*,*)'Not computing NACME between states',ist1,ist2
@@ -505,20 +509,20 @@ module mod_sh
                enddo
             endif
          enddo
-       enddo
+      enddo
 
       if(pot.ne.'_tera_')then
-       iost=readnacm(itrj)
-!------------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-       if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
-         call calcnacm(itrj)
-
          iost=readnacm(itrj)
-       endif
+!------------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
+         if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
+            call calcnacm(itrj)
+
+            iost=readnacm(itrj)
+         endif
 !------------if NACME STILL NOT COMPUTED: USE OLD NACM--------------
-       if(iost.ne.0)then
-        write(*,*)'ERROR:Some NACMEs not read.'
-        call abinerror('surfacehop')
+         if(iost.ne.0)then
+            write(*,*)'ERROR:Some NACMEs not read.'
+            call abinerror('surfacehop')
 !        do ist1=1,nstate-1
 !         do ist2=ist1+1,nstate
 !
@@ -537,32 +541,33 @@ module mod_sh
 
 !         enddo
 !        enddo
-       endif
+         endif
 
-    end if
+      end if
 
 !--------------calculating overlap between nacmes-------------------
       do ist1=1,nstate
-       do ist2=1,nstate
-        vect_olap=0.0d0
-        do iat=1,natom
-         vect_olap=vect_olap+nacx_old(iat,itrj,ist1,ist2)*nacx(iat,itrj,ist1,ist2)
-         vect_olap=vect_olap+nacy_old(iat,itrj,ist1,ist2)*nacy(iat,itrj,ist1,ist2)
-         vect_olap=vect_olap+nacz_old(iat,itrj,ist1,ist2)*nacz(iat,itrj,ist1,ist2)
-        enddo
-        if(vect_olap.lt.0)then
-         do iat=1,natom
-          nacx(iat,itrj,ist1,ist2)=-nacx(iat,itrj,ist1,ist2)
-          nacy(iat,itrj,ist1,ist2)=-nacy(iat,itrj,ist1,ist2)
-          nacz(iat,itrj,ist1,ist2)=-nacz(iat,itrj,ist1,ist2)
-         enddo 
-        endif
+         do ist2=1,nstate
+            vect_olap=0.0d0
+            do iat=1,natom
+               vect_olap=vect_olap+nacx_old(iat,itrj,ist1,ist2)*nacx(iat,itrj,ist1,ist2)
+               vect_olap=vect_olap+nacy_old(iat,itrj,ist1,ist2)*nacy(iat,itrj,ist1,ist2)
+               vect_olap=vect_olap+nacz_old(iat,itrj,ist1,ist2)*nacz(iat,itrj,ist1,ist2)
+            enddo
 
-        enddo
+            if(vect_olap.lt.0)then
+               do iat=1,natom
+                  nacx(iat,itrj,ist1,ist2)=-nacx(iat,itrj,ist1,ist2)
+                  nacy(iat,itrj,ist1,ist2)=-nacy(iat,itrj,ist1,ist2)
+                  nacz(iat,itrj,ist1,ist2)=-nacz(iat,itrj,ist1,ist2)
+               enddo 
+            endif
+
+         enddo
        enddo
 
 !----------- INAC=1  endif
-     endif
+   endif
 
 !------READING time-derivative couplings----------------------------------
    if ( inac.eq.1 ) then
@@ -593,11 +598,13 @@ module mod_sh
       enddo
 
 
-!v prvnim korku nemame mezi cim interpolovat..bereme nulty krok jako prvni
+      !  we don't have interpolation in the zeroth step
       if( it.eq.1) dotproduct_old=dotproduct
-       !TDC end if
+   ! TDC end if
    endif
 !------------------END-OF-TDC-------------------------------
+
+!#### MAIN LOOP
 
 ! Smaller time step for electron population transfer
    do itp=1,substep      
@@ -647,36 +654,36 @@ module mod_sh
 !- do not calculated the whole transition matrix
 !- t array could be one dimensional but whatever
       do ist2=1,nstate 
-        pop(ist2,itrj)=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
-        a_re=( cel_re(ist,itrj)*cel_re(ist2,itrj)+cel_im(ist,itrj)*cel_im(ist2,itrj) )
-        if (phase.eq.1)then
-         a_im=(- cel_im(ist,itrj)*cel_re(ist2,itrj) + cel_re(ist, itrj)*cel_im(ist2, itrj) )
-         t(ist,ist2)=a_re*cos(gama(ist, ist2, itrj))-sin(gama(ist, ist2, itrj))*a_im
-         t(ist,ist2)=t(ist,ist2)*(dotproduct_int(ist,ist2,itrj) + dotproduct_newint(ist,ist2,itrj) )
-        else
-!         t(ist,ist2)=2*a_re*dotproduct_int(ist,ist2,itrj)
-          t(ist,ist2)=a_re*(dotproduct_int(ist,ist2,itrj)+dotproduct_newint(ist,ist2,itrj) )
-        endif
-        t(ist,ist2)=t(ist,ist2)*dtp/(pop0+1d-20)
+         pop(ist2,itrj)=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
+         a_re=( cel_re(ist,itrj)*cel_re(ist2,itrj)+cel_im(ist,itrj)*cel_im(ist2,itrj) )
+         if (phase.eq.1)then
+             a_im=(- cel_im(ist,itrj)*cel_re(ist2,itrj) + cel_re(ist, itrj)*cel_im(ist2, itrj) )
+             t(ist,ist2)=a_re*cos(gama(ist, ist2, itrj))-sin(gama(ist, ist2, itrj))*a_im
+             t(ist,ist2)=t(ist,ist2)*(dotproduct_int(ist,ist2,itrj) + dotproduct_newint(ist,ist2,itrj) )
+         else
+!            t(ist,ist2)=2*a_re*dotproduct_int(ist,ist2,itrj)
+             t(ist,ist2)=a_re*(dotproduct_int(ist,ist2,itrj)+dotproduct_newint(ist,ist2,itrj) )
+         endif
+         t(ist,ist2)=t(ist,ist2)*dtp/(pop0+1d-20)
       enddo        
 
       if(idebug.gt.1)then
          stepfs=(it*substep+itp-substep)*dt*AUtoFS/substep
          write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
-         write(16,fmt=formt)stepfs,(t(ist,ist1),ist1=1,nstate)
+         write(UBKL,fmt=formt)stepfs,(t(ist,ist1),ist1=1,nstate)
 
-         write(17,fmt=formt,advance="no")stepfs,(cel_re(ist1,itrj),ist1=1,nstate)
+         write(UWFCOEF,fmt=formt,advance="no")stepfs,(cel_re(ist1,itrj),ist1=1,nstate)
          write(formt,'(A1,I3,A7)')'(',nstate,'E20.10)'
-         write(17,fmt=formt,advance="no")(cel_im(ist1,itrj),ist1=1,nstate)
-         write(17,*)''
+         write(UWFCOEF,fmt=formt,advance="no")(cel_im(ist1,itrj),ist1=1,nstate)
+         write(UWFCOEF,*)''
 
          if(phase.eq.1)then
-            write(18,'(F15.2,E20.10)',advance="no")stepfs,gama(2,1,itrj)
+            write(UPHASE,'(F15.2,E20.10)',advance="no")stepfs,gama(2,1,itrj)
             do ist1=3,nstate
                write(formt,'(A1,I3,A7)')'(',ist1-1,'E20.10)'
-               write(18,fmt=formt,advance="no")(gama(ist1,ist2,itrj),ist2=1,ist1-1)
+               write(UPHASE,fmt=formt,advance="no")(gama(ist1,ist2,itrj),ist2=1,ist1-1)
             end do
-            write(18,*)''
+            write(UPHASE,*)''
          end if
       end if
 
@@ -695,141 +702,136 @@ module mod_sh
 
 ! Auxiliary calculations of probabilities
       do ist1=1,nstate
-       if(ist1.eq.ist.and.ist1.eq.1)then
-        prob(ist1)=0.0d0
-       endif
-       if(ist1.ne.ist.and.ist1.eq.1)then
-        prob(ist1)=t(ist,ist1)
-       endif
-       if(ist1.ne.ist.and.ist1.ne.1)then
-        prob(ist1)=prob(ist1-1)+t(ist,ist1)
-       endif
-       if(ist1.eq.ist.and.ist1.ne.1)then
-        prob(ist1)=prob(ist1-1)
-       endif
+         if(ist1.eq.ist.and.ist1.eq.1)  prob(ist1) = 0.0d0
+         if(ist1.ne.ist.and.ist1.eq.1)  prob(ist1) = t(ist,ist1)
+         if(ist1.ne.ist.and.ist1.ne.1)  prob(ist1) = prob(ist1-1)+t(ist,ist1)
+         if(ist1.eq.ist.and.ist1.ne.1)  prob(ist1) = prob(ist1-1)
       enddo
 
-      !should we hop before decoherence?????
+      ! should we hop before decoherence?????
       ! every article says something different
       ! newton-X hops before decoherence
-! HOPPING      
-   if (nohop.ne.1)then
 
-      ihop=0
-      call vranf(ran,1,0,6)
-      cn=ran(1)
-      if(ist.ne.1)then
-       if(cn.ge.0.0d0.and.cn.lt.prob(1))then
-        ihop=1
-       endif
-      endif
+!     HOPPING  SECTION     
+      if (nohop.ne.1)then
 
-      do ist1=2,nstate
-      if(ist.ne.ist1)then
-       if(cn.ge.prob(ist1-1).and.cn.lt.prob(ist1))then 
-        ihop=ist1
-       endif
-      endif
-      enddo
-
-!-------did HOP occur?-----------------
-      if(ihop.ne.0)then
-         if(adjmom.eq.0) call hop(vx,vy,vz,ist,ihop,itrj,eclas)
-         if(adjmom.eq.1) call hop_dot(vx,vy,vz,ist,ihop,itrj,eclas)
-         write(formt,'(A8,I3,A7)')'(A1,I10,',nstate+1,'E20.10)'
-         write(3,*)'#Substep   RandomNum   Probabilities'
-         write(3,fmt=formt)'#',itp,cn,(t(ist,ist1),ist1=1,nstate)
-         write(formt,'(A5,I10,A1,I2,A1,I2)')'geom.',it,'.',ist,'.',ihop
-         write(chist,*)ist
-         write(chihop,*)ihop
-         write(chit,*)it
-         formt='geom.'//trim(adjustl(chist))//'.'//trim(adjustl(chihop))//'.'//adjustl(chit)
-         open(100,file=trim(formt))
-         write(100,*)natom
-         write(100,*)''
-         do iat=1,natom
-            write(100,*)names(iat),x(iat,itrj)/ang,y(iat,itrj)/ang,z(iat,itrj)/ang
+         ihop=0
+         call vranf(ran,1,0,6)
+         cn=ran(1)
+         if(ist.ne.1)then
+            if(cn.ge.0.0d0.and.cn.lt.prob(1))then
+               ihop=1
+            endif
+         endif
+       
+         do ist1=2,nstate
+            if(ist.ne.ist1)then
+               if(cn.ge.prob(ist1-1).and.cn.lt.prob(ist1))then 
+                  ihop=ist1
+               endif
+            endif
          enddo
-         close(100)
-      endif   
+       
+!        Did HOP occur?
+         if(ihop.ne.0)then
+            if(adjmom.eq.0) call hop(vx,vy,vz,ist,ihop,itrj,eclas)
+            if(adjmom.eq.1) call hop_dot(vx,vy,vz,ist,ihop,itrj,eclas)
+            write(formt,'(A8,I3,A7)')'(A1,I10,',nstate+1,'E20.10)'
+            write(UPOP,*)'#Substep   RandomNum   Probabilities'
+            write(UPOP,fmt=formt)'#',itp,cn,(t(ist,ist1),ist1=1,nstate)
+       
+            ! write current geometry
+            write(formt,'(A5,I10,A1,I2,A1,I2)')'geom.',it,'.',ist,'.',ihop
+            write(chist,*)ist
+            write(chihop,*)ihop
+            write(chit,*)it
+            formt='geom.'//trim(adjustl(chist))//'.'//trim(adjustl(chihop))//'.'//adjustl(chit)
+            open(500,file=trim(formt))
+            write(500,*)natom
+            write(500,*)''
+            do iat=1,natom
+               write(500,*)names(iat),x(iat,itrj)/ANG,y(iat,itrj)/ANG,z(iat,itrj)/ANG
+            enddo
+            close(500)
+         endif   
+       
+         !nohop endif
+      endif
 
-      !nohop endif
-   endif
-
+!     Quantum decoherence part----------------------------------
       if(alpha.gt.0)then
-! Quantum decoherence part----------------------------------
       
-      ekin_mom=ekin_v(vx_int,vy_int,vz_int)
+         ekin_mom=ekin_v(vx_int,vy_int,vz_int)
 
-      if(ekin_mom.gt.1.0d-4)then !Why this number?In almost all cases it won't matter
+         if(ekin_mom.gt.1.0d-4)then !Why this number? In almost all cases it won't matter
 
-      do ist1=1,nstate
-       if(ist1.ne.istate(itrj)) then
+            do ist1=1,nstate
+               if(ist1.ne.istate(itrj)) then
 
-!Calculation of exponential factor               
-       edif=abs( en_array_int(ist1,itrj)-en_array_int(istate(itrj),itrj) )
-       tau=1/edif
-       apom=alpha/ekin_mom
-       tau=tau*(1.0d0+apom)
-       fact=dexp(-dtp/tau)
-
-       cel_re(ist1,itrj)=cel_re(ist1,itrj)*fact
-       cel_im(ist1,itrj)=cel_im(ist1,itrj)*fact
-       endif
-      enddo
+!                 Calculation of exponential factor               
+                  edif=abs( en_array_int(ist1,itrj)-en_array_int(istate(itrj),itrj) )
+                  tau=1/edif
+                  apom=alpha/ekin_mom
+                  tau=tau*(1.0d0+apom)
+                  fact=dexp(-dtp/tau)
+   
+                  cel_re(ist1,itrj)=cel_re(ist1,itrj)*fact
+                  cel_im(ist1,itrj)=cel_im(ist1,itrj)*fact
+               endif
+            enddo
 
 ! RENORMALIZATION OF ISTATE     
-      sum_norm=1.0d0
-      do ist1=1,nstate
-         if(ist1.ne.istate(itrj)) then
-            sum_norm=sum_norm-cel_re(ist1,itrj)**2-cel_im(ist1,itrj)**2
+            sum_norm=1.0d0
+            do ist1=1,nstate
+               if(ist1.ne.istate(itrj)) then
+                  sum_norm=sum_norm-cel_re(ist1,itrj)**2-cel_im(ist1,itrj)**2
+               endif
+            enddo
+            fact=sum_norm/(cel_re(istate(itrj),itrj)**2+cel_im(istate(itrj),itrj)**2+1.0d-7)
+
+            !Following should never happen as we check for popsumthr later in this subroutine
+            if(fact.lt.0.0d0)then
+               write(*,*)'Fatal error in surfacehop during decoherence renormalization.'
+               write(*,*)'fact=',fact,'but should be > 0'
+               write(*,*)'This usually means inaccurate integration of electronic SE.'
+               write(*,*)'Increase number of substeps or use more accurate integrator.'
+               call abinerror('surfacehop')
+            end if
+
+            fact=sqrt(fact)
+
+            cel_re(istate(itrj),itrj)=cel_re(istate(itrj),itrj)*fact
+            cel_im(istate(itrj),itrj)=cel_im(istate(itrj),itrj)*fact
+
+         ! ekin endif
          endif
-      enddo
-      fact=sum_norm/(cel_re(istate(itrj),itrj)**2+cel_im(istate(itrj),itrj)**2+1.0d-7) !TODO:smaller number
-      !Following should never happen as we check for popsumthr later in this subroutine
-      if(fact.lt.0.0d0)then
-         write(*,*)'Fatal error in surfacehop during decoherence renormalization.'
-         write(*,*)'fact=',fact,'but should be > 0'
-         write(*,*)'This usually means inaccurate integration of electronic SE.'
-         write(*,*)'Increase number of substeps or use more accurate integrator.'
-         call abinerror('surfacehop')
-      end if
-      fact=sqrt(fact)
-!     write(*,*)'renomr',fact,istate(itrj)
 
-      cel_re(istate(itrj),itrj)=cel_re(istate(itrj),itrj)*fact
-      cel_im(istate(itrj),itrj)=cel_im(istate(itrj),itrj)*fact
-
-      !ekin endif
+!-----END-OF-DECOHERENCE------------------------      
       endif
-
-!--------END-OF-DECOHERENCE------------------------      
-      endif
-
 
 
 
 !itp loop
-      enddo
+   enddo
 
 !    set tocalc array for the next step
-     call set_tocalc(itrj)
+   call set_tocalc(itrj)
 
-     if(idebug.eq.1)then
-        ! this is rarely needed, since we always print dotproduct into
-        ! dotprod.dat
-        ! this is only to check that the matrix is really symmetrical
-         if(it.eq.1)then
-            open(iunit,file='dotprodmatrix.dat')
-         else
-            open(iunit,file='dotprodmatrix.dat',access='append')
-         endif
-         write(iunit,*)'Step: ',it
-         do ist1=1,nstate
-            write(iunit,*)(dotproduct_int(ist1,ist2,itrj),ist2=1,nstate)
-         enddo
-         close(iunit)
+   if(idebug.eq.1)then
+      ! this is rarely needed, since we always print dotproduct into
+      ! dotprod.dat
+      ! this is only to check that the matrix is really symmetrical
+      if(it.eq.1)then
+         open(iunit,file='dotprodmatrix.dat')
+      else
+         open(iunit,file='dotprodmatrix.dat',access='append')
       endif
+      write(iunit,*)'Step: ',it
+      do ist1=1,nstate
+         write(iunit,*)(dotproduct_int(ist1,ist2,itrj),ist2=1,nstate)
+      enddo
+      close(iunit)
+   endif
 
 
    do ist1=1,nstate
@@ -844,45 +846,46 @@ module mod_sh
       !stepfs = time ! for future adaptive time step
       ! TODO add printing og TDip, Dip and DotCi
       write(formt,'(A10,I3,A13)')'(F15.2,I3,',nstate,'F10.5,1F10.7)'
-      write(3,fmt=formt)stepfs,istate(itrj),(pop(ist1,itrj), ist1=1,nstate),popsum
+      write(UPOP,fmt=formt)stepfs,istate(itrj),(pop(ist1,itrj), ist1=1,nstate),popsum
 
       t_tot=1-t_tot !up to know, t_tot is the probability of not hopping
       write(formt,'(A10,I3,A6)')'(F15.2,I3,',nstate,'F10.5)'
-      write(4,fmt=formt)stepfs,istate(itrj),(t_tot(ist,ist1),ist1=1,nstate)
+      write(UPROB,fmt=formt)stepfs,istate(itrj),(t_tot(ist,ist1),ist1=1,nstate)
       write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
-      write(8,fmt=formt)stepfs,(en_array(ist1,itrj),ist1=1,nstate)
-      if (inac.eq.0)  write(14,*)'Time step:',it
+      write(UPES,fmt=formt)stepfs,(en_array(ist1,itrj),ist1=1,nstate)
+      if (inac.eq.0)  write(UNACME,*)'Time step:',it
       do ist1=1,nstate-1
          do ist2=ist1+1,nstate
 
             if (ist1.eq.1.and.ist2.eq.2)then
-               write(15,'(F15.2,E20.10)',advance='no')stepfs,dotproduct_int(ist1,ist2,itrj)
+               write(UDOTPROD,'(F15.2,E20.10)',advance='no')stepfs,dotproduct_int(ist1,ist2,itrj)
             else
-               write(15,'(E20.10)',advance='no')dotproduct_int(ist1,ist2,itrj)
+               write(UDOTPROD,'(E20.10)',advance='no')dotproduct_int(ist1,ist2,itrj)
             end if
 
             if (inac.eq.0)then
-               write(14,*)'NACME between states:', ist1, ist2
+               write(UNACME,*)'NACME between states:', ist1, ist2
                do iat=1,natom
-                  write(14,'(3E20.10)')nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+                  write(UNACME,'(3E20.10)')nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                enddo
             endif
 
          end do
       end do
-      write(15,*)''
+      write(UDOTPROD,*)''
 
    endif
 
-   ! ntraj enddo       
-   enddo
+! ntraj enddo       
+enddo
 
    end subroutine surfacehop
 
    subroutine hop(vx,vy,vz,instate,outstate,itrj,eclas)
-      use mod_general, ONLY:natom
-      use mod_system, ONLY: am
-      use mod_kinetic, only: ekin_v
+      use mod_general,  ONLY:natom
+      use mod_system,   ONLY: am
+      use mod_files,    ONLY: UPOP
+      use mod_kinetic,  only: ekin_v
       real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
       real(DP),intent(inout) :: eclas
       integer, intent(in)    :: itrj,instate,outstate
@@ -909,7 +912,7 @@ module mod_sh
       c_temp=b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))
 
       if(c_temp.lt.0)then
-         write(3,*)'#Not enough momentum in the direction of NAC vector.'
+         write(UPOP,*)'#Not enough momentum in the direction of NAC vector.'
          ! Try, whether there is enough total kinetic energy and scale velocities.
          call hop_dot(vx,vy,vz,instate,outstate,itrj,eclas)
          return
@@ -917,7 +920,7 @@ module mod_sh
 
       istate(itrj)=outstate
       eclas=en_array(outstate,itrj)
-      write(3,'(A24,I3,A10,I3)')'#Hop occured from state ',instate,' to state ',outstate
+      write(UPOP,'(A24,I3,A10,I3)')'#Hop occured from state ',instate,' to state ',outstate
 
 
 !------------- Rescaling the velocities------------------------
@@ -938,8 +941,8 @@ module mod_sh
       enddo
       ekin_new=ekin_v(vx,vy,vz)
 
-      write(3,'(A31,2E20.10)')'#deltaE_pot     E_kin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
-      write(3,'(A,2E20.10)')'#Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
+      write(UPOP,'(A31,2E20.10)')'#deltaE_pot     E_kin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
+      write(UPOP,'(A,2E20.10)')'#Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
    end subroutine hop
 

@@ -326,6 +326,7 @@ end
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general
+   use mod_files,  only: MAXUNITS
    use mod_nhc
    use mod_estimators, only: h
    use mod_harmon, only: hess
@@ -369,8 +370,7 @@ subroutine finish(error_code)
 
    call deallocate_arrays( )
 
-   close(2);close(3)
-   do i=7,20
+   do i=2,MAXUNITS
       inquire(unit=i,opened=lopen)
       if (lopen.and.i.ne.5.and.i.ne.6) close(i)
    end do
