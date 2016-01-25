@@ -210,10 +210,6 @@ program abin_dyn
 
          ! sim_time = sim_time + dt
 
-
-#ifdef PLUM
-!          if(plumed.eq.1) call plumed_stepinfo(it,amt)
-#endif
 !-----CALL RESPA or VELOCITY VERLET--------------
          if(nshake.eq.0)then
             if (md.eq.1) call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
@@ -424,7 +420,7 @@ subroutine finish(error_code)
 
 !   PLUMED closing session
 #ifdef PLUM
-    if (plumed.eq.1) then
+    if (iplumed.eq.1) then
     call plumed_f_gfinalize()
     end if
 #endif

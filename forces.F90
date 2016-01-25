@@ -17,7 +17,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
    use mod_water,    only: watpot
    use mod_cp2k,     only: force_cp2k
 #ifdef PLUM
-      use mod_plumed,   only: plumed, plumedfile, force_plumed
+      use mod_plumed,   only: iplumed, plumedfile, force_plumed
 #endif
 #ifdef MPI
    use mod_terampi
@@ -112,7 +112,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
 
 !--------PLUMED SECTION---------------
 #ifdef PLUM
-   if(plumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
+   if(iplumed.eq.1.and.it.gt.imini) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 #endif
 !------------------------------------
 

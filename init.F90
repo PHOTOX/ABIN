@@ -39,7 +39,7 @@ subroutine init(dt, values1)
    use mod_cp2k,     only: cp2k_init
 #endif
 #ifdef PLUM
-   use mod_plumed,   only: plumed, plumedfile, plumed_init
+   use mod_plumed,   only: iplumed, plumedfile, plumed_init
 #endif
 #ifdef MPI
    use mod_remd
@@ -67,7 +67,7 @@ subroutine init(dt, values1)
 
    namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev,dt,irandom,nabin,irest,nrest,anal_ext,isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
-            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, plumed, plumedfile
+            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
@@ -92,7 +92,7 @@ subroutine init(dt, values1)
    chveloc=''
    dt=-1  
    error=0
-   plumed=0
+   iplumed=0
 
    call Get_cmdline(chinput, chcoords, chveloc)
 
@@ -146,14 +146,11 @@ subroutine init(dt, values1)
 #endif
 
 #ifdef PLUM
-   if(plumed.eq.1) then
+   if(iplumed.eq.1) then
       call plumed_init(dt)
       write(*,*) 'PLUMED is on'
       write(*,*) 'PLUMEDfile is ',plumedfile   
    endif
-!add variable numtest=1
-!call plumed_f_ginitialized(numtest)
-! print *, numtest	
 #else
       write(*,*)'FATAL ERROR: ABIN was not compiled with PLUMED.'
 #endif

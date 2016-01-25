@@ -1,0 +1,43 @@
+This is a sample input file for ABIN 
+NOTE: order of input sections matters!!
+
+&general
+nstep=100000,
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+
+pot='harm'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
+ipimd=0,		!classical simulation 0, quantum simulation 1
+nwalk=1,		!number of random walkers 
+imini=0,		!equilibration period,!not properly implemented yet
+istage=0,		!staging transformation (1), without staging (0)
+
+dt=20.,			!number of steps and timestep
+irandom=131313,  	!random seed
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=1,		! how often should we print coordinates?
+nrest=50,		! how often we print restart files?
+
+natom=2,		!number of atoms
+
+iplumed=1,		! turn on PLUMED (metadynamics)
+plumedfile='plumed.in', ! plumed input file
+/
+
+&system
+!massnames=H,
+!masses=1.,
+r0=5.66917796,                  ! [BOHR] = 3.0A
+k=0.05,                     ! Ha*bohr-2 
+ndist=1,
+dist1=1,
+dist2=2,
+xmin=0.0,
+xmax=5.0,
+/
+
+&nhcopt
+inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+temp=300.0,		! initial temperature for Maxwell-Boltzmann sampling [au]
+/
+

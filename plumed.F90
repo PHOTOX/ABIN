@@ -1,9 +1,9 @@
 module mod_plumed
   use mod_const, only: DP
-  use mod_nhc,  only:temp
+  use mod_nhc,   only: temp
   implicit none
   public
-  integer :: plumed, plumed_stopflag
+  integer :: iplumed
   character(len=40) :: plumedfile
 
 
@@ -19,10 +19,10 @@ subroutine plumed_init(dt)
  character(256) :: plumedoutfile
 
  !variables computation
- plumed_kbt=temp            ! kb=1 in au, previously kB*temp
- plumed_energyUnits=2625.5697  !conversion Ha -> kJ/mol
+ plumed_kbt=temp                 ! kb=1 in au, previously kB*temp
+ plumed_energyUnits=2625.5697    !conversion Ha -> kJ/mol
  plumed_lengthUnits=0.1d0/ANG    !conversion Angstrom*ANG -> nm
- plumed_timeUnits=AUTOFS*0.001 ! au time -> ps
+ plumed_timeUnits=AUTOFS*0.001   ! au time -> ps
  plumedoutfile = 'plumed.out'
 
  !plumed init
@@ -43,26 +43,6 @@ end subroutine plumed_init
 #endif
 
 #ifdef PLUM
-subroutine plumed_stepinfo(it,amt)
- use mod_general, only: natom,nwalk
- use mod_const, only:AMU
-integer,intent(in)  ::it
-real(DP),intent(in) ::amt(:,:)
-real(DP),allocatable::amm(:)
-integer             ::iat,iw
-
-allocate( amm(natom) )
-      do iw=1,nwalk
-       do iat=1,natom
-        amm(iat)=amt(iat,iw)/AMU
-       enddo
-      enddo
-
-call plumed_f_gcmd("setStep"//char(0),it)
-call plumed_f_gcmd("setMasses"//char(0),amm)
-
-end subroutine plumed_stepinfo
-
 
 subroutine force_plumed(x,y,z,fx,fy,fz,eclas)
  use mod_general, only: natom,it
@@ -73,7 +53,7 @@ real(DP),intent(inout)  :: x(:,:), y(:,:), z(:,:)
 real(DP),intent(inout)  :: fx(:,:),fy(:,:),fz(:,:)
 real(DP),intent(in)     :: eclas
 real(DP),allocatable    :: xx(:),yy(:),zz(:),fxx(:),fyy(:),fzz(:),amm(:)
-real(DP)                :: pbox(3,3),pcharges(natom),plumvirial(3,3),fconv,gpp(natom*3)
+real(DP)                :: pbox(3,3),pcharges(natom),plumvirial(3,3),gpp(natom*3)
 integer                 :: iat,a
 
 allocate(xx(natom),yy(natom),zz(natom),fxx(natom),fyy(natom),fzz(natom),amm(natom))
@@ -82,21 +62,15 @@ allocate(xx(natom),yy(natom),zz(natom),fxx(natom),fyy(natom),fzz(natom),amm(nato
        amm(a)=am(a)/AMU
       enddo
 
-      fconv=1
-!     fconv=1.88972599                       ! force from Eh/bohr to Eh/ang
-!     fconv=2625.5*18.89725                  ! force from Eh/bohr to kJ/mol/nm
       do iat=1,natom
         xx(iat)=x(iat,1)
         yy(iat)=y(iat,1)
         zz(iat)=z(iat,1)
-        fxx(iat)=fx(iat,1)*fconv
-        fyy(iat)=fy(iat,1)*fconv
-        fzz(iat)=fz(iat,1)*fconv
+        fxx(iat)=fx(iat,1)
+        fyy(iat)=fy(iat,1)
+        fzz(iat)=fz(iat,1)
         pcharges(iat)=0
       enddo
-
-!write(*,*)'Input forces x are:',fx
-write(*,*)'Forces x for PLUMED are:',fxx
 
       pbox=0.0d0
       plumvirial=0.0d0
@@ -116,21 +90,12 @@ call plumed_f_gcmd("setForcesZ"//char(0),fzz)
 
 call plumed_f_gcmd("calc"//char(0),0); 
 
-write(*,*)'Obtained forces x are:',fxx
-
       do iat=1,natom
-!        x(iat,1)=xx(iat)
-        fx(iat,1)=fxx(iat)/fconv
-        fy(iat,1)=fyy(iat)/fconv
-        fz(iat,1)=fzz(iat)/fconv
+!       x(iat,1)=xx(iat)
+        fx(iat,1)=fxx(iat)
+        fy(iat,1)=fyy(iat)
+        fz(iat,1)=fzz(iat)
       enddo
-!write(*,*)'Output forces to MD x are:',fx
-!section for testing purpouses, DELETE LATER
-!      do iat=1,natom
-!        fx(iat,1)=0.0
-!        fy(iat,1)=0.0
-!        fz(iat,1)=0.0
-!     enddo
 
 end subroutine force_plumed
 #endif
