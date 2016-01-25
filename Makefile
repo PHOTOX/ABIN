@@ -101,7 +101,7 @@ distclean :
 
 # Run test suite 
 test :
-	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW}
+	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} ${PLUM}
 
 # Clean all test folders.
 testclean :

@@ -3,7 +3,7 @@ d1: DISTANCE ATOMS=1,2
 #
 # Activate metadynamics in d1
 #
-metad: METAD ARG=d1 PACE=50 HEIGHT=5.0 SIGMA=0.15 FILE=HILLS 
+metad: METAD ARG=d1 PACE=25 HEIGHT=5.0 SIGMA=0.15 FILE=HILLS 
 
 # Print CV value and bis every 50 steps into file COLVAR
 
