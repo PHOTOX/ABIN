@@ -103,6 +103,10 @@ elif  [[ $2 = "all" || $2 = "clean" ]];then
       let index=${#folders[@]}+1
       folders[index]=FFTW
    fi
+   if [[ $7 = "TRUE" ]];then
+      let index=${#folders[@]}+1
+      folders[index]=PLUMED
+   fi
 else
    folders=$2
 fi

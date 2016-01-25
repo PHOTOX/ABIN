@@ -1,5 +1,4 @@
 
-
 ! A wrapper routine for getting forces and energies
 ! Ab-initio programs are called from force_abin routine
 subroutine force_clas(fx,fy,fz,x,y,z,energy)
@@ -17,6 +16,9 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
    use mod_interfaces, only: force_abin
    use mod_water,    only: watpot
    use mod_cp2k,     only: force_cp2k
+#ifdef PLUM
+      use mod_plumed,   only: iplumed, plumedfile, force_plumed
+#endif
 #ifdef MPI
    use mod_terampi
    use mod_terampi_sh
@@ -107,6 +109,12 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
    if(iqmmm.eq.3) call force_LJCoul(transx,transy,transz,fxab,fyab,fzab,eclas)
 
 !--------------------------------------
+
+!--------PLUMED SECTION---------------
+#ifdef PLUM
+   if(iplumed.eq.1.and.it.gt.imini) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
+#endif
+!------------------------------------
 
 ! Classical force without the stage transformation
 !  

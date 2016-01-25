@@ -54,6 +54,13 @@ ifeq ($(CP2K),TRUE)
   LIBS += -L${CP2KPATH} -lcp2k ${CP2K_LIBS} 
 endif
 
+ifeq ($(PLUM),TRUE)
+ include ${PLUMLINK}
+ DFLAGS += -DPLUM
+ LIBS += ${PLUMED_STATIC_LOAD}
+  F_OBJS := plumed.o ${F_OBJS}
+endif
+
 #MPI STUFF
 ifeq  ($(MPI),TRUE) 
   DFLAGS += -DMPI
@@ -94,7 +101,7 @@ distclean :
 
 # Run test suite 
 test :
-	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW}
+	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} ${PLUM}
 
 # Clean all test folders.
 testclean :

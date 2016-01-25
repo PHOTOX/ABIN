@@ -51,3 +51,7 @@ CP2K_LIBS    = $(MKL_LIBS) \
              $(LIBINT_LIB)/libderiv.a\
              $(LIBINT_LIB)/libint.a
 
+# Compile with PLUMED?
+PLUM = TRUE
+PLUMLINK = /home/suchanj/programs/plumed2/lib/plumed/src/lib/Plumed.inc
+
