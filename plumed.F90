@@ -3,7 +3,7 @@ module mod_plumed
   use mod_nhc,  only:temp
   implicit none
   public
-  integer :: plumed
+  integer :: plumed, plumed_stopflag
   character(len=40) :: plumedfile
 
 
@@ -19,9 +19,9 @@ subroutine plumed_init(dt)
  character(256) :: plumedoutfile
 
  !variables computation
- plumed_kbt=kB*temp
+ plumed_kbt=temp            ! kb=1 in au, previously kB*temp
  plumed_energyUnits=2625.5697  !conversion Ha -> kJ/mol
- plumed_lengthUnits=0.1/ANG    !conversion Angstrom*ANG -> nm
+ plumed_lengthUnits=0.1d0/ANG    !conversion Angstrom*ANG -> nm
  plumed_timeUnits=AUTOFS*0.001 ! au time -> ps
  plumedoutfile = 'plumed.out'
 
@@ -82,7 +82,8 @@ allocate(xx(natom),yy(natom),zz(natom),fxx(natom),fyy(natom),fzz(natom),amm(nato
        amm(a)=am(a)/AMU
       enddo
 
-      fconv=1.88972599                       ! force from Eh/bohr to Eh/ang
+      fconv=1
+!     fconv=1.88972599                       ! force from Eh/bohr to Eh/ang
 !     fconv=2625.5*18.89725                  ! force from Eh/bohr to kJ/mol/nm
       do iat=1,natom
         xx(iat)=x(iat,1)
@@ -94,11 +95,11 @@ allocate(xx(natom),yy(natom),zz(natom),fxx(natom),fyy(natom),fzz(natom),amm(nato
         pcharges(iat)=0
       enddo
 
-write(*,*)'Input forces x are:',fx
+!write(*,*)'Input forces x are:',fx
 write(*,*)'Forces x for PLUMED are:',fxx
 
-      pbox=0.0
-      plumvirial=0.0
+      pbox=0.0d0
+      plumvirial=0.0d0
 
 call plumed_f_gcmd("setStep"//char(0),it)
 call plumed_f_gcmd("setPositionsX"//char(0),xx)
@@ -123,7 +124,13 @@ write(*,*)'Obtained forces x are:',fxx
         fy(iat,1)=fyy(iat)/fconv
         fz(iat,1)=fzz(iat)/fconv
       enddo
-write(*,*)'Output forces to MD x are:',fx
+!write(*,*)'Output forces to MD x are:',fx
+!section for testing purpouses, DELETE LATER
+!      do iat=1,natom
+!        fx(iat,1)=0.0
+!        fy(iat,1)=0.0
+!        fz(iat,1)=0.0
+!     enddo
 
 end subroutine force_plumed
 #endif

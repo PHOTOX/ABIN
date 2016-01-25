@@ -12,11 +12,13 @@ CFLAGS :=   -O2  # do not use any other fancy stuff and no fopenmp for this
 # Should we compile mpi version?
 MPI = TRUE
 MPI_PATH = YOUR_PATH TO MPI INSTALLATION
-MPI_LIBS = -L$(MPIPATH)/lib -lmpich -lmpl # This works for MPICH, but not for OPENMPI 
-MPI_INC  = -I$(MPIPATH)/include/
 ifeq  ($(MPI),TRUE) 
   FC = $(MPI_PATH)/bin/mpifort
 endif
+# In theory, the following 2 lines should not be necessary,
+# since mpif90 wrapper should take care of that
+MPI_LIBS = -L$(MPI_PATH)/lib -lmpich -lmpl # This works for MPICH, but not for OPENMPI 
+MPI_INC  = -I$(MPI_PATH)/include/
 
 # Should we compile with NAB libraries (AMBER force field)
 # Currently only possible with gfortran

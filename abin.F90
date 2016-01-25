@@ -29,7 +29,7 @@ program abin_dyn
    use mod_mdstep
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
-   use mod_forces,   only: force_clas, force_quantum
+   use mod_interfaces, only: force_clas, force_quantum
 #ifdef PLUM
    use mod_plumed
 #endif
@@ -154,12 +154,12 @@ program abin_dyn
 !----setting initial values for surface hoping
       if(ipimd.eq.2)then
          do itrj=1, ntraj
-            if (it.eq.0) call get_nacm(itrj)
+            if (it.eq.0.and.pot.ne.'_tera_') call get_nacm(itrj)
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
          end do
       end if
 
-!---------LOOP OVER TIME STEPS
+!-----LOOP OVER TIME STEPS
 !---- "it" variable is set to 0 or read from restart.xyz in subroutine init
       it=it+1
       do it=(it),nstep
@@ -199,7 +199,7 @@ program abin_dyn
 
          endif
        
-         if(idebug.eq.2)then
+         if(idebug.ge.2)then
             write(*,*)'positions',it
             call printf(x,y,z)
             write(*,*)'momenta',it
@@ -208,19 +208,20 @@ program abin_dyn
             call printf(fxc,fyc,fzc)
          end if
 
+         ! sim_time = sim_time + dt
+
 
 #ifdef PLUM
 !          if(plumed.eq.1) call plumed_stepinfo(it,amt)
 #endif
 !-----CALL RESPA or VELOCITY VERLET--------------
          if(nshake.eq.0)then
-          if (md.eq.1) call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-          if (md.eq.2) call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
+            if (md.eq.1) call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+            if (md.eq.2) call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
          else
-          call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+            call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
          endif
        
-         !TODO: call Update_vel()
          vx = px / amt
          vy = py / amt
          vz = pz / amt
@@ -363,8 +364,18 @@ subroutine finish(error_code)
 !   integer :: iter=-3
 
 #ifdef MPI
-   if (pot.eq.'_tera_') call finalize_terachem()
+   if (pot.eq.'_tera_') call finalize_terachem(error_code)
 #endif
+
+   if (my_rank.eq.0)then
+      write(*,*)''
+      if (error_code.eq.0)then
+         write(*,*)'Job finished!'
+      else
+         write(*,*)'Error encountered. Exiting...'
+         write(*,*)''
+      end if
+   end if
 
 
    call deallocate_arrays( )
@@ -394,16 +405,6 @@ subroutine finish(error_code)
    if(allocated(xi_z))  deallocate( xi_z )
 !TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
-
-   if (my_rank.eq.0)then
-      write(*,*)''
-      if (error_code.eq.0)then
-         write(*,*)' Job finished!'
-      else
-         write(*,*)'Error encountered. See file ERROR for more information.'
-         write(*,*)''
-      end if
-   end if
 
 #ifdef MPI
    if (error_code.eq.0.and.pot.ne."_cp2k_")then

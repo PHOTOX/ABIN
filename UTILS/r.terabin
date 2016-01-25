@@ -7,7 +7,7 @@
 # 3. Copy data back (only newer files are copied!).
 # 4. Remove scratch directory. (if delscratch = true)
 
-#$ -V
+#$ -V -cwd
 
 # SETUP --------------------------------
 OUTPUT=output
@@ -63,10 +63,10 @@ cp -upr * $SCRDIR/.
 
 cd $SCRDIR
 
-$MPIRUN_TERA $TERAEXE --inputfile=tera.inp --UseMPI --MPIPort=teraport 2>&1 > tera.out &
-sleep 5
+$MPIRUN_TERA $TERAEXE --inputfile=tera.inp --UseMPI=0 --MPIPort=teraport 2>&1 > tera.out &
 # Get PID of the last process
 terapid=$!
+sleep 5
 # Ugly workaround because MPI_Lookup does not work
 grep port_name: tera.out | awk '{print $6}' > port.txt
 

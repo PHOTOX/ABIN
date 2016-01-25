@@ -9,8 +9,10 @@ module mod_sh
    private
    public :: istate_init,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 
    public :: surfacehop, sh_init, istate, ntraj, nstate, cel_re, cel_im, tocalc, en_array
+   public :: nacx, nacy, nacz
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
    public :: energydifthr, energydriftthr, popsumthr, phase, adjmom, revmom
+   public :: check_CIVector
 
    integer,parameter :: ntraj = ntrajmax
    integer   :: istate_init=1, nstate=1, substep=100
@@ -34,7 +36,7 @@ module mod_sh
    subroutine sh_init(x, y, z, vx, vy, vz, dt)
    use mod_const,    only: AUtoEV
    use mod_general,  only: irest, natom, it
-   use mod_forces,   only: force_clas
+   use mod_interfaces, only: force_clas
    use mod_kinetic,  only: ekin_v
    real(DP),intent(inout)  :: x(:,:), y(:,:), z(:,:)
    real(DP),intent(in)     :: vx(:,:), vy(:,:), vz(:,:)
@@ -438,7 +440,7 @@ module mod_sh
 
    subroutine surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt,eclas)
       use mod_const,   only: ANG, AUTOFS
-      use mod_general, only: natom, nwrite, idebug, it
+      use mod_general, only: natom, pot, nwrite, idebug, it
       use mod_system,  ONLY: names
       use mod_qmmm,    ONLY: natqm
       use mod_random,  ONLY: vranf
@@ -489,7 +491,7 @@ module mod_sh
 !-------READING NACM-----------------------     
      if(inac.eq.0)then
 
-      do ist1=1,nstate-1
+       do ist1=1,nstate-1
          do ist2=ist1+1,nstate
             if(tocalc(ist1,ist2).eq.0)then
                write(*,*)'Not computing NACME between states',ist1,ist2
@@ -503,8 +505,9 @@ module mod_sh
                enddo
             endif
          enddo
-      enddo
+       enddo
 
+      if(pot.ne.'_tera_')then
        iost=readnacm(itrj)
 !------------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
        if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
@@ -535,6 +538,8 @@ module mod_sh
 !         enddo
 !        enddo
        endif
+
+    end if
 
 !--------------calculating overlap between nacmes-------------------
       do ist1=1,nstate
@@ -727,7 +732,7 @@ module mod_sh
       endif
       enddo
 
-!-------does HOP occured???-----------------
+!-------did HOP occur?-----------------
       if(ihop.ne.0)then
          if(adjmom.eq.0) call hop(vx,vy,vz,ist,ihop,itrj,eclas)
          if(adjmom.eq.1) call hop_dot(vx,vy,vz,ist,ihop,itrj,eclas)
@@ -811,28 +816,33 @@ module mod_sh
      call set_tocalc(itrj)
 
      if(idebug.eq.1)then
-       if(it.eq.1)then
-         open(iunit,file='dotprodmatrix.dat')
-       else
-         open(iunit,file='dotprodmatrix.dat',access='append')
-       endif
-      write(iunit,*)'Step: ',it
-      do ist1=1,nstate
-       write(iunit,*)(dotproduct_int(ist1,ist2,itrj),ist2=1,nstate)
-      enddo
-      close(iunit)
-     endif
+        ! this is rarely needed, since we always print dotproduct into
+        ! dotprod.dat
+        ! this is only to check that the matrix is really symmetrical
+         if(it.eq.1)then
+            open(iunit,file='dotprodmatrix.dat')
+         else
+            open(iunit,file='dotprodmatrix.dat',access='append')
+         endif
+         write(iunit,*)'Step: ',it
+         do ist1=1,nstate
+            write(iunit,*)(dotproduct_int(ist1,ist2,itrj),ist2=1,nstate)
+         enddo
+         close(iunit)
+      endif
 
 
-      do ist1=1,nstate
-       popsum=popsum+pop(ist1,itrj)
-      enddo
+   do ist1=1,nstate
+      popsum=popsum+pop(ist1,itrj)
+   enddo
 
-     call check_popsum(itrj,popsum)
-     call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
+   call check_popsum(itrj,popsum)
+   call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
 
    if(modulo(it,nwrite).eq.0)then
       stepfs=it*dt*AUtoFS
+      !stepfs = time ! for future adaptive time step
+      ! TODO add printing og TDip, Dip and DotCi
       write(formt,'(A10,I3,A13)')'(F15.2,I3,',nstate,'F10.5,1F10.7)'
       write(3,fmt=formt)stepfs,istate(itrj),(pop(ist1,itrj), ist1=1,nstate),popsum
 
@@ -852,7 +862,7 @@ module mod_sh
             end if
 
             if (inac.eq.0)then
-               write(14,*)'NACME between states:',ist1,ist2
+               write(14,*)'NACME between states:', ist1, ist2
                do iat=1,natom
                   write(14,'(3E20.10)')nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                enddo
@@ -1328,5 +1338,34 @@ module mod_sh
       end if
 
    end subroutine check_energydrift
+
+   integer function check_CIVector(CIvecs, CIvecs_old, ci_len, nstates)
+   use mod_const, only:AUtoFS
+   use mod_general, only: it, dt0
+   real(DP), allocatable, intent(in) :: CIvecs(:,:), CIvecs_old(:,:)
+   integer, intent(in) :: ci_len, nstates
+   real(DP)  :: cidotprod(NSTMAX)
+   integer   :: ist1, ist2, i
+   character(len=20) :: formt
+
+   do ist1=1, nstates
+      cidotprod(ist1)=0.0d0
+      do i=1,ci_len
+         cidotprod(ist1) = cidotprod(ist1) + CIvecs(i,ist1)*CIvecs_old(i,ist1)
+      end do
+      if(cidotprod(ist1).lt.1/dsqrt(2.0d0).and.it.gt.0)then
+         write(*,*)"Warning: cidotprod too low."
+         ! call abinerror("surfacehop.f90")
+      end if
+   end do
+
+   write(formt,'(A7,I3,A7)')'(F15.2,',nstates,'F15.10)'
+   open(500, file="dotprodci.dat",access="APPEND")
+   write(500,fmt=formt)it * dt0 * AUtoFS,(cidotprod(ist1),ist1=1,nstates)
+   close(500)
+
+   check_CIVector=0
+   return
+   end function check_CIVector
 
 end module mod_sh

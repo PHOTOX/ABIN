@@ -36,9 +36,9 @@ launch_script=$INPUTDIR/r.abin	# this is the file that is submitted by qsub
 
 # Following variables can be determined automatically from input for SurfHop simulations
 # For adiabatic AIMD, set initialstate and nstate equal to 1
-initialstate=$(awk -F"[,=]" '{if($1=="istate_init")print $2}' $abin_input) #initial state for SH
-nstate=$(awk -F"[,=]" '{if($1=="nstate")print $2}' $abin_input)   #total number of electronic states
-natom=$(awk -F"[,=]" '{if($1=="natom")print $2}' $abin_input) #number of atoms
+initialstate=$(awk -F"[! ,=]+" '{if($1=="istate_init")print $2}' $abin_input) #initial state for SH
+nstate=$(awk -F"[! ,=]+" '{if($1=="nstate")print $2}' $abin_input)   #total number of electronic states
+natom=$(awk -F"[! ,=]+" '{if($1=="natom")print $2}' $abin_input) #number of atoms
 
 
 folder=MP2           # Name of the folder with trajectories
@@ -117,7 +117,7 @@ if [[ ! -z $initialstate ]];then
    echo "Initial electronic state for SH simulations = $initialstate"
 fi
 if [[ ! -z $nstate ]];then
-   echo "Number of electronic states in SH simulations = $nstates"
+   echo "Number of electronic states in SH simulations = $nstate"
 fi
 
 if [[ -e $folder/$molname$isample.*.sh ]];then
@@ -157,8 +157,8 @@ fi
 mkdir -p $folder
 cp iseed0 "$abin_input" $folder
 
-offset=0
-offsetvel=0
+let offset=natom2*isample-natom2
+let offsetvel=natom1*isample-natom1
 while [[ $i -le "$nsample" ]];do
 
    let offset=offset+natom2   # for mode=movie

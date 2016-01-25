@@ -24,9 +24,9 @@ ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
-F_OBJS :=  transform.o potentials.o  estimators.o gle.o ekin.o vinit.o  \
-force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o plumed.o forces.o surfacehop.o force_abin.o  analyze_ext_distp.o density.o analysis.o  \
-minimizer.o arrays.o init.o mdstep.o 
+F_OBJS :=  transform.o potentials.o estimators.o gle.o ekin.o vinit.o \
+force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o surfacehop.o force_terash.o force_abin.o analyze_ext_distp.o density.o analysis.o  \
+minimizer.o arrays.o mdstep.o forces.o abin.o
 
 C_OBJS := EWALD/ewaldf.o
 
@@ -58,7 +58,7 @@ ifeq ($(PLUM),TRUE)
  include ${PLUMLINK}
  DFLAGS += -DPLUM
  LIBS += ${PLUMED_STATIC_LOAD}
- FFLAGS :=-g
+  F_OBJS := plumed.o ${F_OBJS}
 endif
 
 #MPI STUFF
@@ -81,16 +81,15 @@ ALLDEPENDS = ${C_OBJS} ${F_OBJS}
 
 
 # This is the default target
-${OUT} : abin.o
+${OUT} : init.o
 	cd WATERMODELS && make all 
 	${FC} ${FFLAGS} WATERMODELS/water_interface.o ${ALLDEPENDS} $< ${LDLIBS} -o $@
 
-# The machine-dependent variables are included from make.vars
-# Always recompile abin.F90 to get current date and commit
-abin.o : abin.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
+# Always recompile init.F90 to get current date and commit
+init.o : init.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
 	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
 	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c abin.F90
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c init.F90
 
 clean :
 	/bin/rm -f *.o *.mod $(OUT)

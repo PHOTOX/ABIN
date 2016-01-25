@@ -16,7 +16,7 @@ delscratch=true
 INPUTVELOC=
 ########################################
 
-#$ -V
+#$ -V -cwd
 
 SCRDIR=/scratch/$USER/$JOBNAME
 

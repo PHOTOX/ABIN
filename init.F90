@@ -44,6 +44,7 @@ subroutine init(dt, values1)
 #ifdef MPI
    use mod_remd
    use mod_terampi
+   use mod_terampi_sh, only: init_terash
 #endif
    real(DP),intent(out) :: dt
    integer,dimension(8) :: values1
@@ -125,7 +126,7 @@ subroutine init(dt, values1)
    endif
 
 ! We need to connect to TeraChem as soon as possible,
-! because we want to shut down TeraChem nicely in case something goes wrong during.
+! because we want to shut down TeraChem nicely in case something goes wrong.
 #ifdef MPI
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
    if(pot.eq.'_tera_')then
@@ -149,7 +150,7 @@ subroutine init(dt, values1)
       call plumed_init(dt)
       write(*,*) 'PLUMED is on'
       write(*,*) 'PLUMEDfile is ',plumedfile   
-    endif
+   endif
 !add variable numtest=1
 !call plumed_f_ginitialized(numtest)
 ! print *, numtest	
@@ -179,6 +180,9 @@ subroutine init(dt, values1)
          scaleveloc=0
       end if
 
+! for future multiple time step integration in SH
+      dt0 = dt
+
       ! We have to initialize here, because we read them from input
       allocate( names( natom )     )
       names     = ''
@@ -201,6 +205,7 @@ subroutine init(dt, values1)
 
       open(111,file=chcoords,status = "old", action = "read", iostat=iost) 
       read(111,*, iostat=iost)natom1
+      !TODO followinf line does not work
       if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.")
       if(natom1.ne.natom)then
         write(*,'(A,A)')'No. of atoms in ',chinput
@@ -305,6 +310,7 @@ subroutine init(dt, values1)
 #ifdef MPI
    if(pot.eq.'_tera_')then
       call initialize_terachem()
+      if (ipimd.eq.2) call init_terash(x, y, z)
    end if
 #endif
 
@@ -1020,11 +1026,10 @@ endif
    end subroutine check_inputsanity
 
    subroutine err_read(chfile, chmsg)
-   character(len=*), intent(in)  :: chmsg, chfile
-   write(*,'(2A)')'Error when reading file ', chfile
-   write(*,'(A)')chmsg
-
-   call abinerror('init')
+      character(len=*), intent(in)  :: chmsg, chfile
+      write(*,*)'Error when reading file ', chfile
+      write(*,*) chmsg
+      call abinerror('init')
    end subroutine err_read
 
    subroutine PrintLogo(values1)

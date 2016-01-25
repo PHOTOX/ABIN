@@ -34,6 +34,15 @@ module mod_array_size
    save
 end module  
 
+! TODO: file units for writes
+module mod_files
+   implicit none
+   integer, parameter :: fenerg=1
+   integer, parameter :: fmovie=10
+!...
+   save
+end module
+
 !------------------------------------------------------
 
 !--General simulation parameters      
@@ -49,6 +58,7 @@ module mod_general
    integer :: iqmmm=0, iremd=0
    integer :: parrespa=0 
    integer :: my_rank=0
+   real(DP) :: dt0
    save
 end module
       
