@@ -151,4 +151,8 @@ typedef	struct	bounds_t	{
 	CHIRAL_T	*b_chiral;
 } BOUNDS_T;
 
+//DH moved this here from nabcode.h
+	/* output from molecular mechanics routines goes to nabout  */
+FILE_T*  nabout;
+
 #endif

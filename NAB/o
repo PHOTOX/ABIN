@@ -1,9 +1,0 @@
-28,31d27
-< //DHmod:je to takhle dobre?
-< #define REAL_T double
-< #define INT_T int
-< 
-7177c7173
-< REAL_T mme2_(REAL_T * x, REAL_T * f, REAL_T * g, REAL_T * m, REAL_T * grad,
----
-> REAL_T mme2(REAL_T * x, REAL_T * f, REAL_T * g, REAL_T * m, REAL_T * grad,

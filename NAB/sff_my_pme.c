@@ -234,13 +234,11 @@ static REAL_T vlimit = 10.0;    /* maximum velocity component */
 static REAL_T genmass = 10.;    /* general masses, for now all the same */
 static int ntpr_md = 10;        /* print frequency for KE,PE,temp */
 static int ntwx = 0;            /* trajectory snapshot frequency  */
-static FILE *binposfp;          /* file pointer for trajectories  */
+// DH binpos deleted
+//static FILE *binposfp;          /* file pointer for trajectories  */
 static int zerov = 0;           /* if true, use zero initial velocities */
 static REAL_T tempi = 0.0;      /* initial temperature */
 static int idum = -1;           /* random number seed */
-
-static int irattle = 0;         /* turn on/off bond constraints in md */
-
 /* ****************** HCP variables start here ****************************** */
 
 /* HCP component coordinates, charges and radii */
@@ -269,13 +267,11 @@ static REAL_T hcp_h3 = 150.0;     /* threshold distance (level 3) */
 
 /* ********************** HCP variables end here ***************************** */
 
-int writebinposhdr(FILE *);
+//DH binpos deleted
+//int writebinposhdr(FILE *);
 
-int writebinposfrm(int, REAL_T *, FILE *);
+//int writebinposfrm(int, REAL_T *, FILE *);
 
-int rattle(REAL_T, REAL_T *, REAL_T *, REAL_T *, REAL_T *);
-
-int rattle2(REAL_T, REAL_T *, REAL_T *, REAL_T *);
 
 REAL_T gauss2(REAL_T *, REAL_T *);
 
@@ -311,8 +307,9 @@ REAL_T seconds(void)
    nsec = gethrtime();
    return (((REAL_T) nsec) * 1.0e-09);
 #else
-   REAL_T t1;
-   arsecond_( &t1);
+   REAL_T t1=0.0;
+   // needs arpack.a to work
+//   arsecond_( &t1);
    return t1;
 #endif
 }
@@ -971,17 +968,18 @@ int mme_init_sff(PARMSTRUCT_T * prm_in, int *frozen_in, int *constrained_in,
    dim = 3;
    prm = prm_in;
    x0 = x0i;
-   binposfp = bfpi;
+   // DH binpos deleted
+   //binposfp = bfpi;
 
   //DHmod: initialization of box sizes in pme.h for nblist
 
   if(prm->IfBox && ipbc==0 ){
    fprintf(nabout, "Topology includes PBC conditions, but ipbc!=1 in input.Exiting... \n");
-   exit(1);
+   mpierror(-1);
   }
   if(!prm->IfBox && ipbc==1 ){
    fprintf(nabout, "Box info not found in input.top.Set ipbc=0 or correct the topology.Exiting... \n");
-   exit(1);
+   mpierror(-1);
   }
 
   if(prm->IfBox ){
@@ -1009,8 +1007,8 @@ int mme_init_sff(PARMSTRUCT_T * prm_in, int *frozen_in, int *constrained_in,
        fprintf(nabout, "Error: To use this method set IFBOX in the PRMTOP file to 0.\n");
        fprintf(nabout, "Error: See http://ambermd.org/formats.html\n");
        fflush(nabout);
+       mpierror(-1);
      }
-     exit(1);
    }
 
    /* Initialize the old LCPO data structures:  */
@@ -1276,9 +1274,14 @@ int mme_init_sff(PARMSTRUCT_T * prm_in, int *frozen_in, int *constrained_in,
       }
    }
 
-   if (binposfp != NULL)
-      writebinposhdr(binposfp);
-
+   // Do not allow binpos format file
+   /*
+   if (binposfp != NULL) {
+      printf("BINPOS format deleted!");
+      mpierror(-1);
+   }
+//      writebinposhdr(binposfp);
+*/
    constrained = constrained_in;
    nconstrained = 0;
    for (i = 0; i < prm->Natom; ++i) {
@@ -1865,198 +1868,6 @@ REAL_T mme4(REAL_T * x, REAL_T * f, int *iter)
 }
 
 /***********************************************************************
-                            MME_RATTLE()
-************************************************************************/
-
-/*
- * Version of mme() with rattle for bond length constraints, for
- * use in minimization. This is quite loosely based on  Duan, Kumar, 
- * Rosenberg, and Kollman, J. Computat. Chem. 16, 1351-1356 (1995).
- */
-
-REAL_T mme_rattle(REAL_T * x, REAL_T * f, int *iter)
-{
-   REAL_T ene;
-
-   int dumx, nratH, nrat, Trat, at1, at2, atyp;
-   int nat3, i, done, niter, maxiter;
-#ifdef DEBUG
-   int imax;
-   REAL_T tmpf;
-   REAL_T frms;
-#endif
-   static REAL_T *minv, *dumv, *deltag;
-   REAL_T dtx;
-   REAL_T maxf;
-   REAL_T inP, krat, dist2, xr, yr, zr;
-
-   /*
-    * If the iteration count equals -3, call mme with an
-    * iteration count of -3 to deallocate any static arrays,
-    * then return.
-    */
-
-   if (*iter == -3) {
-      mme_(x, f, iter);
-      return (0.0);
-   }
-
-   nat3 = 3 * prm->Natom;
-   dtx = 0.001 * 20.455;
-   maxiter = 1000;
-
-   niter = 0;
-   done = 0;
-
-   /*
-    * inverse masses and velocities are required by the
-    * RATTLE routine that's called below, but are dummy variables
-    * since here only positions are affected
-    */
-
-   if (!minv) {
-      minv = (REAL_T *) calloc(nat3, sizeof(REAL_T));
-      dumv = (REAL_T *) calloc(nat3, sizeof(REAL_T));
-      deltag = (REAL_T *) calloc(nat3, sizeof(REAL_T));
-      for (i = 0; i < nat3; i++) {
-         minv[i] = 2.0;
-         dumv[i] = 0.0;
-      }
-   }
-
-   for (i = 0; i < nat3; i++)
-      deltag[i] = 0.0;
-   maxf = -1.0;
-
-   /* call the 'position part' of RATTLE to repair bond lengths */
-   dumx = rattle(dtx, x, x, dumv, minv);
-
-   /* get energy and gradient for the RATTLEd structure */
-   ene = mme_(x, f, iter);
-
-   /* repair the gradient */
-
-   nratH = prm->Nbonh;
-   nrat = prm->Mbona;
-   Trat = nratH + nrat;
-
-   while ((done == 0) && (niter < 50)) {
-      niter++;
-      done = 1;
-      for (i = 0; i < Trat; i++) {
-
-         if (i < nratH) {
-            at1 = prm->BondHAt1[i];
-            at2 = prm->BondHAt2[i];
-            atyp = prm->BondHNum[i] - 1;
-            krat = prm->Req[atyp];
-         } else {
-            at1 = prm->BondAt1[i - nratH];
-            at2 = prm->BondAt2[i - nratH];
-            atyp = prm->BondNum[i - nratH] - 1;
-            krat = prm->Req[atyp];
-         }
-
-         xr = x[at2] - x[at1];
-         yr = x[at2 + 1] - x[at1 + 1];
-         zr = x[at2 + 2] - x[at1 + 2];
-
-         dist2 = xr * xr + yr * yr + zr * zr;
-         /* 'inP' comes from the german expression for dot product */
-         /* since thats exactly what's calculated here */
-         inP =
-             xr * (f[at1] - f[at2]) + yr * (f[at1 + 1] - f[at2 + 1]) +
-             zr * (f[at1 + 2] - f[at2 + 2]);
-
-#define EPS 0.0000001
-         if (inP > EPS)
-            done = 0;
-         f[at1] -= (xr / (2.0 * dist2)) * inP;
-         f[at1 + 1] -= (yr / (2.0 * dist2)) * inP;
-         f[at1 + 2] -= (zr / (2.0 * dist2)) * inP;
-         f[at2] += (xr / (2.0 * dist2)) * inP;
-         f[at2 + 1] += (yr / (2.0 * dist2)) * inP;
-         f[at2 + 2] += (zr / (2.0 * dist2)) * inP;
-      }
-   }
-
-#ifdef DEBUG
-   frms = 0.0;
-   for (i = 0; i < nat3 / 3; i++) {
-      tmpf =
-          f[3 * i] * f[3 * i] + f[3 * i + 1] * f[3 * i + 1] + f[3 * i +
-                                                                2] * f[3 *
-                                                                       i +
-                                                                       2];
-      frms += tmpf;
-
-      if (sqrt(tmpf) > maxf) {
-         maxf = sqrt(tmpf);
-         imax = i;
-
-      }
-   }
-   /* the last for loop is pretty inefficient ;-) */
-   /* but the output is informative nonetheless */
-
-   frms = sqrt(frms / (REAL_T) nat3);
-   if (mytaskid == 0) {
-      fprintf(nabout, "Ene %18.14f frms %18.14f\n", ene, frms);
-      fprintf(nabout, "Max grad %f for atom %d\n", maxf, imax + 1);
-   }
-   /* output accuracy is a little exaggerated */
-   /* we want to see all those digits */
-#endif
-
-   return ene;
-}
-
-/***********************************************************************
-                            GET_MASSES()
-************************************************************************/
-
-/* Get the masses for md.  Note: dim = 3 or 4, for 3D or 4D problem. */
-
-static
-int get_masses(REAL_T * minv)
-{
-
-   int i, k;
-   REAL_T am;
-
-   for (k = 0, i = 0; i < prm->Natom; i++) {
-      am = 1. / prm->Masses[i];
-      minv[k + 0] = am;
-      minv[k + 1] = am;
-      minv[k + 2] = am;
-      if (dim == 4) {
-         minv[k + 3] = am;
-      }
-      k += dim;
-   }
-   return (0);
-}
-
-/***********************************************************************
-                            MM_OPTIONS()
-************************************************************************/
-//DHMOD...disabling mm_options
-/* Set the options for mme, md, etc. */
-/*
-int mm_options(char *opts)
-{
-   int mmolex(void);
-
-   gopts = opts;
-#ifdef flex
-   mmoinputlim = strlen(opts);
-   mmoinputptr = gopts;
-#endif
-   mmolex();
-   return (0);
-}
-*/
-/***********************************************************************
                             MM_SET_CHECKPOINT()
 ************************************************************************/
 
@@ -2071,313 +1882,6 @@ void mm_set_checkpoint(char **fname)
    }
 }
 
-/***********************************************************************
-                            MD()
-************************************************************************/
-
-/* Here is the molecular dynamics function. */
-
-int md(int n, int maxstep, REAL_T * x, REAL_T * f, REAL_T * v,
-       REAL_T(*func) (REAL_T *, REAL_T *, int *))
-{
-   REAL_T dtx, dt5, rndf, dttp, ekin0, ekin, epot, etot, tscal, temp, dt2i,
-       sd;
-   REAL_T gammai, c_implic, c_explic, c_ave, sdfac, zero, invmass,
-       tempv;
-   int nstep, i;
-   
-   /* timer variables */
-   REAL_T tmd1, t1, t2;
-   static REAL_T *xold = NULL, *sqrmass = NULL, *accel = NULL, *minv =
-       NULL;
-   static int nold = 0;         /* save previous size, in case it increases */
-  
-   t1 = seconds();
-   tmd1 = t1;
-   /*
-    * Note: the following allocations assume that the dimensionality
-    * of the problem does not change during one invocation of NAB.
-    * If, for example, md were called with dim==3 and then with dim==4,
-    * these allocations would not be repeated for the larger value
-    * of n that would be necessitated by dim==4.
-    */
-
-   /*  space for holding inverse masses  */
-   if (minv == NULL || n > nold) {
-      free(minv);
-      minv = (REAL_T *) calloc(n, sizeof(REAL_T));
-      if (minv == NULL) {
-         fprintf(stderr, "unable to allocate space for minv\n");
-         fflush(stderr);
-         mpierror(-1);
-      }
-   }
-
-   /*  space for holding extra set of coords  */
-   if ((xold == NULL || n > nold)) {
-      free(xold);
-      xold = (REAL_T *) calloc(n, sizeof(REAL_T));
-      if (xold == NULL) {
-         fprintf(stderr, "unable to allocate space for xold\n");
-         fflush(stderr);
-         mpierror(-1);
-      }
-   }
-
-   /*  space for holding square root of mass */
-   if ((gamma_ln != 0.0) && (sqrmass == NULL || n > nold)) {
-      free(sqrmass);
-      sqrmass = (REAL_T *) calloc(n, sizeof(REAL_T));
-      if (sqrmass == NULL) {
-         fprintf(stderr, "unable to allocate space for sqrmass\n");
-         fflush(stderr);
-         mpierror(-1);
-      }
-   }
-
-   /*  space for holding the accelerations */
-   if (accel == NULL || n > nold) {
-      free(accel);
-      accel = (REAL_T *) calloc(n, sizeof(REAL_T));
-      if (accel == NULL) {
-         fprintf(stderr, "unable to allocate space for accel\n");
-         fflush(stderr);
-         mpierror(-1);
-      }
-   }
-   nold = n;
-
-   dtx = dt * 20.455;
-   dt5 = 0.5 * dtx;
-   rndf = n - 3 * nfrozen;
-   if (irattle == 1)
-      rndf -= prm->Nbonh + prm->Mbona;
-   else if (irattle == 2)
-      rndf -= prm->Nbonh;
-   ekin0 = boltz2 * rndf * temp0;       /* target kinetic energy  */
-   dttp = dt / tautp;
-   zero = 0.0;
-   gammai = gamma_ln / 20.455;
-   c_implic = 1.0 / (1.0 + gammai * dt5);
-   c_explic = 1.0 - gammai * dt5;
-   c_ave = 1.0 + gammai * dt5;
-   dt2i = 1. / (dtx * dtx);
-   sdfac = sqrt(4.0 * gammai * boltz2 * temp0 / dtx);
-
-   invmass = 1. / genmass;
-   if (prm) {
-      get_masses(minv);
-   } else {                     /* if no prmtop file is present, see all masses to genmass */
-      for (i = 0; i < n; i++)
-         minv[i] = invmass;
-   }
-
-   if (zerov) {
-      for (i = 0; i < n; i++)
-         v[i] = 0.0;
-      ekin = 0.0;
-
-   } else if (tempi > 0.0) {
-      ekin = 0.0;
-      for (i = 0; i < n; i++) {
-         if (frozen[i / dim]) {
-            v[i] = 0.0;
-         } else {
-            sd = sqrt(2. * boltz2 * tempi * minv[i]);
-	    //WARNING: DH mod
-        //    v[i] = gauss2(&zero, &sd);
-            ekin += v[i] * v[i] / minv[i];
-         }
-      }
-      ekin *= 0.5;
-      temp = ekin / (boltz2 * rndf);
-
-   } else {
-      for (ekin = 0., i = 0; i < n; i++)
-         ekin += v[i] * v[i] * minv[i];
-      ekin *= 0.5;
-   }
-
-   /*  main loop for the dynamics:  Use velocity Verlet algorithm  */
-
-   nstep = 0;
-
-   t2 = seconds();
-   *tmdOther += t2 - t1;
-
-   epot = (*func) (x, f, &nstep);
-
-   t1 = seconds();
-
-   if (gammai == 0.0) {
-      for (i = 0; i < n; i++) {
-         accel[i] = -f[i] * minv[i] * dt5;
-      }
-   } else {
-      for (i = 0; i < n; i++) {
-         if (frozen[i / dim]) {
-            accel[i] = 0.0;
-         } else {
-            sqrmass[i] = 1.0 / sqrt(minv[i]);
-            sd = sdfac * sqrmass[i];
-	    //WARNING: DHmod
-            //accel[i] = (-f[i] + gauss2(&zero, &sd)) * minv[i] * dt5;
-         }
-      }
-   }
-
-   t2 = seconds();
-   *tmdOther += t2 - t1;
-   t1 = seconds();
-   t2 = seconds();
-   *tmdIO += t2 - t1;
-   t1 = seconds();
-   for (nstep = 1; nstep <= maxstep; nstep++) {
-
-      if (ekin > 0.01)
-         tscal = sqrt(1. + dttp * (ekin0 / ekin - 1.));
-      else
-         tscal = 1.0;
-      ekin = 0.0;
-
-      for (i = 0; i < n; i++)
-         xold[i] = x[i];
-
-      /*  update v[i] by half-timestep, then x[] by a full timestep:  */
-      if (gammai == 0.0) {
-         for (i = 0; i < n; i++) {
-            v[i] = (v[i] + accel[i]) * tscal;
-            v[i] = v[i] > vlimit ? vlimit : v[i];
-            v[i] = v[i] < -vlimit ? -vlimit : v[i];
-            x[i] += v[i] * dtx;
-         }
-      } else {
-         for (i = 0; i < n; i++) {
-            v[i] = c_explic * v[i] + accel[i];
-            v[i] = v[i] > vlimit ? vlimit : v[i];
-            v[i] = v[i] < -vlimit ? -vlimit : v[i];
-            x[i] += v[i] * dtx;
-         }
-      }
-
-      if (irattle)
-         rattle(dtx, x, xold, v, minv);
-
-      /*  get the new energies and forces:  */
-
-      t2 = seconds();
-      *tmdOther += t2 - t1;
-
-      epot = (*func) (x, f, &nstep);
-
-      t1 = seconds();
-
-      /*  update the velocities by the second half-timestep:  */
-      if (gammai == 0.0) {
-         for (i = 0; i < n; i++) {
-            accel[i] = -f[i] * minv[i] * dt5;
-            v[i] = (v[i] + accel[i]) * tscal;
-         }
-      } else {
-         for (i = 0; i < n; i++) {
-            if (!frozen[i / dim]) {
-               sd = sdfac * sqrmass[i];
-	       // WARNING! DHmod
-            //   accel[i] = (-f[i] + gauss2(&zero, &sd)) * minv[i] * dt5;
-               v[i] = (v[i] + accel[i]) * c_implic;
-            }
-         }
-      }
-
-      if (irattle)
-         rattle2(dtx, x, v, minv);
-
-      /*  get the kinetic and total energies; update the time:  */
-
-      /*  For Langevin integrators, there are choices about how the velocities
-       *  (and hence the kinetic energies and temperatures) should be defined.
-       *  For a discussion, see Pastor, Brooks & Szabo, Mol. Phys. 65:1409,
-       *  1988 (PBS).
-       *
-       *  Here is the "strightforward" code from earlier versions of NAB;
-       *  it should yield a temperature that is too low about about a factor
-       *  of (1 + 0.5*gammai*dtx):
-       */
-
-      for (i = 0; i < n; i++)
-         ekin += v[i] * v[i] / minv[i];
-      ekin *= 0.5;
-
-      /*
-       * Here is what Amber does to "adjust" velocities (using ekin from above):
-       * (This is from Loncharich, Brooks and Pastor, Biopolymers 32:523-535
-       * (1992), Eq. 11.  See also Eq. 3.5c of PBS.  This makes the kinetic
-       * energy and temperature "look" right, but doesn't change the trajectory.
-       */
-
-      if (gammai > 0.)
-         ekin *= c_ave;
-
-      /*
-       * Following is from Eq. 2.8a of PBS.  It should give a temperature that
-       * is slightly too low, but the amount by which it is too low is
-       * independent of gammai:
-       * 
-       *    if( gammai == 0. ){ 
-       *       for (i = 0; i < n; i++) ekin += v[i]*v[i]/minv[i];
-       *       ekin *= 0.5;
-       *    } else {
-       *       for (i = 0; i < n; i++){
-       *          tempv = (x[i] - xold[i])*sqrmass[i];
-       *          ekin += tempv*tempv;
-       *       }
-       *       ekin *= 0.5*dt2i;
-       *    }
-       */
-
-      etot = ekin + epot;
-      temp = ekin / (boltz2 * rndf);
-      t += dt;
-
-      t2 = seconds();
-      *tmdOther += t2 - t1;
-      t1 = seconds();
-      /* Print the energies and temperature but only for task zero. */
-
-      if (mytaskid == 0) {
-         if (nstep % ntpr_md == 0 || nstep == 1) {
-            fprintf(nabout,
-                    "md:       %5d %10.3f %10.2f %10.2f %10.2f %10.2f\n",
-                    nstep, t, ekin, epot, ekin + epot, temp);
-            fflush(nabout);
-         }
-      }
-      if (ntwx > 0 && nstep % ntwx == 0 && binposfp != NULL)
-         writebinposfrm(n / 3, x, binposfp);
-      t2 = seconds();
-      *tmdIO += t2 - t1;
-      t1 = seconds();
-      /* Remove COM translation and rotation */
-      if (nscm > 0 && nstep % nscm == 0){
-         com2zero(x, minv);
-         if ((gammai == 0.0) || (hcp)){
-            com_vw2zero(x, v, minv);
-         }
-      }
-
-   }
-
-   /* Free the static gradient vector from within func. */
-
-   t2 = seconds();
-   *tmdOther += t2 - t1;
-   nstep = -3;
-   (*func) (x, f, &nstep);
-
-   t1 = seconds();
-   *tmd += seconds() - tmd1;
-   return (0);
-}
 
 void nab_getcharges_(REAL_T q[]) {
     int i;
@@ -2385,6 +1889,6 @@ void nab_getcharges_(REAL_T q[]) {
 }	
 
 /*   #include "shiftnbond.c"   */
-#include "rattle.c"
+//#include "rattle.c"
 //#include "lex.mm_options.c"
-#include "com.c"
+//#include "com.c"

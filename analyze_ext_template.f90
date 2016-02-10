@@ -27,7 +27,7 @@ module mod_analyze_ext
 !--print output every nwrite steps              
 !   endif
    
-   end
+   end subroutine analyze_ext
 
 end module
                                         

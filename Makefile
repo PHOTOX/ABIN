@@ -33,8 +33,9 @@ C_OBJS := EWALD/ewaldf.o
 LIBS += WATERMODELS/libttm.a
 
 ifeq ($(NAB),TRUE)
-  C_OBJS += nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o NAB/binpos.o
-  LIBS   += NAB/libnab.a  NAB/arpack.a  NAB/blas.a
+  C_OBJS += nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o # NAB/binpos.o
+  # The following libraries were compiled with gfortran
+  LIBS   += NAB/libnab.a # NAB/arpack.a  # NAB/blas.a
   CFLAGS +=  -INAB/include  
   DFLAGS +=  -DNAB
 endif
@@ -97,7 +98,8 @@ clean :
 
 # Remove NAB objects as well
 distclean :
-	/bin/rm -f *.o *.mod NAB/*.o
+	/bin/rm -f *.o *.mod NAB/*.o $(OUT)
+	cd WATERMODELS && make clean
 
 # Run test suite 
 test :

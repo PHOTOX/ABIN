@@ -24,10 +24,14 @@ MPI_INC  = -I$(MPI_PATH)/include/
 # Currently only possible with gfortran
 NAB  = TRUE
 
-# if you have FFTW libraries available, set it to TRUE
-# if not, some ABIN functionality will be limited
-FFTW = TRUE 
+# Compile with PLUMED?
+PLUM = TRUE
+PLUMLINK = /home/suchanj/programs/plumed2/lib/plumed/src/lib/Plumed.inc
 
+
+# if you have FFTW libraries available, set it to TRUE
+# Needed for Normal mode coordinate transformation in PIMD, which is however not fully implemented
+FFTW = TRUE 
 
 # Compile with direct interface to CP2K?
 # This needs working CP2K library
@@ -50,8 +54,3 @@ CP2K_LIBS    = $(MKL_LIBS) \
              $(LIBXC_LIB)/libxc.a\
              $(LIBINT_LIB)/libderiv.a\
              $(LIBINT_LIB)/libint.a
-
-# Compile with PLUMED?
-PLUM = TRUE
-PLUMLINK = /home/suchanj/programs/plumed2/lib/plumed/src/lib/Plumed.inc
-

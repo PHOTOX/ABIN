@@ -7590,8 +7590,10 @@ REAL_T egb2(INT_T * lpears, INT_T * upears, INT_T ** pearlist,
 
    transa = 'N';
    transb = 'N';
-   dgemm_(&transa, &transb, &m3, &n, &n, &dblone,
-          dreff, &m3, sumdeijdn, &n, &dblone, sumdeijdg, &m3);
+   //DH WARNING comment this out to avoid BLAS routine dependency
+   // Thus, egb2 function must not be called for computation
+//   dgemm_(&transa, &transb, &m3, &n, &n, &dblone,
+  //        dreff, &m3, sumdeijdn, &n, &dblone, sumdeijdg, &m3);
 
    t2 = seconds();
    if (gb2_debug) {
@@ -7605,10 +7607,11 @@ REAL_T egb2(INT_T * lpears, INT_T * upears, INT_T ** pearlist,
    transb = 'T';
 
 
-
+//DH WARNING: see above
+/*
    dgemm_(&transa, &transb, &m3, &m3, &n, &dblone,
           sumdeijdg, &m3, dreff, &m3, &dblone, g, &m3);
-
+*/
 
    t2 = seconds();
    if (gb2_debug) {
@@ -7620,8 +7623,11 @@ REAL_T egb2(INT_T * lpears, INT_T * upears, INT_T ** pearlist,
 
    transa = 'N';
    transb = 'T';
+   //DH WARNING
+   /*
    dgemm_(&transa, &transb, &m3, &m3, &n, &dblone,
           dreff, &m3, sumdeijdh, &m3, &dblone, g, &m3);
+          */
 
    t2 = seconds();
    if (gb2_debug) {
@@ -7801,8 +7807,10 @@ REAL_T mme2_(REAL_T * x, REAL_T * f, REAL_T * g, REAL_T * m, REAL_T * grad,
     * If the iteration count equals -3, call egb2 to deallocate the
     * static arrays, then return; otherwise, simply return.
     */
-
+//DH delete egb2 function, potentially dangerous??
+//DH TODO: should deallocate arrays outside egb2 function
    if (*iter == -3) {
+      
       egb2(lpairs, upairs, pairlist, lpairs, upairs, pairlist,
            x, f, g, grad, prm->Fs,
            prm->Rborn, prm->Charges, &kappa, &epsext, &enb, &eel, &esurf,
@@ -8155,9 +8163,12 @@ REAL_T mme2_(REAL_T * x, REAL_T * f, REAL_T * g, REAL_T * m, REAL_T * grad,
    ene[9] = ecn;
 
    /* Calculate the generalized Born energy and derivatives. */
+   // DH: Commented dgemm routines to avoid BLAS dependency,
+   // so egb2 does not work at the moment
 
    if (gb) {
-
+      printf("Generalized BORN 2nd derivatives not supported at the moment!!!");
+/*
 #if defined(SCALAPACK) || defined(MPI)
 
       ene[10] =
@@ -8175,7 +8186,7 @@ REAL_T mme2_(REAL_T * x, REAL_T * f, REAL_T * g, REAL_T * m, REAL_T * grad,
                *context_1x1, *context_PxQ, descF_PxQ, descF_1x1, descG_PxQ,
                *gridim, 0);
 #endif
-
+*/
       t2 = seconds();
       *tmme2Born += t2 - t1;
       t1 = t2;

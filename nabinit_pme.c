@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
-#include "nabcode.h"
+#include "nabtypes.h"
 //#include "pme.h"
 extern char NAB_rsbuf[];
 static int mytaskid, numtasks;
