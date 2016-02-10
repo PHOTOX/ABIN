@@ -1,36 +1,34 @@
 !---This is a template file for user-defined analysis function.
-!---This function will be called if anal_ext=1 in input(section general).
-!---Should the user need something more then coordinates(velocities,forces),
-! he/she must also modify  analysis.f90 and possibly also  abin.f90
+!---This function will be called if anal_ext=1 in input (section general).
 module mod_analyze_ext
    use mod_const, only: DP
-   use mod_array_size, only: nbinmax
    implicit none
    private
-   public :: analyze_ext
-   real(DP)  :: spec(nbinmax)
-   real(DP)  :: emin=0,emax=0.35
-   integer :: nbinen=400
+   public    :: analyze_ext
    save
    contains
 
    subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
-   use mod_array_size
-   use mod_general
-   use mod_system, ONLY: names
+   use mod_general, only: it
    real(DP) x(:,:),y(:,:),z(:,:)
    real(DP) vx(:,:),vy(:,:),vz(:,:)
    real(DP) amt(:,:)
+   character(len=100)   :: chsystem
+   character(len=50)   :: chit
 
 
-   if(modulo(it,nwrite).eq.0)then
+   ! Launch external BASH script.
+   ! Can be used to analyze wavefunction on-the-fly
+   write(chit,*)it
+   chsystem='./analyze_ext.sh '//trim(chit)
+   call system(chsystem)
+
+!   if(modulo(it,nwrite).eq.0)then
 !--print output every nwrite steps              
-   endif
+!   endif
    
    end
 
 end module
                                         
-
-
 

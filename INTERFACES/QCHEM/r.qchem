@@ -12,7 +12,6 @@ natom=$(cat $geom | wc -l )
 #-----------NOTES FOR QCHEM-------------------
 # SCF_GUESS read should guarantee faster SCF convergence
 # QCHEM sometimes print core file for no obvious reason ---> removing core at the end
-# QCHEM must have SCF_CONVERGENCE set to high value (10?)
 # QCHEM must have symmetry and reorientation turned off (sym_ignore true),
 # otherwise it yields bad gradients
 # Comments on energy and gradient readings are below 
@@ -37,13 +36,11 @@ EXCHANGE hf
 CORRELATION mp2
 BASIS  aug-cc-pVDZ
 max_scf_cycles    100
-SCF_ALGORITHM DIIS_GDM ! use DIIS for first iterations, then switch to geometric direct minimizer
-MAX_DIIS_CYCLES 50 ! do not allow more than 100 DIIS iterations
-THRESH_DIIS_SWITCH 4 ! change to GDM when accuracy 10-4 is reached
-scf_convergence 10 ! convergence criterion is 10-10
-THRESH		13 ! should be scf_convergence+3
-N_FROZEN_CORE FC ! do not correlate core electrons
-sym_ignore true  ! ignores symmetry throughout the calculations
+MAX_DIIS_CYCLES 100 ! do not allow more than 100 DIIS iterations
+scf_convergence 6 ! convergence criterion is 10^-scf_convergence
+THRESH		9 ! should be scf_convergence+3
+N_FROZEN_CORE FC  ! do not correlate core electrons
+sym_ignore true   ! ignores symmetry throughout the calculations
 $end
 
 '>>$input
