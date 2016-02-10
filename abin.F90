@@ -21,7 +21,6 @@ program abin_dyn
    use mod_arrays
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
-   use mod_interfaces
    use mod_kinetic, ONLY: temperature
    use mod_utils, only: abinerror, printf
    use mod_shake, only: nshake

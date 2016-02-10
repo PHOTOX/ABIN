@@ -145,15 +145,17 @@ subroutine init(dt, values1)
    end if
 #endif
 
-#ifdef PLUM
    if(iplumed.eq.1) then
+
+#ifdef PLUM
       call plumed_init(dt)
       write(*,*) 'PLUMED is on'
       write(*,*) 'PLUMEDfile is ',plumedfile   
-   endif
 #else
       write(*,*)'FATAL ERROR: ABIN was not compiled with PLUMED.'
 #endif
+
+   endif
    
    if (my_rank.eq.0)then
       write(*,*)'Reading parameters from input file ',chinput

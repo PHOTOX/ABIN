@@ -7,7 +7,7 @@
       real(DP) :: epsinf=3d33
       real(DP), allocatable :: charges(:)
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
-      integer, allocatable  :: natmol(:) !used for wraping, independent of nmolt
+      integer, allocatable  :: natmol(:) !used for wrapping, independent of nmolt
 #else
       integer  :: natmol(2000) !hardcoded for older gfortran
 #endif
@@ -25,7 +25,7 @@
       iwrap=0
 
       iat=1
-      !delame wrapping na zaklade 1.walkera
+      ! wrapping based on the 1st bead
       iww=1
       do i=1,nmol
 
@@ -150,7 +150,7 @@
          pom=pom+1
         enddo
        enddo
-!       TODO:z mme2 brat jen hessian...anebo zablokovat vypocet elstat. sil pro ipbc=1
+!      TODO:z mme2 brat jen hessian...anebo zablokovat vypocet elstat. sil pro ipbc=1
 
 
       else    !only forces
@@ -193,7 +193,7 @@
         if(idebug.eq.1)then
                 iter=-1
         else  
-                iter=-5  !we dont update nblist for QM part!!!!
+                iter=-5  ! we don't update nblist for QM part!!!!
         endif
 #ifdef NAB              
         energy=energy-mme_qmmm( xyz, grad, iter) !grad se nemusi nulovat
