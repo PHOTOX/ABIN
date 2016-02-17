@@ -14,7 +14,6 @@ in terachem, they use 1000fs, but with a bit different definition, so it transla
 tau=0.159
 I should really test this for larger system.....
 
-
 ! For using GLE with REMD, we need to input multiple seeds ... use another PRNG for that
 
 

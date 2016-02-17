@@ -14,10 +14,12 @@ module mod_terampi_sh
 
    implicit none
    private
-   public :: force_terash, init_terash, send_terash
+   public :: force_terash, init_terash, send_terash, tera_method
    real(DP), allocatable :: CIvecs(:,:), MO(:,:), CMO(:,:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:,:), MO_old(:,:), CMO_old(:,:)
+   real(DP), allocatable :: fracOcc(:),fracOcc_old(:)
    integer :: civec, nbf 
+   character(len=20)     :: tera_method="casscf"
    save
 contains
 
@@ -69,7 +71,7 @@ subroutine receive_terash(fx, fy, fz, eclas)
 !      T_FMS%ElecStruc%TransDipole(i+1,:)=TDip(3*(i-1)+1:3*(i-1)+3)
 !   end do
 
-!    Receive dipole moment from TC
+!  Receive dipole moment from TC
    if (idebug>0) write(*, '(a)') 'Receiving dipole moments from TC.'
    call MPI_Recv( Dip,nstate*3, &
           MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
@@ -128,12 +130,16 @@ subroutine receive_terash(fx, fy, fz, eclas)
 
    i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
 
+   if(tera_method.eq."casci")then
+     if (idebug>0) write(*, '(a)') 'Receiving Frac. Occ. numbers.'
+     call MPI_Recv( fracOcc, nbf, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+   end if
+
    CIVecs_old = Civecs
 
    do ist1=1, nstate-1
       do ist2=ist1+1, nstate
-      ! At this point, TeraChem sends all couplings
-!         if (tocalc(ist1, ist2).eq.0) cycle
+         if (tocalc(ist1, ist2).eq.0) cycle
          if (idebug>0) write(*, '(a,i3,i3)') 'Receiving NA couplings between states.'&
          ,ist1, ist2
 
@@ -147,6 +153,12 @@ subroutine receive_terash(fx, fy, fz, eclas)
             nacx(iat, itrj, ist1, ist2) = NAC(ipom)
             nacy(iat, itrj, ist1, ist2) = NAC(ipom+1)
             nacz(iat, itrj, ist1, ist2) = NAC(ipom+2)
+            ! for ethylene SA3 2-state dynamics !!
+!            if(ist2.eq.3)!then
+!               nacx(iat, itrj, ist1, ist2) = 0.0d0
+!               nacy(iat, itrj, ist1, ist2) = 0.0d0
+!               nacz(iat, itrj, ist1, ist2) = 0.0d0
+!            end if
             nacx(iat,itrj,ist2,ist1) = -nacx(iat,itrj,ist1,ist2)
             nacy(iat,itrj,ist2,ist1) = -nacy(iat,itrj,ist1,ist2)
             nacz(iat,itrj,ist2,ist1) = -nacz(iat,itrj,ist1,ist2)
@@ -212,7 +224,7 @@ subroutine send_terash(x, y, z, vx, vy, vz)
 
 !  Send coordinates
    call MPI_Send(qmcoords, 3*natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
-   write(*, '(a)') 'Sent initial coordinates to TeraChem.'
+   if(idebug.gt.0) write(*, '(a)') 'Sent coordinates to TeraChem.'
 
 !  Send previous MOs
    if(idebug.gt.0) write(*,*)'Sending previous orbitals.', nbf*nbf
@@ -224,10 +236,15 @@ subroutine send_terash(x, y, z, vx, vy, vz)
 !     $      MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
 !      else if (tc_nml%casscf == 'yes') then
    if(idebug.gt.0) write(*,*)'Sending canonical orbitals.', nbf*nbf
-   call MPI_SSend(CMO, nbf*nbf, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+   call MPI_Send(CMO, nbf*nbf, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
    if(idebug.gt.0) write(*,*)'Sending CI vector of size ', civec*nstate
-   call MPI_SSend(CIvecs, civec*nstate, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+   call MPI_Send(CIvecs, civec*nstate, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
 !  end if
+
+   if(tera_method.eq."casci")then
+     if (idebug>0) write(*, '(a)') 'Sending Frac. Occ. numbers.'
+     call MPI_Send( fracOcc, nbf, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+   end if
 
    if(idebug.gt.0) write(*,*)'Sending velocities'
 !  Send velocity vectors
@@ -267,6 +284,11 @@ subroutine init_terash(x, y, z)
    integer  :: ierr, FMSinit, iat, iw
    integer  :: bufints(20)
 
+   if(tera_method.ne."casscf".or.tera_method.ne."casci")then
+      write(*,*)'tera_method must be casscf or casci!'
+      write(*,*)'CIS/TDDFT dynamics not yet implemented.'
+   end if
+
    iw = 1
    do iat=1, natqm
       qmcoords(1,iat) = x(iat,iw) / ANG
@@ -280,18 +302,21 @@ subroutine init_terash(x, y, z)
    FMSinit = 1
    bufints(1) = FMSinit
    bufints(2) = natom
-   call MPI_Send( bufints, 12, MPI_INTEGER, 0, 2, newcomm, ierr )
+   call MPI_SSend( bufints, 12, MPI_INTEGER, 0, 2, newcomm, ierr )
+   if (idebug.gt.0) write(*, '(a)') 'Sent initial FMSinit.'
 
 !  send initial time step (so far 0, no restart yet)
    bufints(1) = 0.0d0 ! it
-   call MPI_Send( bufints, 1, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
+   call MPI_SSend( bufints, 1, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
+   if (idebug.gt.0) write(*, '(a)') 'Sent initial timestep.'
 
 !  Send atom types
    call MPI_Send( names, 2*natqm, MPI_CHARACTER, 0, 2, newcomm, ierr )
+   if (idebug.gt.0) write(*, '(a)') 'Sent initial atom types.'
 
 !  Send coordinates
    call MPI_Send( qmcoords, 3*natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
-   write(*, '(a)') 'Sent initial coordinates to TeraChem.'
+   if (idebug.gt.0) write(*, '(a)') 'Sent initial coordinates to TeraChem.'
 
 !  Receive nbf and CI length
    call MPI_Recv( bufints, 2, MPI_INTEGER, MPI_ANY_SOURCE, &
@@ -315,6 +340,10 @@ subroutine init_terash(x, y, z)
    allocate(CiVecs(civec,nstate))
    allocate(CiVecs_old(civec,nstate))
    allocate(NAC(natom*3))
+   if(tera_method.eq."casci")then
+     allocate(fracOcc_old(nbf))
+     allocate(fracOcc(nbf))
+   end if
 
 end subroutine init_terash
 
