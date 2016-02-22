@@ -48,7 +48,7 @@ module mod_general
    integer :: it=0,ipimd=0,istage=0,nwalk=1,ihess=0,md=1  
    character(len=15) :: pot='none'
    integer :: imini=0,nstep=1,nabin=50
-   integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0
+   integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0,nwritef=0
    integer :: icv=0,irest=0,anal_ext=0,idebug=0
    integer :: irandom=156873,natom=0,pid
    integer :: iqmmm=0, iremd=0
@@ -68,7 +68,7 @@ module mod_files
    character(len=MAXFILENAME)  :: CHFILES(MAXUNITS)
 
    ! UNIT 1 is reserved for CP2K!!!
-   integer, parameter :: UMOVIE=10, UVELOC=2
+   integer, parameter :: UMOVIE=10, UVELOC=2, UFORCE=15
    integer, parameter :: UENERGY=3, UTEMPER=4
    integer, parameter :: URADIUS=11
    ! PIMD stuff
@@ -92,6 +92,7 @@ module mod_files
    end do
 
    chfiles(UVELOC)='vel.xyz'
+   chfiles(UFORCE)='forces.xyz'
    chfiles(UENERGY)='energies.dat'
    chfiles(UTEMPER)='temper.dat'
 
@@ -147,6 +148,8 @@ module mod_files
 !      end if
       open(UVELOC,file=chfiles(UVELOC),access=chaccess,action='write')
    endif
+
+   if (nwritef.gt.0) open(UFORCE,file=chfiles(UFORCE),access=chaccess,action='write')
 
 
    if (ipimd.ne.1)then

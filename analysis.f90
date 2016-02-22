@@ -18,46 +18,52 @@ module mod_analysis
 !----Contains all analysis stuff
    subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
      use mod_analyze_ext, only:analyze_ext
-     use mod_estimators ,only:estimators
+     use mod_estimators , only:estimators
      use mod_general
      use mod_system
      use mod_density
      implicit none
      !intent inout because of estimators, writing to nwalk+1
-     real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
-     real(DP),intent(in) :: fxc(:,:),fyc(:,:),fzc(:,:)
-     real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
-     real(DP),intent(in) :: amt(:,:)
-     real(DP),intent(in) :: eclas,equant
+     real(DP),intent(inout) :: x(:,:),   y(:,:),   z(:,:)
+     real(DP),intent(in)    :: fxc(:,:), fyc(:,:), fzc(:,:)
+     real(DP),intent(in)    :: vx(:,:),  vy(:,:),  vz(:,:)
+     real(DP),intent(in)    :: amt(:,:)
+     real(DP),intent(in)    :: eclas, equant
      real(DP) :: dt  !,energy
 
 !     eclas comes from force_clas,equant from force_quantum
 !     energy=eclas+equant
 
       if (ipimd.eq.1.or.icv.eq.1)then
-       call estimators(x,y,z,fxc,fyc,fzc,eclas,dt)
+       call estimators(x, y, z, fxc, fyc, fzc, eclas, dt)
       endif
 
       if(modulo(it,nwritex).eq.0)then
-       call trajout(x,y,z,it)
+       call trajout(x, y, z, it)
       endif
 
       if(nwritev.gt.0)then
        if(modulo(it,nwritev).eq.0)then
-        call velout(vx,vy,vz)
+        call velout(vx, vy, vz)
+       endif
+      endif
+
+      if(nwritef.gt.0)then
+       if(modulo(it,nwritef).eq.0)then
+        call forceout(x, y, z, fxc, fyc, fzc, UFORCE )
        endif
       endif
 
       if(ndist.ge.1.and.it.gt.imini)then
-       call density(x,y,z)
+       call density(x, y, z)
       endif
 
       if(nang.ge.1.and.it.gt.imini)then
-       call density_ang(x,y,z)
+       call density_ang(x, y, z)
       endif
 
       if(ndih.ge.1.and.it.gt.imini)then
-       call density_dih(x,y,z)
+       call density_dih(x, y, z)
       endif
 
       if((modulo(it,nrest).eq.0).or.it.eq.nstep)then
@@ -65,7 +71,7 @@ module mod_analysis
       endif
 
       if (anal_ext.eq.1)then
-       call analyze_ext(x,y,z,vx,vy,vz,amt)
+       call analyze_ext(x, y, z, vx, vy, vz, amt)
       endif
       
 
@@ -104,6 +110,44 @@ module mod_analysis
      end if
 
    end subroutine trajout
+
+   subroutine forceout(x, y, z, fx,fy,fz,funit)
+      use mod_general, only: nwalk, natom, it
+      use mod_system, ONLY: names
+      use mod_files,   only: UVELOC
+      real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(in) :: fx(:,:),fy(:,:),fz(:,:)
+      integer, intent(in) :: funit
+      real(DP)  :: fx_tot, fy_tot, fz_tot
+      real(DP)  :: fx_rot, fy_rot, fz_rot
+      integer   :: iat, iw
+      character(len=40)  :: fgeom, fkom
+
+      ! Calculate net translational and rotational gradient (should be close to zero)
+      do iw=1,nwalk
+         do iat=1,natom
+            fx_tot = fx_tot + fx(iat, iw)
+            fy_tot = fy_tot + fy(iat, iw)
+            fz_tot = fz_tot + fz(iat, iw)
+            fx_rot = fx_rot + fy(iat, iw)*z(iat, iw) - fz(iat,iw)*y(iat,iw)
+            fy_rot = fy_rot + fz(iat, iw)*x(iat, iw) - fx(iat,iw)*z(iat,iw)
+            fz_rot = fz_rot + fx(iat, iw)*y(iat, iw) - fy(iat,iw)*x(iat,iw)
+         enddo
+      enddo
+      
+      fgeom='(A2,3E18.10E2)'
+      fkom='(A10,3E13.5E2,A14,3E13.5E2)'
+
+      write(funit,*)natom
+      write(funit,fkom)'net force:',fx_tot,fy_tot,fz_tot,' torque force:',fx_rot,fy_rot,fz_rot
+      do iw=1,nwalk
+         do iat=1,natom
+            ! Printing in atomic units
+            write(funit,fgeom)names(iat),fx(iat,iw),fy(iat,iw),fz(iat,iw)
+         enddo
+      enddo
+
+   end subroutine forceout
 
 
    subroutine velout(vx,vy,vz)

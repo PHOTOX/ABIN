@@ -29,6 +29,7 @@ irandom=131313,  	!random seed
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?
 nrest=1,		! how often we print restart files?
+nwritef=1,		! how often we print forces? (default=0)
 
 isbc=0,			! spherical boundary conditions
 rb_sbc=10.9d0,              ! radius of the cluster for sbc
