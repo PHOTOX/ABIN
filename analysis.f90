@@ -196,6 +196,8 @@ module mod_analysis
      chsystem='cp '//trim(chout)//'  '//trim(chout)//'.old'
      if(file_exists) call system(chsystem)
 
+!    open(102, file=chout, action='WRITE',recl=250)
+!    intel compilers don't write too many columns on single line
      open(102, file=chout, action='WRITE')
 
      write(102,*)it

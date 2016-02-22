@@ -1,9 +1,8 @@
 #/bin/bash
-#MPIRUN=/opt/intel/composer_xe_2013_sp1.3.174/mpirt/bin/intel64/mpirun
-#module load mpich2-x86_64
-#module load mpich2/1.5
-module load mpich2/1.4.1p1
-MPIRUN=mpiexec
+#module load mpich2/1.4.1p1
+#MPIRUN=mpiexec
+
+MPIRUN=$MPI_PATH/bin/mpirun
 
 rm -f restart.xyz movie.xyz
 if [[ "$1" = "clean" ]];then

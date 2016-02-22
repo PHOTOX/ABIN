@@ -178,7 +178,7 @@ module mod_files
       if(idebug.gt.1)then
          open(UBKL,file=chfiles(UBKL),access=chaccess,action='write')
          write(UBKL,*)'# Hopping probabilities - bkl(i) [i=1,nstate]'
-         open(UWFCOEF,file=chfiles(UWFCOEF),access=chaccess,action='write')
+         open(UWFCOEF,file=chfiles(UWFCOEF),access=chaccess,action='write', recl=250)
          write(UWFCOEF,*)'# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
          if(phase.eq.1)then
             open(UPHASE,file=chfiles(UPHASE),access=chaccess,action='write')
@@ -477,9 +477,11 @@ module mod_system
    end subroutine mass_init
 
    subroutine constrainP (px,py,pz)
-      use mod_general, only: nwalk
+      use mod_general, only: nwalk, my_rank
       real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
       integer                 :: iw,iat
+      if (my_rank.eq.0) write(*,*)'Removing initial velocity of constrained atoms.'
+
       do iw=1,nwalk
          do iat=1,conatom
             px(iat,iw) = 0.0d0

@@ -1,5 +1,4 @@
 #/bin/bash
-source SetEnvironment.sh CP2K
 
 if [[ $1 = "clean" ]];then
    rm -f restart.xyz.old output *.diff temper.dat energies.dat restart.xyz WATER* movie.xyz cp2k.out
@@ -8,4 +7,5 @@ fi
 
 ABINEXE=$1
 
-$MPIRUN  -np 3 $ABINEXE -i input.in > output
+# $MPI_PATH exported at the top of  test.sh
+$MPI_PATH/bin/mpirun  -np 3 $ABINEXE -i input.in > output

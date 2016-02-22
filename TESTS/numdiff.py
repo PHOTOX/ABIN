@@ -6,8 +6,8 @@ from sys import argv
 # Workaround for STDIN problem for CP2K tests
 import readline
 
-# This scripts is for comparing differences between files,
-# while disregarding insignificant numerical differences
+# This scripts is compares differences between files
+# while disregarding insignificant numerical differences.
 
 # This script parses output from command:
 # $ diff -y file1 file2

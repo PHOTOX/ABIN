@@ -4,7 +4,7 @@ module mod_plumed
   implicit none
   public
   integer :: iplumed
-  character(len=40) :: plumedfile
+  character(len=40) :: plumedfile=''
 
 
 CONTAINS

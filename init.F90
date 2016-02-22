@@ -395,14 +395,11 @@ subroutine init(dt, values1)
      if(irest.eq.1) call restin(x,y,z,vx,vy,vz,it)
 
 
-!------------END OF INPUT SECTION---------------------
+!----END OF INPUT SECTION---------------------
 
 
 
-!----------------INITIALIZATION-----------------------
-
-!     Open files for writing
-      call files_init(isbc, phase)
+!-----INITIALIZATION-----------------------
 
 
       if(pot.eq.'2dho')then
@@ -455,10 +452,7 @@ subroutine init(dt, values1)
 
 !     END OF READING VELOCITIES--------------------
 
-      if(conatom.gt.0)then
-         if (my_rank.eq.0) write(*,*)'Removing initial velocity of constrained atoms.'
-         call constrainP(vx,vy,vz)
-      endif
+      if(conatom.gt.0) call constrainP(vx,vy,vz)
 
       ! If scaleveloc=1, scale initial velocitites
       ! Otherwise, just print the temperature.
@@ -531,6 +525,9 @@ subroutine init(dt, values1)
          endif
       endif
 #endif
+
+!  Open files for writing
+   call files_init(isbc, phase)
 
 !--------END OF INITIALIZATION-------------------
    call flush(6)
@@ -1002,7 +999,7 @@ print *,commit
 #endif
 #ifdef MPI
 write(*,*)'Compiled with MPI support.'
-write(*,*)'(Currently used for direct CP2K a TeraChem interfaces.)'
+write(*,*)'(Currently used for direct CP2K and TeraChem interfaces.)'
 #endif
 print *,' '
 

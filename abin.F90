@@ -50,11 +50,11 @@ program abin_dyn
    integer  :: ierr
 !$ integer  :: nthreads,omp_get_max_threads
 
-!-   INPUT AND INITIALIZATION SECTION      
-   call init(dt, values1) 
-
    ! TODO: move this bit to init
    if(my_rank.eq.0) call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+
+!-   INPUT AND INITIALIZATION SECTION      
+   call init(dt, values1) 
 
    ! TODO: in case of _cp2k_, this needs to be done only by rank0
    if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then

@@ -1,6 +1,13 @@
 #!/bin/bash
 ABINEXE="$PWD/$1 -x mini.dat"
 
+
+MPI=$(awk -F"[# ,=]+" '{if($1=="MPI")print $2}' make.vars)
+if [[ $MPI = "TRUE" ]];then
+   export MPI_PATH=$(awk -F"[# ,=]+" '{if($1=="MPI_PATH") print $2}' make.vars)
+   export LD_LIBRARY_PATH=$MPI_PATH/lib:$LD_LIBRARY_PATH
+fi
+
 cd TESTS 
 
 function dif_files {
@@ -143,10 +150,10 @@ do
    if [[ -f "test.sh" ]];then
       ./test.sh $ABINEXE 2> /dev/null
    else
-      $ABINEXE > output 2>/dev/null 
+      $ABINEXE > output  
       #for testing restart
       if [[ -e input.in2 ]];then
-         $ABINEXE -i input.in2 2> /dev/null >> output
+         $ABINEXE -i input.in2 >> output
       fi
    fi
 

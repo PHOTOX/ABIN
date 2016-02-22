@@ -1,5 +1,4 @@
 #/bin/bash
-source SetEnvironment.sh CP2K
 
 if [[ "$1" = "clean" ]];then
    rm -f remd.out restart.xyz.??.old output output2 restart.xyz.?? restart.xyz.??.? geom.dat.?? movie.xyz.?? cp2k.out temper.dat.?? energies.dat.?? 
@@ -7,6 +6,7 @@ if [[ "$1" = "clean" ]];then
 fi
 
 ABINEXE=$1
+MPIRUN=$MPI_PATH/bin/mpirun
 
 $MPIRUN  -np 3 $ABINEXE -i input.in -v vel0.in > output
 $MPIRUN  -np 3 $ABINEXE -i input.in2 >> output

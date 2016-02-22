@@ -1,7 +1,8 @@
 # Name of the Abin binary
 OUT = abin
 
-# Determine compilers
+# Determine compilers, currently only gnu compilers are supported
+# ifort may give different results (2015 version is know to not work for some reason)
 FC = gfortran
 CC = gcc 
 FFLAGS :=   -O2 -fopenmp  

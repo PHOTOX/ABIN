@@ -17,12 +17,15 @@ INPUTGEOM=mini.dat
 delscratch=true
 INPUTVELOC=
 ########################################
-MPIRUN_TERA="/home/hollas/programes/mpich-3.1.3/arch/x86_64-intel-2015-update5/bin/mpirun -np 1 "
-MPIRUN_ABIN="/home/hollas/programes/mpich-3.1.3/arch/x86_64-gcc/bin/mpirun -np 1 "
-ABINEXE=/home/hollas/PHOTOX/bin/abin.mpi
-
+# ABINEXE=/home/hollas/PHOTOX/bin/abin.mpi
+# ABINEXE is determined automatically from SetEnvironment.sh
 
 source SetEnvironment.sh TERACHEM dev
+MPIRUN_TERA="$MPIRUN -np 1 "
+source SetEnvironment.sh ABIN 1.0-mpi
+MPIRUN_ABIN="$MPIRUN -np 1 "
+
+
 rm -f port.txt
 
 # First check, that pot='_tera_' 
