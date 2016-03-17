@@ -12,34 +12,28 @@
 # The trajectories are executed and stored in $folder.
 
 # Files needed in this folder:
-#	$INPUTDIR : template directory with ABIN input files (mainly input.in and r.abin)
+#	$inputdir : template directory with ABIN input files (mainly input.in and r.abin)
 # 	traj-randomint PRNG program should be in your $PATH.
 #---------------------------------------------------------------------------------
 
 #######-----SETUP---#############
-irandom0=-1          # random seed, set negative for random seed based on time
-movie=geoms.xyz      # PATH TO a XYZ movie with initial geometries
-veloc=velocs.dat     # PATH to XYZ initial velocities, leave blank if you do not have them
+irandom0=156863189          # random seed, set negative for random seed based on time
+movie=traj_nh4.xyz      # PATH TO a XYZ movie with initial geometries
+veloc=vels_nh4.xyz     # PATH to XYZ initial velocities, leave blank if you do not have them
 isample=1	     # initial number of traj
 nsample=100	     # number of trajectories
-INPUTDIR=TRAJS-TEMPLATE-QCHEM   # Directory with input files for ABIN
-abin_input=$INPUTDIR/input.in   # main input file for ABIN
-launch_script=$INPUTDIR/r.abin	# this is the file that is submitted by qsub
-
-
-folder=MP2           # Name of the folder with trajectories
-abinexe=$PHOTOX/bin/abin      # path to abin binary
-submit="qsub -q nq -cwd  " # -q sq-* "    # comment this line if you don't want to submit to queue yet
+folder=MP2-NH4           # Name of the folder with trajectories
+inputdir=TEMPLATE-$folder   # Directory with input files for ABIN
+abin_input=$inputdir/input.in   # main input file for ABIN
+launch_script=$inputdir/r.abin	# this is the file that is submitted by qsub
+abinexe=abin.v1.0          # path to abin binary
+submit="qsub -q nq -cwd  " # comment this line if you don't want to submit to queue yet
 rewrite=0            # if =1 -> rewrite trajectories that already exist
-jobs=30              # number of batch jobs to submit. Trajectories will be distributed accordingly.
+jobs=20              # number of batch jobs to submit. Trajectories will be distributed accordingly.
 
 # Number of atoms is determined automatically from input.in
 natom=$(awk -F"[! ,=]+" '{if($1=="natom")print $2}' $abin_input) #number of atoms
-molname=$folder # Name of the job in the queue
-
-## If you need to process the input via cut_sphere, adjust the following command
-# cut="cut_sphere -u 4 -v 3" # cut command, velocity file is handled automatically if needed
-# (Do not provide file names.)
+molname=$folder      # Name of the job in the queue
 ##########END OF SETUP##########
 
 
@@ -58,8 +52,8 @@ function Error {
    exit 1
 }
 
-if [[ ! -d "$INPUTDIR" ]];then
-   Folder_not_found "$INPUTDIR"
+if [[ ! -d "$inputdir" ]];then
+   Folder_not_found "$inputdir"
 fi
 
 if [[ ! -f "$movie" ]];then
@@ -92,6 +86,15 @@ fi
 
 echo "Number of atoms = $natom"
 
+let natom2=natom+2
+lines=$(cat $movie | wc -l)
+geoms=$(expr $lines / $natom2)
+if [[ $nsample -gt $geoms ]];then
+   echo "ERROR: Number of geometries ($geoms) is smaller than number of samples($nsample)."
+   echo "Change parameter \"nsample\"."
+   exit 1
+fi
+
 # I don't think this is needed, we make sure not to overwrite any trajectory anyway
 #if [[ -e $folder/$molname.$isample.*.sh ]];then
 #   echo  "Error: File $folder/$molname.$isample.*.sh already exists!"
@@ -114,8 +117,6 @@ fi
 
 j=1
 i=$isample
-
-let natom2=natom+2
 
 #--------------------generation of random numbers--------------------------------
 echo "Generating $nsample random integers."
@@ -154,7 +155,7 @@ while [[ $i -le "$nsample" ]];do
 
    fi
 
-   cp -r $INPUTDIR/* $folder/TRAJ.$i
+   cp -r $inputdir/* $folder/TRAJ.$i
 
 
 #--Now prepare mini.dat (and possibly veloc.in)
@@ -162,20 +163,6 @@ while [[ $i -le "$nsample" ]];do
    head -$offset $movie | tail -$natom2 > geom
    if [[ ! -z "$veloc" ]];then
       head -$offset $veloc | tail -$natom2 > veloc.in
-   fi
-#--- Perform cutting, if needed.
-   if [[  ! -z "$cut" ]];then
-      if [[ ! -z "$veloc" ]];then
-         $cut -vel veloc.in < geom
-      else
-         $cut
-      fi
-      if [[ $? -ne "0" ]];then
-         Error "$cut"
-      fi
-
-      cp cut_qm.xyz geom
-      cp veloc.out veloc.in
    fi
 
    mv geom $folder/TRAJ.$i/mini.dat
