@@ -14,13 +14,13 @@
 #           - It should be similar to populations.dat. If that's not the case, the SH algorithm does not work properly.
 
 #######SETUP#############
-folder=TERACAS-22-SA3-MPI
+folder=TERAFOMO-128-SA3
 isample=1
 nsample=100
-nstate=2
+nstate=3
 dt=5.0
-nstep=1700
-SKIPFOLDERS=(   )     # these trajectories will be excluded from analysis
+nstep=850
+SKIPFOLDERS=(  )     # these trajectories will be excluded from analysis
 ##########END OF SETUP##########
 outfolder=$folder/ANALYSIS
 
@@ -72,7 +72,7 @@ while [[ $i -le $nsample ]];do
       cd $DEST
       grep -q -s "Job finished" output
       if [[ -e job.log && $? -ne 0 && ! -e ERROR ]];then
-         fetchabin.sh  > /dev/null
+         fetchabin.sh  > /dev/null 
       fi
       cd $currfolder
    else
@@ -178,25 +178,50 @@ cd $outfolder
 cat > gnuplot.in << EOF
 set term png enhanced size 800,600
 set output "populations.png"
-unset key
 set multiplot 
 set size 1.0, 1.0 
 set origin 0.0, 0.0
 set tics nomirror
 totaltime=$nstep*$dt*0.02419
 
-#TODO: make color styles
-# same color for lines and points with error bars
+linewidth=3
+linewidth2=1
+set style line 1 lt 1 lc rgb "black"  lw linewidth
+set style line 2 lt 1 lc rgb "red"    lw linewidth
+set style line 3 lt 1 lc rgb "blue"   lw linewidth
+set style line 4 lt 1 lc rgb "green"  lw linewidth
+set style line 5 lt 2 lc rgb "yellow" lw linewidth
+set style line 6 lt 2 lc rgb "orange" lw linewidth
+set style line 7 lt 2 lc rgb "purple" lw linewidth
+set style line 10 lt 1 lc rgb "black"  lw linewidth2
+set style line 20 lt 1 lc rgb "red"    lw linewidth2
+set style line 30 lt 1 lc rgb "blue"   lw linewidth2
+set style line 40 lt 1 lc rgb "green"  lw linewidth2
+set style line 50 lt 2 lc rgb "yellow" lw linewidth2
+set style line 60 lt 2 lc rgb "orange" lw linewidth2
+set style line 70 lt 2 lc rgb "purple" lw linewidth2
+
+# MACRO definitions
+set macros
+PLT_ERR="every 100 using 1:2:3 with yerrorbars" 
+PLT_POP="using 1:2 with lines"
+KEY="at graph 0.96, graph"
+posy=0.9
+dy=0.05
 
 set yrange [0:1]
 set xrange [0:totaltime]
-set ylabel "Populations [ - ]" 
-set xlabel "Time [ fs ]" 
+set ylabel font "Arial,16" "Populations [ - ]" offset 2
+set xlabel font "Arial,16" "Time [ fs ]" offset 2
 EOF
 for((i=0;i<nstate;i++));do
+   let ls=i+1
+   let ls2=ls*10
 cat >> gnuplot.in << EOF
-plot "populations.dat" index $i every 100 using 1:2:3 with yerrorbars,\
-     "populations.dat" index $i using 1:2 with lines
+unset key
+plot "populations.dat" index $i @PLT_ERR ls $ls2
+set key @KEY posy-$i*dy
+plot "populations.dat" index $i @PLT_POP ls $ls t "S_$i"
 EOF
 done
 

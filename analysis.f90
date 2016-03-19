@@ -13,280 +13,291 @@ module mod_analysis
             chSH='Coefficients for SH', chAVG='Cumulative averages of various estimators', &
             chcoords='Cartesian Coordinates [au]', chvel='Cartesian Velocities [au]'
 
-   contains
+   CONTAINS
 
 !----Contains all analysis stuff
-   subroutine analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
-     use mod_analyze_ext, only:analyze_ext
-     use mod_estimators , only:estimators
-     use mod_general
-     use mod_system
-     use mod_density
-     implicit none
-     !intent inout because of estimators, writing to nwalk+1
-     real(DP),intent(inout) :: x(:,:),   y(:,:),   z(:,:)
-     real(DP),intent(in)    :: fxc(:,:), fyc(:,:), fzc(:,:)
-     real(DP),intent(in)    :: vx(:,:),  vy(:,:),  vz(:,:)
-     real(DP),intent(in)    :: amt(:,:)
-     real(DP),intent(in)    :: eclas, equant
-     real(DP) :: dt  !,energy
+   SUBROUTINE analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
+   use mod_analyze_ext, only:analyze_ext
+   use mod_estimators , only:estimators
+   use mod_general
+   use mod_system
+   use mod_density
+   implicit none
+   !intent inout because of estimators, writing to nwalk+1
+   real(DP),intent(inout) :: x(:,:),   y(:,:),   z(:,:)
+   real(DP),intent(in)    :: fxc(:,:), fyc(:,:), fzc(:,:)
+   real(DP),intent(in)    :: vx(:,:),  vy(:,:),  vz(:,:)
+   real(DP),intent(in)    :: amt(:,:)
+   real(DP),intent(in)    :: eclas, equant
+   real(DP) :: dt  !,energy
 
-!     eclas comes from force_clas,equant from force_quantum
-!     energy=eclas+equant
+!  eclas comes from force_clas,equant from force_quantum
+!  energy=eclas+equant
 
-      if (ipimd.eq.1.or.icv.eq.1)then
-       call estimators(x, y, z, fxc, fyc, fzc, eclas, dt)
+   if (ipimd.eq.1.or.icv.eq.1)then
+      call estimators(x, y, z, fxc, fyc, fzc, eclas, dt)
+   endif
+
+   if(modulo(it,nwritex).eq.0)then
+      call trajout(x, y, z, it)
+   endif
+
+   if(nwritev.gt.0)then
+      if(modulo(it,nwritev).eq.0)then
+         call velout(vx, vy, vz)
       endif
+   endif
 
-      if(modulo(it,nwritex).eq.0)then
-       call trajout(x, y, z, it)
+   if(nwritef.gt.0)then
+      if(modulo(it,nwritef).eq.0)then
+         call forceout(x, y, z, fxc, fyc, fzc, UFORCE )
       endif
+   endif
 
-      if(nwritev.gt.0)then
-       if(modulo(it,nwritev).eq.0)then
-        call velout(vx, vy, vz)
-       endif
-      endif
+   if(ndist.ge.1.and.it.gt.imini)then
+      call density(x, y, z)
+   endif
 
-      if(nwritef.gt.0)then
-       if(modulo(it,nwritef).eq.0)then
-        call forceout(x, y, z, fxc, fyc, fzc, UFORCE )
-       endif
-      endif
+   if(nang.ge.1.and.it.gt.imini)then
+      call density_ang(x, y, z)
+   endif
 
-      if(ndist.ge.1.and.it.gt.imini)then
-       call density(x, y, z)
-      endif
+   if(ndih.ge.1.and.it.gt.imini)then
+      call density_dih(x, y, z)
+   endif
 
-      if(nang.ge.1.and.it.gt.imini)then
-       call density_ang(x, y, z)
-      endif
+   if((modulo(it,nrest).eq.0).or.it.eq.nstep)then
+      call restout(x,y,z,vx,vy,vz,it)
+   endif
 
-      if(ndih.ge.1.and.it.gt.imini)then
-       call density_dih(x, y, z)
-      endif
-
-      if((modulo(it,nrest).eq.0).or.it.eq.nstep)then
-       call restout(x,y,z,vx,vy,vz,it)
-      endif
-
-      if (anal_ext.eq.1)then
-       call analyze_ext(x, y, z, vx, vy, vz, amt)
-      endif
+   if (anal_ext.eq.1)then
+      call analyze_ext(x, y, z, vx, vy, vz, amt)
+   endif
       
 
    end subroutine analysis
 
    subroutine trajout(x,y,z,it)
-     use mod_const, only: ANG
-     use mod_files, only: UMOVIE
-     use mod_general, only: imini,nwalk,natom, iremd, my_rank
-     use mod_system, ONLY: names
-     implicit none
-     real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
-     integer,intent(in) :: it
-     integer            :: iat,iw
-     character(len=20)  :: fgeom, chout
+   use mod_const, only: ANG
+   use mod_files, only: UMOVIE
+   use mod_general, only: imini,nwalk,natom, iremd, my_rank
+   use mod_system, ONLY: names
+   implicit none
+   real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
+   integer,intent(in) :: it
+   integer            :: iat,iw
+   character(len=20)  :: fgeom, chout
 
-     
-!    printing with slightly lower precision for saving space
-     fgeom='(A2,3E18.10E2)'
+   if (imini.eq.it)then
+      close(UMOVIE)
+      chout='movie.xyz'
+      if(iremd.eq.1) write(chout, '(A,I2.2)')trim(chout)//'.', my_rank
+      open(UMOVIE, file=chout, access='append', action="write")
+   end if
+   
+!  printing with slightly lower precision for saving space
+   fgeom='(A2,3E18.10E2)'
 
-     do iw=1,nwalk
-         write(UMOVIE,*)natom
-         write(UMOVIE,*)'Time step:',it
-         do iat=1,natom
-            write(UMOVIE,fgeom)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
-         enddo
-     enddo
+   do iw=1,nwalk
+       write(UMOVIE,*)natom
+       write(UMOVIE,*)'Time step:',it
+       do iat=1,natom
+          write(UMOVIE,fgeom)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
+       enddo
+   enddo
 
-     ! when equillibration period ends, 
-     ! start wrinting to movie.xyz instead of movie_mini.xyz
-     if (imini.eq.it)then
-        close(UMOVIE)
-        chout='movie.xyz'
-        if(iremd.eq.1) write(chout, '(A,I2.2)')trim(chout)//'.', my_rank
-        open(UMOVIE, file=chout, access='append', action="write")
-     end if
+   ! when equillibration period ends, 
+   ! start wrinting to movie.xyz instead of movie_mini.xyz
+   if (imini.eq.it)then
+      close(UMOVIE)
+      chout='movie.xyz'
+      if(iremd.eq.1) write(chout, '(A,I2.2)')trim(chout)//'.', my_rank
+      open(UMOVIE, file=chout, access='append', action="write")
+   end if
 
    end subroutine trajout
 
    subroutine forceout(x, y, z, fx,fy,fz,funit)
-      use mod_general, only: nwalk, natom, it
-      use mod_system, ONLY: names
-      use mod_files,   only: UVELOC
-      real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
-      real(DP),intent(in) :: fx(:,:),fy(:,:),fz(:,:)
-      integer, intent(in) :: funit
-      real(DP)  :: fx_tot, fy_tot, fz_tot
-      real(DP)  :: fx_rot, fy_rot, fz_rot
-      integer   :: iat, iw
-      character(len=40)  :: fgeom, fkom
+   use mod_general, only: nwalk, natom, it
+   use mod_system, ONLY: names
+   real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(in) :: fx(:,:),fy(:,:),fz(:,:)
+   integer, intent(in) :: funit
+   real(DP)  :: fx_tot, fy_tot, fz_tot
+   real(DP)  :: fx_rot, fy_rot, fz_rot
+   integer   :: iat, iw
+   character(len=40)  :: fgeom, fkom
 
-      ! Calculate net translational and rotational gradient (should be close to zero)
-      do iw=1,nwalk
-         do iat=1,natom
-            fx_tot = fx_tot + fx(iat, iw)
-            fy_tot = fy_tot + fy(iat, iw)
-            fz_tot = fz_tot + fz(iat, iw)
-            fx_rot = fx_rot + fy(iat, iw)*z(iat, iw) - fz(iat,iw)*y(iat,iw)
-            fy_rot = fy_rot + fz(iat, iw)*x(iat, iw) - fx(iat,iw)*z(iat,iw)
-            fz_rot = fz_rot + fx(iat, iw)*y(iat, iw) - fy(iat,iw)*x(iat,iw)
-         enddo
-      enddo
-      
-      fgeom='(A2,3E18.10E2)'
-      fkom='(A10,3E13.5E2,A14,3E13.5E2)'
+   ! Calculate net translational and rotational gradient (should be close to zero)
+   fx_tot = 0.0d0; fy_tot=0.0d0; fz_tot=0.0d0
+   fx_rot = 0.0d0; fy_rot=0.0d0; fz_rot=0.0d0
 
-      write(funit,*)natom
-      write(funit,fkom)'net force:',fx_tot,fy_tot,fz_tot,' torque force:',fx_rot,fy_rot,fz_rot
-      do iw=1,nwalk
-         do iat=1,natom
-            ! Printing in atomic units
-            write(funit,fgeom)names(iat),fx(iat,iw),fy(iat,iw),fz(iat,iw)
-         enddo
+   do iw=1,nwalk
+      do iat=1,natom
+         fx_tot = fx_tot + fx(iat, iw)
+         fy_tot = fy_tot + fy(iat, iw)
+         fz_tot = fz_tot + fz(iat, iw)
+         fx_rot = fx_rot + fy(iat, iw)*z(iat, iw) - fz(iat,iw)*y(iat,iw)
+         fy_rot = fy_rot + fz(iat, iw)*x(iat, iw) - fx(iat,iw)*z(iat,iw)
+         fz_rot = fz_rot + fx(iat, iw)*y(iat, iw) - fy(iat,iw)*x(iat,iw)
       enddo
+   enddo
+   
+   fgeom='(A2,3E18.10E2)'
+   fkom='(A10,3E13.5E2,A14,3E13.5E2)'
+
+   write(funit,*)natom
+   write(funit,fkom)'net force:',fx_tot,fy_tot,fz_tot,' torque force:',fx_rot,fy_rot,fz_rot
+   do iw=1,nwalk
+      do iat=1,natom
+         ! Printing in atomic units
+         write(funit,fgeom)names(iat),fx(iat,iw),fy(iat,iw),fz(iat,iw)
+      enddo
+   enddo
 
    end subroutine forceout
 
 
    subroutine velout(vx,vy,vz)
-      use mod_general, only: nwalk, natom, it
-      use mod_system, ONLY: names
-      use mod_files,   only: UVELOC
-      real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
-      integer :: iat,iw
-      character(len=20)  :: fgeom
-      
-      
-      fgeom='(A2,3E18.10E2)'
-      write(UVELOC,*)natom
-      write(UVELOC,*)'Time step:',it
-      do iw=1,nwalk
-         do iat=1,natom
-            ! Printing in atomic units
-            write(UVELOC,fgeom)names(iat),vx(iat,iw),vy(iat,iw),vz(iat,iw)
-         enddo
+   use mod_general, only: nwalk, natom, it
+   use mod_system, ONLY: names
+   use mod_files,   only: UVELOC
+   real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
+   integer :: iat,iw
+   character(len=20)  :: fgeom
+   
+   
+   fgeom='(A2,3E18.10E2)'
+   write(UVELOC,*)natom
+   write(UVELOC,*)'Time step:',it
+
+   do iw=1,nwalk
+      do iat=1,natom
+         ! Printing in atomic units
+         write(UVELOC,fgeom)names(iat),vx(iat,iw),vy(iat,iw),vz(iat,iw)
       enddo
+   enddo
 
    end subroutine velout
 
    subroutine restout(x,y,z,vx,vy,vz,it)
-     use mod_general,only:icv, ihess, nwalk, ipimd, natom, iremd, my_rank
-     use mod_nhc,    only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
-     use mod_estimators
-     use mod_kinetic,only: entot_cumul, est_temp_cumul
-     use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
-     use mod_gle
-     use mod_random
-     real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
-     real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
-     integer,intent(in) :: it
-     integer :: iat,iw,inh,itrj,ist1,is
-     LOGICAL :: file_exists
-     character(len=200)    :: chout, chsystem
+   use mod_general,only:icv, ihess, nwalk, ipimd, natom, iremd, my_rank
+   use mod_nhc,    only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
+   use mod_estimators
+   use mod_kinetic,only: entot_cumul, est_temp_cumul
+   use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
+   use mod_gle
+   use mod_random
+   real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
+   integer,intent(in) :: it
+   integer :: iat,iw,inh,itrj,ist1,is
+   LOGICAL :: file_exists
+   character(len=200)    :: chout, chsystem
 
-     if(iremd.eq.1)then
-        write(chout, '(A,I2.2)')'restart.xyz.', my_rank
-     else
-        chout='restart.xyz'
-     end if
+   if(iremd.eq.1)then
+      write(chout, '(A,I2.2)')'restart.xyz.', my_rank
+   else
+      chout='restart.xyz'
+   end if
 
-     INQUIRE(FILE=chout, EXIST=file_exists)
-     chsystem='cp '//trim(chout)//'  '//trim(chout)//'.old'
-     if(file_exists) call system(chsystem)
+   INQUIRE(FILE=chout, EXIST=file_exists)
+   chsystem='cp '//trim(chout)//'  '//trim(chout)//'.old'
+   if(file_exists) call system(chsystem)
 
-!    open(102, file=chout, action='WRITE',recl=250)
-!    intel compilers don't write too many columns on single line
-     open(102, file=chout, action='WRITE')
+!  open(102, file=chout, action='WRITE',recl=250)
+!  intel compilers don't write too many columns on single line
+   open(102, file=chout, action='WRITE')
 
-     write(102,*)it
+   write(102,*)it
 
-     write(102,*)chcoords
-     do iw=1,nwalk
+   write(102,*)chcoords
+   do iw=1,nwalk
       do iat=1,natom
-       write(102,*)x(iat,iw),y(iat,iw),z(iat,iw)
+         write(102,*)x(iat,iw),y(iat,iw),z(iat,iw)
       enddo
-     enddo
+   enddo
 
-     write(102,*)chvel
+   write(102,*)chvel
 
-     do iw=1,nwalk
+   do iw=1,nwalk
       do iat=1,natom
-       write(102,*)vx(iat,iw),vy(iat,iw),vz(iat,iw)
+         write(102,*)vx(iat,iw),vy(iat,iw),vz(iat,iw)
       enddo
-     enddo
+   enddo
 
-     if(ipimd.eq.2)then
-     call write_nacmrest()
-     write(102,*)chSH
+   if(ipimd.eq.2)then
+      call write_nacmrest()
+      write(102,*)chSH
       do itrj=1,ntraj
-       write(102,*)istate(itrj)
-       do ist1=1,nstate
-        write(102,*)cel_re(ist1,itrj),cel_im(ist1,itrj)
-       enddo
+         write(102,*)istate(itrj)
+         do ist1=1,nstate
+            write(102,*)cel_re(ist1,itrj),cel_im(ist1,itrj)
+         enddo
       enddo
-     endif
+   endif
 
-     if(inose.eq.1)then
+   if(inose.eq.1)then
       write(102,*)chnose
-     if(imasst.eq.1)then
-      do inh=1,nchain
-       do iw=1,nwalk
-        do iat=1,natom
-          write(102,*)pnhx(iat,iw,inh),pnhy(iat,iw,inh),pnhz(iat,iw,inh)
-        enddo
-       enddo
-      enddo
 
-     else
+      if(imasst.eq.1)then
+         do inh=1,nchain
+            do iw=1,nwalk
+               do iat=1,natom
+                  write(102,*)pnhx(iat,iw,inh),pnhy(iat,iw,inh),pnhz(iat,iw,inh)
+               enddo
+            enddo
+         enddo
 
-      do inh=1,nchain
-       do iw=1,nwalk
-        do iat=1,nmolt
-          write(102,*)pnhx(iat,iw,inh)
-        enddo
-       enddo
-      enddo
-     endif
-
-     endif
-
-     if(inose.eq.2)then
-      write(102,*)chQT
-      if(nwalk.eq.1)then
-       do iat=1,natom*3
-        write(102,*)(gp(iat,is),is=2,ns+1)
-       enddo
       else
-       do iw=1,nwalk
-        do iat=1,natom*3
-         write(102,*)(ps(iat,is,iw),is=1,ns)
-        enddo
-       enddo
-     endif
-     write(102,*)langham
-     endif
 
-     write(102,*)chAVG
-     write(102,*)est_temp_cumul
-     write(102,*)est_prim_cumul,est_vir_cumul
-     write(102,*)entot_cumul
-     if(icv.eq.1)then
+         do inh=1,nchain
+            do iw=1,nwalk
+               do iat=1,nmolt
+                  write(102,*)pnhx(iat,iw,inh)
+               enddo
+            enddo
+         enddo
+      endif
+
+   endif
+
+   if(inose.eq.2)then
+      write(102,*)chQT
+         if(nwalk.eq.1)then
+            do iat=1,natom*3
+               write(102,*)(gp(iat,is),is=2,ns+1)
+            enddo
+         else
+            do iw=1,nwalk
+               do iat=1,natom*3
+                  write(102,*)(ps(iat,is,iw),is=1,ns)
+               enddo
+            enddo
+         endif
+      write(102,*)langham
+   endif
+
+   write(102,*)chAVG
+   write(102,*)est_temp_cumul
+   write(102,*)est_prim_cumul,est_vir_cumul
+   write(102,*)entot_cumul
+
+   if(icv.eq.1)then
       write(102,*)est_prim2_cumul,est_prim_vir,est_vir2_cumul
       write(102,*)cv_prim_cumul,cv_vir_cumul
       if(ihess.eq.1)then 
-       write(102,*)cv_dcv_cumul
-       do iw=1,nwalk
-        write(102,*)cvhess_cumul(iw)
-       enddo
+         write(102,*)cv_dcv_cumul
+         do iw=1,nwalk
+            write(102,*)cvhess_cumul(iw)
+         enddo
       endif
-     endif
+   endif
 
-     ! write current state of PRNG
-     call rsavef(102)
+   ! write current state of PRNG
+   call rsavef(102)
 
-     close(102)
+   close(102)
 
 
    end subroutine restout
