@@ -45,7 +45,7 @@ subroutine init(dt, values1)
 #ifdef MPI
    use mod_remd
    use mod_terampi
-   use mod_terampi_sh, only: init_terash, tera_method
+   use mod_terampi_sh, only: init_terash
 #endif
    real(DP),intent(out) :: dt
    integer,dimension(8) :: values1
@@ -81,8 +81,7 @@ subroutine init(dt, values1)
                      Nshake,ishake1,ishake2,shake_tol
 
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
-                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
-                     tera_method
+                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 

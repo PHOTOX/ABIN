@@ -360,7 +360,13 @@ subroutine finish(error_code)
 !   integer :: iter=-3
 
 #ifdef MPI
-   if (pot.eq.'_tera_') call finalize_terachem(error_code)
+   if (pot.eq.'_tera_')then
+      ! TODO! 
+      !if (ipimd.eq.2) then
+      !   call finalize_terash
+      !end if
+      call finalize_terachem(error_code)
+   end if
 #endif
 
    if (my_rank.eq.0)then
@@ -420,7 +426,7 @@ subroutine finish(error_code)
 !   PLUMED closing session
 #ifdef PLUM
     if (iplumed.eq.1) then
-    call plumed_f_gfinalize()
+      call plumed_f_gfinalize()
     end if
 #endif
 end subroutine finish
