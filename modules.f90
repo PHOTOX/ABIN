@@ -77,6 +77,9 @@ module mod_files
    integer, parameter :: UPOP=20, UPROB=21, UPES=22
    integer, parameter :: UDOTPROD=23, UNACME=24, UWFCOEF=25
    integer, parameter :: UPHASE=26, UBKL=27
+   ! So far only for TeraChem
+   integer, parameter :: UDOTPRODCI=31, UCHARGES=32
+   integer, parameter :: UDIP = 33, UTDIP = 34
    save
 
    CONTAINS
@@ -185,6 +188,13 @@ module mod_files
             write(UPHASE,*)'# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
          end if
       endif
+
+      if(pot.eq.'_tera_')then
+         open(UCHARGES,file='charges.dat',access=chaccess,action='write')
+         write(UCHARGES,*)'# Atomic charges from current electronic states'
+         open(UDOTPRODCI,file='dotprodci.dat',access=chaccess,action='write')
+         write(UDOTPRODCI,*)'# Dot products between current and previous CI vectors.'
+      end if
    endif
 
    if(isbc.eq.1)then

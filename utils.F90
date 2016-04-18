@@ -85,7 +85,7 @@ module mod_utils
    use mod_const, only: DP
    implicit none
    real(KIND=DP),intent(in) :: fx(:,:),fy(:,:),fz(:,:)
-   integer :: iat,iw
+   integer :: iat, iw
 
    do iw=1,nwalk
       do iat=1,natom
@@ -94,6 +94,23 @@ module mod_utils
    enddo
 
    end subroutine printf
+
+   subroutine print_charges(charges, iw, istate)
+   use mod_files, only: UCHARGES
+   use mod_general, only: nwalk, natom, it
+   use mod_system, only: names
+   use mod_const, only: DP
+   implicit none
+   integer, intent(in)  :: iw, istate
+   real(KIND=DP),intent(in) :: charges(:)
+   integer :: iat
+
+   write(UCHARGES, *)'# Time step:',it,' BEAD: ',iw,'EL. STATE ',istate
+   do iat=1,natom
+      write(UCHARGES,*)names(iat), charges(iat)
+   enddo
+
+   end subroutine print_charges
 
    subroutine Get_cmdline(chinput, chcoords, chveloc )
    character(len=*),intent(inout)   :: chinput, chcoords, chveloc

@@ -1344,6 +1344,7 @@ enddo
 
    integer function check_CIVector(CIvecs, CIvecs_old, ci_len, nstates)
    use mod_const, only:AUtoFS
+   use mod_files, only: UDOTPRODCI
    use mod_general, only: it, dt0
    real(DP), allocatable, intent(in) :: CIvecs(:,:), CIvecs_old(:,:)
    integer, intent(in) :: ci_len, nstates
@@ -1363,9 +1364,7 @@ enddo
    end do
 
    write(formt,'(A7,I3,A7)')'(F15.2,',nstates,'F15.10)'
-   open(500, file="dotprodci.dat",access="APPEND")
-   write(500,fmt=formt)it * dt0 * AUtoFS,(cidotprod(ist1),ist1=1,nstates)
-   close(500)
+   write(UDOTPRODCI,fmt=formt)it * dt0 * AUtoFS,(cidotprod(ist1),ist1=1,nstates)
 
    check_CIVector=0
    return

@@ -40,7 +40,7 @@ subroutine receive_terash(fx, fy, fz, eclas)
    use mod_array_size, only: NSTMAX
    use mod_general, only: idebug, natom
    use mod_qmmm, only: natqm
-   use mod_utils, only: abinerror
+   use mod_utils, only: abinerror, print_charges
    use mod_sh, only: check_CIVector, en_array, nstate, istate, nacx, nacy, nacz, tocalc
    include 'mpif.h'
    real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
@@ -76,9 +76,11 @@ subroutine receive_terash(fx, fy, fz, eclas)
 !     T_FMS%ElecStruc%Dipole(i,1:3)=Dip(3*(i-1)+1:3*(i-1)+3)
 !  end do
 
-!   Receive partial charges from TC
+!  Receive partial charges from TC
    if (idebug>0) write(*, '(a)') 'Receiving atomic charges from TC.'
    call MPI_Recv( qmcharges, natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+
+   call print_charges(qmcharges, 1, istate(itrj) )
 
 !  Receive MOs from TC
    if (idebug>0) write(*, '(a)') 'Receiving MOs from TC.'
@@ -215,7 +217,7 @@ subroutine send_terash(x, y, z, vx, vy, vz)
    call MPI_SSend(bufints, nstate*(nstate-1)/2+nstate, MPI_INTEGER, 0, 2, newcomm, ierr )
 
    ! temporary hack
-   bufdoubles(1) = it * AUtoFS !* dt
+   bufdoubles(1) = it ! * AUtoFS !* dt
    ! Send Time 
    call MPI_Send(bufdoubles, 1, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
 
