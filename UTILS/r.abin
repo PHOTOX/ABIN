@@ -1,10 +1,11 @@
 #!/bin/bash
+
 # This is a sample script for launching ABIN simulations in cluster environments.
-# 1. Copy all data from CWD to the node's scratch.
+# 1. Copy all data from CWD to the node's scratch. 
+#    (not copying folders except the interface folder, e.g G09)
 # 2. Launch ABIN.
 # 3. Copy data back (only newer files are copied!).
 # 4. Remove scratch directory. (if delscratch = true)
-
 
 # SETUP --------------------------------
 OUTPUT=output
@@ -15,6 +16,10 @@ INPUTGEOM=mini.dat
 delscratch=true
 INPUTVELOC=
 ########################################
+
+pot=$(awk -F"[! ,=\"']+" '{if($1=="pot")print $2}' $INPUTPARAM)
+# Upper case, this is the folder with file interface
+INTERFACE=${pot^^}
 
 #$ -V -cwd
 
@@ -46,7 +51,10 @@ if [[ ! -f SetEnvironment.sh ]];then
    cp $where .
 fi
 
-cp -upr * $SCRDIR/.
+cp -up * $SCRDIR/.
+if [[ -d $INTERFACE ]];then
+   cp -r $INTERFACE $SCRDIR/
+fi
 
 cd $SCRDIR
 
@@ -56,7 +64,7 @@ else
    $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
-cp -upr * $KDE/.
+cp -pr * $KDE/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"
@@ -70,5 +78,4 @@ cd ..
 if [[ $delscratch -eq "true" ]];then
    rm -r $JOBNAME
 fi
-
 

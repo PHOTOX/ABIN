@@ -45,7 +45,7 @@ else
    mkdir $SCRDIR
 fi
 
-cp -upr * $SCRDIR/.
+cp -p * $SCRDIR/.
 
 cd $SCRDIR
 

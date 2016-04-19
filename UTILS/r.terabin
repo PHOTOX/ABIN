@@ -30,13 +30,12 @@ rm -f port.txt
 
 # First check, that pot='_tera_' 
 # Otherwise, TeraChem would wait forever and the job would never finish
-egrep -q -e ^pot=\'tera\' $INPUTPARAM
+egrep -q -e ^pot=\'_tera_\' $INPUTPARAM
 if [[ ! $? ]];then
    echo "Error: It appears that you did not specify pot=_tera_ in $INPUTPARAM."
    echo "Exiting..."
    exit 1 
 fi
-
 
 SCRDIR=/scratch/$USER/$JOBNAME
 
@@ -62,7 +61,7 @@ else
 fi
 
 
-cp -upr * $SCRDIR/.
+cp -p * $SCRDIR/.
 
 cd $SCRDIR
 
@@ -98,7 +97,7 @@ while true;do
    fi
 done
 
-cp -upr * $KDE/.
+cp -pr * $KDE/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"
