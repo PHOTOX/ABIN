@@ -76,7 +76,7 @@ LDLIBS = -lm -lstdc++ ${LIBS}
 
 # Adding rest of the Fortran objects
 # This hack is needed for force_tera.o and fftw_interface.o
-F_OBJS := modules.o utils.o interfaces.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
+F_OBJS := modules.o utils.o interfaces.o io.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
 
 ALLDEPENDS = ${C_OBJS} ${F_OBJS}
 

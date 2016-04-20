@@ -95,23 +95,6 @@ module mod_utils
 
    end subroutine printf
 
-   subroutine print_charges(charges, iw, istate)
-   use mod_files, only: UCHARGES
-   use mod_general, only: nwalk, natom, it
-   use mod_system, only: names
-   use mod_const, only: DP
-   implicit none
-   integer, intent(in)  :: iw, istate
-   real(KIND=DP),intent(in) :: charges(:)
-   integer :: iat
-
-   write(UCHARGES, *)'# Time step:',it,' BEAD: ',iw,'EL. STATE ',istate
-   do iat=1,natom
-      write(UCHARGES,*)names(iat), charges(iat)
-   enddo
-
-   end subroutine print_charges
-
    subroutine Get_cmdline(chinput, chcoords, chveloc )
    character(len=*),intent(inout)   :: chinput, chcoords, chveloc
    character(len=len(chinput))   :: arg
@@ -187,6 +170,7 @@ module mod_utils
     print '(a)', ''
     print '(a)', 'ABIN: Multipurpose ab initio MD program.'
     print '(a)', ''
+    call print_compile_info()
     print '(a)', 'cmdline options:'
     print '(a)', ''
     print '(a)', '  -h, --help               print help and exit'
@@ -195,5 +179,34 @@ module mod_utils
     print '(a)', '  -v <input_velocities>    no default'
     print '(a)', ''
    end subroutine PrintHelp
+
+   subroutine print_compile_info()
+   include 'date.inc'
+
+   print *,'Compiled at  ',date
+   print *,commit
+!$ print *,'Compiled with parallel OpenMP support for PIMD.'
+#ifdef USEFFTW
+   write(*,*)'Compiled with FFTW support.'
+#endif
+#ifdef CP2K
+   write(*,*)'Compiled with in-built CP2K interface.'
+#endif
+#ifdef PLUM
+   write(*,*)'Compiled with PLUMED (static lib).'
+#endif
+#ifdef MPI
+   write(*,*)'Compiled with MPI support.'
+   write(*,*)'(used for REMD and direct CP2K and TeraChem interfaces.)'
+#endif
+   print *,' '
+
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+   print *, 'This file was compiled by ',  &
+             compiler_version(), ' using the options: '
+   print *,     compiler_options()
+#endif
+
+end subroutine print_compile_info
 
 end module mod_utils

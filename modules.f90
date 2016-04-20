@@ -86,6 +86,7 @@ module mod_files
 
    SUBROUTINE files_init(isbc, phase)
    use mod_general
+   use mod_system, only: names
    integer, intent(in)  :: isbc, phase
    character(len=10)    :: chaccess
    integer              :: i
@@ -117,6 +118,11 @@ module mod_files
    chfiles(UWFCOEF)='wfcoef.dat'
    chfiles(UPHASE)='phase.dat'
    chfiles(UBKL)='bkl.dat'
+!  Files for TeraChem SH interface
+   chfiles(UCHARGES)='charges.dat'
+   chfiles(UDIP)='dipoles.dat'
+   chfiles(UTDIP)='trans_dipoles.dat'
+   chfiles(UDOTPRODCI)='dotprodci.dat'
 
    !--Here we ensure, that previous files are deleted----
    if(irest.eq.0)then
@@ -190,10 +196,16 @@ module mod_files
       endif
 
       if(pot.eq.'_tera_')then
-         open(UCHARGES,file='charges.dat',access=chaccess,action='write')
-         write(UCHARGES,*)'# Atomic charges from current electronic states'
-         open(UDOTPRODCI,file='dotprodci.dat',access=chaccess,action='write')
+         open(UCHARGES,file=chfiles(UCHARGES),access=chaccess,action='write')
+         write(UCHARGES,*)'# Atomic charges from current electronic state'
+         write(UCHARGES,*)'# Time  st ',(names(i),i=1,natom)
+         open(UDOTPRODCI,file=chfiles(UDOTPRODCI),access=chaccess,action='write')
          write(UDOTPRODCI,*)'# Dot products between current and previous CI vectors.'
+         write(UCHARGES,*)'# Time  cidotprod1  cidotprod2 ... '
+         open(UDIP,file=chfiles(UDIP),access=chaccess,action='write')
+         write(UDIP,*)'# Time  dip_tot.1 dip_tot.2 ... dip_x.1 dip_y.1 dip_z.1 dip_x.2 dip_y.2 dip_z.2.'
+         open(UTDIP,file=chfiles(UTDIP),access=chaccess,action='write')
+         write(UTDIP,*)'# Time  st  tdip_tot.1 tdip_tot.2 ... tdip_x.1 tdip_y.1 tdip_z.1 tdip_x.2 tdip_y.2 tdip_z.2.'
       end if
    endif
 

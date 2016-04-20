@@ -13,6 +13,7 @@ module mod_sh
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
    public :: energydifthr, energydriftthr, popsumthr, phase, adjmom, revmom
    public :: check_CIVector
+   public :: ignore_state
 
    integer,parameter :: ntraj = ntrajmax
    integer   :: istate_init=1, nstate=1, substep=100
@@ -26,10 +27,12 @@ module mod_sh
    real(DP),allocatable :: nacx_old(:,:,:,:), nacy_old(:,:,:,:), nacz_old(:,:,:,:)
    real(DP),allocatable :: dotproduct(:,:,:), dotproduct_old(:,:,:) !for inac=1
    real(DP),allocatable :: en_array(:,:), en_array_old(:,:)
-   real(DP)  :: cel_re(nstmax,ntrajmax), cel_im(nstmax,ntrajmax)
-   real(DP)  :: eshift, entot0, gama(nstmax,nstmax,ntrajmax)
+   real(DP) :: cel_re(nstmax,ntrajmax), cel_im(nstmax,ntrajmax)
+   real(DP) :: eshift, entot0, gama(nstmax,nstmax,ntrajmax)
    integer, allocatable :: tocalc(:,:)
-   integer   :: istate(ntrajmax)
+   integer  :: istate(ntrajmax)
+   ! for ethylene 2-state SA3 dynamics
+   integer  :: ignore_state = 0
    save
    contains
 

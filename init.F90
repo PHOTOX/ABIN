@@ -80,7 +80,7 @@ subroutine init(dt, values1)
                      k,r0,k1,k2,k3,De,a, &
                      Nshake,ishake1,ishake2,shake_tol
 
-   namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr, &
+   namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr,ignore_state, &
                      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
@@ -966,7 +966,6 @@ subroutine init(dt, values1)
 
    subroutine PrintLogo(values1)
    use iso_fortran_env
-   include 'date.inc'
    integer,dimension(8),intent(out) :: values1
    call date_and_time(VALUES=values1)
 
@@ -984,29 +983,7 @@ print '(a)','     version 1.0'
 print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek 2011-2015'
 print '(a)',' '
 
-print *,'Compiled at  ',date
-print *,commit
-!$ print *,'Compiled with parallel OpenMP support for PIMD.'
-#ifdef USEFFTW
-   write(*,*)'Compiled with FFTW support.'
-#endif
-#ifdef CP2K
-   write(*,*)'Compiled with in-built CP2K interface.'
-#endif
-#ifdef PLUM
-   write(*,*)'Compiled with PLUMED (static lib).'
-#endif
-#ifdef MPI
-write(*,*)'Compiled with MPI support.'
-write(*,*)'(Currently used for direct CP2K and TeraChem interfaces.)'
-#endif
-print *,' '
-
-#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
-print *, 'This file was compiled by ',  &
-             compiler_version(), ' using the options: '
-print *,     compiler_options()
-#endif
+call print_compile_info()
 
 write(*,*)'Job started at:'
 write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &

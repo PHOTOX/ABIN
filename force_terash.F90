@@ -40,7 +40,8 @@ subroutine receive_terash(fx, fy, fz, eclas)
    use mod_array_size, only: NSTMAX
    use mod_general, only: idebug, natom
    use mod_qmmm, only: natqm
-   use mod_utils, only: abinerror, print_charges
+   use mod_utils, only: abinerror
+   use mod_io, only: print_charges, print_dipoles, print_transdipoles
    use mod_sh, only: check_CIVector, en_array, nstate, istate, nacx, nacy, nacz, tocalc
    include 'mpif.h'
    real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
@@ -67,6 +68,7 @@ subroutine receive_terash(fx, fy, fz, eclas)
 !   do i=1, nstate-1
 !      T_FMS%ElecStruc%TransDipole(i+1,:)=TDip(3*(i-1)+1:3*(i-1)+3)
 !   end do
+   call print_transdipoles(TDip, istate(itrj), nstate-1 )
 
 !  Receive dipole moment from TC
    if (idebug>0) write(*, '(a)') 'Receiving dipole moments from TC.'
@@ -75,12 +77,13 @@ subroutine receive_terash(fx, fy, fz, eclas)
 !  do i=1, nstate
 !     T_FMS%ElecStruc%Dipole(i,1:3)=Dip(3*(i-1)+1:3*(i-1)+3)
 !  end do
+   call print_dipoles(Dip, iw, nstate )
 
 !  Receive partial charges from TC
    if (idebug>0) write(*, '(a)') 'Receiving atomic charges from TC.'
    call MPI_Recv( qmcharges, natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
 
-   call print_charges(qmcharges, 1, istate(itrj) )
+   call print_charges(qmcharges, istate(itrj) )
 
 !  Receive MOs from TC
    if (idebug>0) write(*, '(a)') 'Receiving MOs from TC.'
@@ -154,7 +157,7 @@ subroutine send_terash(x, y, z, vx, vy, vz)
    use mod_system, only: names
    use mod_qmmm,  only: natqm
    use mod_utils, only: abinerror
-   use mod_sh,    only: istate, tocalc, nstate 
+   use mod_sh,    only: istate, tocalc, nstate, ignore_state 
    include 'mpif.h'
    real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)   ::  vx(:,:),vy(:,:),vz(:,:)
@@ -194,9 +197,12 @@ subroutine send_terash(x, y, z, vx, vy, vz)
    ! The following bit is not in FMS code
    ! let ABIN decide which derivatives should TC compute
    i=1
-   ! DH for ethylene SA3 2-state dynamics
-!   tocalc(1,3) = 0
-!   tocalc(2,3) = 0
+   if (ignore_state.gt.0)then
+      do ist1=1, nstate
+         tocalc(ist1,ignore_state)  = 0
+         tocalc(ignore_state, ist1) = 0
+      end do
+   end if
    do ist1=1,nstate
       do ist2=ist1,nstate
          if(ist1.eq.ist2.and.ist1.eq.istate(itrj))then
