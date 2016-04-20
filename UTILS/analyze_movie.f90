@@ -421,6 +421,11 @@ if (ndist.gt.0 )then
          write(*,*)'Number of particles type 1 in RDF:',rdfparts1
          write(*,*)'Number of particles type 2 in RDF:',rdfparts2
       end if
+
+      if (imod.eq.0)then
+         anorm = anorm * dx
+      end if
+
       do ian = 1, nbin_dist
          r(1) = distmin+dx*(ian+0.5)
          if (imod.eq.1)then
@@ -432,14 +437,12 @@ if (ndist.gt.0 )then
             if(rdfname1.ne.rdfname2)then
                anorm=anorm*2.0d0
             end if
-      end if
-      if (imod.eq.0)then
-         anorm = anorm * dx
-      end if
+         end if
 
-      write(128,*) r(1), bins_dist(ian, idist) / anorm
+         write(128,*) r(1), bins_dist(ian, idist) / anorm
 
-    enddo
+      enddo
+
     write(128,*)
 
   enddo

@@ -9,6 +9,11 @@
 # 4. Remove scratch directory. (if delscratch = true)
 
 
+# Submit this script simply as
+#  $ qsub -pe shm x r.cp2kabin
+# Additionaly, you may e.g. specify queue via '-q queue'
+# Number of processors should be determined inside this script.
+
 # SETUP --------------------------------
 OUTPUT=output
 ABINEXE=/home/hollas/PHOTOX/bin/abin.cp2k
@@ -18,6 +23,7 @@ INPUTGEOM=mini.dat
 delscratch=true
 INPUTVELOC=
 ########################################
+NPROC=${NSLOTS}  # determined from qsub -pe shm x
 
 #$ -V -cwd
 source SetEnvironment.sh CP2K
@@ -50,9 +56,9 @@ cp -p * $SCRDIR/.
 cd $SCRDIR
 
 if [[ -z $INPUTVELOC ]];then
-   $MPIRUN $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+   $MPIRUN -np $NPROC $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 else
-   $MPIRUN $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+   $MPIRUN -np $NPROC $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
 cp -upr * $KDE/.
