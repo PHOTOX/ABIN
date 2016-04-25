@@ -1,6 +1,7 @@
 ! Various small functions and subroutines, that may be used throughout the program.
 ! Daniel Hollas         2014
 module mod_utils
+   use iso_fortran_env
    use mod_const, only: DP
    implicit none
    private :: PrintHelp
