@@ -104,6 +104,7 @@ subroutine init(dt, values1)
    rewind(150)
    pot=UpperToLower(pot)
 
+
    if(pot.eq."_cp2k_")then
 #ifdef CP2K
       call cp2k_init()
@@ -164,75 +165,92 @@ subroutine init(dt, values1)
       call PrintLogo(values1)
    end if
 
-      if(irest.eq.1)then
-       readnhc=1   !readnhc has precedence before initNHC
-       readQT=1
-       initNHC=0   !i.e. if(readnhc.eq.1.and.initNHC.eq.1)
-       scaleveloc=0  !do not scale velocities when restarting a job
-      else         !then nhc momenta from restart.xyz will be used
-       readnhc=0
-       readQT=0
-       initNHC=1
-       scaleveloc=1
-      endif
-      
-      if (chveloc.ne.'')then
-         scaleveloc=0
-      end if
+print '(a)','**********************************************'
+print '(a)','                                              '
+   SELECT CASE (ipimd)
+      case (0)
+print '(a)','              Classical MD                    '
+      case (1)
+print '(a)','            Path Integral MD                  '
+      case (2)
+print '(a)','           Surface Hopping MD                 '
+      case (3)
+print '(a)','              Minimization                    '
+   END SELECT
+
+  write(*,*)'    using potential: ', pot 
+print '(a)','                                              '
+print '(a)','**********************************************'
+
+   if(irest.eq.1)then
+    readnhc=1   !readnhc has precedence before initNHC
+    readQT=1
+    initNHC=0   !i.e. if(readnhc.eq.1.and.initNHC.eq.1)
+    scaleveloc=0  !do not scale velocities when restarting a job
+   else         !then nhc momenta from restart.xyz will be used
+    readnhc=0
+    readQT=0
+    initNHC=1
+    scaleveloc=1
+   endif
+   
+   if (chveloc.ne.'')then
+      scaleveloc=0
+   end if
 
 ! for future multiple time step integration in SH
-      dt0 = dt
+   dt0 = dt
 
-      ! We have to initialize here, because we read them from input
-      allocate( names( natom )     )
-      names     = ''
-      attypes   = ''
-      massnames = ''
-      masses    = -1.0d0
+   ! We have to initialize here, because we read them from input
+   allocate( names( natom )     )
+   names     = ''
+   attypes   = ''
+   massnames = ''
+   masses    = -1.0d0
 
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
-      allocate( ishake1(natom*3-6) )
-      allocate( ishake2(natom*3-6) )
+   allocate( ishake1(natom*3-6) )
+   allocate( ishake2(natom*3-6) )
 #endif
-      ishake1 = 0
-      ishake2 = 0
+   ishake1 = 0
+   ishake2 = 0
 
-!     allocate all basic arrays and set them to 0.0d0
-      call allocate_arrays( natom, nwalk+1 )
+!  allocate all basic arrays and set them to 0.0d0
+   call allocate_arrays( natom, nwalk+1 )
 
 !-----READING GEOMETRY
-      if(iremd.eq.1) write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank
+   if(iremd.eq.1) write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank
 
-      open(111,file=chcoords,status = "old", action = "read", iostat=iost) 
-      read(111,*, iostat=iost)natom1
-      !TODO followinf line does not work
-      if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.")
-      if(natom1.ne.natom)then
-        write(*,'(A,A)')'No. of atoms in ',chinput
-        write(*,'(A,A)')'and in ',chcoords
-        write(*,*)'do not match.'
-        call abinerror('init')
-      endif
-      read(111,*)
+   open(111,file=chcoords,status = "old", action = "read", iostat=iost) 
+   read(111,*, iostat=iost)natom1
+   !TODO following line does not work
+   if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.")
+   if(natom1.ne.natom)then
+     write(*,'(A,A)')'No. of atoms in ',chinput
+     write(*,'(A,A)')'and in ',chcoords
+     write(*,*)'do not match.'
+     call abinerror('init')
+   endif
+   read(111,*)
+   do iat=1,natom
+
+     read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
+     if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates')
+     names(iat) = LowerToUpper(names(iat))
+     x(iat,1) = x(iat,1) * ANG
+     y(iat,1) = y(iat,1) * ANG
+     z(iat,1) = z(iat,1) * ANG
+
+   enddo 
+   close(111)
+
+   do iw=1,nwalk
       do iat=1,natom
-
-        read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
-        if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates')
-        names(iat) = LowerToUpper(names(iat))
-        x(iat,1) = x(iat,1) * ANG
-        y(iat,1) = y(iat,1) * ANG
-        z(iat,1) = z(iat,1) * ANG
-
-      enddo 
-      close(111)
-
-      do iw=1,nwalk
-         do iat=1,natom
-            x(iat,iw) = x(iat,1)
-            y(iat,iw) = y(iat,1)
-            z(iat,iw) = z(iat,1)
-         enddo
+         x(iat,iw) = x(iat,1)
+         y(iat,iw) = y(iat,1)
+         z(iat,iw) = z(iat,1)
       enddo
+   enddo
 !-----END OF READING GEOMETRY      
 
 

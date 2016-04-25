@@ -64,7 +64,7 @@ module mod_io
    write(UTDIP,format5,advance='no')it, istate
 
    do ind=1,3*ntdip,3
-      total_tdip = tdipoles(ind)**2 + tdipoles(ind+1) + tdipoles(ind+2)**2
+      total_tdip = tdipoles(ind)**2 + tdipoles(ind+1)**2 + tdipoles(ind+2)**2
       total_tdip = dsqrt(total_tdip)
       write(UTDIP,format2, advance="no") total_tdip
    enddo
