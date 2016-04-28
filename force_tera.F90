@@ -41,7 +41,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
    use mod_general, only: idebug, iqmmm, nwalk, DP
 !   use mod_system, only: names
    use mod_qmmm, only: natqm
-   use mod_utils, only: printf
+   use mod_utils, only: printf, abinerror
    use mod_interfaces, only: oniom
    include 'mpif.h'
    real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
@@ -151,6 +151,11 @@ end if
       call flush(6)
    end if
    call MPI_Recv( escf, 1, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
+   ! Checking for TAG=1, which means that SCF did not converge
+   if (status(MPI_TAG).eq.1)then
+      write(*,*)'GOT TAG 1 from TeraChem: SCF probably did not converge.'
+      call abinerror('force_tera')
+   end if
    if ( idebug > 1 ) then
       write(6,'(a,es15.6)') 'Received scf energy from server:', escf
       call flush(6)
