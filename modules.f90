@@ -489,7 +489,7 @@ module mod_files
          write(UCHARGES,*)'# Time  st ',(names(i),i=1,natom)
          open(UDOTPRODCI,file=chfiles(UDOTPRODCI),access=chaccess,action='write')
          write(UDOTPRODCI,*)'# Dot products between current and previous CI vectors.'
-         write(UCHARGES,*)'# Time  cidotprod1  cidotprod2 ... '
+         write(UDOTPRODCI,*)'# Time  cidotprod1  cidotprod2 ... '
          open(UDIP,file=chfiles(UDIP),access=chaccess,action='write')
          write(UDIP,*)'# Time  dip_tot.1 dip_tot.2 ... dip_x.1 dip_y.1 dip_z.1 dip_x.2 dip_y.2 dip_z.2.'
          open(UTDIP,file=chfiles(UTDIP),access=chaccess,action='write')

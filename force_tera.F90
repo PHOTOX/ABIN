@@ -19,10 +19,10 @@ module mod_terampi
    implicit none
    private
    public :: teraport, finalize_terachem, initialize_terachem, &
-          connect_terachem, force_tera, newcomm, &
+          connect_terachem, force_tera, newcomm, mpisleep, &
           qmcharges, qmcoords, dxyz_all ! for terash
    ! This does not work at this moment.
-   character*50  ::  teraport = 'terachem_port'
+   character*50  ::  teraport = 'terachem_port', chsystem
    integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
 !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
    integer, parameter     ::  natmm_tera=0
@@ -32,6 +32,7 @@ module mod_terampi
    real(DP), allocatable :: qmcoords(:,:)
    real(DP), allocatable :: mmcoords(:,:) 
    real(DP), allocatable :: dxyz_all(:,:)
+   real(DP)  :: mpisleep = 0.25
    save
 
 contains
@@ -53,6 +54,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
    real(DP) :: dummy=1.0d0
    integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iw, iat
+   logical  :: ltest
 
 ! DHnote: we cannot use Niklasson's propagator if nwalk > 1
 ! This is the responsibility of the user
@@ -144,6 +146,18 @@ end if
    ! DH TODO: we need to somehow make sure that we don't wait forever if
    ! terachem crashes
    ! At this moment, this is ensured at the bash script level
+
+   ! DH reduce cpu usage comming from MPI_Recv() via system call to 'sleep'.
+   ! Not elegant, but MPICH apparently does not currently provide better solution.
+   ! Based according to an answer here:
+   ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
+
+   ltest = .false.
+   write(chsystem,'(A6,I13,F10.4)')'sleep ',mpisleep
+   do while(ltest.eq..false.)
+      call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG,newcomm,ltest, status, ierr)
+      call system(chsystem)
+   end do
 
    ! Energy
    if ( idebug > 2 ) then

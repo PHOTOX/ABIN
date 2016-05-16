@@ -67,7 +67,7 @@ subroutine init(dt, values1)
 
    namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
-            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom, &
+            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
