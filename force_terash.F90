@@ -10,7 +10,7 @@ module mod_terampi_sh
 ! ----------------------------------------------------------------
    use mod_const, only: DP
 #ifdef MPI
-   use mod_terampi, only: newcomm, qmcharges, qmcoords, dxyz_all
+   use mod_terampi, only: newcomm, qmcharges, qmcoords, dxyz_all, chsys_sleep
    implicit none
    private
    public :: force_terash, init_terash, send_terash
@@ -50,12 +50,25 @@ subroutine receive_terash(fx, fy, fz, eclas)
    integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iat,iw, ist1, ist2, itrj, ipom, i
    integer  :: bufints(20)
+   logical  :: ltest
 
    itrj = 1
    iw = 1
 
 !  Receive energies from TC
    if (idebug>0) write(*, '(a)') 'Receiving energies from TC.'
+
+   ! DH reduce cpu usage comming from MPI_Recv() via system call to 'sleep'.
+   ! Not elegant, but MPICH apparently does not currently provide better solution.
+   ! Based according to an answer here:
+   ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
+
+   ltest = .false.
+   do while(ltest.eq..false.)
+      call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG,newcomm,ltest, status, ierr)
+      call system(chsys_sleep)
+   end do
+
 !  DH WARNING this will only work if itrj = 1
    call MPI_Recv( en_array, nstate, MPI_DOUBLE_PRECISION, &
            MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)

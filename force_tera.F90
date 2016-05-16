@@ -20,9 +20,9 @@ module mod_terampi
    private
    public :: teraport, finalize_terachem, initialize_terachem, &
           connect_terachem, force_tera, newcomm, mpisleep, &
-          qmcharges, qmcoords, dxyz_all ! for terash
+          qmcharges, qmcoords, dxyz_all, chsys_sleep ! for terash
    ! This does not work at this moment.
-   character*50  ::  teraport = 'terachem_port', chsystem
+   character*50  ::  teraport = 'terachem_port', chsys_sleep
    integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
 !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
    integer, parameter     ::  natmm_tera=0
@@ -153,10 +153,9 @@ end if
    ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
 
    ltest = .false.
-   write(chsystem,'(A6,I13,F10.4)')'sleep ',mpisleep
    do while(ltest.eq..false.)
       call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG,newcomm,ltest, status, ierr)
-      call system(chsystem)
+      call system(chsys_sleep)
    end do
 
    ! Energy
@@ -333,6 +332,13 @@ subroutine connect_terachem( )
    end do
    write(*,*)'Sending initial QM atom names to TeraChem.'
    call MPI_Send( names_qm, 2*natqm, MPI_CHARACTER, 0, 2, newcomm, ierr )
+
+   if(mpisleep.le.0)then
+      write(*,*)'Fatal: parameter "mpisleep" must be positive!'
+      call abinerror('initialize_terachem')
+   else
+      write(chsys_sleep,'(A6,F10.4)')'sleep ',mpisleep
+   end if
 
    end subroutine initialize_terachem
 
