@@ -16,6 +16,7 @@ module mod_terampi_sh
    public :: force_terash, init_terash, send_terash
    real(DP), allocatable :: CIvecs(:,:), MO(:,:), blob(:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:,:), MO_old(:,:), blob_old(:)
+   real(DP), allocatable :: SMatrix(:)
    integer :: civec, nbf, nblob, oldWfn = 0 
    save
 contains
@@ -109,7 +110,10 @@ subroutine receive_terash(fx, fy, fz, eclas)
    call MPI_Recv( CIvecs, nstate*civec,  &
            MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
         
+   if (idebug>0) write(*,*) "Receiving wavefunction overlap via MPI."
+   call MPI_Recv(SMatrix, nstate*nstate, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr);
 
+   ! Should change the following according to what is done in TeraChem
    i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
 
    CIVecs_old = Civecs
@@ -319,6 +323,7 @@ subroutine init_terash(x, y, z)
    allocate(NAC(natom*3))
    allocate(blob(nblob))
    allocate(blob_old(nblob))
+   allocate(SMatrix(nstate*nstate))
    blob = 0.0d0
    blob_old = 0.0d0
 
