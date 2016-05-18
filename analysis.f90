@@ -87,33 +87,34 @@ module mod_analysis
    integer,intent(in) :: it
    integer            :: iat,iw
    character(len=20)  :: fgeom, chout
+   logical            :: lopened
 
-   if (imini.eq.it)then
-      close(UMOVIE)
-      chout='movie.xyz'
+   ! close has no effect if UMOVIE is not open according to the standard
+   if (imini.eq.it) close(UMOVIE) 
+
+   INQUIRE(UMOVIE,opened=lopened)
+
+   if(.not.lopened)then
+      if (imini.gt.it)then
+         chout='movie_mini.xyz'
+      else
+         chout='movie.xyz'
+      end if
       if(iremd.eq.1) write(chout, '(A,I2.2)')trim(chout)//'.', my_rank
       open(UMOVIE, file=chout, access='append', action="write")
    end if
-   
+
 !  printing with slightly lower precision for saving space
-   fgeom='(A2,3E18.10E2)'
+!  could be probably much lower
+10 format(A2,3E18.8E2)
 
    do iw=1,nwalk
        write(UMOVIE,*)natom
        write(UMOVIE,*)'Time step:',it
        do iat=1,natom
-          write(UMOVIE,fgeom)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
+          write(UMOVIE,10)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
        enddo
    enddo
-
-   ! when equillibration period ends, 
-   ! start wrinting to movie.xyz instead of movie_mini.xyz
-   if (imini.eq.it)then
-      close(UMOVIE)
-      chout='movie.xyz'
-      if(iremd.eq.1) write(chout, '(A,I2.2)')trim(chout)//'.', my_rank
-      open(UMOVIE, file=chout, access='append', action="write")
-   end if
 
    end subroutine trajout
 

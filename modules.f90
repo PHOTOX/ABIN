@@ -435,7 +435,9 @@ module mod_files
    end if
 
 !  OPEN trajectory file
-   open(UMOVIE,file=chfiles(UMOVIE),access=chaccess,action='write')
+!   open(UMOVIE,file=chfiles(UMOVIE),access=chaccess,action='write')
+!  Trajectory file is opened later in output function trajout
+!  to prevent creating empty movie.xyz and then failing
 
    if (nwritev.gt.0)then
 !      if(iremd.eq.1)then

@@ -408,6 +408,7 @@ subroutine finish(error_code)
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
 
 #ifdef MPI
+if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
    if (error_code.eq.0.and.pot.ne."_cp2k_")then
       call MPI_FINALIZE ( errmpi )
       if (errmpi.ne.0)then
@@ -417,6 +418,7 @@ subroutine finish(error_code)
    else if (error_code.gt.0)then
       call MPI_Abort(MPI_COMM_WORLD, ierr)
    end if
+end if
 #endif
 #ifdef CP2K
 !  MPI_FINALIZE is called in this routine as well
