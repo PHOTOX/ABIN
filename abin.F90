@@ -207,7 +207,6 @@ program abin_dyn
             call printf(fxc,fyc,fzc)
          end if
 
-         ! sim_time = sim_time + dt
 
 !-----CALL RESPA or VELOCITY VERLET--------------
          if(nshake.eq.0)then
@@ -216,6 +215,8 @@ program abin_dyn
          else
             call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
          endif
+
+         sim_time = sim_time + dt
        
          vx = px / amt
          vy = py / amt
@@ -272,7 +273,7 @@ program abin_dyn
          
       
          if(modulo(it,nwrite).eq.0.and.my_rank.eq.0)then
-           write(*,'(I20,F15.2)')it,it*dt*AUtoFS
+           write(*,'(I20,F15.2)')it, sim_time * AUtoFS
            call flush(6)
          endif
 

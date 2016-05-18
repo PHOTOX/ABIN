@@ -170,7 +170,7 @@ end subroutine receive_terash
 subroutine send_terash(x, y, z, vx, vy, vz)
    use mod_array_size, only: NSTMAX
    use mod_const, only: DP, ANG, AUTOFS
-   use mod_general, only: natom, idebug, it
+   use mod_general, only: natom, idebug, sim_time
    use mod_system, only: names
    use mod_qmmm,  only: natqm
    use mod_utils, only: abinerror
@@ -240,7 +240,7 @@ subroutine send_terash(x, y, z, vx, vy, vz)
    call MPI_SSend(bufints, nstate*(nstate-1)/2+nstate, MPI_INTEGER, 0, 2, newcomm, ierr )
 
    ! temporary hack
-   bufdoubles(1) = it ! * AUtoFS !* dt
+   bufdoubles(1) = sim_time ! * AUtoFS !* dt
    ! Send Time 
    call MPI_Send(bufdoubles, 1, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
 

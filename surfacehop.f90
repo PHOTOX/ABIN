@@ -446,7 +446,7 @@ module mod_sh
 
    subroutine surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt,eclas)
    use mod_const,    only: ANG, AUTOFS
-   use mod_general,  only: natom, pot, nwrite, idebug, it
+   use mod_general,  only: natom, pot, nwrite, idebug, it, sim_time
    use mod_system,   ONLY: names
    use mod_files,    ONLY: UPOP,UPROB,UPES,UWFCOEF,UWFCOEF,UNACME, UBKL,UPHASE,UDOTPROD
    use mod_qmmm,     ONLY: natqm
@@ -671,6 +671,7 @@ do itrj=1,ntraj
       enddo        
 
       if(idebug.gt.1)then
+         ! WaRNING: this will not work for adaptive time step
          stepfs=(it*substep+itp-substep)*dt*AUtoFS/substep
          write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
          write(UBKL,fmt=formt)stepfs,(t(ist,ist1),ist1=1,nstate)
@@ -845,9 +846,7 @@ do itrj=1,ntraj
    call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
 
    if(modulo(it,nwrite).eq.0)then
-      stepfs=it*dt*AUtoFS
-      !stepfs = time ! for future adaptive time step
-      ! TODO add printing og TDip, Dip and DotCi
+      stepfs = sim_time * AUtoFS
       write(formt,'(A10,I3,A13)')'(F15.2,I3,',nstate,'F10.5,1F10.7)'
       write(UPOP,fmt=formt)stepfs,istate(itrj),(pop(ist1,itrj), ist1=1,nstate),popsum
 
@@ -1348,7 +1347,7 @@ enddo
    integer function check_CIVector(CIvecs, CIvecs_old, ci_len, nstates)
    use mod_const, only:AUtoFS
    use mod_files, only: UDOTPRODCI
-   use mod_general, only: it, dt0
+   use mod_general, only: sim_time, it
    real(DP), allocatable, intent(in) :: CIvecs(:,:), CIvecs_old(:,:)
    integer, intent(in) :: ci_len, nstates
    real(DP)  :: cidotprod(NSTMAX)
@@ -1367,7 +1366,7 @@ enddo
    end do
 
    write(formt,'(A7,I3,A7)')'(F15.2,',nstates,'F15.10)'
-   write(UDOTPRODCI,fmt=formt)it * dt0 * AUtoFS,(cidotprod(ist1),ist1=1,nstates)
+   write(UDOTPRODCI,fmt=formt)sim_time * AUtoFS,(cidotprod(ist1),ist1=1,nstates)
 
    check_CIVector=0
    return

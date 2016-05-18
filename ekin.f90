@@ -45,7 +45,7 @@ module mod_kinetic
       if(modulo(it,nwrite).eq.0)then
 
          ! Temperature and conserved quantities of thermostats
-         write(UTEMPER,'(F15.2,F10.2)',advance="no")it*dt*autofs,est_temp*autok
+         write(UTEMPER,'(F15.2,F10.2)',advance="no")sim_time*AUtoFS,est_temp*autok
          if(ipimd.ne.2) write(UTEMPER,'(F10.2)',advance="no")est_temp_cumul*autok/it2
 
          if(inose.eq.1)then
@@ -59,7 +59,7 @@ module mod_kinetic
 
          if (ipimd.ne.1)then
             ! Printing to file energies.dat
-            write(UENERGY,'(F15.2,3E20.10)', advance='no')it*dt*autofs,eclas,ekin_mom,eclas+ekin_mom
+            write(UENERGY,'(F15.2,3E20.10)', advance='no')sim_time*AUtoFS,eclas,ekin_mom,eclas+ekin_mom
             if (ipimd.eq.0) write(UENERGY,'(E20.10)',advance="no")entot_cumul/it2
             write(UENERGY,*)
          end if

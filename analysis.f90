@@ -80,7 +80,7 @@ module mod_analysis
    subroutine trajout(x,y,z,it)
    use mod_const, only: ANG
    use mod_files, only: UMOVIE
-   use mod_general, only: imini,nwalk,natom, iremd, my_rank
+   use mod_general, only: imini,nwalk,natom, iremd, my_rank, sim_time
    use mod_system, ONLY: names
    implicit none
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
@@ -110,7 +110,8 @@ module mod_analysis
 
    do iw=1,nwalk
        write(UMOVIE,*)natom
-       write(UMOVIE,*)'Time step:',it
+       ! In the future, we should get rid of time step
+       write(UMOVIE,'(A10,I20,A15,F15.2)')'Time step:',it,' Sim. Time [au]',sim_time
        do iat=1,natom
           write(UMOVIE,10)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
        enddo

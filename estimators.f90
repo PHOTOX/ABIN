@@ -200,7 +200,7 @@ module mod_estimators
    if(modulo(it,nwrite).eq.0)then
 
       if(icv.eq.1.and.enmini.lt.it)then
-         write(UCV,'(F15.2,4E20.10)')it*dt*autofs,cv_prim,cv_vir,cv_prim_cumul/it2,cv_vir_cumul/it2
+         write(UCV,'(F15.2,4E20.10)')sim_time*AUtoFS,cv_prim,cv_vir,cv_prim_cumul/it2,cv_vir_cumul/it2
 
 !       CV_PCV estimator is not correctly implemented at the moment        
 !       open(126,file='cv_pcv.dat',access='append')
@@ -208,13 +208,13 @@ module mod_estimators
 !       close(126)
 
          if(ihess.eq.1)then
-            write(UCVDCV,'(F15.2,2E20.10)')it*dt*autofs,cv_dcv,cv_dcv_cumul/it2
+            write(UCVDCV,'(F15.2,2E20.10)')sim_time*AUtoFS,cv_dcv,cv_dcv_cumul/it2
          endif
 
 !     icv endif
       endif
 
-      write(UESTENERGY,'(F15.2,5E20.10)')it*dt*autofs,eclas,est_prim,est_vir,est_prim_cumul/itnc,est_vir_cumul/itnc
+      write(UESTENERGY,'(F15.2,5E20.10)')sim_time*AUtoFS,eclas,est_prim,est_vir,est_prim_cumul/itnc,est_vir_cumul/itnc
 
    endif
         

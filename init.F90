@@ -409,7 +409,12 @@ print '(a)','**********************************************'
 
 
 !----performing RESTART from restart.xyz
-     if(irest.eq.1) call restin(x,y,z,vx,vy,vz,it)
+     if(irest.eq.1)then
+        call restin(x,y,z,vx,vy,vz,it)
+        sim_time = it * dt
+     else
+        sim_time = 0.0d0
+     end if
 
 
 !----END OF INPUT SECTION---------------------

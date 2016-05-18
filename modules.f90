@@ -54,7 +54,7 @@ module mod_general
    integer :: iqmmm=0, iremd=0
    integer :: parrespa=0 
    integer :: my_rank=0
-   real(DP) :: dt0
+   real(DP) :: dt0, sim_time
    save
 end module
       
