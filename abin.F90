@@ -33,6 +33,7 @@ program abin_dyn
    use mod_plumed
 #endif
 #ifdef MPI
+   use mod_terampi_sh, only: move_new2old_terash
    use mod_remd, only: nswap, remd_swap
    implicit none
    include 'mpif.h'
@@ -69,6 +70,9 @@ program abin_dyn
       write(*,*)chsystem
       call system(chsystem)  
    end if
+
+   !DH this is a nasty hack
+   if(irest.eq.0) call system('rm -f wfn.dat nacmrest.dat')
 
 !-------SH initialization -- 
    if(ipimd.eq.2)then
@@ -155,6 +159,7 @@ program abin_dyn
          do itrj=1, ntraj
             if (it.eq.0.and.pot.ne.'_tera_') call get_nacm(itrj)
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
+            if(pot.eq.'_tera_') call move_new2old_terash()
          end do
       end if
 
@@ -228,6 +233,9 @@ program abin_dyn
             px = amt * vx
             py = amt * vy
             pz = amt * vz
+#ifdef MPI
+            if(pot.eq.'_tera_') call move_new2old_terash()
+#endif
          endif
 
 #ifdef MPI
@@ -348,6 +356,7 @@ subroutine finish(error_code)
 
 #ifdef MPI
    use mod_terampi, only: finalize_terachem
+   use mod_terampi_sh, only: finalize_terash
    implicit none
    include "mpif.h"
    integer :: errmpi
@@ -362,10 +371,9 @@ subroutine finish(error_code)
 
 #ifdef MPI
    if (pot.eq.'_tera_')then
-      ! TODO! 
-      !if (ipimd.eq.2) then
-      !   call finalize_terash
-      !end if
+      if (ipimd.eq.2) then
+         call finalize_terash()
+      end if
       call finalize_terachem(error_code)
    end if
 #endif

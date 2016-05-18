@@ -13,11 +13,12 @@ module mod_terampi_sh
    use mod_terampi, only: newcomm, qmcharges, qmcoords, dxyz_all, chsys_sleep
    implicit none
    private
-   public :: force_terash, init_terash, send_terash
+   public :: force_terash, init_terash, send_terash, finalize_terash
+   public :: write_wfn, read_wfn, move_new2old_terash
    real(DP), allocatable :: CIvecs(:,:), MO(:,:), blob(:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:,:), MO_old(:,:), blob_old(:)
    real(DP), allocatable :: SMatrix(:)
-   integer :: civec, nbf, nblob, oldWfn = 0 
+   integer :: civec, nbf, blobsize, oldWfn = 0 
    save
 contains
 
@@ -32,6 +33,7 @@ subroutine force_terash(x, y, z, fx, fy, fz, eclas)
    call send_terash(x, y, z, fx, fy, fz)
 
    call receive_terash(fx, fy, fz, eclas)
+
 
 
 end subroutine force_terash
@@ -82,6 +84,10 @@ subroutine receive_terash(fx, fy, fz, eclas)
 !   do i=1, nstate-1
 !      T_FMS%ElecStruc%TransDipole(i+1,:)=TDip(3*(i-1)+1:3*(i-1)+3)
 !   end do
+   ! TODO: these things should be printed in analysis.F90
+   ! TODO: move charges and dipoles to array module and make them universal
+   ! TODO: move TDIP to surface hopping module
+   ! allow reading these stuff from other programs as well
    call print_transdipoles(TDip, istate(itrj), nstate-1 )
 
 !  Receive dipole moment from TC
@@ -119,7 +125,7 @@ subroutine receive_terash(fx, fy, fz, eclas)
    CIVecs_old = Civecs
 
    if (idebug>0) write(*, '(a)') 'Receiving blob from TC.'
-   call MPI_Recv( blob, nblob,  &
+   call MPI_Recv( blob, blobsize,  &
            MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
 
    if (idebug>0) write(*, '(a)') 'Receiving gradients and NACME from TC.'
@@ -257,7 +263,7 @@ subroutine send_terash(x, y, z, vx, vy, vz)
    call MPI_Send(CIvecs, civec*nstate, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
 
    if(idebug.gt.0) write(*,*)'Sending blob.'
-   call MPI_Send(blob, NBLOB, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+   call MPI_Send(blob, blobsize, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
 
    if(idebug.gt.0) write(*,*)'Sending velocities'
 !  Only needed for numerical NACME, so send 0 instead for now
@@ -312,22 +318,133 @@ subroutine init_terash(x, y, z)
 
    civec = bufints(1)
    nbf = bufints(2)
-   nblob = bufints(3)
+   blobsize = bufints(3)
 
-   write(*,*)'size of CI vector, number of AOs, blob size:', CiVec, nbf, nblob
+   write(*,*)'size of CI vector, number of AOs, blob size:', CiVec, nbf, blobsize
 
    allocate(MO(nbf, nbf))
    allocate(MO_old(nbf, nbf))
    allocate(CiVecs(civec,nstate))
    allocate(CiVecs_old(civec,nstate))
    allocate(NAC(natom*3))
-   allocate(blob(nblob))
-   allocate(blob_old(nblob))
+   allocate(blob(blobsize))
+   allocate(blob_old(blobsize))
    allocate(SMatrix(nstate*nstate))
    blob = 0.0d0
    blob_old = 0.0d0
 
 end subroutine init_terash
+
+subroutine finalize_terash()
+   if( allocated(MO) )then
+      deallocate(MO, MO_old)
+      deallocate(blob, blob_old)
+      deallocate(CiVecs, CiVecs_old)
+      deallocate(NAC, SMatrix)
+   end if
+end subroutine finalize_terash
+
+subroutine write_wfn()
+   use mod_files, only: UWFN
+   use mod_general, only: it, sim_time, iremd, my_rank
+   use mod_sh,    only: nstate
+   character(len=200)    :: chout, chsystem
+   logical  :: file_exists
+
+   if(iremd.eq.1)then
+      write(chout, '(A,I2.2)')'wfn.dat.', my_rank
+   else
+      chout='wfn.dat'
+   end if
+
+   INQUIRE(FILE=chout, EXIST=file_exists)
+   chsystem='mv '//trim(chout)//'  '//trim(chout)//'.old'
+   if(file_exists) call system(chsystem)
+
+   open(UWFN, file=chout, action='WRITE',status="NEW",access="Sequential",form="FORMATTED")
+   write(UWFN,*)'#Time_step   Simulation_time'
+   write(UWFN,*)it, sim_time
+   write(UWFN,*)'# Orbitals'
+   write(UWFN,*)nbf
+   write(UWFN,*)MO_old
+   write(UWFN,*)'# Ci vectors'
+   write(UWFN,*)civec, nstate
+   write(UWFN,*)Civecs_old
+   write(UWFN,*)'# BLOB'
+   write(UWFN,*)blobsize
+   write(UWFN,*)blob_old
+
+   close(UWFN)
+
+end subroutine write_wfn
+
+subroutine read_wfn()
+   use mod_files, only: UWFN
+   use mod_general, only: iremd, my_rank, iknow
+   use mod_chars, only: chknow
+   use mod_utils, only: abinerror
+   use mod_sh,    only: nstate
+   character(len=200)    :: chout, chsystem
+   logical  :: file_exists
+   integer  :: temp, temp2
+
+   if(iremd.eq.1)then
+      write(chout, '(A,I2.2)')'wfn.dat.', my_rank
+   else
+      chout='wfn.dat'
+   end if
+
+   INQUIRE(FILE=chout, EXIST=file_exists)
+   if(.not.file_exists)then
+      write(*,*)'ERROR: wavefunction restart file does not exist! ', chout
+      write(*,*)chknow
+      if(iknow.ne.1) call abinerror('read_wfn')
+      RETURN
+   end if
+
+   open(UWFN, file=chout, action='READ',status="OLD",access="Sequential",form="FORMATTED")
+   read(UWFN,*)
+   read(UWFN,*)
+   read(UWFN,*)
+   read(UWFN,*)temp
+   if(temp.ne.nbf)then
+      write(*,*)'ERROR: Number of MOs in restart file is inconsistent!'
+      GO TO 10
+   end if
+   read(UWFN,*)MO
+   read(UWFN,*)
+   read(UWFN,*)temp, temp2
+   if(temp.ne.civec.or.temp2.ne.nstate)then
+      write(*,*)'ERROR: Number and/or size of the CI vectors in restart file is inconsistent!'
+      GO TO 10
+   end if
+   read(UWFN,*)CIVecs
+   read(UWFN,*)
+   read(UWFN,*)temp
+   if(temp.ne.blobsize)then
+      write(*,*)'ERROR: Size of blob in restart file is inconsistent!'
+      GO TO 10
+   end if
+   read(UWFN,*)blob
+
+   close(UWFN)
+
+   oldWFN = 1
+
+   RETURN
+
+10 close(UWFN)
+   write(*,*)'If you want to proceed, delete file "wfn.dat" and then...'
+   write(*,*)chknow
+   call abinerror('read_wfn')
+
+end subroutine read_wfn
+
+subroutine move_new2old_terash
+   MO_old = MO
+   CIVecs_old = CIVecs
+   blob_old = blob
+end subroutine move_new2old_terash
 
 #endif
 

@@ -45,15 +45,17 @@ end module  mod_array_size
 module mod_general
    use mod_const, only: DP
    implicit none
-   integer :: it=0,ipimd=0,istage=0,nwalk=1,ihess=0,md=1  
+   integer :: it=0,ipimd=0,istage=0,nwalk=1,ihess=0,md=1
    character(len=15) :: pot='none'
    integer :: imini=0,nstep=1,nabin=50
    integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0,nwritef=0
+   ! TODO archivation of restart files
    integer :: icv=0,irest=0,anal_ext=0,idebug=0
    integer :: irandom=156873,natom=0,pid
-   integer :: iqmmm=0, iremd=0
+   integer :: iqmmm=0
    integer :: parrespa=0 
-   integer :: my_rank=0
+   integer :: my_rank=0, iremd=0
+   integer :: iknow=0
    real(DP) :: dt0, sim_time
    save
 end module
@@ -368,6 +370,7 @@ module mod_files
    ! So far only for TeraChem
    integer, parameter :: UDOTPRODCI=31, UCHARGES=32
    integer, parameter :: UDIP = 33, UTDIP = 34
+   integer, parameter :: UWFN = 35 ! this one is not permanently opened
    save
 
    CONTAINS
@@ -515,7 +518,14 @@ module mod_files
 
    end subroutine files_init
 
+
 end module mod_files
+
+module mod_chars
+   character(len=*),parameter :: chknow='If you know what you are doing, &
+    &set iknow=1 (namelist general) to proceed.'
+
+end module mod_chars
 !------------------------------------------------------
 !------------------------------------------------------
 !------------------------------------------------------

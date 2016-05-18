@@ -22,6 +22,9 @@ module mod_analysis
    use mod_general
    use mod_system
    use mod_density
+#ifdef MPI
+   use mod_io 
+#endif
    implicit none
    !intent inout because of estimators, writing to nwalk+1
    real(DP),intent(inout) :: x(:,:),   y(:,:),   z(:,:)
@@ -73,7 +76,10 @@ module mod_analysis
    if (anal_ext.eq.1)then
       call analyze_ext(x, y, z, vx, vy, vz, amt)
    endif
-      
+
+   if((modulo(it,nwrite).eq.0).and.pot.eq.'_tera_'.and.ipimd.eq.2)then
+   endif
+
 
    end subroutine analysis
 
@@ -183,13 +189,16 @@ module mod_analysis
    end subroutine velout
 
    subroutine restout(x,y,z,vx,vy,vz,it)
-   use mod_general,only:icv, ihess, nwalk, ipimd, natom, iremd, my_rank
+   use mod_general,only:icv, ihess, nwalk, ipimd, natom, iremd, my_rank, pot
    use mod_nhc,    only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
    use mod_estimators
    use mod_kinetic,only: entot_cumul, est_temp_cumul
    use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
    use mod_gle
    use mod_random
+#ifdef MPI
+   use mod_terampi_sh, only: write_wfn
+#endif
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
    integer,intent(in) :: it
@@ -197,6 +206,9 @@ module mod_analysis
    LOGICAL :: file_exists
    character(len=200)    :: chout, chsystem
 
+#ifdef MPI
+   if(pot.eq.'_tera_'.and.ipimd.eq.2) call write_wfn()
+#endif
    if(iremd.eq.1)then
       write(chout, '(A,I2.2)')'restart.xyz.', my_rank
    else
@@ -308,13 +320,16 @@ module mod_analysis
    ! Subroutine that reads from restart.xyz during restart
    ! It is called from subroutine init.
    subroutine restin(x,y,z,vx,vy,vz,it)
-     use mod_general,only: icv, ihess, nwalk, ipimd, natom, iremd, my_rank
+     use mod_general,only: icv, ihess, nwalk, ipimd, natom, iremd, my_rank, pot
      use mod_nhc,    only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
      use mod_estimators
      use mod_kinetic,only: entot_cumul, est_temp_cumul
      use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
      use mod_gle
      use mod_random
+#ifdef MPI
+     use mod_terampi_sh, only: read_wfn
+#endif
      real(DP),intent(out)  :: x(:,:),y(:,:),z(:,:)
      real(DP),intent(out)  :: vx(:,:),vy(:,:),vz(:,:)
      integer,intent(out)   :: it
@@ -322,6 +337,10 @@ module mod_analysis
      character(len=100) :: chtemp
      logical :: prngread
      character(len=20)  :: chin
+
+#ifdef MPI
+     if(pot.eq.'_tera_'.and.ipimd.eq.2) call read_wfn()
+#endif
 
      prngread=.false. 
 

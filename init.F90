@@ -52,7 +52,7 @@ subroutine init(dt, values1)
    real(DP) :: masses(MAXTYPES)
    real(DP)  :: rans(10)
    integer :: iw,iat,natom1,imol,shiftdihed=1, iost
-   integer :: error, getpid, nproc=1, iknow=0, ipom, ipom2=0
+   integer :: error, getpid, nproc=1, ipom, ipom2=0
    character(len=2)    :: massnames(MAXTYPES), atom
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
@@ -557,8 +557,7 @@ print '(a)','**********************************************'
    CONTAINS
 
    subroutine check_inputsanity()
-   character(len=*),parameter :: chknow='If you know what you are doing, &
-    &set iknow=1 (namelist general) to proceed.'
+   use mod_chars, only: chknow
 
    !  We should exclude all non-abinitio options, but whatever....
 !$    if(nthreads.gt.1.and.(ipimd.ne.1.and.pot.ne.'_cp2k_'))then
@@ -972,10 +971,12 @@ print '(a)','**********************************************'
        endif 
       endif
 
+
       if(error.eq.1)then
          write(*,*)'Input errors were found! Exiting now...'
          call abinerror('init')
       endif
+
 
 
    end subroutine check_inputsanity
