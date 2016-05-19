@@ -82,9 +82,9 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
          qmcoords(3,iat) = z(iat,iw)/ANG
       end do
       do iat=1,natmm_tera
-         mmcoords(1,iat) = x(iat+natqm,iw)
-         mmcoords(2,iat) = y(iat+natqm,iw)
-         mmcoords(3,iat) = z(iat+natqm,iw)
+         mmcoords(1,iat) = x(iat+natqm,iw)/ANG
+         mmcoords(2,iat) = y(iat+natqm,iw)/ANG
+         mmcoords(3,iat) = z(iat+natqm,iw)/ANG
       end do
 
    ! -----------------------------------------
@@ -97,14 +97,27 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
       write(6,'(/, a, i0)') 'Sending natqm = ', natqm
       call flush(6)
    end if
-   call MPI_SSend( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
+   call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
 
    if ( idebug > 1 ) then
       write(6,'(/,a)') 'Sending QM atom types: '
       write(*,*)(names_qm(iat), iat=1,natqm)
       call flush(6)
    end if
-   call MPI_SSend( names_qm, 2*size(names_qm), MPI_CHARACTER, 0, 2, newcomm, ierr )
+   ! DH WARNING: this will not work for iw>199
+   ! not really tested for iw>99
+   write(names_qm(natqm+1),'(A2)')'++'
+   write(names_qm(natqm+2),'(A2)')'sc'
+   if(iw.gt.99)then
+      write(names_qm(natqm+3),'(A1,I1)')'r',1
+      write(names_qm(natqm+4),'(I2.2)')iw-100
+   else
+      write(names_qm(natqm+3),'(A1,I1)')'r',0
+      write(names_qm(natqm+4),'(I2.2)')iw
+   end if
+   write(names_qm(natqm+5),'(A2)')'++'
+!   write(names_qm(natqm+1),'(A9,I3.3,A2)')'++scratch',iw,'++'
+   call MPI_Send( names_qm, 2*size(names_qm), MPI_CHARACTER, 0, 2, newcomm, ierr )
 
    ! Send QM coordinate array
    if ( idebug > 1 ) then
@@ -116,7 +129,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
          call flush(6)
       end do 
    end if
-   call MPI_SSend( qmcoords, size(qmcoords), MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call MPI_Send( qmcoords, size(qmcoords), MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
 
 if(natmm_tera.gt.0)then
    ! Send natmm and the charge of each atom
@@ -324,9 +337,7 @@ subroutine connect_terachem( )
    write(*,*)'Sending initial number of QM atoms to TeraChem.'
    call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
 
-   ! DH WARNING: FOR QMMM WE WILL NEED TO send only part of names()
-   ! Is it safe to send the whole array? (it should be, it is passed by reference)
-   allocate(names_qm(natqm))
+   allocate(names_qm(natqm+5))
    do iat=1,natqm
       names_qm(iat) = names(iat)
    end do
