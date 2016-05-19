@@ -741,8 +741,10 @@ do itrj=1,ntraj
             if(adjmom.eq.0) call hop(vx,vy,vz,ist,ihop,itrj,eclas)
             if(adjmom.eq.1) call hop_dot(vx,vy,vz,ist,ihop,itrj,eclas)
             write(formt,'(A8,I3,A7)')'(A1,I10,',nstate+1,'E20.10)'
-            write(UPOP,*)'#Substep   RandomNum   Probabilities'
-            write(UPOP,fmt=formt)'#',itp,cn,(t(ist,ist1),ist1=1,nstate)
+            if(idebug.gt.0)then
+              write(UPOP,*)'# Substep   RandomNum   Probabilities'
+              write(UPOP,fmt=formt)'#',itp,cn,(t(ist,ist1),ist1=1,nstate)
+            end if
        
             ! write current geometry
             write(formt,'(A5,I10,A1,I2,A1,I2)')'geom.',it,'.',ist,'.',ihop
@@ -888,12 +890,15 @@ enddo
       use mod_system,   ONLY: am
       use mod_files,    ONLY: UPOP
       use mod_kinetic,  only: ekin_v
+      use mod_arrays,   ONLY: fxc, fyc, fzc, x, y, z
+      use mod_interfaces, only: force_clas
       real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
       real(DP),intent(inout) :: eclas
       integer, intent(in)    :: itrj,instate,outstate
       real(DP)  :: a_temp,b_temp,c_temp,g_temp
       real(DP)  :: ekin, ekin_new
       integer   :: iat
+      integer, allocatable :: tocalc_temp(:,:)
 
 !  Checking for frustrated hop
 
@@ -914,7 +919,7 @@ enddo
       c_temp=b_temp**2+4*a_temp*(en_array(instate,itrj)-en_array(outstate,itrj))
 
       if(c_temp.lt.0)then
-         write(UPOP,*)'#Not enough momentum in the direction of NAC vector.'
+         write(*,*)'# Not enough momentum in the direction of NAC vector.'
          ! Try, whether there is enough total kinetic energy and scale velocities.
          call hop_dot(vx,vy,vz,instate,outstate,itrj,eclas)
          return
@@ -922,7 +927,7 @@ enddo
 
       istate(itrj)=outstate
       eclas=en_array(outstate,itrj)
-      write(UPOP,'(A24,I3,A10,I3)')'#Hop occured from state ',instate,' to state ',outstate
+      write(*,'(A24,I3,A10,I3)')'# Hop occured from state ',instate,' to state ',outstate
 
 
 !------------- Rescaling the velocities------------------------
@@ -943,8 +948,16 @@ enddo
       enddo
       ekin_new=ekin_v(vx,vy,vz)
 
-      write(UPOP,'(A31,2E20.10)')'#deltaE_pot     E_kin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
-      write(UPOP,'(A,2E20.10)')'#Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
+      write(*,'(A31,2E20.10)')'# deltaE_pot     E_kin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
+      write(*,'(A,2E20.10)')'# Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
+
+      allocate(tocalc_temp(nstate, nstate))
+      tocalc_temp = tocalc
+      tocalc = 0
+      write(*,*)'Calculating correct forces for the new state.'
+      call force_clas(fxc,fyc,fzc,x,y,z,eclas)
+      tocalc = tocalc_temp
+      deallocate(tocalc_temp)
 
    end subroutine hop
 
@@ -1002,34 +1015,34 @@ enddo
 
       if(ekin.ge.de)then
 
-        alfa=sqrt(1-de/ekin)
+         alfa=sqrt(1-de/ekin)
 
-        do iat=1,natom
-         vx(iat,itrj)=alfa*vx(iat,itrj) 
-         vy(iat,itrj)=alfa*vy(iat,itrj) 
-         vz(iat,itrj)=alfa*vz(iat,itrj) 
-        enddo
-        istate(itrj)=outstate
-        eclas=en_array(outstate,itrj)
-        ekin_new=ekin_v(vx,vy,vz)
+         do iat=1,natom
+            vx(iat,itrj) = alfa * vx(iat,itrj) 
+            vy(iat,itrj) = alfa * vy(iat,itrj) 
+            vz(iat,itrj) = alfa * vz(iat,itrj) 
+         enddo
+         istate(itrj) = outstate
+         eclas = en_array(outstate,itrj)
+         ekin_new = ekin_v(vx,vy,vz)
 
-        write(3,'(A24,I3,A10,I3)')'#Hop occured from state ', instate, ' to state ', outstate
-        write(3,*)'#Adjusting velocities by simple scaling.'
-        write(3,'(A,2E20.10)')'#Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
+         write(*,'(A24,I3,A10,I3)')'# Hop occured from state ', instate, ' to state ', outstate
+         write(*,*)'# Adjusting velocities by simple scaling.'
+         write(*,'(A,2E20.10)')'#Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
       else
 
-       write(3,'(A35,I3,A10,I3)')'#Frustrated Hop occured from state ',instate,' to state ',outstate
-       if(revmom.eq.1)then
-          write(3,*)'#Reversing momentum direction.'
-          vx=-vx
-          vy=-vy
-          vz=-vz
-       end if
+         write(*,'(A35,I3,A10,I3)')'# Frustrated Hop occured from state ',instate,' to state ',outstate
+         if(revmom.eq.1)then
+            write(*,*)'# Reversing momentum direction.'
+            vx = -vx
+            vy = -vy
+            vz = -vz
+         end if
 
       endif
 
-      write(3,'(A31,2E20.10)')'#deltaE_pot  E_kin-total',dE,ekin
+      write(*,'(A31,2E20.10)')'# deltaE_pot  E_kin-total',dE,ekin
 
    end subroutine hop_dot
 
@@ -1347,7 +1360,7 @@ enddo
    integer function check_CIVector(CIvecs, CIvecs_old, ci_len, nstates)
    use mod_const, only:AUtoFS
    use mod_files, only: UDOTPRODCI
-   use mod_general, only: sim_time, it
+   use mod_general, only: sim_time
    real(DP), allocatable, intent(in) :: CIvecs(:,:), CIvecs_old(:,:)
    integer, intent(in) :: ci_len, nstates
    real(DP)  :: cidotprod(NSTMAX)
@@ -1359,7 +1372,7 @@ enddo
       do i=1,ci_len
          cidotprod(ist1) = cidotprod(ist1) + CIvecs(i,ist1)*CIvecs_old(i,ist1)
       end do
-      if(cidotprod(ist1).lt.1/dsqrt(2.0d0).and.it.gt.0)then
+      if(cidotprod(ist1).lt.1/dsqrt(2.0d0))then
          write(*,*)"Warning: cidotprod too low."
          ! call abinerror("surfacehop.f90")
       end if

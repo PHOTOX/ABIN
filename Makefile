@@ -24,9 +24,9 @@ ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
-F_OBJS :=  transform.o potentials.o estimators.o gle.o ekin.o vinit.o \
+F_OBJS :=  arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o \
 force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o surfacehop.o force_terash.o force_abin.o analyze_ext_template.o density.o analysis.o  \
-minimizer.o arrays.o mdstep.o forces.o abin.o
+minimizer.o mdstep.o forces.o abin.o
 
 C_OBJS := EWALD/ewaldf.o
 
