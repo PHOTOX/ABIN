@@ -96,6 +96,28 @@ module mod_utils
 
    end subroutine printf
 
+   subroutine archive_file(chfile, time_step)
+   use mod_general,  ONLY: iremd, my_rank
+   integer, intent(in)  :: time_step
+   character(len=*), intent(in)  :: chfile
+   character(len=200)   :: chsystem
+   character(len=50)    :: chit, charch
+   if(my_rank.eq.0.or.iremd.eq.1)then
+      write (chit,*)time_step
+      if(iremd.eq.1)then
+         write(charch,'(A,I2.2)')trim(chfile),my_rank
+      else
+         charch=trim(chfile)
+      end if
+      chsystem='cp '//trim(chfile)//'  '//trim(charch)//'.'//adjustl(chit)
+      write(*,*)'Archiving file ', trim(chfile)
+      write(*,*)trim(chsystem)
+      call system(chsystem)
+   end if
+   end subroutine archive_file
+
+
+
    subroutine Get_cmdline(chinput, chcoords, chveloc )
    character(len=*),intent(inout)   :: chinput, chcoords, chveloc
    character(len=len(chinput))   :: arg

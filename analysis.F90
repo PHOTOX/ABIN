@@ -189,7 +189,9 @@ module mod_analysis
    end subroutine velout
 
    subroutine restout(x,y,z,vx,vy,vz,it)
-   use mod_general,only:icv, ihess, nwalk, ipimd, natom, iremd, my_rank, pot
+   use mod_general,only:it,icv, ihess, nwalk, ipimd, natom, &
+                        iremd, my_rank, pot, narchive, sim_time
+   use mod_utils,  only: archive_file
    use mod_nhc,    only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
    use mod_estimators
    use mod_kinetic,only: entot_cumul, est_temp_cumul
@@ -223,7 +225,7 @@ module mod_analysis
 !  intel compilers don't write too many columns on single line
    open(102, file=chout, action='WRITE')
 
-   write(102,*)it
+   write(102,*)it, sim_time
 
    write(102,*)chcoords
    do iw=1,nwalk
@@ -313,6 +315,9 @@ module mod_analysis
 
    close(102)
 
+   if(modulo(it,narchive).eq.0)then
+      call archive_file('restart.xyz', it)
+   end if
 
    end subroutine restout
 
@@ -320,7 +325,8 @@ module mod_analysis
    ! Subroutine that reads from restart.xyz during restart
    ! It is called from subroutine init.
    subroutine restin(x,y,z,vx,vy,vz,it)
-     use mod_general,only: icv, ihess, nwalk, ipimd, natom, iremd, my_rank, pot
+     use mod_general,only: icv, ihess, nwalk, ipimd, natom, &
+                           iremd, my_rank, pot,sim_time
      use mod_nhc,    only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
      use mod_estimators
      use mod_kinetic,only: entot_cumul, est_temp_cumul
@@ -353,7 +359,7 @@ module mod_analysis
      write(*,*)'irest=1, Reading geometry, velocities and other information from restart.xyz.'
 
      open(111,file=chin,status = "OLD", action = "READ")
-     read(111,*)it
+     read(111,*)it, sim_time
      read(111,'(A)')chtemp
      call checkchar(chtemp, chcoords)
      do iw=1,nwalk

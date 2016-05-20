@@ -22,7 +22,7 @@ program abin_dyn
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_kinetic, ONLY: temperature
-   use mod_utils, only: abinerror, printf
+   use mod_utils, only: abinerror, printf, archive_file
    use mod_shake, only: nshake
    use mod_transform
    use mod_mdstep
@@ -51,7 +51,7 @@ program abin_dyn
    integer  :: ierr
 !$ integer  :: nthreads,omp_get_max_threads
 
-   ! TODO: move this bit to init
+   ! This cannot be in init because of namelist 'system'
    if(my_rank.eq.0) call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
 
 !-   INPUT AND INITIALIZATION SECTION      
@@ -59,19 +59,10 @@ program abin_dyn
 
    ! TODO: in case of _cp2k_, this needs to be done only by rank0
    if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then
-      write (chit,*)it
-      if(iremd.eq.1)then
-         write(chrestart,'(A,I2.2)')'restart.xyz.',my_rank
-      else
-         chrestart='restart.xyz'
-      end if
-      chsystem='cp '//trim(chrestart)//'  '//trim(chrestart)//'.'//adjustl(chit)
-      write(*,*)'Making backup of the current restart file.'
-      write(*,*)chsystem
-      call system(chsystem)  
+      call archive_file('restart.xyz',it)
    end if
 
-   !DH this is a nasty hack
+   !DH this is a nasty hack TODO remove this
    if(irest.eq.0) call system('rm -f wfn.dat nacmrest.dat')
 
 !-------SH initialization -- 

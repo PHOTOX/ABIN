@@ -346,8 +346,9 @@ end subroutine finalize_terash
 
 subroutine write_wfn()
    use mod_files, only: UWFN
-   use mod_general, only: it, sim_time, iremd, my_rank
+   use mod_general, only: it, sim_time, iremd, my_rank, narchive
    use mod_sh,    only: nstate
+   use mod_utils, only: archive_file
    character(len=200)    :: chout, chsystem
    logical  :: file_exists
 
@@ -376,17 +377,19 @@ subroutine write_wfn()
 
    close(UWFN)
 
+   if(modulo(it,narchive).eq.0)  call archive_file('wfn.dat',it)
+
 end subroutine write_wfn
 
 subroutine read_wfn()
    use mod_files, only: UWFN
    use mod_general, only: iremd, my_rank, iknow
    use mod_chars, only: chknow
-   use mod_utils, only: abinerror
+   use mod_utils, only: abinerror, archive_file
    use mod_sh,    only: nstate
    character(len=200)    :: chout, chsystem
    logical  :: file_exists
-   integer  :: temp, temp2
+   integer  :: temp, temp2, time_step,sim_time
 
    if(iremd.eq.1)then
       write(chout, '(A,I2.2)')'wfn.dat.', my_rank
@@ -404,7 +407,7 @@ subroutine read_wfn()
 
    open(UWFN, file=chout, action='READ',status="OLD",access="Sequential",form="FORMATTED")
    read(UWFN,*)
-   read(UWFN,*)
+   read(UWFN,*)time_step, sim_time
    read(UWFN,*)
    read(UWFN,*)temp
    if(temp.ne.nbf)then
@@ -430,6 +433,8 @@ subroutine read_wfn()
    close(UWFN)
 
    oldWFN = 1
+
+   call archive_file('wfn.dat',time_step)
 
    RETURN
 

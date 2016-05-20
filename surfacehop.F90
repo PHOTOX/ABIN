@@ -193,7 +193,9 @@ module mod_sh
    end subroutine set_tocalc
 
    subroutine Write_nacmrest()
+   use mod_general, only: narchive, it
    use mod_qmmm, only:natqm
+   use mod_utils, only: archive_file
    integer :: ist1,ist2,iat,itrj
    integer :: iunit1, iunit2
    iunit1 = 600; iunit2 = 601
@@ -236,16 +238,22 @@ module mod_sh
    close(iunit1)
    if(phase.eq.1) close(iunit2)
 
+   if(modulo(it,narchive).eq.0)then
+      call archive_file('nacmrest.dat',it)
+      if (phase.eq.1) call archive_file('phaserest.dat',it)
+   end if
+
    end subroutine write_nacmrest
 
    subroutine read_nacmrest()
    use mod_general, only: it
-   use mod_qmmm, only:natqm
-   integer :: iost,ist1,ist2,iat,itrj
-   integer :: iunit1, iunit2
-   character(len=200) :: chmsg
-   character(len=20) :: chit
-   character(len=60) :: chrestart
+   use mod_qmmm,  only: natqm
+   use mod_utils, only: archive_file
+   integer  :: iost,ist1,ist2,iat,itrj
+   integer  :: iunit1, iunit2
+   character(len=200)   :: chmsg
+   character(len=20)    :: chit
+   character(len=60)    :: chrestart
    iunit1=600; iunit2=601
 
    if (inac.eq.0) write(*,*)'Reading NACME from nacmrest.dat'
@@ -269,7 +277,7 @@ module mod_sh
                if (iost.ne.0)then
                   write(*,*)'Error reading NACME from file nacmrest.'
                   write(*,*)chmsg
-                  call abinerror('write_nacm_rest')
+                  call abinerror('read_nacmrest')
                end if
                nacx(iat,itrj,ist2,ist1)=-nacx(iat,itrj,ist1,ist2)
                nacy(iat,itrj,ist2,ist1)=-nacy(iat,itrj,ist1,ist2)
@@ -297,19 +305,11 @@ module mod_sh
    end do
 
    close(iunit1)
-
-   write (chit,*)it
-   chrestart='cp nacmrest.dat nacmrest.dat.'//adjustl(chit)
-   write(*,*)'Making backup of the nacmrest.dat'
-   write(*,*)chrestart
-   call system(chrestart)  
+   call archive_file('nacmrest.dat',it)
 
    if (phase.eq.1)then
       close(iunit2)
-      chrestart='cp phaserest.dat phaserest.dat.'//adjustl(chit)
-      write(*,*)'Making backup of the phaserest.dat'
-      write(*,*)chrestart
-      call system(chrestart)  
+      call archive_file('phaserest.dat',it)
    end if
 
    end subroutine read_nacmrest

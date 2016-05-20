@@ -67,7 +67,7 @@ subroutine init(dt, values1)
 
    namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
-            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep, &
+            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
@@ -94,6 +94,7 @@ subroutine init(dt, values1)
    dt=-1  
    error=0
    iplumed=0
+
 
    call Get_cmdline(chinput, chcoords, chveloc)
 
@@ -411,9 +412,6 @@ print '(a)','**********************************************'
 !----performing RESTART from restart.xyz
      if(irest.eq.1)then
         call restin(x,y,z,vx,vy,vz,it)
-        sim_time = it * dt
-     else
-        sim_time = 0.0d0
      end if
 
 

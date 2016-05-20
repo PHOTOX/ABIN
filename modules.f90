@@ -48,15 +48,15 @@ module mod_general
    integer :: it=0,ipimd=0,istage=0,nwalk=1,ihess=0,md=1
    character(len=15) :: pot='none'
    integer :: imini=0,nstep=1,nabin=50
-   integer :: nwrite=1,nwritex=1,ncalc=1,nrest=1,nwritev=0,nwritef=0
-   ! TODO archivation of restart files
+   integer :: nwrite=1,nwritex=1,ncalc=1,nwritev=0,nwritef=0
+   integer :: narchive=1000, nrest=1
    integer :: icv=0,irest=0,anal_ext=0,idebug=0
    integer :: irandom=156873,natom=0,pid
    integer :: iqmmm=0
    integer :: parrespa=0 
    integer :: my_rank=0, iremd=0
    integer :: iknow=0
-   real(DP) :: dt0, sim_time
+   real(DP) :: dt0, sim_time=0.0d0
    save
 end module
       
