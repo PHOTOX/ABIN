@@ -20,8 +20,8 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
       use mod_plumed,   only: iplumed, plumedfile, force_plumed
 #endif
 #ifdef MPI
-   use mod_terampi
-   use mod_terampi_sh
+   use mod_terampi,     only: force_tera
+   use mod_terampi_sh,  only: force_terash
 #endif
    real(DP),intent(inout) ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) ::  fx(:,:),fy(:,:),fz(:,:)

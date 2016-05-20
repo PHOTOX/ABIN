@@ -17,14 +17,13 @@ module mod_analysis
 
 !----Contains all analysis stuff
    SUBROUTINE analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
-   use mod_analyze_ext, only:analyze_ext
-   use mod_estimators , only:estimators
-   use mod_general
+   use mod_analyze_ext, only: analyze_ext
+   use mod_estimators , only: estimators
+   use mod_general,     only: it, ipimd, icv, nwritef, nwritev, &
+                              nrest, nwritex, imini, nstep, anal_ext
    use mod_system
    use mod_density
-#ifdef MPI
    use mod_io 
-#endif
    implicit none
    !intent inout because of estimators, writing to nwalk+1
    real(DP),intent(inout) :: x(:,:),   y(:,:),   z(:,:)
@@ -77,31 +76,27 @@ module mod_analysis
       call analyze_ext(x, y, z, vx, vy, vz, amt)
    endif
 
-   if((modulo(it,nwrite).eq.0).and.pot.eq.'_tera_'.and.ipimd.eq.2)then
-   endif
-
-
    end subroutine analysis
 
-   subroutine trajout(x,y,z,it)
+   subroutine trajout(x,y,z,time_step)
    use mod_const, only: ANG
    use mod_files, only: UMOVIE
-   use mod_general, only: imini,nwalk,natom, iremd, my_rank, sim_time
-   use mod_system, ONLY: names
+   use mod_general,  only: imini, nwalk, natom, iremd, my_rank, sim_time
+   use mod_system,   only: names
    implicit none
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
-   integer,intent(in) :: it
+   integer,intent(in) :: time_step
    integer            :: iat,iw
    character(len=20)  :: fgeom, chout
    logical            :: lopened
 
    ! close has no effect if UMOVIE is not open according to the standard
-   if (imini.eq.it) close(UMOVIE) 
+   if (imini.eq.time_step) close(UMOVIE) 
 
    INQUIRE(UMOVIE,opened=lopened)
 
    if(.not.lopened)then
-      if (imini.gt.it)then
+      if (imini.gt.time_step)then
          chout='movie_mini.xyz'
       else
          chout='movie.xyz'
@@ -117,7 +112,7 @@ module mod_analysis
    do iw=1,nwalk
        write(UMOVIE,*)natom
        ! In the future, we should get rid of time step
-       write(UMOVIE,'(A10,I20,A15,F15.2)')'Time step:',it,' Sim. Time [au]',sim_time
+       write(UMOVIE,'(A10,I20,A15,F15.2)')'Time step:',time_step,' Sim. Time [au]',sim_time
        do iat=1,natom
           write(UMOVIE,10)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
        enddo
@@ -125,7 +120,7 @@ module mod_analysis
 
    end subroutine trajout
 
-   subroutine forceout(x, y, z, fx,fy,fz,funit)
+   subroutine forceout(x, y, z, fx,fy,fz,fUNIT)
    use mod_general, only: nwalk, natom, it
    use mod_system, ONLY: names
    real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
@@ -168,7 +163,7 @@ module mod_analysis
 
    subroutine velout(vx,vy,vz)
    use mod_general, only: nwalk, natom, it
-   use mod_system, ONLY: names
+   use mod_system,  only: names
    use mod_files,   only: UVELOC
    real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
    integer :: iat,iw
@@ -188,9 +183,9 @@ module mod_analysis
 
    end subroutine velout
 
-   subroutine restout(x,y,z,vx,vy,vz,it)
-   use mod_general,only:it,icv, ihess, nwalk, ipimd, natom, &
-                        iremd, my_rank, pot, narchive, sim_time
+   subroutine restout(x,y,z,vx,vy,vz,time_step)
+   use mod_general,only: icv, ihess, nwalk, ipimd, natom, &
+                         iremd, my_rank, pot, narchive, sim_time
    use mod_utils,  only: archive_file
    use mod_nhc,    only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
    use mod_estimators
@@ -198,19 +193,16 @@ module mod_analysis
    use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
    use mod_gle
    use mod_random
-#ifdef MPI
    use mod_terampi_sh, only: write_wfn
-#endif
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
-   integer,intent(in) :: it
+   integer,intent(in) :: time_step
    integer :: iat,iw,inh,itrj,ist1,is
    LOGICAL :: file_exists
    character(len=200)    :: chout, chsystem
 
-#ifdef MPI
    if(pot.eq.'_tera_'.and.ipimd.eq.2) call write_wfn()
-#endif
+
    if(iremd.eq.1)then
       write(chout, '(A,I2.2)')'restart.xyz.', my_rank
    else
@@ -225,7 +217,7 @@ module mod_analysis
 !  intel compilers don't write too many columns on single line
    open(102, file=chout, action='WRITE')
 
-   write(102,*)it, sim_time
+   write(102,*)time_step, sim_time
 
    write(102,*)chcoords
    do iw=1,nwalk
@@ -315,8 +307,8 @@ module mod_analysis
 
    close(102)
 
-   if(modulo(it,narchive).eq.0)then
-      call archive_file('restart.xyz', it)
+   if(modulo(time_step,narchive).eq.0)then
+      call archive_file('restart.xyz', time_step)
    end if
 
    end subroutine restout
@@ -333,9 +325,7 @@ module mod_analysis
      use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
      use mod_gle
      use mod_random
-#ifdef MPI
      use mod_terampi_sh, only: read_wfn
-#endif
      real(DP),intent(out)  :: x(:,:),y(:,:),z(:,:)
      real(DP),intent(out)  :: vx(:,:),vy(:,:),vz(:,:)
      integer,intent(out)   :: it
@@ -344,9 +334,7 @@ module mod_analysis
      logical :: prngread
      character(len=20)  :: chin
 
-#ifdef MPI
      if(pot.eq.'_tera_'.and.ipimd.eq.2) call read_wfn()
-#endif
 
      prngread=.false. 
 

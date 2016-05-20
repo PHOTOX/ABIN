@@ -66,9 +66,6 @@ module mod_mdstep
    use mod_nhc, ONLY:inose, imasst, shiftNHC_yosh, shiftNHC_yosh_mass
    use mod_gle, ONLY:langham, gle_step, wn_step
    use mod_interfaces, only: force_clas
-!#ifdef MPI
-!   use mod_terampi_sh, only: send_terash
-!#endif
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
    real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
@@ -102,10 +99,6 @@ module mod_mdstep
    
    call shiftX(x, y, z, px, py, pz, amt, dt)
    
-!  we need to pass velocities to terachem
-!  this asumes that we have cartesian coordinates here
-!  DH initial hack px instead vx
-!  if(ipimd.eq.2.and.pot.eq."_tera_") call send_terash(x,y,z,px,py,pz)
    call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 
    call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)

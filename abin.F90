@@ -32,8 +32,8 @@ program abin_dyn
 #ifdef PLUM
    use mod_plumed
 #endif
-#ifdef MPI
    use mod_terampi_sh, only: move_new2old_terash
+#ifdef MPI
    use mod_remd, only: nswap, remd_swap
    implicit none
    include 'mpif.h'
@@ -220,13 +220,15 @@ program abin_dyn
 
 !-------SURFACE HOPPING SECTION----------------------------      
          if(ipimd.eq.2)then
+
             call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
+
             px = amt * vx
             py = amt * vy
             pz = amt * vz
-#ifdef MPI
+
             if(pot.eq.'_tera_') call move_new2old_terash()
-#endif
+
          endif
 
 #ifdef MPI
@@ -283,6 +285,8 @@ program abin_dyn
 !DUMP restart file at the end of a run even if the final step is not compatible with nrest
 !Because ncalc might be >1, we have to perform transformation to get the most
 !recent coordinates and velocities
+      it = it - 1 
+
       if (istage.gt.0)then
          if(istage.eq.1)then     
             call QtoX(vx,vy,vz,transxv,transyv,transzv)
@@ -292,9 +296,9 @@ program abin_dyn
             call UtoX(x,y,z,transx,transy,transz)
             call UtoX(vx,vy,vz,transxv,transyv,transzv)
          endif
-         call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
+         call restout(transx,transy,transz,transxv,transyv,transzv,it)
       else
-         call restout(x,y,z,vx,vy,vz,it-1)
+         call restout(x,y,z,vx,vy,vz,it)
       endif
 
 !   minimization endif

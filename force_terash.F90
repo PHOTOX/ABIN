@@ -2,27 +2,30 @@ module mod_terampi_sh
 ! ----------------------------------------------------------------
 ! Interface for TeraChem based Surface Hopping.
 ! Based on the FMS interface from FMS90
-! (files TerachemModule.f90 and )
+! (files TerachemModule.f90)
 !
 ! Original Author: Unknown, J. Snyder and Ed Hohenstein
 !
 ! Date: December 2015
 ! ----------------------------------------------------------------
    use mod_const, only: DP
-#ifdef MPI
    use mod_terampi, only: newcomm, qmcharges, qmcoords, dxyz_all, chsys_sleep
    implicit none
    private
-   public :: force_terash, init_terash, send_terash, finalize_terash
-   public :: write_wfn, read_wfn, move_new2old_terash
+#ifdef MPI
+   public :: force_terash, init_terash, send_terash
+#endif
+   public :: finalize_terash
+   public :: write_wfn, read_wfn, move_new2old_terash, move_old2new_terash
    real(DP), allocatable :: CIvecs(:,:), MO(:,:), blob(:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:,:), MO_old(:,:), blob_old(:)
    real(DP), allocatable :: SMatrix(:)
    integer :: civec, nbf, blobsize, oldWfn = 0 
    save
-contains
 
+CONTAINS
 
+#ifdef MPI
 subroutine force_terash(x, y, z, fx, fy, fz, eclas)
    use mod_const, only: DP
    include 'mpif.h'
@@ -33,8 +36,6 @@ subroutine force_terash(x, y, z, fx, fy, fz, eclas)
    call send_terash(x, y, z, fx, fy, fz)
 
    call receive_terash(fx, fy, fz, eclas)
-
-
 
 end subroutine force_terash
 
@@ -335,6 +336,8 @@ subroutine init_terash(x, y, z)
 
 end subroutine init_terash
 
+#endif
+
 subroutine finalize_terash()
    if( allocated(MO) )then
       deallocate(MO, MO_old)
@@ -353,31 +356,28 @@ subroutine write_wfn()
    logical  :: file_exists
 
    if(iremd.eq.1)then
-      write(chout, '(A,I2.2)')'wfn.dat.', my_rank
+      write(chout, '(A,I2.2)')'wfn.bin.', my_rank
    else
-      chout='wfn.dat'
+      chout='wfn.bin'
    end if
 
    INQUIRE(FILE=chout, EXIST=file_exists)
    chsystem='mv '//trim(chout)//'  '//trim(chout)//'.old'
    if(file_exists) call system(chsystem)
 
-   open(UWFN, file=chout, action='WRITE',status="NEW",access="Sequential",form="FORMATTED")
-   write(UWFN,*)'#Time_step   Simulation_time'
-   write(UWFN,*)it, sim_time
-   write(UWFN,*)'# Orbitals'
-   write(UWFN,*)nbf
-   write(UWFN,*)MO_old
-   write(UWFN,*)'# Ci vectors'
-   write(UWFN,*)civec, nstate
-   write(UWFN,*)Civecs_old
-   write(UWFN,*)'# BLOB'
-   write(UWFN,*)blobsize
-   write(UWFN,*)blob_old
+   open(UWFN, file=chout, action='WRITE',status="NEW",access="Sequential",form="UNFORMATTED")
+
+   write(UWFN)it, sim_time
+   write(UWFN)nbf
+   write(UWFN)MO
+   write(UWFN)civec, nstate
+   write(UWFN)Civecs
+   write(UWFN)blobsize
+   write(UWFN)blob
 
    close(UWFN)
 
-   if(modulo(it,narchive).eq.0)  call archive_file('wfn.dat',it)
+   if(modulo(it,narchive).eq.0)  call archive_file('wfn.bin',it)
 
 end subroutine write_wfn
 
@@ -389,12 +389,13 @@ subroutine read_wfn()
    use mod_sh,    only: nstate
    character(len=200)    :: chout, chsystem
    logical  :: file_exists
-   integer  :: temp, temp2, time_step,sim_time
+   integer  :: temp, temp2, time_step
+   real(DP) :: stime
 
    if(iremd.eq.1)then
-      write(chout, '(A,I2.2)')'wfn.dat.', my_rank
+      write(chout, '(A,I2.2)')'wfn.bin.', my_rank
    else
-      chout='wfn.dat'
+      chout='wfn.bin'
    end if
 
    INQUIRE(FILE=chout, EXIST=file_exists)
@@ -405,45 +406,41 @@ subroutine read_wfn()
       RETURN
    end if
 
-   open(UWFN, file=chout, action='READ',status="OLD",access="Sequential",form="FORMATTED")
-   read(UWFN,*)
-   read(UWFN,*)time_step, sim_time
-   read(UWFN,*)
-   read(UWFN,*)temp
+   open(UWFN, file=chout, action='READ',status="OLD",access="Sequential",form="UNFORMATTED")
+
+   read(UWFN)time_step, stime
+   read(UWFN)temp
    if(temp.ne.nbf)then
       write(*,*)'ERROR: Number of MOs in restart file is inconsistent!'
       GO TO 10
    end if
-   read(UWFN,*)MO
-   read(UWFN,*)
-   read(UWFN,*)temp, temp2
+   read(UWFN)MO
+   read(UWFN)temp, temp2
    if(temp.ne.civec.or.temp2.ne.nstate)then
       write(*,*)'ERROR: Number and/or size of the CI vectors in restart file is inconsistent!'
       GO TO 10
    end if
-   read(UWFN,*)CIVecs
-   read(UWFN,*)
-   read(UWFN,*)temp
+   read(UWFN)CIVecs
+   read(UWFN)temp
    if(temp.ne.blobsize)then
       write(*,*)'ERROR: Size of blob in restart file is inconsistent!'
       GO TO 10
    end if
-   read(UWFN,*)blob
+   read(UWFN)blob
 
    close(UWFN)
 
    oldWFN = 1
 
-   call archive_file('wfn.dat',time_step)
-
    RETURN
 
 10 close(UWFN)
-   write(*,*)'If you want to proceed, delete file "wfn.dat" and then...'
+   write(*,*)'If you want to proceed, delete file "wfn.bin" and then...'
    write(*,*)chknow
    call abinerror('read_wfn')
 
 end subroutine read_wfn
+
 
 subroutine move_new2old_terash
    MO_old = MO
@@ -451,7 +448,13 @@ subroutine move_new2old_terash
    blob_old = blob
 end subroutine move_new2old_terash
 
-#endif
+
+subroutine move_old2new_terash
+   MO = MO_old
+   CIVecs = CIVecs_old
+   blob = blob_old
+end subroutine move_old2new_terash
+
 
 end module mod_terampi_sh
 

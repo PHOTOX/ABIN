@@ -18,9 +18,6 @@ module mod_terampi
    use mod_const, only: DP
    implicit none
    private
-   public :: teraport, finalize_terachem, initialize_terachem, &
-          connect_terachem, force_tera, newcomm, mpisleep, &
-          qmcharges, qmcoords, dxyz_all, chsys_sleep ! for terash
    ! This does not work at this moment.
    character*50  ::  teraport = 'terachem_port', chsys_sleep
    integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
@@ -33,6 +30,10 @@ module mod_terampi
    real(DP), allocatable :: mmcoords(:,:) 
    real(DP), allocatable :: dxyz_all(:,:)
    real(DP)  :: mpisleep = 0.25
+   public :: teraport, newcomm, mpisleep, &
+             qmcharges, qmcoords, dxyz_all, chsys_sleep
+#ifdef MPI
+   public :: finalize_terachem, initialize_terachem,connect_terachem, force_tera
    save
 
 contains
@@ -381,6 +382,7 @@ subroutine connect_terachem( )
 !  call system("sleep 5")
   end subroutine finalize_terachem
 
+#endif
 
 end module mod_terampi
 
