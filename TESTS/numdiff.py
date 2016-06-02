@@ -15,6 +15,8 @@ import readline
 # It returns 1 when difference is found and 0 otherwise
 
 decimal.getcontext().prec = 17
+
+DELTA=1e-15
 #decimal.getcontext().rounding = "ROUND_DOWN"
 
 usage = "USAGE: %prog input_diff_file"
@@ -30,10 +32,12 @@ except:
 print("Comparing numerical differences in file "+inpfile)
 
 def failed(n1, n2):
+   delta = float(n1) - float(n2)
    print('I may have found a significant numerical difference in file '+inpfile)
    print('Differing numbers: '+n1+"  "+n2)
-   delta = float(n1) - float(n2)
    print('Delta = ',delta)
+   if delta < DELTA:
+      return
    yn = raw_input('Is this difference ok? [y/n]')
    if yn != "y":
       exit(1)

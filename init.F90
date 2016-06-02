@@ -179,7 +179,7 @@ print '(a)','           Surface Hopping MD                 '
 print '(a)','              Minimization                    '
    END SELECT
 
-  write(*,*)'    using potential: ', pot 
+  write(*,*)'    using potential: ', LowerToUpper(pot)
 print '(a)','                                              '
 print '(a)','**********************************************'
 

@@ -123,7 +123,7 @@ debug:
 	echo ${C_OBJS}
 	echo ${F_OBJS}
 
-.PHONY: clean distclean test testsh testclean makeref debug
+.PHONY: clean distclean test testclean makeref debug
 
 .SUFFIXES: .F90 .f90 .f95 .f03 .F03
 
