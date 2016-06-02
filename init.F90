@@ -1013,6 +1013,120 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
 
    end subroutine PrintLogo
 
+   subroutine PrintHelp()
+   implicit none
+    print '(a)', ''
+    print '(a)', 'ABIN: Multipurpose ab initio MD program.'
+    print '(a)', ''
+    call print_compile_info()
+    print '(a)', ''
+    print '(a)', 'cmdline options:'
+    print '(a)', ''
+    print '(a)', '  -h, --help               print help and exit'
+    print '(a)', '  -i <input_parameters>    default: input.in'
+    print '(a)', '  -x <input_coordinates>   default: mini.dat'
+    print '(a)', '  -v <input_velocities>    no default'
+    print '(a)', ''
+   end subroutine PrintHelp
+
+   subroutine Get_cmdline(chinput, chcoords, chveloc )
+   character(len=*),intent(inout)   :: chinput, chcoords, chveloc
+   character(len=len(chinput))   :: arg
+   integer            :: i
+   logical            :: lexist
+   
+   i=0
+   do while (i < command_argument_count())
+
+     i=i+1
+     call get_command_argument(i, arg)
+   
+      select case (arg)
+      case ('-h', '--help')
+         call PrintHelp()
+         stop 0
+
+      case ('-i')
+         i=i+1
+         call get_command_argument(i, arg)
+         !-format specifier is needed here in case of slashes
+         read(arg,'(A)')chinput
+         chinput=trim(chinput)
+
+      case ('-x')
+         i=i+1
+         call get_command_argument(i, arg)
+         read(arg,'(A)')chcoords
+         chcoords=trim(chcoords)
+      case ('-v')
+         i=i+1
+         call get_command_argument(i, arg)
+         read(arg,'(A)')chveloc
+         chveloc=trim(chveloc)
+      case default
+         write(*,*)'Invalid command line argument!'
+         call abinerror('Get_cmdline')
+      end select
+
+   end do
+   !check for existence of input files
+
+
+   inquire(file=chinput,exist=lexist)
+   if (.not.lexist)then
+      write(*,*)'FATAL: The following input file does not exists!'
+      write(*,*)chinput
+      call abinerror('Get_Cmdline')
+   end if
+
+#ifndef MPI
+   inquire(file=chcoords,exist=lexist)
+   if (.not.lexist)then
+      write(*,*)'FATAL: Input file does not exists!'
+      write(*,*)chcoords
+      call abinerror('Get_Cmdline')
+   end if
+   if (chveloc.ne.'')then
+      inquire(file=chveloc,exist=lexist)
+      if (.not.lexist)then
+         write(*,*)'FATAL: The following input file does not exists!'
+         write(*,*)chveloc
+         call abinerror('Get_Cmdline')
+      end if
+   end if
+#endif
+
+   end subroutine Get_cmdline
+
+   subroutine print_compile_info()
+   !   include 'date.inc'
+
+   print *,'Compiled at  ', DATE
+   print *,COMMIT
+!$ print *,'Compiled with parallel OpenMP support for PIMD.'
+#ifdef USEFFTW
+   write(*,*)'Compiled with FFTW support.'
+#endif
+#ifdef CP2K
+   write(*,*)'Compiled with in-built CP2K interface.'
+#endif
+#ifdef PLUM
+   write(*,*)'Compiled with PLUMED (static lib).'
+#endif
+#ifdef MPI
+   write(*,*)'Compiled with MPI support.'
+   write(*,*)'(used for REMD and direct CP2K and TeraChem interfaces.)'
+#endif
+   print *,' '
+
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+   print *, 'This file was compiled by ',  &
+             compiler_version(), ' using the options: '
+   print *,     compiler_options()
+#endif
+
+   end subroutine print_compile_info
+
 end subroutine init
 
 

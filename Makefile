@@ -88,9 +88,9 @@ ${OUT} : init.o
 
 # Always recompile init.F90 to get current date and commit
 init.o : init.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
-	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
-	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c init.F90
+#	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
+#	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DDATE="'${DATE}'" -DCOMMIT="'${COMMIT}'" -c init.F90
 
 clean :
 	/bin/rm -f *.o *.mod $(OUT)
