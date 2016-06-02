@@ -68,7 +68,7 @@ subroutine receive_terash(fx, fy, fz, eclas)
    ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
 
    ltest = .false.
-   do while(ltest.eq..false.)
+   do while(.not.ltest)
       call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG,newcomm,ltest, status, ierr)
       call system(chsys_sleep)
    end do

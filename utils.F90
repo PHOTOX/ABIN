@@ -194,6 +194,7 @@ module mod_utils
     print '(a)', 'ABIN: Multipurpose ab initio MD program.'
     print '(a)', ''
     call print_compile_info()
+    print '(a)', ''
     print '(a)', 'cmdline options:'
     print '(a)', ''
     print '(a)', '  -h, --help               print help and exit'
