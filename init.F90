@@ -164,7 +164,6 @@ subroutine init(dt, values1)
       write(*,*)'Reading parameters from input file ',chinput
       write(*,*)'Reading xyz coordinates from file ',chcoords
       call PrintLogo(values1)
-   end if
 
 print '(a)','**********************************************'
 print '(a)','                                              '
@@ -182,6 +181,8 @@ print '(a)','              Minimization                    '
   write(*,*)'    using potential: ', LowerToUpper(pot)
 print '(a)','                                              '
 print '(a)','**********************************************'
+
+   end if
 
    if(irest.eq.1)then
     readnhc=1   !readnhc has precedence before initNHC

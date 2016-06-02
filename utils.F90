@@ -104,12 +104,12 @@ module mod_utils
    if(my_rank.eq.0.or.iremd.eq.1)then
       write (chit,*)time_step
       if(iremd.eq.1)then
-         write(charch,'(A,I2.2)')trim(chfile),my_rank
+         write(charch,'(A,I2.2)')trim(chfile)//".",my_rank
       else
          charch=trim(chfile)
       end if
-      chsystem='cp '//trim(chfile)//'  '//trim(charch)//'.'//adjustl(chit)
-      write(*,*)'Archiving file ', trim(chfile)
+      chsystem='cp '//trim(charch)//'  '//trim(charch)//'.'//adjustl(chit)
+      write(*,*)'Archiving file ', trim(charch)
       write(*,*)trim(chsystem)
       call system(chsystem)
    end if
