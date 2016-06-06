@@ -10,265 +10,276 @@
 ! * e-mail me at michele dot ceriotti at gmail dot com    *
 ! *********************************************************
 
+! The original code was modified to allow for PI+GLE and PIGLET simulation
+! in ABIN by Daniel Hollas
+
 module mod_gle
-  use mod_const, only: DP
-  use mod_random, only: gautrg
-  implicit none
-  private
-  public :: readQT, ns, gp, ps, langham,gle_step,wn_init,gle_init,wn_step
-  real(DP), allocatable :: gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
-  real(DP), allocatable :: ran(:)
-  real(DP), allocatable :: ps(:,:,:)
-  real(DP)         :: wnt, wns, langham
-  integer          :: ns, readQT=1
-  save
+   use mod_const, only: DP
+   use mod_random, only: gautrg
+   implicit none
+   private
+   public :: readQT, ns, gp, ps, langham,gle_step,wn_init,gle_init,wn_step
+   real(DP), allocatable :: gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
+   real(DP), allocatable :: ran(:)
+   real(DP), allocatable :: ps(:,:,:)
+   real(DP)         :: wnt, wns, langham
+   integer          :: ns, readQT=1
+   save
+
 contains
 
-  ! initialize white-noise thermostat. 
-  ! the init and the propagator here are written with the same philosophy
-  ! used for the full-fledged colored-noise stuff.
-  subroutine wn_init(dt,wopt)
-    use mod_general,only:natom
-    use mod_nhc,only:temp
-    implicit none
-    real(DP), intent(in) :: dt,wopt
-    real(DP) g
-    g=2.d0*wopt
-    wnt=exp(-dt*g)
-    wns=sqrt(temp*(1.d0-wnt*wnt))
-    langham=0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
-    allocate( ran(natom*3) )  !allocating arrays for random numbers produced by gautrg
-  end subroutine
+   ! initialize white-noise thermostat. 
+   ! the init and the propagator here are written with the same philosophy
+   ! used for the full-fledged colored-noise stuff.
+   subroutine wn_init(dt,wopt)
+   use mod_general,only:natom
+   use mod_nhc,only:temp
+   real(DP), intent(in) :: dt,wopt
+   real(DP) g
+   g = 2.d0 * wopt
+   wnt = exp(-dt*g)
+   wns = sqrt(temp*(1.d0-wnt*wnt))
+   langham = 0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
+   allocate( ran(natom*3) )  !allocating arrays for random numbers produced by gautrg
+   end subroutine
 
-  ! white-noise propagator. time-step has been set in wn_init
-  subroutine wn_step(px,py,pz,m)
-    use mod_general, only: natom
-    real*8, intent(inout)  :: px(:,:)
-    real*8, intent(inout)  :: py(:,:)
-    real*8, intent(inout)  :: pz(:,:)
-    real*8, intent(in)     :: m(:,:)
-    integer :: iat,iw,pom
-    iw=1
-    pom=1
-    call gautrg(ran,natom*3,0,6)
-    do iat=1,natom
-      px(iat,iw)=wnt*px(iat,iw)+wns*ran(pom)*sqrt(m(iat,iw))  
-      py(iat,iw)=wnt*py(iat,iw)+wns*ran(pom+1)*sqrt(m(iat,iw))
-      pz(iat,iw)=wnt*pz(iat,iw)+wns*ran(pom+2)*sqrt(m(iat,iw))
-      pom=pom+3
-    end do
-  end subroutine
+   ! white-noise propagator. time-step has been set in wn_init
+   subroutine wn_step(px,py,pz,m)
+   use mod_general, only: natom
+   real*8, intent(inout)  :: px(:,:)
+   real*8, intent(inout)  :: py(:,:)
+   real*8, intent(inout)  :: pz(:,:)
+   real*8, intent(in)     :: m(:,:)
+   integer :: iat,iw,pom
+   iw=1
+   pom=1
+   call gautrg(ran,natom*3,0,6)
+   do iat=1,natom
+      px(iat,iw) = wnt*px(iat,iw)+wns*ran(pom)*sqrt(m(iat,iw))  
+      py(iat,iw) = wnt*py(iat,iw)+wns*ran(pom+1)*sqrt(m(iat,iw))
+      pz(iat,iw) = wnt*pz(iat,iw)+wns*ran(pom+2)*sqrt(m(iat,iw))
+      pom = pom + 3
+   end do
+   end subroutine
   
-  subroutine gle_init(dt)
-    use mod_const, only: AUtoEV
-    use mod_general,only: natom,nwalk
-    use mod_utils, only: abinerror
-    use mod_nhc,only: temp,inose
-    implicit none
-    real(DP), intent(in)  :: dt
-    real(DP), allocatable :: gA(:,:), gC(:,:), gr(:)
-    integer :: i, j, cns, ios, iw
-    
-
-    write(6,*) "# Initialization of GLE thermostat.                           "
-    write(6,*) "# Please cite the relevant works among:                       "
-    write(6,*) "#                                                             "
-    write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-    write(6,*) "# Phy. Rev. Lett. 102, 020601 (2009)                          "
-    write(6,*) "#                                                             "
-    write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-    write(6,*) "# Phy. Rev. Lett. 103, 030603 (2009)                          "
-    write(6,*) "#                                                             "
-
-    !reads in matrices
-    !reads A (in a.u. units)
-    open(121,file='GLE-A',status='OLD',iostat=ios,action='read')
-    if (ios.ne.0)then
-       write(0,*) "Error: could not read GLE-A file!"
-       write(0,*) "Exiting..."
-       call abinerror('gle_init')
-    end if
-    read(121,*) ns
-
-    !allocate everything we need
-    if(natom*3.gt.ns+1)then 
-     allocate( ran(natom*3) )  !allocating arrays for random numbers produced by gautrg
-    else
-     allocate( ran(ns+1) )  
-    endif
-
-    allocate(gA(ns+1,ns+1))
-    allocate(gC(ns+1,ns+1))
-    allocate(gS(ns+1,ns+1))
-    allocate(gT(ns+1,ns+1))
-    allocate(gp(natom*3,ns+1))   
-    allocate(ngp(natom*3,ns+1))   
-    allocate(gr(ns+1))
-    if(nwalk.gt.1) allocate(ps(natom*3,ns,nwalk))!each bead has to have its additional momenta
-
-    
-    write(6,*)'# Reading A-matrix. Expecting a.u. units!!!!'
-    do i=1,ns+1
-       read(121,*) gA(i,:)
-    enddo
-    close(121)
-
-    !gamma for a WN langevin will be 1/tau, which would make it optimal for w=1/(2tau) angular frequency. 
-    !DHmod: we DONT scale gA (which is expected to be fitted by http://gle4md.berlios.de/ ) 
-    !A metrix is expected to be in atomic units of time 
-    !gA=gA
-
-    ! reads C (in eV!), or init to kT
-    open(121,file='GLE-C',status='OLD',action='read',iostat=ios)
-    if (ios.ne.0)then
-      if(inose.eq.2)then
-         write(0,*) "Error: could not read GLE-C file!"
-         write(0,*) "Exiting..."
-      else   !in future release, we may use e.g. optimal sampling
-        write(6,*) "# Using canonical-sampling, Cp=kT"
-        gC=0.0d0
-        do i=1,ns+1
-           gC(i,i)=temp
-        enddo
-      end if
-    else    
-       write(6,*) "# Reading specialized Cp matrix."
-       write(6,*)'# Expecting eV units!!!'
-       read(121,*) cns
-       if (cns.ne.ns)then
-           write(0,*) " Error: size mismatch between given GLE-A and GLE-C!"
-           call abinerror('gle_init')
-       endif
-       do i=1,ns+1
-          read(121,*) gC(i,:)
-          gC(i,:)=gC(i,:)/autoev
-       enddo
-    end if
-    close(121)
-
-    ! the deterministic part of the propagator is obtained in a second
-    call matrix_exp(-dt*gA, ns+1,15,15,gT)
-    
-    ! the stochastic part is just as easy. we use gA as a temporary array
-    gA=gC-matmul(gT,matmul(gC,transpose(gT)))
-    call cholesky(gA, gS, ns+1)
-
-
-    ! then, we must initialize the auxiliary vectors. we keep general - as we might be 
-    ! using non-diagonal C to break detailed balance - and we use cholesky decomposition
-    ! of C. again, since one would like to initialize correctly the velocities in 
-    ! case of generic C, we use an extra slot for gp for the physical momentum, as we 
-    ! could then use it to initialize the momentum in the calling code
-
-    ! DH: ps or gp rewritten in init.f90 if irest.eq.1
-    ! Pro jistotu inicializovat vzdy a restart to prepise
-    gA=gC   
-    call cholesky(gA, gC, ns+1)
-    
-    do iw=1,nwalk
-
-    do j=1,natom*3
-      call gautrg(ran,ns+1,0,6)
-      do i=1,ns+1
-        gr(i)=ran(i)
-      enddo
-      gp(j,:)=matmul(gC,gr)
-    end do
-
-    if(nwalk.gt.1)then
-     do j=1,natom*3
-      do i=1,ns
-       ps(j,i,iw)=gp(j,i+1)
-      enddo
-     enddo
-    endif
-!nwalk ENDDO
-    enddo
-    langham=0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
+   subroutine gle_init(dt)
+   use mod_const, only: AUtoEV
+   use mod_general,only: natom,nwalk
+   use mod_utils, only: abinerror
+   use mod_nhc,only: temp,inose
+   implicit none
+   real(DP), intent(in)  :: dt
+   real(DP), allocatable :: gA(:,:), gC(:,:), gr(:)
+   integer :: i, j, cns, ios, iw
    
-    deallocate(gA)
-    deallocate(gC)
-    deallocate(gr)
-  end subroutine gle_init
 
-  ! the GLE propagator. 
-  ! gT contains the deterministic (friction) part, and gS the stochastic (diffusion) part.
-  ! gp(j,1) must be filled with the mass-scaled actual j-th momentum, and contains in
-  ! gp(j,2:ns+1) the current values of additional momenta. 
-  ! the matrix multiplies are performed on the whole array at once, and the new momentum
-  ! is passed back to the caller, while the new s's are kept stored in gp.
-  ! please note that one can avoid the double conversion between mass-scaled and actual
-  ! momentum/velocity (as used by the calling code) by scaling with the mass the white-noise
-  ! random numbers. 
-  subroutine gle_step(px,py,pz,m)
-    use mod_general,only:natom,nwalk
-    real(DP), intent(inout)  :: px(:,:)
-    real(DP), intent(inout)  :: py(:,:)
-    real(DP), intent(inout)  :: pz(:,:)
-    real(DP), intent(in)     :: m(:,:)
-    integer                :: i, j, iat, iw
+   write(6,*) "# Initialization of GLE thermostat.                           "
+   write(6,*) "# Please cite the relevant works among:                       "
+   write(6,*) "#                                                             "
+   write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
+   write(6,*) "# Phy. Rev. Lett. 102, 020601 (2009)                          "
+   write(6,*) "#                                                             "
+   write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
+   write(6,*) "# Phy. Rev. Lett. 103, 030603 (2009)                          "
+   write(6,*) "#                                                             "
 
-!    call printf(px,py,pz)
+   !reads in matrices
+   !reads A (in a.u. units)
+   open(121,file='GLE-A',status='OLD',iostat=ios,action='read')
+   if (ios.ne.0)then
+      write(0,*) "Error: could not read GLE-A file!"
+      write(0,*) "Exiting..."
+      call abinerror('gle_init')
+   end if
+   read(121,*) ns
 
-    do iw=1,nwalk
-!for GLE+PIMD, we store additional momenta in ps 3d matrices
-    if(nwalk.gt.1)then
-     do i=1,ns
-      do iat=1,natom*3
-       gp(iat,i+1)=ps(iat,i,iw)
+   !allocate everything we need
+   if(natom*3.gt.ns+1)then 
+    allocate( ran(natom*3) )  !allocating arrays for random numbers produced by gautrg
+   else
+    allocate( ran(ns+1) )  
+   endif
+
+   allocate(gA(ns+1,ns+1))
+   allocate(gC(ns+1,ns+1))
+   allocate(gS(ns+1,ns+1))
+   allocate(gT(ns+1,ns+1))
+   allocate(gp(natom*3,ns+1))   
+   allocate(ngp(natom*3,ns+1))   
+   allocate(gr(ns+1))
+   if(nwalk.gt.1) allocate(ps(natom*3,ns,nwalk))!each bead has to have its additional momenta
+
+   
+   write(6,*)'# Reading A-matrix. Expecting a.u. units!!!!'
+   do i=1,ns+1
+      read(121,*) gA(i,:)
+   enddo
+   close(121)
+
+   !gamma for a WN langevin will be 1/tau, which would make it optimal for w=1/(2tau) angular frequency. 
+   !DHmod: we DONT scale gA (which is expected to be fitted by http://gle4md.berlios.de/ ) 
+   !A metrix is expected to be in atomic units of time 
+   !gA=gA
+
+   ! reads C (in eV!), or init to kT
+   open(121,file='GLE-C',status='OLD',action='read',iostat=ios)
+   if (ios.ne.0)then
+     if(inose.eq.2)then
+        write(0,*) "Error: could not read GLE-C file!"
+        write(0,*) "Exiting..."
+     else   !in future release, we may use e.g. optimal sampling
+       write(6,*) "# Using canonical-sampling, Cp=kT"
+       gC=0.0d0
+       do i=1,ns+1
+          gC(i,i)=temp
+       enddo
+     end if
+   else    
+      write(6,*) "# Reading specialized Cp matrix."
+      write(6,*)'# Expecting eV units!!!'
+      read(121,*) cns
+      if (cns.ne.ns)then
+          write(0,*) " Error: size mismatch between given GLE-A and GLE-C!"
+          call abinerror('gle_init')
+      endif
+      do i=1,ns+1
+         read(121,*) gC(i,:)
+         gC(i,:)=gC(i,:)/autoev
       enddo
-     enddo
-    endif
+   end if
+   close(121)
+
+   ! the deterministic part of the propagator is obtained in a second
+   call matrix_exp(-dt*gA, ns+1,15,15,gT)
+    
+   ! the stochastic part is just as easy. we use gA as a temporary array
+   gA=gC-matmul(gT,matmul(gC,transpose(gT)))
+   call cholesky(gA, gS, ns+1)
+
+
+   ! then, we must initialize the auxiliary vectors. we keep general - as we might be 
+   ! using non-diagonal C to break detailed balance - and we use cholesky decomposition
+   ! of C. again, since one would like to initialize correctly the velocities in 
+   ! case of generic C, we use an extra slot for gp for the physical momentum, as we 
+   ! could then use it to initialize the momentum in the calling code
+
+   ! DH: ps or gp rewritten in init.f90 if irest.eq.1
+   ! always initialize, maybe rewritten in restart
+   gA = gC   
+   call cholesky(gA, gC, ns+1)
+    
+   do iw=1,nwalk
+
+      do j=1,natom*3
+         call gautrg(ran,ns+1,0,6)
+         do i=1,ns+1
+            gr(i)=ran(i)
+         enddo
+         gp(j,:)=matmul(gC,gr)
+      end do
+
+      ! TODO: always use ps to make code simpler
+      if(nwalk.gt.1)then
+         do j=1,natom*3
+            do i=1,ns
+               ps(j,i,iw) = gp(j,i+1)
+            enddo
+         enddo
+      endif
+!nwalk ENDDO
+   enddo
+   langham=0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
+   
+   deallocate(gA)
+   deallocate(gC)
+   deallocate(gr)
+   end subroutine gle_init
+
+   ! the GLE propagator. 
+   ! gT contains the deterministic (friction) part, and gS the stochastic (diffusion) part.
+   ! gp(j,1) must be filled with the mass-scaled actual j-th momentum, and contains in
+   ! gp(j,2:ns+1) the current values of additional momenta. 
+   ! the matrix multiplies are performed on the whole array at once, and the new momentum
+   ! is passed back to the caller, while the new s's are kept stored in gp.
+   ! please note that one can avoid the double conversion between mass-scaled and actual
+   ! momentum/velocity (as used by the calling code) by scaling with the mass the white-noise
+   ! random numbers. 
+
+   ! TODO: make this routine more general, pass variables and bead index
+   ! we need to pass gT and gS matrices as well to allow for PIGLET
+
+   ! Probably just extract core functions to a subroutine
+   subroutine gle_step(px,py,pz,m)
+   use mod_general,only:natom,nwalk
+   real(DP), intent(inout)  :: px(:,:)
+   real(DP), intent(inout)  :: py(:,:)
+   real(DP), intent(inout)  :: pz(:,:)
+   real(DP), intent(in)     :: m(:,:)
+   integer                :: i, j, iat, iw
+
+!   call printf(px,py,pz)
+
+   do iw=1,nwalk
+!for GLE+PIMD, we store additional momenta in ps 3d matrices
+      if(nwalk.gt.1)then
+         do i=1,ns
+            do iat=1,natom*3
+               gp(iat,i+1)=ps(iat,i,iw)
+            enddo
+         enddo
+      endif
       
 
-    do iat=1,natom
-     gp(iat,1)=px(iat,iw)         !<-- if m!= 1, here a proper scaling must be performed
-     gp(iat+natom,1)=py(iat,iw)   !<-- if m!= 1, here a proper scaling must be performed
-     gp(iat+natom*2,1)=pz(iat,iw) !<-- if m!= 1, here a proper scaling must be performed
-    enddo
+      do iat=1,natom
+         gp(iat,1) = px(iat,iw)         !<-- if m!= 1, here a proper scaling must be performed
+         gp(iat+natom,1) = py(iat,iw)   !<-- if m!= 1, here a proper scaling must be performed
+         gp(iat+natom*2,1) = pz(iat,iw) !<-- if m!= 1, here a proper scaling must be performed
+      enddo
 
 
 #ifdef USELIBS
-    call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,gp,natom*3,gT,ns+1,0.0d0,ngp,natom*3)
+      call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,gp,natom*3,gT,ns+1,0.0d0,ngp,natom*3)
 #else
-    ngp=transpose(matmul(gT,transpose(gp)))
+      ngp = transpose(matmul(gT,transpose(gp)))
 #endif
 
-    !now, must compute random part. 
-    !first, fill up gp of random n
-    do i=1,ns+1
-     call gautrg(ran,natom*3,0,6)
-     do j=1,natom
-        gp(j,i)=ran(j)*sqrt(m(j,iw))     !<-- if m!= 1, alternatively one could perform the scaling here (check also init!)
-        gp(j+natom,i)=ran(j+natom)*sqrt(m(j,iw))     
-        gp(j+natom*2,i)=ran(j+natom*2)*sqrt(m(j,iw))     
+      ! now, must compute random part. 
+      ! first, fill up gp of random n
+      do i=1,ns+1
+         call gautrg(ran,natom*3,0,6)
+         do j=1,natom
+            !<-- if m!= 1, alternatively one could perform the scaling here (check also init!)
+            gp(j,i)=ran(j)*sqrt(m(j,iw))     
+            gp(j+natom,i)=ran(j+natom)*sqrt(m(j,iw))     
+            gp(j+natom*2,i)=ran(j+natom*2)*sqrt(m(j,iw))     
+         end do
       end do
-    end do
 
 #ifdef USELIBS    
-    call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,gp,natom*3,gS,ns+1,1.0d0,ngp,natom*3)
-    gp=ngp
+      call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,gp,natom*3,gS,ns+1,1.0d0,ngp,natom*3)
+      gp = ngp
 #else
-    gp=ngp+transpose(matmul(gS,transpose(gp)))
+      gp = ngp + transpose(matmul(gS,transpose(gp)))
 #endif
 
-    do iat=1,natom
-     px(iat,iw)=gp(iat,1)           !<-- if m!= 1, here a proper inverse scaling must be performed
-     py(iat,iw)=gp(iat+natom,1)     !<-- if m!= 1, here a proper inverse scaling must be performed
-     pz(iat,iw)=gp(iat+2*natom,1)   !<-- if m!= 1, here a proper inverse scaling must be performed
-    end do
+      do iat=1,natom
+         px(iat,iw) = gp(iat,1)           !<-- if m!= 1, here a proper inverse scaling must be performed
+         py(iat,iw) = gp(iat+natom,1)     !<-- if m!= 1, here a proper inverse scaling must be performed
+         pz(iat,iw) = gp(iat+2*natom,1)   !<-- if m!= 1, here a proper inverse scaling must be performed
+      end do
 
-    if(nwalk.gt.1)then
-     do i=1,ns
-      do iat=1,natom*3
-       ps(iat,i,iw)=gp(iat,i+1)
-      enddo
-     enddo
-    endif
+      if(nwalk.gt.1)then
+         do i=1,ns
+            do iat=1,natom*3
+               ps(iat,i,iw) = gp(iat,i+1)
+            enddo
+         enddo
+      endif
 
-    !iw enddo
-    enddo
-  end subroutine gle_step
+   !iw enddo
+   enddo
+
+   end subroutine gle_step
 
   ! matrix exponential by scale & square.
   ! one can diagonalize with lapack, but it's not worth it, as 

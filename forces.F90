@@ -122,18 +122,18 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
       if(inose.eq.2)then  ! pro kvantovy termostat je jiny hamiltonian
          do iw=1,nwalk 
             do iat=1,natom
-               fx(iat,iw)=fx(iat,iw)+fxab(iat,iw)
-               fy(iat,iw)=fy(iat,iw)+fyab(iat,iw)
-               fz(iat,iw)=fz(iat,iw)+fzab(iat,iw)
+               fx(iat,iw) = fxab(iat,iw)
+               fy(iat,iw) = fyab(iat,iw)
+               fz(iat,iw) = fzab(iat,iw)
 !              eclas=eclas*nwalk  eclas stejne neovlivnuje dynamiku.....
             enddo 
          enddo
       else
          do iw=1,nwalk 
             do iat=1,natom
-               fx(iat,iw)=fx(iat,iw)+fxab(iat,iw)/nwalk
-               fy(iat,iw)=fy(iat,iw)+fyab(iat,iw)/nwalk 
-               fz(iat,iw)=fz(iat,iw)+fzab(iat,iw)/nwalk 
+               fx(iat,iw) = fxab(iat,iw) / nwalk
+               fy(iat,iw) = fyab(iat,iw) / nwalk 
+               fz(iat,iw) = fzab(iat,iw) / nwalk 
             enddo 
          enddo
       endif
@@ -144,8 +144,12 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
    if(istage.eq.1)then
       call FXtoFQ(fxab,fyab,fzab,fx,fy,fz)
    else if(istage.eq.2)then
+      ! The following makes things worse
+!      fxab = fxab / nwalk
+!      fyab = fyab / nwalk
+!      fzab = fzab / nwalk
       if (idebug.eq.1) call printf(fxab,fyab,fzab)
-      call XtoU(fxab,fyab,fzab,fx,fy,fz)
+      call XtoU(fxab, fyab, fzab, fx, fy, fz)
    endif
     
    ! Constraining atoms
@@ -189,10 +193,10 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
    use mod_general
    use mod_nhc,   ONLY: temp, inose
    implicit none
-   real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
-   real(DP),intent(in) :: amg(:,:)
-   real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
-   real(DP),intent(out) :: energy
+   real(DP), intent(in) :: x(:,:),y(:,:),z(:,:)
+   real(DP), intent(in) :: amg(:,:)
+   real(DP), intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
+   real(DP), intent(out) :: energy
    real(DP) :: ak(size(x,1),size(x,2))
    real(DP) :: equant
    integer  :: iat,iw,i,j,kplus,kminus
@@ -201,9 +205,9 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
    fy = 0.0d0
    fz = 0.0d0
 
-! TODO: ak parametry se nemuseji pocitat pokazde znova
-! Setting the quantum force constants
-! ak is defined is m*P/(beta^2*hbar^2)
+!  TODO: ak parametry se nemuseji pocitat pokazde znova
+!  Setting the quantum force constants
+!  ak is defined is m*P/(beta^2*hbar^2)
    do iw=1,nwalk
       do i=1,natom
          ak(i,iw)=nwalk*amg(i,iw)*TEMP**2

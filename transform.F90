@@ -80,11 +80,11 @@ module mod_transform
 
 
                                         
-   subroutine init_mass(amg,amt)
+   subroutine init_mass(amg, amt)
    use mod_const, only: PI
    use mod_general, only: istage
    use mod_system, ONLY: am
-   real(DP),intent(out) :: amg(:,:),amt(:,:)
+   real(DP),intent(out) :: amg(:,:), amt(:,:)
    real(DP)  :: lambda(size(amg,2)+1)
    integer :: iat,iw
 
@@ -115,16 +115,17 @@ module mod_transform
    endif
 
 !---SETTING MASSES FOR NORMAL MODES-----------  
-   if(istage.eq.2)then   
+   if(istage.eq.2)then
       do iat=1,natom
          lambda(1)=0
          do iw=2,nwalk,2
-            lambda(iw)=2*nwalk*(1-cos(PI*iw/nwalk))
+            lambda(iw) = 2 * nwalk * (1-cos(PI*iw/nwalk))
             lambda(iw+1)=lambda(iw)
          enddo
          do iw=2,nwalk
-            amg(iat,iw)=am(iat)*lambda(iw)
-            amt(iat,iw)=amg(iat,iw)
+            amg(iat,iw) = am(iat)*lambda(iw)
+            !DH DEBUG
+            amt(iat,iw) = amg(iat,iw)
          enddo
          amg(iat,1)=0.0d0
          amt(iat,1)=am(iat)
