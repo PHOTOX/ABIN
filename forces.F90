@@ -9,7 +9,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
    use mod_sbc,      only: force_sbc, isbc !,ibag
    use mod_system,   only: conatom
    use mod_nhc,      only: inose
-   use mod_harmon,   only: force_harmon,force_2dho,force_morse
+   use mod_harmon,   only: force_harmon,force_2dho,force_morse,force_doublewell
    use mod_guillot,  only: force_guillot
    use mod_utils,    only: printf
    use mod_transform
@@ -79,6 +79,8 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
           call force_2dho(transx,transy,transz,fxab,fyab,fzab,eclas)
         case ("morse")
           call force_morse(transx,transy,transz,fxab,fyab,fzab,eclas)
+        case ("doublewell")
+          call force_doublewell(transx,transy,transz,fxab,fyab,fzab,eclas)
         case ("guillot")
           call force_guillot(transx,transy,transz,fxab,fyab,fzab,eclas)
         case ("nab")

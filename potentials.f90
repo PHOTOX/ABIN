@@ -12,6 +12,8 @@ module mod_harmon
    real(DP) :: k1=0.0d0,k2=0.0d0,k3=0.0d0
 !--constants for 1D 2-particle harmonic oscillator
    real(DP) :: k=0.000d0, r0=0.0d0
+!--constants for double well 
+   real(DP) :: lambda=0.0d0, D0=0.0d0
 !--CONSTANTS for morse potential ccc
 !  V=De*(1-exp(-a(r-r0)))^2
    real(DP) :: De=0.059167d0,a=-1.0d0
@@ -43,6 +45,27 @@ module mod_harmon
       return
    end subroutine force_2dho
       
+!oooooooo DOUBLE WELL potential -- ref. Tuckerman, Statistical Mechanics,p350 --oooooooooooooooo
+  subroutine  force_doublewell(x,y,z,fxab,fyab,fzab,eclas)
+      use mod_general, only: nwalk
+      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out) :: fxab(:,:),fyab(:,:),fzab(:,:)
+      real(DP),intent(out) :: eclas
+      real(DP)             :: dx,dy,dz,r,fac
+      integer              :: i
+
+      eclas=0.0d0
+ 
+      do i=1,nwalk
+         fxab(1,i) = -4*D0*x(1,i)*(x(1,i)**2-r0**2)-lambda*y(1,i)
+         fyab(1,i) = -k1 * y(1,i) - lambda*x(1,i)
+         fzab(1,i) = 0
+      enddo
+
+      eclas = D0*(x(1,i)**2-r0**2)**2 + 0.5*k1*y(1,i)**2 + lambda*x(1,i)*y(1,i)
+
+  end subroutine force_doublewell
+
 
 !ccccccccHARMONIC OSCILLATOR--diatomic molecules--ccccccccccccccccccccc
    subroutine force_harmon(x,y,z,fxab,fyab,fzab,eclas)

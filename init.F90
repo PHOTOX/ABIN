@@ -77,7 +77,7 @@ subroutine init(dt, values1)
 
    namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
                      nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
-                     k,r0,k1,k2,k3,De,a, &
+                     k,r0,k1,k2,k3,De,a,D0,lambda, &
                      Nshake,ishake1,ishake2,shake_tol
 
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr,ignore_state, &
