@@ -65,7 +65,7 @@ subroutine init(dt, values1)
 !   REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
    REAL, POINTER  :: REALPTR => NULL ()
 
-   namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
+   namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile

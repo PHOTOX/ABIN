@@ -18,12 +18,16 @@ module mod_gle
    use mod_random, only: gautrg
    implicit none
    private
-   public :: readQT, ns, gp, ps, langham,gle_step,wn_init,gle_init,wn_step
-   real(DP), allocatable :: gS(:,:), gT(:,:), gp(:,:), ngp(:,:)
-   real(DP), allocatable :: ran(:)
+   public :: readQT, ns, ps, langham
+   public :: gle_step, wn_step, wn_init, gle_init, finalize_gle
+   real(DP), allocatable :: gS(:,:), gT(:,:)
    real(DP), allocatable :: ps(:,:,:)
+   ! For PIGLET
+   real(DP), allocatable :: gS_centroid(:,:), gT_centroid(:,:)
+   ! the following are only temporary helper arrays
+   real(DP), allocatable :: gp(:,:), ngp(:,:), ran(:)
    real(DP)         :: wnt, wns, langham
-   integer          :: ns, readQT=1
+   integer          :: ns, ns_centroid, readQT=1
    save
 
 contains
@@ -64,12 +68,13 @@ contains
   
    subroutine gle_init(dt)
    use mod_const, only: AUtoEV
-   use mod_general,only: natom,nwalk
+   use mod_general,only: natom, nwalk, inormalmodes
    use mod_utils, only: abinerror
    use mod_nhc,only: temp,inose
    implicit none
    real(DP), intent(in)  :: dt
    real(DP), allocatable :: gA(:,:), gC(:,:), gr(:)
+   real(DP), allocatable :: gA_centroid(:,:), gC_centroid(:,:)
    integer :: i, j, cns, ios, iw
    
 
@@ -91,13 +96,52 @@ contains
       write(0,*) "Exiting..."
       call abinerror('gle_init')
    end if
+
+   ! try to open GLE-C file
+   open(122,file='GLE-C',status='OLD',action='read',iostat=ios)
+   if (ios.ne.0.and.inose.eq.2)then
+      write(0,*) "Error: could not read GLE-C file!"
+      call abinerror("gle_init")
+   end if
+
+   if(inormalmodes.eq.1)then
+      read(121,*) ns
+      allocate(gA_centroid(ns+1,ns+1))
+      allocate(gC_centroid(ns+1,ns+1))
+      allocate(gS_centroid(ns+1,ns+1))
+      allocate(gT_centroid(ns+1,ns+1))
+      write(6,*)'# Reading A-matrix for centroid. Expecting a.u. units!!!!'
+      do i=1,ns+1
+         read(121,*) gA_centroid(i,:)
+      enddo
+      ns_centroid = ns
+
+      ! Read C matrix for centroid
+      read(122,*) ns
+      if(ns.ne.ns_centroid)then
+         write(*,*)'ERROR: Inconsistent size of A and C matrices for centroid.'
+         call abinerror("gle_init")
+      end if
+      write(6,*)'# Reading C-matrix for centroid. Expecting a.u. units!!!!'
+      do i=1, ns+1
+         read(122,*) gC_centroid(i,:)
+         gC_centroid(i,:) = gC_centroid(i,:) / AUtoEV
+      enddo
+   end if
+
    read(121,*) ns
+
+   if(inormalmodes.eq.1.and.ns.ne.ns_centroid)then
+      write(*,*)'ERROR: Size of A matrix for centroid and other normal modes does not match!'
+      write(*,*)'Double check file GLE-A!!'
+      call abinerror('gle_init')
+   end if
 
    !allocate everything we need
    if(natom*3.gt.ns+1)then 
-    allocate( ran(natom*3) )  !allocating arrays for random numbers produced by gautrg
+      allocate( ran(natom*3) )  !allocating arrays for random numbers produced by gautrg
    else
-    allocate( ran(ns+1) )  
+      allocate( ran(ns+1) )  
    endif
 
    allocate(gA(ns+1,ns+1))
@@ -107,47 +151,43 @@ contains
    allocate(gp(natom*3,ns+1))   
    allocate(ngp(natom*3,ns+1))   
    allocate(gr(ns+1))
-   if(nwalk.gt.1) allocate(ps(natom*3,ns,nwalk))!each bead has to have its additional momenta
+   allocate(ps(natom*3, ns, nwalk)) !each bead has to have its additional momenta
 
    
    write(6,*)'# Reading A-matrix. Expecting a.u. units!!!!'
    do i=1,ns+1
       read(121,*) gA(i,:)
    enddo
+
+
    close(121)
 
    !gamma for a WN langevin will be 1/tau, which would make it optimal for w=1/(2tau) angular frequency. 
    !DHmod: we DONT scale gA (which is expected to be fitted by http://gle4md.berlios.de/ ) 
-   !A metrix is expected to be in atomic units of time 
+   !A matrix is expected to be in atomic units of time 
    !gA=gA
 
    ! reads C (in eV!), or init to kT
-   open(121,file='GLE-C',status='OLD',action='read',iostat=ios)
-   if (ios.ne.0)then
-     if(inose.eq.2)then
-        write(0,*) "Error: could not read GLE-C file!"
-        write(0,*) "Exiting..."
-     else   !in future release, we may use e.g. optimal sampling
-       write(6,*) "# Using canonical-sampling, Cp=kT"
-       gC=0.0d0
-       do i=1,ns+1
-          gC(i,i)=temp
-       enddo
-     end if
+   if(inose.eq.4)then
+      write(6,*) "# Using canonical-sampling, Cp=kT"
+      gC=0.0d0
+      do i=1,ns+1
+         gC(i,i)=temp
+      enddo
    else    
-      write(6,*) "# Reading specialized Cp matrix."
+      write(6,*)"# Reading specialized Cp matrix."
       write(6,*)'# Expecting eV units!!!'
-      read(121,*) cns
+      read(122,*) cns
       if (cns.ne.ns)then
-          write(0,*) " Error: size mismatch between given GLE-A and GLE-C!"
+          write(0,*) " Error: size mismatch matrices in GLE-A and GLE-C!"
           call abinerror('gle_init')
       endif
-      do i=1,ns+1
-         read(121,*) gC(i,:)
-         gC(i,:)=gC(i,:)/autoev
+      do i=1, ns+1
+         read(122,*) gC(i,:)
+         gC(i,:) = gC(i,:) / AUtoEV
       enddo
    end if
-   close(121)
+   close(122)
 
    ! the deterministic part of the propagator is obtained in a second
    call matrix_exp(-dt*gA, ns+1,15,15,gT)
@@ -165,42 +205,61 @@ contains
 
    ! DH: ps or gp rewritten in init.f90 if irest.eq.1
    ! always initialize, maybe rewritten in restart
+
+   ! TODO
+   ! gA probably not really needed, since its rewritten 
+   !do iw=1, nwalk
+   !  call initialize_momenta(gA, gC, ps, iw)
+   !end do
    gA = gC   
    call cholesky(gA, gC, ns+1)
     
-   do iw=1,nwalk
+   do iw=1, nwalk
+
 
       do j=1,natom*3
          call gautrg(ran,ns+1,0,6)
          do i=1,ns+1
-            gr(i)=ran(i)
+            gr(i) = ran(i)
          enddo
-         gp(j,:)=matmul(gC,gr)
+         ! TODO, actually pass this to initialize momenta
+         gp(j,:) = matmul(gC,gr)
       end do
 
-      ! TODO: always use ps to make code simpler
-      if(nwalk.gt.1)then
-         do j=1,natom*3
-            do i=1,ns
-               ps(j,i,iw) = gp(j,i+1)
-            enddo
+      do j=1,natom*3
+         do i=1,ns
+            ps(j,i,iw) = gp(j,i+1)
          enddo
-      endif
-!nwalk ENDDO
+      enddo
+
    enddo
    langham=0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
    
    deallocate(gA)
    deallocate(gC)
+   if(inormalmodes.eq.1)then
+      deallocate(gA_centroid)
+      deallocate(gC_centroid)
+   end if
    deallocate(gr)
    end subroutine gle_init
+
+   subroutine finalize_gle()
+   if(allocated(gS))then
+      deallocate(gS, gT, ps, gp, ngp, ran)
+   end if
+   if(allocated(gS_centroid))then
+      deallocate(gS_centroid, gT_centroid)
+   end if
+
+   end subroutine 
 
    ! the GLE propagator. 
    ! gT contains the deterministic (friction) part, and gS the stochastic (diffusion) part.
    ! gp(j,1) must be filled with the mass-scaled actual j-th momentum, and contains in
    ! gp(j,2:ns+1) the current values of additional momenta. 
    ! the matrix multiplies are performed on the whole array at once, and the new momentum
-   ! is passed back to the caller, while the new s's are kept stored in gp.
+   ! is passed back to the caller, while the new s's are kept stored in ps.
    ! please note that one can avoid the double conversion between mass-scaled and actual
    ! momentum/velocity (as used by the calling code) by scaling with the mass the white-noise
    ! random numbers. 
@@ -220,14 +279,12 @@ contains
 !   call printf(px,py,pz)
 
    do iw=1,nwalk
-!for GLE+PIMD, we store additional momenta in ps 3d matrices
-      if(nwalk.gt.1)then
-         do i=1,ns
-            do iat=1,natom*3
-               gp(iat,i+1)=ps(iat,i,iw)
-            enddo
+! for PI+GLE and PIGLET, we need to store additional momenta in ps 3d matrices
+      do i=1,ns
+         do iat=1,natom*3
+            gp(iat,i+1) = ps(iat,i,iw)
          enddo
-      endif
+      enddo
       
 
       do iat=1,natom
@@ -262,19 +319,18 @@ contains
       gp = ngp + transpose(matmul(gS,transpose(gp)))
 #endif
 
+   ! Pass the results back
       do iat=1,natom
          px(iat,iw) = gp(iat,1)           !<-- if m!= 1, here a proper inverse scaling must be performed
          py(iat,iw) = gp(iat+natom,1)     !<-- if m!= 1, here a proper inverse scaling must be performed
          pz(iat,iw) = gp(iat+2*natom,1)   !<-- if m!= 1, here a proper inverse scaling must be performed
       end do
 
-      if(nwalk.gt.1)then
-         do i=1,ns
-            do iat=1,natom*3
-               ps(iat,i,iw) = gp(iat,i+1)
-            enddo
+      do i=1,ns
+         do iat=1,natom*3
+            ps(iat,i,iw) = gp(iat,i+1)
          enddo
-      endif
+      enddo
 
    !iw enddo
    enddo

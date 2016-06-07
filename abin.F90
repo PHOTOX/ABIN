@@ -333,7 +333,8 @@ subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general
    use mod_files,  only: MAXUNITS
-   use mod_nhc
+   use mod_nhc!,   only: finalize_nhc
+   use mod_gle,    only: finalize_gle
    use mod_estimators, only: h
    use mod_harmon, only: hess
 
@@ -399,6 +400,7 @@ subroutine finish(error_code)
    if (istage.eq.2) call fftw_end()
 #endif
 
+!  TODO: this should be in nosehoover routine
    if(allocated(w))     deallocate( w )
    if(allocated(Qm))    deallocate( Qm )
    if(allocated(ms))    deallocate( ms )
@@ -408,6 +410,9 @@ subroutine finish(error_code)
    if(allocated(xi_x))  deallocate( xi_x )
    if(allocated(xi_y))  deallocate( xi_y )
    if(allocated(xi_z))  deallocate( xi_z )
+   if(inose.gt.1.and.inose.lt.5)then
+      call finalize_gle()
+   end if
 !TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
 

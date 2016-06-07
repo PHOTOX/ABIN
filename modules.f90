@@ -45,7 +45,8 @@ end module  mod_array_size
 module mod_general
    use mod_const, only: DP
    implicit none
-   integer :: it=0,ipimd=0,istage=0,nwalk=1,ihess=0,md=1
+   integer :: it=0, md=1, ihess
+   integer :: ipimd=0, istage=0, nwalk=1, inormalmodes
    character(len=15) :: pot='none'
    integer :: imini=0,nstep=1,nabin=50
    integer :: nwrite=1,nwritex=1,ncalc=1,nwritev=0,nwritef=0
