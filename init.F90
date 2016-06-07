@@ -343,9 +343,9 @@ print '(a)','**********************************************'
             write(*,*)'ipimd=0,Resetting number of walkers to 1.'
             write(*,*)'ipimd=0,Using velocity Verlet integrator'
          end if
-         md=2
-         nwalk=1
-         nabin=1   ! TODO:safety for respashake code
+         md = 2
+         nwalk = 1
+         nabin = 1   ! TODO:safety for respashake code
                    ! We should probably copy shake to velocity verlet
                    ! algorithm as well
       endif
@@ -359,11 +359,16 @@ print '(a)','**********************************************'
 
       if(ipimd.eq.1)then
          if (my_rank.eq.0) write(*,*)'ipimd=1,using RESPA integrator'
-         md=1
+         md = 1
       endif
 
+      !DH temporary hack
+      if(ipimd.eq.1.and.inormalmodes.eq.1)then
+         md = 3
+      end if
+
 #ifdef USEFFTW
-      if(istage.eq.2) call fftw_init(nwalk)
+      if(inormalmodes.gt.0) call fftw_init(nwalk)
 #endif
 
 
@@ -579,7 +584,7 @@ print '(a)','**********************************************'
 #endif
 
 #ifndef USEFFTW
-      if(istage.eq.2)then
+      if(inormalmodes.gt.0)then
          write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
          write(*,*)'Normal mode transformations cannot be performed.'
          call abinerror('init')
@@ -749,9 +754,13 @@ print '(a)','**********************************************'
        write(*,*)'ipimd has to be 0,1,2 or 3.'
        error=1
       endif
-      if(istage.ne.1.and.istage.ne.0.and.istage.ne.2)then
-       write(*,*)'istage has to be 0,1 or 2'
-       error=1 
+      if(istage.ne.1.and.istage.ne.0)then
+         write(*,*)'ERROR: istage has to be 0 or 1'
+         error=1 
+      endif
+      if(inormalmodes.lt.0.and.inormalmodes.gt.2)then
+         write(*,*)'ERROR: inormalmodes has to be 0, 1 or 2!'
+         error=1 
       endif
       if(readnhc.eq.1.and.initNHC.eq.1.and.irest.eq.1)then
        write(*,*)'Warning: Conflicting keywords readnhc and initNHC set to 1.'
@@ -832,12 +841,12 @@ print '(a)','**********************************************'
        if (iknow.ne.1) error=1
       endif
       if(istage.eq.1.and.ipimd.ne.1)then
-      write(*,*)'The staging transformation is only meaningful for PIMD'
-       error=1
+         write(*,*)'The staging transformation is only meaningful for PIMD'
+         error=1
       endif
-      if(istage.eq.2.and.ipimd.ne.1)then
-      write(*,*)'The normal mode transformation is only meaningful for PIMD. Exiting...'
-       error=1
+      if(inormalmodes.gt.0.and.ipimd.ne.1)then
+         write(*,*)'The normal mode transformation is only meaningful for PIMD. Exiting...'
+         error=1
       endif
       if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2)then
        write(*,*)'PIMD should be done with staging or normal mode transformation! Exiting...'
@@ -845,8 +854,8 @@ print '(a)','**********************************************'
        if (iknow.ne.1) error=1
       endif
       if(istage.eq.1.and.inose.eq.2)then
-       write(*,*)'The staging transformation is not compatible with GLE thermostat.'
-       error=1
+         write(*,*)'The staging transformation is not compatible with GLE thermostat.'
+         error=1
       endif
       if(nyosh.ne.1.and.nyosh.ne.3.and.nyosh.ne.7)then
        write(*,*)'Variable nyosh(order of Suzuki-Yoshiga scheme) must be 1,3 or 7'

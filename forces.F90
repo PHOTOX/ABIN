@@ -51,14 +51,16 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
 
 ! Back stage transformation, Cartesian coordinates are kept in trans
 ! matrices (even if staging is OFF!)
-   if(istage.eq.1) call QtoX(x,y,z,transx,transy,transz)
-   if(istage.eq.2) call UtoX(x,y,z,transx,transy,transz)
-   if(istage.eq.0)then
+   if(istage.eq.1)then
+      call QtoX(x,y,z,transx,transy,transz)
+   else if(inormalmodes.gt.0)then
+      call UtoX(x,y,z,transx,transy,transz)
+   else
       do iat=1,natom
          do iw=1,nwalk
-            transx(iat,iw)=x(iat,iw)
-            transy(iat,iw)=y(iat,iw)
-            transz(iat,iw)=z(iat,iw)
+            transx(iat,iw) = x(iat,iw)
+            transy(iat,iw) = y(iat,iw)
+            transz(iat,iw) = z(iat,iw)
          enddo
       enddo 
    endif
@@ -116,40 +118,42 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
 #endif
 !------------------------------------
 
-! Classical force without the stage transformation
-!  
-   if(istage.eq.0)then
-      if(inose.eq.2)then  ! pro kvantovy termostat je jiny hamiltonian
-         do iw=1,nwalk 
-            do iat=1,natom
-               fx(iat,iw) = fxab(iat,iw)
-               fy(iat,iw) = fyab(iat,iw)
-               fz(iat,iw) = fzab(iat,iw)
-!              eclas=eclas*nwalk  eclas stejne neovlivnuje dynamiku.....
-            enddo 
-         enddo
-      else
-         do iw=1,nwalk 
-            do iat=1,natom
-               fx(iat,iw) = fxab(iat,iw) / nwalk
-               fy(iat,iw) = fyab(iat,iw) / nwalk 
-               fz(iat,iw) = fzab(iat,iw) / nwalk 
-            enddo 
-         enddo
-      endif
-   endif
-
 !--TRANSFORMING FORCES FROM CARTESIAN TO STAGING or NORMAL MODE COORDS--!
 !--forces are divided by nwalk inside the FXtoFQ routine!---------------!
    if(istage.eq.1)then
+
       call FXtoFQ(fxab,fyab,fzab,fx,fy,fz)
-   else if(istage.eq.2)then
+
+   else if(inormalmodes.gt.0)then
+
       ! The following makes things worse
 !      fxab = fxab / nwalk
 !      fyab = fyab / nwalk
 !      fzab = fzab / nwalk
       if (idebug.eq.1) call printf(fxab,fyab,fzab)
       call XtoU(fxab, fyab, fzab, fx, fy, fz)
+
+   else if (inose.eq.2)then
+      ! for PI+GLE 
+      do iw=1,nwalk 
+         do iat=1,natom
+            fx(iat,iw) = fxab(iat,iw)
+            fy(iat,iw) = fyab(iat,iw) 
+            fz(iat,iw) = fzab(iat,iw) 
+         enddo 
+      enddo
+
+   else
+
+      ! no transformation, classical MD
+      do iw=1,nwalk 
+         do iat=1,natom
+            fx(iat,iw) = fxab(iat,iw) / nwalk
+            fy(iat,iw) = fyab(iat,iw) / nwalk 
+            fz(iat,iw) = fzab(iat,iw) / nwalk 
+         enddo 
+      enddo
+
    endif
     
    ! Constraining atoms
@@ -173,14 +177,12 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
 ! Stage transformation,
       if(istage.eq.1)then
          call XtoQ(transx,transy,transz,x,y,z)
-
-      else if(istage.eq.2)then
+      else if(inormalmodes.gt.0)then
          call XtoU(transx,transy,transz,x,y,z)
-
-      else if(istage.eq.0)then
-         x=transx
-         y=transy
-         z=transz
+      else
+         x = transx
+         y = transy
+         z = transz
       endif
 
    endif
@@ -223,6 +225,13 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
       enddo
    endif
 
+   ! PIGLET, try different way from Ceriotti article from 2010
+   if(inormalmodes.eq.1)then
+      write(*,*)'Whooops, this was not written yet!!'
+      stop 1
+      ! call force_quantum_nm()
+   end if
+
    equant=0.0d0
 
 
@@ -254,8 +263,8 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
       enddo
    endif
 
-! If the staging transformation is used
-   if(istage.eq.1.or.istage.eq.2)then
+!  If the staging or normal mode transformation is used
+   if(istage.eq.1.or.inormalmodes.gt.0)then
       do j=1,natom 
          do i=1,nwalk 
             fx(j,i)=-ak(j,i)*x(j,i)   

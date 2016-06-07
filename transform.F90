@@ -82,7 +82,7 @@ module mod_transform
                                         
    subroutine init_mass(amg, amt)
    use mod_const, only: PI
-   use mod_general, only: istage
+   use mod_general, only: istage, inormalmodes
    use mod_system, ONLY: am
    real(DP),intent(out) :: amg(:,:), amt(:,:)
    real(DP)  :: lambda(size(amg,2)+1)
@@ -115,7 +115,7 @@ module mod_transform
    endif
 
 !---SETTING MASSES FOR NORMAL MODES-----------  
-   if(istage.eq.2)then
+   if(inormalmodes.eq.1)then
       do iat=1,natom
          lambda(1)=0
          do iw=2,nwalk,2
@@ -135,6 +135,15 @@ module mod_transform
 !        write(*,*)'amg2',(amg(iat,iw)*2*sin(pi*(iw-1)/nwalk),iw=1,nwalk)
       enddo
 
+   else if (inormalmodes.eq.2)then
+      write(*,*)'This part is not written yet!!'
+      call abinerror("cdsjkcd")
+      ! amg = XX
+      do iw=1,nwalk
+         do iat=1,natom
+            amt(iat,iw)=am(iat)
+         enddo
+      enddo
    endif
 
    end subroutine init_mass

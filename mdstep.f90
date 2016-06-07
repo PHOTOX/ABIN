@@ -6,7 +6,7 @@ module mod_mdstep
    use mod_transform
    implicit none
    private
-   public :: verletstep, respastep, respashake
+   public :: verletstep_new, verletstep, respastep, respashake
 
    contains
 
@@ -53,6 +53,7 @@ module mod_mdstep
 !      PX = PX + dt*FX
 !      PY = PY + dt*FY
 !      PZ = PZ + dt*FZ
+   ! TODO: move contraints here
 
    RETURN
    END subroutine shiftP
@@ -133,7 +134,7 @@ module mod_mdstep
    ! further info is before subroutine respa_shake
    subroutine respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
               fxc,fyc,fzc,fxq,fyq,fzq)
-   use mod_general,  only: istage, nabin
+   use mod_general,  only: nabin
    use mod_nhc,      only: inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
    use mod_gle,      only: langham, gle_step
    use mod_interfaces, only: force_clas, force_quantum
@@ -176,48 +177,49 @@ module mod_mdstep
    do iabin=1,nabin
    
       if(inose.eq.1)then
-      if (imasst.eq.1)then
-         call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2*nabin))
-      else
-         call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
-      endif
-   end if
+         if (imasst.eq.1)then
+            call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2*nabin))
+         else
+            call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
+         endif
+      end if
 
-   if (inose.eq.2.and.iabin.ne.1)then
-      langham=langham+ekin_p(px,py,pz)
-      call gle_step(px,py,pz,amt)
-      langham=langham-ekin_p(px,py,pz)
-   end if
+      if (inose.eq.2.and.iabin.ne.1)then
+         langham=langham+ekin_p(px,py,pz)
+         call gle_step(px,py,pz,amt)
+         langham=langham-ekin_p(px,py,pz)
+      end if
 
-! if(istage.eq.2)then
+! if(inormalmodes.eq.??)then
 !  call XtoU(transpx,transpy,transpz,px,py,pz)
 ! endif
 !----quantum forces propagated using normal modes 
 !---- GLE must use physical masses, i.e. cartesian coordinates
 
-   call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
-   if(conatom.gt.0) call constrainP (px,py,pz)
+      call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
+      ! TODO: move this inside shiftP
+      if(conatom.gt.0) call constrainP (px,py,pz)
+  
+      call shiftX(x,y,z,px,py,pz,amt,dt/nabin)
  
-   call shiftX(x,y,z,px,py,pz,amt,dt/nabin)
-
-   call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
-
-   call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
-   if(conatom.gt.0) call constrainP (px,py,pz)
-
-   if (inose.eq.2.and.iabin.ne.nabin)then
-      langham=langham+ekin_p(px,py,pz)
-      call gle_step(px,py,pz,amt)
-      langham=langham-ekin_p(px,py,pz)
-   end if
-
-   if(inose.eq.1)then
-      if (imasst.eq.1)then
-         call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2*nabin))
-      else
-         call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
+      call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
+ 
+      call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
+      if(conatom.gt.0) call constrainP (px,py,pz)
+ 
+      if (inose.eq.2.and.iabin.ne.nabin)then
+         langham=langham+ekin_p(px,py,pz)
+         call gle_step(px,py,pz,amt)
+         langham=langham-ekin_p(px,py,pz)
+      end if
+ 
+      if(inose.eq.1)then
+         if (imasst.eq.1)then
+            call shiftNHC_yosh_mass (px,py,pz,amt,dt/(2*nabin))
+         else
+            call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
+         endif
       endif
-   endif
    
    ! iabin loop
    enddo
@@ -361,5 +363,69 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
 
 
    end subroutine respashake
+
+!--Velocity verlet ALGORITHM including PIGLET Daniel Hollas,2016
+! esentially added PIMD without RESPA
+!  At this moment it does not contain shake routines,
+!  which are only in respashake function
+!  GLE and NHC thermostats available at the moment
+   subroutine verletstep_new(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
+   use mod_general, ONLY: pot, ipimd, inormalmodes
+   use mod_nhc, ONLY:inose, imasst, shiftNHC_yosh, shiftNHC_yosh_mass
+   use mod_gle, ONLY:langham, gle_step, wn_step
+   use mod_interfaces, only: force_clas
+   real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
+   real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
+   real(DP),intent(in)    :: amt(:,:)
+   real(DP),intent(in)    :: dt
+   real(DP),intent(inout) :: eclas
+
+
+   !---THERMOSTATS------------------
+   ! TODO: add select statement here
+   if(inose.eq.1)then
+      if (imasst.eq.1)then
+         call shiftNHC_yosh_mass(px,py,pz,amt,dt/2)
+      else
+         call shiftNHC_yosh(px,py,pz,amt,dt/2)
+      endif
+   else if (inose.eq.3)then
+      call wn_step(px,py,pz,amt)
+   else if (inose.eq.2.or.inose.eq.4)then
+      langham=langham+ekin_p(px,py,pz)
+      call gle_step(px,py,pz,amt)
+      langham=langham-ekin_p(px,py,pz)
+   endif
+   !--END OF THERMOSTATS
+   
+   call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+   
+   call shiftX(x, y, z, px, py, pz, amt, dt)
+   
+   call force_clas(fxc,fyc,fzc,x,y,z,eclas)
+
+   if(ipimd.eq.1) call force_quantum(fxc,fyc,fzc,x,y,z,eclas)
+
+   call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+
+   !---THERMOSTATS------------------
+   ! TODO: add select statement here
+   if(inose.eq.1)then
+      if (imasst.eq.1)then
+         call shiftNHC_yosh_mass(px,py,pz,amt,dt/2)
+      else
+         call shiftNHC_yosh(px,py,pz,amt,dt/2)
+      endif
+   else if (inose.eq.3)then
+      call wn_step(px,py,pz,amt)
+   else if (inose.eq.2.or.inose.eq.4)then
+      langham=langham+ekin_p(px,py,pz)
+      call gle_step(px,py,pz,amt)
+      langham=langham-ekin_p(px,py,pz)
+   endif
+   !--END OF THERMOSTATS
+   
+   end subroutine verletstep_new
 
 end module mod_mdstep

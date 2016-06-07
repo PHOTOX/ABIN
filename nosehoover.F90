@@ -63,7 +63,7 @@ module mod_nhc
 
    subroutine nhc_init() 
    use mod_const,    only: AMU, AUtoFS
-   use mod_general, only: ipimd, nwalk, natom, istage
+   use mod_general, only: ipimd, nwalk, natom, inormalmodes
    use mod_system, ONLY: dime
    use mod_random, only: gautrg
    implicit none
@@ -112,7 +112,7 @@ module mod_nhc
    enddo
 !in pimd the Nose-Hoover mass is set within the code (as 1/(beta*omega_p^2), where omega_p=sqrt(P)/(beta*hbar)
 !  DH DEBUG
-!  if (ipimd.eq.1.and.istage.ne.2)then
+!  if (ipimd.eq.1.and.inormalmodes.ne.2)then
    if(ipimd.eq.1)then
       do iw=1,nwalk
          Qm(iw)=1/(TEMP*NWALK)
