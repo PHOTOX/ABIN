@@ -127,6 +127,12 @@ contains
          read(122,*) gC_centroid(i,:)
          gC_centroid(i,:) = gC_centroid(i,:) / AUtoEV
       enddo
+
+      call compute_propagator(gA_centroid, gC_centroid, gT_centroid, gS_centroid, dt)
+      
+      ! For initialization of momenta, see below
+      gA_centroid = gC_centroid   
+      call cholesky(gA_centroid, gC_centroid, ns+1)
    end if
 
    read(121,*) ns
@@ -189,12 +195,7 @@ contains
    end if
    close(122)
 
-   ! the deterministic part of the propagator is obtained in a second
-   call matrix_exp(-dt*gA, ns+1,15,15,gT)
-    
-   ! the stochastic part is just as easy. we use gA as a temporary array
-   gA=gC-matmul(gT,matmul(gC,transpose(gT)))
-   call cholesky(gA, gS, ns+1)
+   call compute_propagator(gA, gC, gT, gS, dt)
 
 
    ! then, we must initialize the auxiliary vectors. we keep general - as we might be 
@@ -203,36 +204,21 @@ contains
    ! case of generic C, we use an extra slot for gp for the physical momentum, as we 
    ! could then use it to initialize the momentum in the calling code
 
-   ! DH: ps or gp rewritten in init.f90 if irest.eq.1
+   ! DH: ps rewritten in init.f90 if irest.eq.1
    ! always initialize, maybe rewritten in restart
 
-   ! TODO
-   ! gA probably not really needed, since its rewritten 
-   !do iw=1, nwalk
-   !  call initialize_momenta(gA, gC, ps, iw)
-   !end do
    gA = gC   
    call cholesky(gA, gC, ns+1)
-    
-   do iw=1, nwalk
 
+   do iw = 1, nwalk
+      ! Centroid was already initialized
+      if(inormalmodes.eq.1.and.iw.eq.1)then
+         call initialize_momenta(gC_centroid, 1)
+      else
+         call initialize_momenta(gC, iw)
+      end if
+   end do
 
-      do j=1,natom*3
-         call gautrg(ran,ns+1,0,6)
-         do i=1,ns+1
-            gr(i) = ran(i)
-         enddo
-         ! TODO, actually pass this to initialize momenta
-         gp(j,:) = matmul(gC,gr)
-      end do
-
-      do j=1,natom*3
-         do i=1,ns
-            ps(j,i,iw) = gp(j,i+1)
-         enddo
-      enddo
-
-   enddo
    langham=0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
    
    deallocate(gA)
@@ -241,8 +227,39 @@ contains
       deallocate(gA_centroid)
       deallocate(gC_centroid)
    end if
-   deallocate(gr)
    end subroutine gle_init
+
+   subroutine initialize_momenta(C, iw)
+   use mod_arrays,  only: px, py, pz
+   use mod_general, only: natom
+   use mod_utils,   only: abinerror
+   real(DP), intent(in) :: C(:,:)
+   integer, intent(in)  :: iw
+   real(DP),allocatable :: gr(:)
+   integer  :: i, j
+   ! WARNING: this routine must be called after arrays are allocated!
+   if(.not.allocated(ps))then
+      write(*,*)"WHOOOPS: Fatal programming error int gle.F90!!"
+      call abinerror("initialize_momenta")
+   end if
+
+   allocate(gr(ns+1))
+
+   do j=1,natom*3
+      call gautrg(gr,ns+1,0,6)
+      ! TODO, actually pass this to initialize momenta
+      gp(j,:) = matmul(C, gr)
+   end do
+
+   do j=1,natom*3
+      do i=1,ns
+         ps(j,i,iw) = gp(j,i+1)
+      enddo
+   enddo
+
+   deallocate(gr)
+   end subroutine initialize_momenta
+
 
    subroutine finalize_gle()
    if(allocated(gS))then
@@ -252,7 +269,25 @@ contains
       deallocate(gS_centroid, gT_centroid)
    end if
 
-   end subroutine 
+   end subroutine finalize_gle
+
+
+   subroutine compute_propagator(A, C, T, S, dt)
+      ! Matrix A is rewritten on output
+   real(DP), intent(inout) :: A(:,:) 
+   real(DP), intent(in)    :: C(:,:)
+   real(DP), intent(out)   :: T(:,:), S(:,:)
+   real(DP), intent(in)    :: dt
+
+   ! the deterministic part of the propagator is obtained in a second
+   call matrix_exp(-dt*A, ns+1, 15, 15, T)
+    
+   ! the stochastic part is just as easy. we use gA as a temporary array
+   A = C - matmul(T, matmul(C, transpose(T)) )
+   call cholesky(A, S, ns+1)
+
+   end subroutine compute_propagator
+
 
    ! the GLE propagator. 
    ! gT contains the deterministic (friction) part, and gS the stochastic (diffusion) part.
