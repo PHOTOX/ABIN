@@ -289,22 +289,14 @@ contains
    end subroutine compute_propagator
 
 
-   ! the GLE propagator. 
+   ! The GLE propagator. 
    ! gT contains the deterministic (friction) part, and gS the stochastic (diffusion) part.
    ! gp(j,1) must be filled with the mass-scaled actual j-th momentum, and contains in
    ! gp(j,2:ns+1) the current values of additional momenta. 
    ! the matrix multiplies are performed on the whole array at once, and the new momentum
    ! is passed back to the caller, while the new s's are kept stored in ps.
-   ! please note that one can avoid the double conversion between mass-scaled and actual
-   ! momentum/velocity (as used by the calling code) by scaling with the mass the white-noise
-   ! random numbers. 
-
-   ! TODO: make this routine more general, pass variables and bead index
-   ! we need to pass gT and gS matrices as well to allow for PIGLET
-
-   ! Probably just extract core functions to a subroutine
-   subroutine gle_step(px,py,pz,m)
-   use mod_general,only:natom,nwalk
+   subroutine gle_step(px, py, pz, m)
+   use mod_general,only:natom, nwalk, inormalmodes
    real(DP), intent(inout)  :: px(:,:)
    real(DP), intent(inout)  :: py(:,:)
    real(DP), intent(inout)  :: pz(:,:)
@@ -314,51 +306,31 @@ contains
 !   call printf(px,py,pz)
 
    do iw=1,nwalk
-! for PI+GLE and PIGLET, we need to store additional momenta in ps 3d matrices
+
       do i=1,ns
          do iat=1,natom*3
             gp(iat,i+1) = ps(iat,i,iw)
          enddo
       enddo
       
-
       do iat=1,natom
-         gp(iat,1) = px(iat,iw)         !<-- if m!= 1, here a proper scaling must be performed
-         gp(iat+natom,1) = py(iat,iw)   !<-- if m!= 1, here a proper scaling must be performed
-         gp(iat+natom*2,1) = pz(iat,iw) !<-- if m!= 1, here a proper scaling must be performed
+         gp(iat,1) = px(iat,iw)         
+         gp(iat+natom,1) = py(iat,iw)   
+         gp(iat+natom*2,1) = pz(iat,iw) 
       enddo
 
+      if(inormalmodes.eq.2.and.iw.eq.1)then
+         ! PIGLET centroid propagation
+         call gle_propagate(gp, gT_centroid, gS_centroid, m, iw)
+      else
+         call gle_propagate(gp, gT, gS, m, iw)
+      end if
 
-#ifdef USELIBS
-      call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,gp,natom*3,gT,ns+1,0.0d0,ngp,natom*3)
-#else
-      ngp = transpose(matmul(gT,transpose(gp)))
-#endif
-
-      ! now, must compute random part. 
-      ! first, fill up gp of random n
-      do i=1,ns+1
-         call gautrg(ran,natom*3,0,6)
-         do j=1,natom
-            !<-- if m!= 1, alternatively one could perform the scaling here (check also init!)
-            gp(j,i)=ran(j)*sqrt(m(j,iw))     
-            gp(j+natom,i)=ran(j+natom)*sqrt(m(j,iw))     
-            gp(j+natom*2,i)=ran(j+natom*2)*sqrt(m(j,iw))     
-         end do
-      end do
-
-#ifdef USELIBS    
-      call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,gp,natom*3,gS,ns+1,1.0d0,ngp,natom*3)
-      gp = ngp
-#else
-      gp = ngp + transpose(matmul(gS,transpose(gp)))
-#endif
-
-   ! Pass the results back
+      ! Pass the results back
       do iat=1,natom
-         px(iat,iw) = gp(iat,1)           !<-- if m!= 1, here a proper inverse scaling must be performed
-         py(iat,iw) = gp(iat+natom,1)     !<-- if m!= 1, here a proper inverse scaling must be performed
-         pz(iat,iw) = gp(iat+2*natom,1)   !<-- if m!= 1, here a proper inverse scaling must be performed
+         px(iat,iw) = gp(iat,1)           
+         py(iat,iw) = gp(iat+natom,1)     
+         pz(iat,iw) = gp(iat+2*natom,1)   
       end do
 
       do i=1,ns
@@ -371,6 +343,44 @@ contains
    enddo
 
    end subroutine gle_step
+
+
+   subroutine gle_propagate(p, T, S, m, iw)
+   use mod_general, only: natom, inormalmodes
+   real(DP), intent(inout) :: p(:,:)
+   real(DP), intent(in) :: T(:,:), S(:,:), m(:,:)
+   integer, intent(in)  :: iw  ! this one is stupid
+   integer :: i, j
+   ! ran and ngp arrays are allocated in gle_init,
+   ! maybe we should move the allocation here
+
+#ifdef USELIBS
+   call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,p,natom*3,T,ns+1,0.0d0,ngp,natom*3)
+#else
+   ngp = transpose(matmul(gT,transpose(p)))
+#endif
+
+   ! now, must compute random part. 
+   ! first, fill up gp of random n
+   do i=1,ns+1
+      call gautrg(ran,natom*3,0,6)
+      do j=1,natom
+         !<-- if m!= 1, alternatively one could perform the scaling here (check also init!)
+         p(j,i)=ran(j)*sqrt(m(j,iw))
+         p(j+natom,i)=ran(j+natom)*sqrt(m(j,iw))
+         p(j+natom*2,i)=ran(j+natom*2)*sqrt(m(j,iw))
+      end do
+   end do
+
+#ifdef USELIBS    
+   call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,p,natom*3,S,ns+1,1.0d0,gp,natom*3)
+   p = ngp
+#else
+   p = ngp + transpose(matmul(S,transpose(p)))
+#endif
+
+   end subroutine gle_propagate
+
 
   ! matrix exponential by scale & square.
   ! one can diagonalize with lapack, but it's not worth it, as 
