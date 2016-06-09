@@ -373,7 +373,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
    use mod_general, ONLY: pot, ipimd, inormalmodes
    use mod_nhc, ONLY:inose, imasst, shiftNHC_yosh, shiftNHC_yosh_mass
    use mod_gle, ONLY:langham, gle_step, wn_step
-   use mod_interfaces, only: force_clas
+   use mod_interfaces, only: force_clas, propagate_nm
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
    real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
@@ -401,11 +401,15 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
    
    call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
    
-   call shiftX(x, y, z, px, py, pz, amt, dt)
+   if(inormalmodes.eq.1)then
+      ! Warning, initial hack, passing amt here
+      call propagate_nm(x, y, z, px, py, pz, amt, dt)
+   else
+      call shiftX(x, y, z, px, py, pz, amt, dt)
+   end if
    
    call force_clas(fxc,fyc,fzc,x,y,z,eclas)
 
-   if(ipimd.eq.1) call force_quantum(fxc,fyc,fzc,x,y,z,eclas)
 
    call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 

@@ -90,6 +90,11 @@ module mod_transform
 
 ! NOTE: am was multiplied by amu earlier in the init.f
 
+!  DH hack to prevent sigfpe when dividing by amt
+!  because size is actualy nwalk+1, so this would be invalid
+!  vx = px / amt
+   amt = 1
+   amg = 1
 
 ! Setting mass array, which is only used without the stage transformation
    do iw=1,nwalk
@@ -115,7 +120,7 @@ module mod_transform
    endif
 
 !---SETTING MASSES FOR NORMAL MODES-----------  
-   if(inormalmodes.eq.1)then
+if(inormalmodes.eq.2)then ! this one apparently does not work
       do iat=1,natom
          lambda(1)=0
          do iw=2,nwalk,2
@@ -135,13 +140,12 @@ module mod_transform
 !        write(*,*)'amg2',(amg(iat,iw)*2*sin(pi*(iw-1)/nwalk),iw=1,nwalk)
       enddo
 
-   else if (inormalmodes.eq.2)then
-      write(*,*)'This part is not written yet!!'
-      call abinerror("cdsjkcd")
-      ! amg = XX
+   else if (inormalmodes.eq.1)then
+      ! initial hack
       do iw=1,nwalk
          do iat=1,natom
-            amt(iat,iw)=am(iat)
+            amt(iat,iw) = am(iat)
+            amg(iat,iw) = am(iat)
          enddo
       enddo
    endif

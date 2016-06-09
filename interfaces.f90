@@ -33,6 +33,13 @@ module mod_interfaces
    real(DP),intent(out) :: energy
    end subroutine force_quantum
 
+   subroutine propagate_nm(x, y, z, px, py, pz, amg, dt)
+   IMPORT :: DP
+   real(DP), intent(inout) :: x(:,:), y(:,:), z(:,:)
+   real(DP), intent(inout) :: px(:,:), py(:,:), pz(:,:)
+   real(DP), intent(in)    ::  amg(:,:), dt
+   end subroutine propagate_nm
+
    subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
    IMPORT :: DP
    real(DP),intent(in)      :: x(:,:),y(:,:),z(:,:)

@@ -88,8 +88,8 @@ contains
    write(6,*) "# Phy. Rev. Lett. 103, 030603 (2009)                          "
    write(6,*) "#                                                             "
 
-   !reads in matrices
-   !reads A (in a.u. units)
+   ! reads in matrices
+   ! reads A (in a.u. units)
    open(121,file='GLE-A',status='OLD',iostat=ios,action='read')
    if (ios.ne.0)then
       write(0,*) "Error: could not read GLE-A file!"
@@ -113,7 +113,7 @@ contains
       write(6,*)'# Reading A-matrix for centroid. Expecting a.u. units!!!!'
       do i=1,ns+1
          read(121,*) gA_centroid(i,:)
-      enddo
+      end do
       ns_centroid = ns
 
       ! Read C matrix for centroid
@@ -122,11 +122,11 @@ contains
          write(*,*)'ERROR: Inconsistent size of A and C matrices for centroid.'
          call abinerror("gle_init")
       end if
-      write(6,*)'# Reading C-matrix for centroid. Expecting a.u. units!!!!'
+      write(6,*)'# Reading C-matrix for centroid. Expecting eV units!!!!'
       do i=1, ns+1
          read(122,*) gC_centroid(i,:)
          gC_centroid(i,:) = gC_centroid(i,:) / AUtoEV
-      enddo
+      end do
 
       call compute_propagator(gA_centroid, gC_centroid, gT_centroid, gS_centroid, dt)
       
@@ -167,11 +167,6 @@ contains
 
 
    close(121)
-
-   !gamma for a WN langevin will be 1/tau, which would make it optimal for w=1/(2tau) angular frequency. 
-   !DHmod: we DONT scale gA (which is expected to be fitted by http://gle4md.berlios.de/ ) 
-   !A matrix is expected to be in atomic units of time 
-   !gA=gA
 
    ! reads C (in eV!), or init to kT
    if(inose.eq.4)then
@@ -314,12 +309,12 @@ contains
       enddo
       
       do iat=1,natom
-         gp(iat,1) = px(iat,iw)         
-         gp(iat+natom,1) = py(iat,iw)   
-         gp(iat+natom*2,1) = pz(iat,iw) 
+         gp(iat,1) = px(iat,iw)
+         gp(iat+natom,1) = py(iat,iw)
+         gp(iat+natom*2,1) = pz(iat,iw)
       enddo
 
-      if(inormalmodes.eq.2.and.iw.eq.1)then
+      if(inormalmodes.eq.1.and.iw.eq.1)then
          ! PIGLET centroid propagation
          call gle_propagate(gp, gT_centroid, gS_centroid, m, iw)
       else
@@ -334,8 +329,8 @@ contains
       end do
 
       do i=1,ns
-         do iat=1,natom*3
-            ps(iat,i,iw) = gp(iat,i+1)
+         do iat=1, natom*3
+            ps(iat, i, iw) = gp(iat,i+1)
          enddo
       enddo
 
@@ -345,10 +340,11 @@ contains
    end subroutine gle_step
 
 
-   subroutine gle_propagate(p, T, S, m, iw)
+   subroutine gle_propagate(p, T, S, mass, iw)
    use mod_general, only: natom, inormalmodes
    real(DP), intent(inout) :: p(:,:)
-   real(DP), intent(in) :: T(:,:), S(:,:), m(:,:)
+   real(DP), intent(in) :: T(:,:), S(:,:), mass(:,:)
+   real(DP)  :: sqm
    integer, intent(in)  :: iw  ! this one is stupid
    integer :: i, j
    ! ran and ngp arrays are allocated in gle_init,
@@ -361,19 +357,20 @@ contains
 #endif
 
    ! now, must compute random part. 
-   ! first, fill up gp of random n
+   ! first, fill up p of random n
    do i=1,ns+1
       call gautrg(ran,natom*3,0,6)
       do j=1,natom
+         sqm = sqrt( mass(j,iw) )
          !<-- if m!= 1, alternatively one could perform the scaling here (check also init!)
-         p(j,i)=ran(j)*sqrt(m(j,iw))
-         p(j+natom,i)=ran(j+natom)*sqrt(m(j,iw))
-         p(j+natom*2,i)=ran(j+natom*2)*sqrt(m(j,iw))
+         p(j,i) = ran(j) * sqm
+         p(j+natom,i) = ran(j+natom) * sqm
+         p(j+natom*2,i) = ran(j+natom*2) * sqm
       end do
    end do
 
 #ifdef USELIBS    
-   call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,p,natom*3,S,ns+1,1.0d0,gp,natom*3)
+   call dgemm('n', 't', natom*3, ns+1, ns+1, 1.0d0, p, natom*3, S, ns+1, 1.0d0, ngp, natom*3)
    p = ngp
 #else
    p = ngp + transpose(matmul(S,transpose(p)))

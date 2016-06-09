@@ -748,7 +748,8 @@ print '(a)','**********************************************'
 
       if(ipimd.eq.1.and.inose.ne.1.and.inose.ne.2)then
        write(*,*)'You have to use Nosé-Hoover or quantum thermostat with PIMD!(inose=1 or 2)'
-       error=1
+       write(*,*)chknow
+       if(iknow.ne.1) error=1
       endif
       if(ipimd.lt.0.or.ipimd.gt.3)then
        write(*,*)'ipimd has to be 0,1,2 or 3.'
@@ -1130,7 +1131,7 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
    print *,' '
 
 #if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
-   print *, 'This file was compiled by ',  &
+   print *, 'This program was compiled by ',  &
              compiler_version(), ' using the options: '
    print *,     compiler_options()
 #endif

@@ -126,12 +126,16 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
 
    else if(inormalmodes.gt.0)then
 
-      ! The following makes things worse
-!      fxab = fxab / nwalk
-!      fyab = fyab / nwalk
-!      fzab = fzab / nwalk
-      if (idebug.eq.1) call printf(fxab,fyab,fzab)
+      ! The following makes things worse for tuckermann like dyn
+!     fxab = fxab / nwalk
+!     fyab = fyab / nwalk
+!     fzab = fzab / nwalk
       call XtoU(fxab, fyab, fzab, fx, fy, fz)
+      if(inose.gt.1)then ! with this I am not at all sure
+         fx = fx * nwalk
+         fy = fy * nwalk
+         fz = fz * nwalk
+      end if
 
    else if (inose.eq.2)then
       ! for PI+GLE 
@@ -167,7 +171,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
        enddo
    endif
 
-   energy=eclas
+   energy = eclas
 
 !--for PBC we do wrapping of molecules back to the box    
 !  We should probably be doing this somewhere else, 
@@ -190,7 +194,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
 end subroutine force_clas
 
 subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
-   use mod_const, only: DP
+   use mod_const,      only: DP
    use mod_array_size
    use mod_general
    use mod_nhc,   ONLY: temp, inose
@@ -206,6 +210,7 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
    fx = 0.0d0
    fy = 0.0d0
    fz = 0.0d0
+
 
 !  TODO: ak parametry se nemuseji pocitat pokazde znova
 !  Setting the quantum force constants
@@ -225,12 +230,6 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
       enddo
    endif
 
-   ! PIGLET, try different way from Ceriotti article from 2010
-   if(inormalmodes.eq.1)then
-      write(*,*)'Whooops, this was not written yet!!'
-      stop 1
-      ! call force_quantum_nm()
-   end if
 
    equant=0.0d0
 
@@ -277,7 +276,82 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
       enddo
    endif 
 
-   energy=equant
+   energy = equant
       
 end subroutine force_quantum
+
                                         
+! Based on:
+! Efficient stochastic thermostatting of path integral molecular dynamics
+! J. Chem. Phys. 133, 124104 ?2010?
+subroutine propagate_nm(x, y, z, px, py, pz, m, dt)
+   use mod_const, only: DP, PI
+   use mod_array_size
+   use mod_general, only: nwalk, natom
+   use mod_nhc,   ONLY: temp, inose
+   implicit none
+   real(DP), intent(inout) :: x(:,:), y(:,:), z(:,:)
+   real(DP), intent(inout) :: px(:,:), py(:,:), pz(:,:)
+   real(DP), intent(in)    ::  m(:,:), dt
+   real(DP) :: omega(size(x,2)), omega_n, om, omt, c, s
+   real(DP), allocatable :: x_old(:,:), y_old(:,:), z_old(:,:)
+   real(DP), allocatable :: px_old(:,:), py_old(:,:), pz_old(:,:)
+   integer  :: iat, iw, k
+
+   ! expecting m = am = physical masses
+
+   x_old = x
+   y_old = y
+   z_old = z
+   px_old = px
+   py_old = py
+   pz_old = pz
+
+   omega_n = TEMP * NWALK
+
+   do iw=1, nwalk
+      k = iw -1
+      omega(iw) = 2 * omega_n * sin(k * PI / nwalk) 
+   enddo
+
+   ! First, propagate centroid
+   iw = 1
+   do iat = 1, natom
+      X(iat,iw) = X(iat,iw) + dt * PX(iat,iw) / M(iat,iw)
+      Y(iat,iw) = Y(iat,iw) + dt * PY(iat,iw) / M(iat,iw)
+      Z(iat,iw) = Z(iat,iw) + dt * PZ(iat,iw) / M(iat,iw)
+   end do
+
+   ! eq 23 from J. Chem. Phys. 133, 124104 ?2010?
+   do iw = 2, nwalk
+      om = omega(iw)
+      omt = omega(iw) * dt
+      c = cos(omt)
+      s = sin(omt)
+      do iat = 1, natom
+         ! Propagate positions
+         x(iat, iw) = x_old(iat, iw) * c &
+            + px_old(iat, iw) * s / m(iat,iw) / om
+         y(iat, iw) = y_old(iat, iw) * c &
+            + py_old(iat, iw) * s / m(iat,iw) / om
+         z(iat, iw) = z_old(iat, iw) * c &
+            + pz_old(iat, iw) * s / m(iat,iw) / om
+
+         ! propagate momenta
+         px(iat, iw) = px_old(iat, iw) * c &
+            - x_old(iat, iw) * s * m(iat,iw) * om
+         py(iat, iw) = py_old(iat, iw) * c &
+            - y_old(iat, iw) * s * m(iat,iw) * om
+         pz(iat, iw) = pz_old(iat, iw) * c &
+            - z_old(iat, iw) * s * m(iat,iw) * om
+
+      end do
+
+   end do
+
+   deallocate(x_old, y_old, z_old)
+   deallocate(px_old, py_old, pz_old)
+
+
+end subroutine propagate_nm
+

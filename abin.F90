@@ -210,7 +210,7 @@ program abin_dyn
          endif
 
          sim_time = sim_time + dt
-       
+
          vx = px / amt
          vy = py / amt
          vz = pz / amt

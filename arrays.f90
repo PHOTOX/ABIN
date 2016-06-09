@@ -20,7 +20,7 @@ module mod_arrays
 
    subroutine allocate_arrays(natomalloc, nwalkalloc)
       integer,intent(in)  :: nwalkalloc
-      integer  :: natomalloc
+      integer,intent(in)  :: natomalloc
 
       ! This is to avoid segfault for natom=1 and ndist>0
       if (natomalloc.eq.1)then
