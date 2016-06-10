@@ -16,7 +16,6 @@
 
 # SETUP --------------------------------
 OUTPUT=output
-ABINEXE=/home/hollas/PHOTOX/bin/abin.cp2k
 JOBNAME=ABIN_${JOB_ID}_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
@@ -26,7 +25,7 @@ INPUTVELOC=
 NPROC=${NSLOTS}  # determined from qsub -pe shm x
 
 #$ -V -cwd
-source SetEnvironment.sh CP2K
+source SetEnvironment.sh ABIN 1.0-mpi
 
 SCRDIR=/scratch/$USER/$JOBNAME
 
@@ -61,7 +60,7 @@ else
    $MPIRUN -np $NPROC $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
-cp -upr * $KDE/.
+cp -pr * $KDE/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"

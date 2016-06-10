@@ -9,13 +9,16 @@
 
 # SETUP --------------------------------
 OUTPUT=output
-ABINEXE=/home/hollas/PHOTOX/bin/abin
 JOBNAME=ABIN_${JOB_ID}_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
 delscratch=true
 INPUTVELOC=
 ########################################
+
+# ABINEXE determined via SetEnvironment.sh script
+# ABINEXE=/home/hollas/PHOTOX/bin/abin
+source SetEnvironment.sh ABIN 1.0
 
 pot=$(awk -F"[! ,=\"']+" '{if($1=="pot")print $2}' $INPUTPARAM)
 # Upper case, this is the folder with file interface
@@ -51,7 +54,7 @@ if [[ ! -f SetEnvironment.sh ]];then
    cp $where .
 fi
 
-cp -up * $SCRDIR/.
+cp -p * $SCRDIR/.
 if [[ -d $INTERFACE ]];then
    cp -r $INTERFACE $SCRDIR/
 fi

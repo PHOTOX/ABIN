@@ -11,7 +11,6 @@
 
 # SETUP --------------------------------
 OUTPUT=output
-ABINEXE=/home/hollas/PHOTOX/bin/abin.mpi
 JOBNAME=ABIN_${JOB_ID}_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
@@ -20,11 +19,14 @@ INPUTVELOC=
 ########################################
 
 #$ -V -cwd
-# We assume here that ABIN was compiled by the same MPI compiler as CP2K
-# Should change this to source SetEnvironment.sh MPICH
-source SetEnvironment.sh CP2K
+NPROC=${NSLOTS} # determined for queuing system: -pe mpi x
+source SetEnvironment.sh ABIN 1.0-mpi
 
 SCRDIR=/scratch/$USER/$JOBNAME
+
+pot=$(awk -F"[! ,=\"']+" '{if($1=="pot")print $2}' $INPUTPARAM)
+# Upper case, this is the folder with file interface
+INTERFACE=${pot^^}
 
 echo "Job started at: " >> $OUTPUT
 date >> $OUTPUT
@@ -47,17 +49,20 @@ else
    mkdir $SCRDIR
 fi
 
-cp -upr * $SCRDIR/.
+cp -p * $SCRDIR/.
+if [[ -d $INTERFACE ]];then
+   cp -r $INTERFACE $SCRDIR/
+fi
 
 cd $SCRDIR
 
 if [[ -z $INPUTVELOC ]];then
-   $MPIRUN $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+   $MPIRUN -np $NPROC $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 else
-   $MPIRUN $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
+   $MPIRUN -np $NPROC $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
-cp -upr * $KDE/.
+cp -pr * $KDE/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"
