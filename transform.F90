@@ -11,10 +11,11 @@ module mod_transform
    private
    public :: UtoX, XtoU, QtoX, XtoQ, FXtoFQ, FQtoFX
    public :: init_mass
+   public :: equant_nm
    contains
 
-!     This routine transforms staging coordinates to cartesian coordinates, which are stored
-!     in trans matrices,values in x,y and z matrices are NOT modified!!      
+!  This routine transforms staging coordinates to cartesian coordinates, which are stored
+!  in trans matrices,values in x,y and z matrices are NOT modified!!      
    subroutine QtoX(x,y,z,transx,transy,transz)
    real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(out)    :: transx(:,:),transy(:,:),transz(:,:)
@@ -88,7 +89,7 @@ module mod_transform
    real(DP)  :: lambda(size(amg,2)+1)
    integer :: iat,iw
 
-! NOTE: am was multiplied by amu earlier in the init.f
+!  NOTE: am was multiplied by amu earlier in the init.f
 
 !  DH hack to prevent sigfpe when dividing by amt
 !  because size is actualy nwalk+1, so this would be invalid
@@ -96,7 +97,7 @@ module mod_transform
    amt = 1
    amg = 1
 
-! Setting mass array, which is only used without the stage transformation
+!  Setting mass array, which is only used without the stage transformation
    do iw=1,nwalk
       do iat=1,natom
          amg(iat,iw)=am(iat)
@@ -245,9 +246,19 @@ if(inormalmodes.eq.2)then ! this one apparently does not work
 #ifdef USEFFTW
       use mod_fftw3
 #endif
-   real(DP)  :: x(:,:), y(:,:), z(:,:)
-   real(DP)  :: transx(:,:), transy(:,:), transz(:,:)
-   integer   :: iat, iw
+   use mod_general, only: nwalk, inormalmodes
+   real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
+   real(DP), intent(out)   :: transx(:,:), transy(:,:), transz(:,:)
+   integer  :: iat, iw
+   real(DP) :: dnwalk, fac
+
+   if(inormalmodes.eq.1)then
+      dnwalk = dsqrt(1.0d0 * nwalk)
+      fac = dsqrt(2.0d0)
+   else
+      dnwalk = 1.0d0
+      fac = 1.0d0
+   end if
 
 #ifdef USEFFTW
    do iat = 1, natom
@@ -255,22 +266,22 @@ if(inormalmodes.eq.2)then ! this one apparently does not work
       cx(1) = complex(x(iat,1),0)
       cy(1) = complex(y(iat,1),0)
       cz(1) = complex(z(iat,1),0)
-      cx((nwalk+2)/2) = complex(x(iat,nwalk), 0)
-      cy((nwalk+2)/2) = complex(y(iat,nwalk), 0)
-      cz((nwalk+2)/2) = complex(z(iat,nwalk), 0)
+      cx((nwalk+2)/2) = complex(x(iat,nwalk), 0) ! / dsqrt(2.0d0) ! / 2
+      cy((nwalk+2)/2) = complex(y(iat,nwalk), 0) !/ dsqrt(2.0d0) ! / 2
+      cz((nwalk+2)/2) = complex(z(iat,nwalk), 0) !/ dsqrt(2.0d0) ! / 2
       do iw = 2, nwalk/2
-         cx(iw) = complex(x(iat,2*iw-2), x(iat,2*iw-1))
-         cy(iw) = complex(y(iat,2*iw-2), y(iat,2*iw-1))
-         cz(iw) = complex(z(iat,2*iw-2), z(iat,2*iw-1))
+         cx(iw) = complex(x(iat,2*iw-2), x(iat,2*iw-1)) / fac
+         cy(iw) = complex(y(iat,2*iw-2), y(iat,2*iw-1)) / fac
+         cz(iw) = complex(z(iat,2*iw-2), z(iat,2*iw-1)) / fac
       enddo
       call fftw_execute_dft_c2r(plan_utox, cx, x_in)
       call fftw_execute_dft_c2r(plan_utox, cy, y_in)
       call fftw_execute_dft_c2r(plan_utox, cz, z_in)
 
       do iw=1,nwalk
-         transx(iat,iw) = x_in(iw)
-         transy(iat,iw) = y_in(iw)
-         transz(iat,iw) = z_in(iw)
+         transx(iat,iw) = x_in(iw) / dnwalk
+         transy(iat,iw) = y_in(iw) / dnwalk
+         transz(iat,iw) = z_in(iw) / dnwalk
       enddo
 
    enddo
@@ -286,15 +297,27 @@ if(inormalmodes.eq.2)then ! this one apparently does not work
    end subroutine UtoX
 
 !  This routine transforms cartesian to normal coordinates, which are stored
-!  in trans matrices,values in x,y and z matrices are NOT modified!!      
+!  in trans matrices,values in x,y and z matrices are NOT modified!!
+!  see https://github.com/i-pi/i-pi/blob/2a09a6d652b1ffe5f485c4c078c1085db6fcf63a/ipi/utils/nmtransform.py
    subroutine XtoU(x,y,z,transx,transy,transz)
 #ifdef USEFFTW
    use mod_fftw3
 #endif
-   use mod_general, only: idebug
+   use mod_general, only: idebug, inormalmodes
    real(DP)  :: x(:,:), y(:,:), z(:,:)
    real(DP)  :: transx(:,:), transy(:,:), transz(:,:)
    integer   :: iat, iw
+   real(DP)  :: dnwalk, equant, fac
+
+   if(inormalmodes.eq.1)then
+      dnwalk = dsqrt(1.0d0 * nwalk)
+      fac = dsqrt(2.0d0)
+   else
+      dnwalk = nwalk
+      fac = 1.0d0
+   end if
+
+   call equant_cart(x, y, z, equant)
 
 #ifdef USEFFTW
    do iat = 1, natom
@@ -307,31 +330,38 @@ if(inormalmodes.eq.2)then ! this one apparently does not work
       call fftw_execute_dft_r2c(plan_xtou,y_in,cy)
       call fftw_execute_dft_r2c(plan_xtou,z_in,cz)
 
-if(idebug.eq.1)then
+if(idebug.gt.1)then
       write(*,*)'complex coefficients'
       write(*,*)(cx(iw),iw=1,nwalk)
       write(*,*)(cy(iw),iw=1,nwalk)
       write(*,*)(cz(iw),iw=1,nwalk)
 endif
-      transx(iat,1) = realpart(cx(1)) / nwalk
-      transy(iat,1) = realpart(cy(1)) / nwalk
-      transz(iat,1) = realpart(cz(1)) / nwalk
-      transx(iat,nwalk) = realpart(cx((nwalk+2)/2)) / nwalk
-      transy(iat,nwalk) = realpart(cy((nwalk+2)/2)) / nwalk
-      transz(iat,nwalk) = realpart(cz((nwalk+2)/2)) / nwalk
+      transx(iat,1) = realpart(cx(1))
+      transy(iat,1) = realpart(cy(1))
+      transz(iat,1) = realpart(cz(1))
+      transx(iat,nwalk) = realpart(cx((nwalk+2)/2))  !* dsqrt(2.0d0)
+      transy(iat,nwalk) = realpart(cy((nwalk+2)/2))  !* dsqrt(2.0d0)
+      transz(iat,nwalk) = realpart(cz((nwalk+2)/2))  !* dsqrt(2.0d0)
       do iw=2,nwalk/2
-         transx(iat,2*iw-2) = realpart(cx(iw)) / nwalk
-         transx(iat,2*iw-1) = imagpart(cx(iw)) / nwalk
-         transy(iat,2*iw-2) = realpart(cy(iw)) / nwalk
-         transy(iat,2*iw-1) = imagpart(cy(iw)) / nwalk
-         transz(iat,2*iw-2) = realpart(cz(iw)) / nwalk
-         transz(iat,2*iw-1) = imagpart(cz(iw)) / nwalk
+         transx(iat,2*iw-2) = realpart(cx(iw)) * fac
+         transx(iat,2*iw-1) = imagpart(cx(iw)) * fac
+         transy(iat,2*iw-2) = realpart(cy(iw)) * fac
+         transy(iat,2*iw-1) = imagpart(cy(iw)) * fac
+         transz(iat,2*iw-2) = realpart(cz(iw)) * fac
+         transz(iat,2*iw-1) = imagpart(cz(iw)) * fac
       enddo
    enddo
-!       write(*,*)'original cartesian to normal modes'
-!       call printf(x/ang,y/ang,z/ang)
-!       write(*,*)'transformed coordinates to normal modes'
-!       call printf(transx/ang,transy/ang,transz/ang)
+
+   transx = transx / dnwalk
+   transy = transy / dnwalk
+   transz = transz / dnwalk
+
+   call equant_nm(transx, transy, transz, equant)
+
+!  write(*,*)'original cartesian to normal modes'
+!  call printf(x/ang,y/ang,z/ang)
+!  write(*,*)'transformed coordinates to normal modes'
+!  call printf(transx/ang,transy/ang,transz/ang)
 
 #else
    write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
@@ -342,4 +372,86 @@ endif
 
    end subroutine XtoU
 
+   subroutine equant_cart(x, y, z, equant)
+   use mod_general , only: nwalk, natom, idebug
+   use mod_system, only: am
+   use mod_nhc,    only: temp
+   use mod_utils, only: printf
+   real(DP), intent(inout) :: x(:,:), y(:,:), z(:,:)
+   real(DP), intent(out) :: equant
+   real(DP) :: equantx, equanty, equantz, omega_n
+   integer  :: iat, iw, k
+
+   omega_n = NWALK * TEMP
+   equantx = 0.0d0
+   equanty = 0.0d0
+   equantz = 0.0d0
+
+   do iat = 1, natom
+      x(iat, nwalk+1) = x(iat, nwalk)
+      y(iat, nwalk+1) = y(iat, nwalk)
+      z(iat, nwalk+1) = z(iat, nwalk)
+   end do
+
+   do iw = 1, nwalk
+      do iat = 1, natom
+         equantx = equantx + 0.5d0 * am(iat) * omega_n**2 * (x(iat,iw)-x(iat,iw+1))**2
+         equanty = equanty + 0.5d0 * am(iat) * omega_n**2 * (y(iat,iw)-y(iat,iw+1))**2
+         equantz = equantz + 0.5d0 * am(iat) * omega_n**2 * (z(iat,iw)-z(iat,iw+1))**2
+      end do
+   end do
+
+   equant = equantx + equanty + equantz
+
+   if(idebug.eq.1)then
+      write(*,*)"Quantum energy in cartesian coordinates"
+      write(*,*)equantx, equanty, equantz, equant
+      write(*,*)"Cartesian coordinates"
+      call printf(x,y,z)
+   end if
+
+   end subroutine equant_cart
+
+   subroutine equant_nm(x, y, z, equant)
+   use mod_const, only: PI
+   use mod_general , only: nwalk, natom, idebug
+   use mod_system,   only: am
+   use mod_nhc,    only: temp
+   use mod_utils, only: printf
+   real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
+   real(DP), intent(out) :: equant
+   real(DP) :: equantx, equanty, equantz, omega_n, omega(size(x,2))
+   integer  :: iat, iw, k
+
+   omega_n = NWALK * TEMP
+   equantx = 0.0d0
+   equanty = 0.0d0
+   equantz = 0.0d0
+
+   do iw=1, nwalk
+      k = iw -1
+      omega(iw) = 2 * omega_n * sin(k * PI / nwalk) 
+   enddo
+
+   do iw = 1, nwalk
+      do iat = 1, natom
+         equantx = equantx + 0.5d0 * am(iat) * omega(iw)**2 * (x(iat,iw))**2
+         equanty = equanty + 0.5d0 * am(iat) * omega(iw)**2 * (y(iat,iw))**2
+         equantz = equantz + 0.5d0 * am(iat) * omega(iw)**2 * (z(iat,iw))**2
+      end do
+   end do
+
+   equant = equantx + equanty + equantz
+
+   if(idebug.eq.1)then
+      write(*,*)'omegas', (omega(iw),iw=1,nwalk)
+      write(*,*)"Quantum energy in normal modes coordinates"
+      write(*,*)equantx, equanty, equantz, equant
+      write(*,*)"Normal mode coordinates"
+      call printf(x, y, z)
+   end if
+
+   end subroutine equant_nm
+
 end module mod_transform
+

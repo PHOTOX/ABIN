@@ -90,7 +90,7 @@ program abin_dyn
       vz = transzv
 !------NORMAL MODE TRANSFORMATION-------------
    else if(inormalmodes.gt.0)then
-      if(idebug.eq.1)then
+      if(idebug.gt.1)then
          write(*,*)'Positions before transform'
          call printf(x,y,z)
       endif
@@ -102,13 +102,12 @@ program abin_dyn
       vx = transxv
       vy = transyv
       vz = transzv
-      if(idebug.eq.1)then
+      if(idebug.gt.1)then
          write(*,*)'Positions after transform'
          call printf(x,y,z)
          call Utox(x,y,z,transx,transy,transz)
          write(*,*)'Positions after back transform'
          call printf(transx,transy,transz)
-         call abinerror('Only debug')
       endif
    endif
 
@@ -259,10 +258,6 @@ program abin_dyn
             call UtoX(x,y,z,transx,transy,transz)
             call UtoX(vx,vy,vz,transxv,transyv,transzv)
             call UtoX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
-            if(idebug.eq.1) then
-               write(*,*)'Back transformed forces'
-               call printf(transfxc,transfyc,transfzc)
-            endif
             call analysis (transx,transy,transz,transxv,transyv,transzv,  &
                          transfxc,transfyc,transfzc,amt,eclas,equant,dt)
          else

@@ -126,16 +126,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy)
 
    else if(inormalmodes.gt.0)then
 
-      ! The following makes things worse for tuckermann like dyn
-!     fxab = fxab / nwalk
-!     fyab = fyab / nwalk
-!     fzab = fzab / nwalk
       call XtoU(fxab, fyab, fzab, fx, fy, fz)
-      if(inose.gt.1)then ! with this I am not at all sure
-         fx = fx * nwalk
-         fy = fy * nwalk
-         fz = fz * nwalk
-      end if
 
    else if (inose.eq.2)then
       ! for PI+GLE 
@@ -287,15 +278,19 @@ end subroutine force_quantum
 subroutine propagate_nm(x, y, z, px, py, pz, m, dt)
    use mod_const, only: DP, PI
    use mod_array_size
-   use mod_general, only: nwalk, natom
-   use mod_nhc,   ONLY: temp, inose
+   use mod_general,   only: nwalk, natom
+   use mod_nhc,       only: temp, inose
    implicit none
    real(DP), intent(inout) :: x(:,:), y(:,:), z(:,:)
    real(DP), intent(inout) :: px(:,:), py(:,:), pz(:,:)
-   real(DP), intent(in)    ::  m(:,:), dt
+   real(DP), intent(in)    :: m(:,:), dt
    real(DP) :: omega(size(x,2)), omega_n, om, omt, c, s
-   real(DP), allocatable :: x_old(:,:), y_old(:,:), z_old(:,:)
-   real(DP), allocatable :: px_old(:,:), py_old(:,:), pz_old(:,:)
+   real(DP) :: x_old(size(x,1),size(x,2))
+   real(DP) :: y_old(size(x,1),size(x,2))
+   real(DP) :: z_old(size(x,1),size(x,2))
+   real(DP) :: px_old(size(px,1),size(px,2))
+   real(DP) :: py_old(size(px,1),size(px,2))
+   real(DP) :: pz_old(size(px,1),size(px,2))
    integer  :: iat, iw, k
 
    ! expecting m = am = physical masses
@@ -322,7 +317,8 @@ subroutine propagate_nm(x, y, z, px, py, pz, m, dt)
       Z(iat,iw) = Z(iat,iw) + dt * PZ(iat,iw) / M(iat,iw)
    end do
 
-   ! eq 23 from J. Chem. Phys. 133, 124104 ?2010?
+   ! eq 23 from J. Chem. Phys. 133, 124104 2010
+   ! exact propagation of a free ring polymer in normal mode coordinates
    do iw = 2, nwalk
       om = omega(iw)
       omt = omega(iw) * dt
@@ -349,9 +345,6 @@ subroutine propagate_nm(x, y, z, px, py, pz, m, dt)
 
    end do
 
-   deallocate(x_old, y_old, z_old)
-   deallocate(px_old, py_old, pz_old)
-
-
 end subroutine propagate_nm
+
 
