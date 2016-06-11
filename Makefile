@@ -107,11 +107,11 @@ test :
 
 # Clean all test folders.
 testclean :
-	/bin/bash TESTS/test.sh ${OUT} clean ${NAB} ${MPI} ${CP2K} ${FFTW}
+	/bin/bash TESTS/test.sh ${OUT} clean ${NAB} ${MPI} ${CP2K} ${FFTW} $(PLUM)
 
 # This will automatically generate new reference data for tests
 makeref :
-	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} makeref
+	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} $(PLUM) makeref
  
 # Dummy target for debugging purposes
 debug: 

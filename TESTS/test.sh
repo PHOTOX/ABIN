@@ -157,7 +157,7 @@ do
       fi
    fi
 
-   if [[ $7 = "makeref" ]];then
+   if [[ $8 = "makeref" ]];then
 
       makeref ${files[@]}
 
