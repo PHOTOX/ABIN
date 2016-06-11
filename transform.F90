@@ -120,18 +120,18 @@ module mod_transform
       enddo
    endif
 
-!---SETTING MASSES FOR NORMAL MODES-----------  
-if(inormalmodes.eq.2)then ! this one apparently does not work
+!--SETTING MASSES FOR NORMAL MODES-----------  
+   if(inormalmodes.eq.2)then ! this one apparently does not work
       do iat=1,natom
          lambda(1)=0
-         do iw=2,nwalk,2
-            lambda(iw) = 2 * nwalk * (1-cos(PI*iw/nwalk))
-            lambda(iw+1)=lambda(iw)
+         do iw=2,nwalk
+!            lambda(iw) = 2 * nwalk * (1-cos(PI*iw/nwalk))
+!            lambda(iw+1)=lambda(iw)
+             lambda = 2 * nwalk * sin(PI*(iw-1)/nwalk)
          enddo
          do iw=2,nwalk
             amg(iat,iw) = am(iat)*lambda(iw)
-            !DH DEBUG
-            amt(iat,iw) = amg(iat,iw)
+            amt(iat,iw) = am(iat)*lambda(iw)
          enddo
          amg(iat,1)=0.0d0
          amt(iat,1)=am(iat)
@@ -142,7 +142,6 @@ if(inormalmodes.eq.2)then ! this one apparently does not work
       enddo
 
    else if (inormalmodes.eq.1)then
-      ! initial hack
       do iw=1,nwalk
          do iat=1,natom
             amt(iat,iw) = am(iat)
@@ -251,6 +250,7 @@ if(inormalmodes.eq.2)then ! this one apparently does not work
    real(DP), intent(out)   :: transx(:,:), transy(:,:), transz(:,:)
    integer  :: iat, iw
    real(DP) :: dnwalk, fac
+   integer  :: nmodes, odd
 
    if(inormalmodes.eq.1)then
       dnwalk = dsqrt(1.0d0 * nwalk)
@@ -260,20 +260,34 @@ if(inormalmodes.eq.2)then ! this one apparently does not work
       fac = 1.0d0
    end if
 
+   nmodes = nwalk / 2
+   odd = nwalk - 2 * nmodes ! 0 if even, 1 if odd
+
 #ifdef USEFFTW
    do iat = 1, natom
 
       cx(1) = complex(x(iat,1),0)
       cy(1) = complex(y(iat,1),0)
       cz(1) = complex(z(iat,1),0)
-      cx((nwalk+2)/2) = complex(x(iat,nwalk), 0) ! / dsqrt(2.0d0) ! / 2
-      cy((nwalk+2)/2) = complex(y(iat,nwalk), 0) !/ dsqrt(2.0d0) ! / 2
-      cz((nwalk+2)/2) = complex(z(iat,nwalk), 0) !/ dsqrt(2.0d0) ! / 2
-      do iw = 2, nwalk/2
-         cx(iw) = complex(x(iat,2*iw-2), x(iat,2*iw-1)) / fac
-         cy(iw) = complex(y(iat,2*iw-2), y(iat,2*iw-1)) / fac
-         cz(iw) = complex(z(iat,2*iw-2), z(iat,2*iw-1)) / fac
-      enddo
+      do iw = 2, nmodes + odd
+         cx(iw) = complex(x(iat,iw), x(iat,iw+nmodes)) / fac
+         cy(iw) = complex(y(iat,iw), y(iat,iw+nmodes)) / fac
+         cz(iw) = complex(z(iat,iw), z(iat,iw+nmodes)) / fac
+      end do
+      if(odd.ne.1)then
+         cx(nmodes+1) = complex(x(iat,nmodes+1),0)
+         cy(nmodes+1) = complex(y(iat,nmodes+1),0)
+         cz(nmodes+1) = complex(z(iat,nmodes+1),0)
+      end if
+
+!      cx((nwalk+2)/2) = complex(x(iat,nwalk), 0)
+!      cy((nwalk+2)/2) = complex(y(iat,nwalk), 0)
+!      cz((nwalk+2)/2) = complex(z(iat,nwalk), 0)
+!      do iw = 2, nwalk / 2
+!         cx(iw) = complex(x(iat,2*iw-2), x(iat,2*iw-1)) / fac
+!         cy(iw) = complex(y(iat,2*iw-2), y(iat,2*iw-1)) / fac
+!         cz(iw) = complex(z(iat,2*iw-2), z(iat,2*iw-1)) / fac
+!      enddo
       call fftw_execute_dft_c2r(plan_utox, cx, x_in)
       call fftw_execute_dft_c2r(plan_utox, cy, y_in)
       call fftw_execute_dft_c2r(plan_utox, cz, z_in)
@@ -304,10 +318,11 @@ if(inormalmodes.eq.2)then ! this one apparently does not work
    use mod_fftw3
 #endif
    use mod_general, only: idebug, inormalmodes
-   real(DP)  :: x(:,:), y(:,:), z(:,:)
-   real(DP)  :: transx(:,:), transy(:,:), transz(:,:)
-   integer   :: iat, iw
-   real(DP)  :: dnwalk, equant, fac
+   real(DP) :: x(:,:), y(:,:), z(:,:)
+   real(DP) :: transx(:,:), transy(:,:), transz(:,:)
+   integer  :: iat, iw
+   real(DP) :: dnwalk, equant, fac
+   integer  :: nmodes, odd
 
    if(inormalmodes.eq.1)then
       dnwalk = dsqrt(1.0d0 * nwalk)
@@ -316,6 +331,9 @@ if(inormalmodes.eq.2)then ! this one apparently does not work
       dnwalk = nwalk
       fac = 1.0d0
    end if
+
+   nmodes = nwalk / 2
+   odd = nwalk - 2 * nmodes ! 0 if even, 1 if odd
 
    call equant_cart(x, y, z, equant)
 
@@ -339,17 +357,21 @@ endif
       transx(iat,1) = realpart(cx(1))
       transy(iat,1) = realpart(cy(1))
       transz(iat,1) = realpart(cz(1))
-      transx(iat,nwalk) = realpart(cx((nwalk+2)/2))  !* dsqrt(2.0d0)
-      transy(iat,nwalk) = realpart(cy((nwalk+2)/2))  !* dsqrt(2.0d0)
-      transz(iat,nwalk) = realpart(cz((nwalk+2)/2))  !* dsqrt(2.0d0)
-      do iw=2,nwalk/2
-         transx(iat,2*iw-2) = realpart(cx(iw)) * fac
-         transx(iat,2*iw-1) = imagpart(cx(iw)) * fac
-         transy(iat,2*iw-2) = realpart(cy(iw)) * fac
-         transy(iat,2*iw-1) = imagpart(cy(iw)) * fac
-         transz(iat,2*iw-2) = realpart(cz(iw)) * fac
-         transz(iat,2*iw-1) = imagpart(cz(iw)) * fac
+      do iw=2,nmodes+odd
+         transx(iat,iw) = realpart(cx(iw)) * fac
+         transx(iat,iw+nmodes) = imagpart(cx(iw)) * fac
+         transy(iat,iw) = realpart(cy(iw)) * fac
+         transy(iat,iw+nmodes) = imagpart(cy(iw)) * fac
+         transz(iat,iw) = realpart(cz(iw)) * fac
+         transz(iat,iw+nmodes) = imagpart(cz(iw)) * fac
       enddo
+
+      if(odd.ne.1)then
+         transx(iat,nmodes+1) = realpart(cx((nwalk+2)/2))
+         transy(iat,nmodes+1) = realpart(cy((nwalk+2)/2))
+         transz(iat,nmodes+1) = realpart(cz((nwalk+2)/2))
+      end if
+
    enddo
 
    transx = transx / dnwalk
@@ -430,7 +452,7 @@ endif
 
    do iw=1, nwalk
       k = iw -1
-      omega(iw) = 2 * omega_n * sin(k * PI / nwalk) 
+      omega(iw) = 2 * omega_n * sin(k * PI / nwalk)
    enddo
 
    do iw = 1, nwalk

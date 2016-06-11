@@ -304,7 +304,7 @@ subroutine propagate_nm(x, y, z, px, py, pz, m, dt)
 
    omega_n = TEMP * NWALK
 
-   do iw=1, nwalk
+   do iw=2, nwalk
       k = iw -1
       omega(iw) = 2 * omega_n * sin(k * PI / nwalk) 
    enddo

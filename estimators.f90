@@ -28,6 +28,9 @@ module mod_estimators
    real(DP)  :: est_vir,est_prim,cv_prim,cv_vir,cv_dcv
    integer :: iat,iw,ipom,iat1,iat2,nf
    real(DP)  :: it2,itnc
+
+
+   if(inormalmodes.eq.1.and.inose.eq.1)   temp = temp / nwalk
       
 !  fxab array is classical force in cartesian coordinates
 
@@ -100,7 +103,7 @@ module mod_estimators
       enddo
    enddo
 
-   if(inose.eq.2)then
+   if(inose.eq.2.or.inormalmodes.eq.1)then
       est_vir = est_vir / nwalk
    endif
 
@@ -149,7 +152,7 @@ module mod_estimators
                cvhess(iw)=cvhess(iw)-(z(iat,iw)-zc(iat))*fzab(iat,iw)*1.5d0
             enddo
        !    PIGLE --- different hamiltonian,fxc not divided by nwalk
-            if (inose.eq.2) cvhess(iw) = cvhess(iw)/nwalk
+            if (inose.eq.2.or.inormalmodes.eq.1) cvhess(iw) = cvhess(iw)/nwalk
 
             do iat1=1,natom*3
                do iat2=1,natom*3
@@ -217,6 +220,8 @@ module mod_estimators
       write(UESTENERGY,'(F15.2,5E20.10)')sim_time*AUtoFS,eclas,est_prim,est_vir,est_prim_cumul/itnc,est_vir_cumul/itnc
 
    endif
+
+   if(inormalmodes.eq.1.and.inose.eq.1)   temp = temp * nwalk
         
    return
 

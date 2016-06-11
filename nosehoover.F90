@@ -62,13 +62,14 @@ module mod_nhc
    end subroutine
 
    subroutine nhc_init() 
-   use mod_const,    only: AMU, AUtoFS
-   use mod_general, only: ipimd, nwalk, natom, inormalmodes
-   use mod_system, ONLY: dime
-   use mod_random, only: gautrg
+   use mod_const,    only: AMU, AUtoFS, PI
+   use mod_general,  only: ipimd, nwalk, natom, inormalmodes
+   use mod_system,   only: dime
+   use mod_random,   only: gautrg
    implicit none
    real(DP), allocatable  :: ran(:)
-   integer :: inh,iw,iat,ipom,imol
+   real(DP) :: omega
+   integer  :: inh,iw,iat,ipom,imol
 
    if (imasst.eq.1)then
       allocate( pnhx(natom,nwalk,nchain) ); pnhx = 0.0d0
@@ -110,15 +111,27 @@ module mod_nhc
          ms(imol,inh)=ams
       enddo
    enddo
-!in pimd the Nose-Hoover mass is set within the code (as 1/(beta*omega_p^2), where omega_p=sqrt(P)/(beta*hbar)
+!  in pimd the Nose-Hoover mass is set within the code (as 1/(beta*omega_p^2), where omega_p=sqrt(P)/(beta*hbar)
 !  DH DEBUG
-!  if (ipimd.eq.1.and.inormalmodes.ne.2)then
-   if(ipimd.eq.1)then
+   if (ipimd.eq.1.and.inormalmodes.ne.1)then
+
       do iw=1,nwalk
          Qm(iw)=1/(TEMP*NWALK)
       enddo
       if(tau0.gt.0) Qm(1) = ams  ! see tuckermann,stat.mech.
-   endif
+
+   else if(ipimd.eq.1.and.inormalmodes.eq.1)then
+
+      ! so far, NHC with normal modes does not work
+      temp = temp * nwalk
+      Qm(1) = temp * tau * tau * 4
+      do iw = 2, nwalk
+         omega = 2 * TEMP * sin((iw-1)*PI/NWALK)
+         Qm(iw) = 1 / TEMP / omega**2
+      enddo
+
+   end if
+
 
    if(nmolt.le.50)then
       write(*,*)'Thermostat masses'
