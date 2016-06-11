@@ -352,18 +352,20 @@ print '(a)','**********************************************'
 
 !for surface hopping      
       if(ipimd.eq.2)then
-         nwalk=ntraj
-         md=2
-         nabin=1
+         nwalk = ntraj
+         md = 2 ! velocity verlet
+         nabin = 1
       endif
 
-      if(ipimd.eq.1)then
-         if (my_rank.eq.0) write(*,*)'ipimd=1,using RESPA integrator'
+      if(ipimd.eq.1.and.inormalmodes.ne.1)then
+         if (my_rank.eq.0) write(*,*)'Using RESPA integrator.'
          md = 1
-      endif
+      else if(ipimd.eq.1.and.inormalmodes.eq.1)then
+         md = 2
+      end if
 
-      !DH temporary hack
-      if(ipimd.eq.1.and.inormalmodes.eq.1)then
+      ! we should include shake into the verlet routine
+      if(nshake.gt.0)then
          md = 3
       end if
 

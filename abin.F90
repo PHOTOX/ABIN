@@ -57,13 +57,9 @@ program abin_dyn
 !-   INPUT AND INITIALIZATION SECTION      
    call init(dt, values1) 
 
-   ! TODO: in case of _cp2k_, this needs to be done only by rank0
    if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then
       call archive_file('restart.xyz',it)
    end if
-
-   !DH this is a nasty hack TODO remove this
-   if(irest.eq.0) call system('rm -f wfn.dat nacmrest.dat')
 
 !-------SH initialization -- 
    if(ipimd.eq.2)then
@@ -197,16 +193,15 @@ program abin_dyn
          end if
 
 
-!-----CALL RESPA or VELOCITY VERLET--------------
-!        TODO: case here based on md, respashake should be number 3 in the end
-         if(nshake.eq.0)then
-            if (md.eq.1) call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-            if (md.eq.2) call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
-            ! DH temporary hack !
-            if (md.eq.3) call verletstep_new(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
-         else
-            call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-         endif
+!-----   CALL the integrator, propagate through one time step
+         SELECT CASE (md)
+            case (1)
+               call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+            case (2)
+               call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
+            case (3)
+               call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+         END SELECT
 
          sim_time = sim_time + dt
 
@@ -392,19 +387,9 @@ subroutine finish(error_code)
    if (inormalmodes.gt.0) call fftw_end()
 #endif
 
-!  TODO: this should be in nosehoover routine
-   if(allocated(w))     deallocate( w )
-   if(allocated(Qm))    deallocate( Qm )
-   if(allocated(ms))    deallocate( ms )
-   if(allocated(pnhx))  deallocate( pnhx )
-   if(allocated(pnhy))  deallocate( pnhy )
-   if(allocated(pnhz))  deallocate( pnhz )
-   if(allocated(xi_x))  deallocate( xi_x )
-   if(allocated(xi_y))  deallocate( xi_y )
-   if(allocated(xi_z))  deallocate( xi_z )
-   if(inose.gt.1.and.inose.lt.5)then
-      call finalize_gle()
-   end if
+   if(inose.eq.1) call finalize_nhc()
+   if(inose.gt.1.and.inose.lt.5) call finalize_gle()
+
 !TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
 

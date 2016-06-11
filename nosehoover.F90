@@ -198,22 +198,35 @@ module mod_nhc
    deallocate ( ran )
    end subroutine
 
-      subroutine nhc_temp() !currently not in use
-      use mod_general, ONLY:nwalk,natom
-      implicit none
-      integer :: iw,iat
-      real(DP)  :: ekin_mom=0.0d0,temp1=0.0d0
-      do iw=1,nwalk
-       do iat=1,natom
-        temp1=pnhx(iat,iw,1)**2+pnhy(iat,iw,1)**2+pnhz(iat,iw,1)**2
-        temp1=0.5*temp1/ams
-        ekin_mom=ekin_mom+temp1
-       enddo
+
+   subroutine finalize_nhc()
+   if(allocated(w))     deallocate( w )
+   if(allocated(Qm))    deallocate( Qm )
+   if(allocated(ms))    deallocate( ms )
+   if(allocated(pnhx))  deallocate( pnhx )
+   if(allocated(pnhy))  deallocate( pnhy )
+   if(allocated(pnhz))  deallocate( pnhz )
+   if(allocated(xi_x))  deallocate( xi_x )
+   if(allocated(xi_y))  deallocate( xi_y )
+   if(allocated(xi_z))  deallocate( xi_z )
+   end subroutine finalize_nhc
+
+   subroutine nhc_temp() !currently not in use
+   use mod_general, ONLY:nwalk,natom
+   implicit none
+   integer :: iw,iat
+   real(DP)  :: ekin_mom=0.0d0,temp1=0.0d0
+   do iw=1,nwalk
+      do iat=1,natom
+         temp1=pnhx(iat,iw,1)**2+pnhy(iat,iw,1)**2+pnhz(iat,iw,1)**2
+         temp1=0.5*temp1/ams
+         ekin_mom=ekin_mom+temp1
       enddo
-      open(100,file='temper_nhc.dat',access='append')
-      write(100,*)2*ekin_mom/3/natom/nwalk
-      close(100)
-      end subroutine
+   enddo
+   open(100,file='temper_nhc.dat',access='append')
+   write(100,*)2*ekin_mom/3/natom/nwalk
+   close(100)
+   end subroutine
       
 !------------------------------------------------------
 
