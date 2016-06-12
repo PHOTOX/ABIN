@@ -19,7 +19,8 @@
 program abin_dyn
    use mod_const, only: DP, AUtoFS
    use mod_arrays
-   use mod_general
+   use mod_general, only: pot, pot_ref, sim_time, md, my_rank, it, &
+           ncalc, nstep, nwrite, iremd, ipimd, idebug, inormalmodes, istage, irest
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_kinetic, ONLY: temperature
    use mod_utils, only: abinerror, printf, archive_file
@@ -135,8 +136,14 @@ program abin_dyn
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
 !----getting initial forces and energies
-      call force_clas(fxc, fyc, fzc, x, y, z, eclas)
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
       if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
+      
+      ! if we use reference potential with RESPA
+      if(pot_ref.ne.'none')then
+         call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
+         call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
+      end if
      
 !----setting initial values for surface hoping
       if(ipimd.eq.2)then
@@ -201,6 +208,8 @@ program abin_dyn
                call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
             case (3)
                call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+            case (4)
+               call doublerespastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
          END SELECT
 
          sim_time = sim_time + dt

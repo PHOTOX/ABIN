@@ -292,14 +292,12 @@ contains
    ! is passed back to the caller, while the new s's are kept stored in ps.
    subroutine gle_step(px, py, pz, m)
    use mod_general,  only:natom, nwalk, inormalmodes
-   use mod_kinetic,  only: ekin_p
    real(DP), intent(inout)  :: px(:,:)
    real(DP), intent(inout)  :: py(:,:)
    real(DP), intent(inout)  :: pz(:,:)
    real(DP), intent(in)     :: m(:,:)
    integer                :: i, j, iat, iw
 
-   langham = langham + ekin_p(px,py,pz)
 
    do iw=1,nwalk
 
@@ -337,8 +335,6 @@ contains
 
    !iw enddo
    enddo
-
-   langham = langham - ekin_p(px,py,pz)
 
    end subroutine gle_step
 

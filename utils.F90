@@ -31,7 +31,7 @@ module mod_utils
             write(*,*)'Suspicious character found in one of the input strings: '//string
             write(*,*)'ASCII index:', c,' Position in the string:', i
             write(*,*)'Please check your input files. Exiting...'
-            call abinerror('UpperToLower')
+            call abinerror('SanitizeString')
          end if
       end do
       

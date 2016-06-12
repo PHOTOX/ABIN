@@ -68,7 +68,8 @@ subroutine init(dt, values1)
    namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive, &
-            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile
+            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
+            pot_ref, nstep_ref
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
@@ -106,7 +107,7 @@ subroutine init(dt, values1)
    pot=UpperToLower(pot)
 
 
-   if(pot.eq."_cp2k_")then
+   if(pot.eq."_cp2k_".or.pot_ref.eq."_cp2k_")then
 #ifdef CP2K
       call cp2k_init()
 #else
@@ -312,7 +313,7 @@ print '(a)','**********************************************'
          rewind(150)
       end if
 
-      if(iqmmm.eq.2.or.pot.eq.'nab')then
+      if(iqmmm.eq.2.or.pot.eq.'nab'.or.pot_ref.eq.'nab')then
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
          allocate ( natmol(natom) )
 #endif
@@ -355,9 +356,7 @@ print '(a)','**********************************************'
          nwalk = ntraj
          md = 2 ! velocity verlet
          nabin = 1
-      endif
-
-      if(ipimd.eq.1.and.inormalmodes.ne.1)then
+      else if(ipimd.eq.1.and.inormalmodes.ne.1)then
          if (my_rank.eq.0) write(*,*)'Using RESPA integrator.'
          md = 1
       else if(ipimd.eq.1.and.inormalmodes.eq.1)then
@@ -367,6 +366,10 @@ print '(a)','**********************************************'
       ! we should include shake into the verlet routine
       if(nshake.gt.0)then
          md = 3
+      end if
+
+      if(pot_ref.ne.'none')then
+         md = 4
       end if
 
 #ifdef USEFFTW
@@ -388,14 +391,14 @@ print '(a)','**********************************************'
       temp0 = temp0/autok
 
       if (ihess.eq.1)then 
-       allocate ( hess(natom*3,natom*3,nwalk) )
-       allocate ( cvhess_cumul(nwalk) )
-       cvhess_cumul=0.0d0
-       if (pot.eq.'nab')then
+         allocate ( hess(natom*3,natom*3,nwalk) )
+         allocate ( cvhess_cumul(nwalk) )
+         cvhess_cumul=0.0d0
+         if (pot.eq.'nab'.or.pot_ref.eq.'nab')then
 !!$OMP PARALLEL
-        allocate ( h(natom*natom*9) )
+            allocate ( h(natom*natom*9) )
 !!$OMP END PARALLEL
-       endif
+         endif
       endif
 
 !----SHAKE initialization,determining the constrained bond lenghts
@@ -406,14 +409,14 @@ print '(a)','**********************************************'
 
       call dist_init() !zeroing distribution arrays
 
-      if (pot.eq.'mmwater') call check_water(natom, names)
+      if (pot.eq.'mmwater'.or.pot_ref.eq.'mmwater') call check_water(natom, names)
 
 !-----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
 !    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      if (inose.eq.1) call nhc_init()
-     if (inose.eq.2) call gle_init(dt*0.5/nabin) !nabin is set to 1 unless ipimd=1
+     if (inose.eq.2) call gle_init(dt*0.5/nabin/nstep_ref) !nabin is set to 1 unless ipimd=1
      if (inose.eq.3) call wn_init(dt*0.5,wnw)
 
 
@@ -526,7 +529,7 @@ print '(a)','**********************************************'
 
 
 #ifdef NAB
-      if (pot.eq."nab".or.iqmmm.eq.2)then
+      if (pot.eq."nab".or.pot_ref.eq."nab".or.iqmmm.eq.2)then
          if (alpha_pme.lt.0) alpha_pme = pi / cutoff
          if (kappa_pme.lt.0) kappa_pme = alpha_pme
          call nab_init(alpha_pme, cutoff, nsnb, ipbc, ips, iqmmm) !C function...see nabinit.c

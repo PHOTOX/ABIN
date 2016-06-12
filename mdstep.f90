@@ -5,7 +5,7 @@ module mod_mdstep
    use mod_transform
    implicit none
    private
-   public :: verletstep, respastep, respashake
+   public :: verletstep, respastep, respashake, doublerespastep
 
    contains
 
@@ -39,8 +39,8 @@ module mod_mdstep
 
 
    subroutine thermostat(px,py,pz,amt,dt)
-   use mod_nhc
-   use mod_gle
+   use mod_nhc, only: inose, shiftNHC_yosh, shiftNHC_yosh_mass, imasst
+   use mod_gle, only: gle_step, wn_step, langham
    real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
    real(DP),intent(in)     :: amt(:,:)
    real(DP),intent(in)     :: dt
@@ -57,7 +57,11 @@ module mod_mdstep
    
    if (inose.eq.3)  call wn_step(px,py,pz,amt)
    
-   if (inose.eq.2)  call gle_step(px,py,pz,amt)
+   if (inose.eq.2)then
+      langham = langham + ekin_p(px,py,pz)
+      call gle_step(px,py,pz,amt)
+      langham = langham - ekin_p(px,py,pz)
+   end if
 
    end subroutine thermostat
            
@@ -91,7 +95,7 @@ module mod_mdstep
       call shiftX(x, y, z, px, py, pz, amt, dt)
    end if
    
-   call force_clas(fxc,fyc,fzc,x,y,z,eclas)
+   call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot)
 
    call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
@@ -106,9 +110,8 @@ module mod_mdstep
    ! further info is before subroutine respa_shake
    subroutine respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
               fxc,fyc,fzc,fxq,fyq,fzq)
-   use mod_general,  only: nabin
-   use mod_nhc,      only: inose,imasst,shiftNHC_yosh,shiftNHC_yosh_mass
-   use mod_gle,      only: gle_step
+   use mod_general,  only: nabin, pot
+   use mod_nhc,      only: inose
    use mod_interfaces, only: force_clas, force_quantum
    real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)  :: fxc(:,:),fyc(:,:),fzc(:,:)
@@ -139,7 +142,7 @@ module mod_mdstep
    
    enddo
    
-   call force_clas(fxc,fyc,fzc,x,y,z,eclas)
+   call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot)
    
    call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
    
@@ -174,7 +177,7 @@ module mod_mdstep
 
 subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
                  fxc,fyc,fzc,fxq,fyq,fzq)
-      use mod_general, ONLY: nabin
+      use mod_general, ONLY: nabin, pot
       use mod_nhc, ONLY:inose,shiftNHC_yosh,shiftNHC_yosh_mass
       use mod_shake, only: shake, nshake
       use mod_interfaces, only: force_clas, force_quantum
@@ -234,7 +237,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
     call shiftNHC_yosh (px,py,pz,amt,-dt/(2*nabin))
    endif
 
-   call force_clas(fxc,fyc,fzc,x,y,z,eclas)
+   call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot)
 
    call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
@@ -245,4 +248,67 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
 
    end subroutine respashake
 
+   !-double RESPA ALGORITHM using reference semiempirical potential (or any other potential)
+   subroutine doublerespastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
+              fxc,fyc,fzc,fxq,fyq,fzq)
+   use mod_general,  only: nabin, pot, pot_ref, nstep_ref
+   use mod_nhc,      only: inose
+   use mod_interfaces, only: force_clas, force_quantum
+   use mod_arrays,   only: fxc_diff, fyc_diff, fzc_diff
+   real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout)  :: fxc(:,:),fyc(:,:),fzc(:,:)
+   real(DP),intent(inout)  :: fxq(:,:),fyq(:,:),fzq(:,:)
+   real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
+   real(DP),intent(in)     :: amg(:,:),amt(:,:)
+   real(DP),intent(in)     :: dt
+   real(DP),intent(inout)  :: eclas,equant
+   real(DP)                :: dtsm
+   integer                 :: iabin, iref
+
+   dtsm = dt/(nabin*nstep_ref)
+
+   if (inose.gt.0) call thermostat(px, py, pz, amt, dtsm/2)
+      
+   call shiftP(px, py, pz, fxc_diff, fyc_diff, fzc_diff, dt/2)
+
+   do iref = 1, nstep_ref
+   
+      if (inose.gt.0.and.iref.ne.1) call thermostat(px, py, pz, amt, dtsm/2)
+      
+      call shiftP(px, py, pz, fxc, fyc, fzc, dt/2/nstep_ref)
+      
+      do iabin = 1, nabin
+      
+         if (inose.gt.0.and.iabin.ne.1) call thermostat(px, py, pz, amt, dtsm/2)
+ 
+         call shiftP(px, py, pz, fxq, fyq, fzq, dtsm/2)
+     
+         call shiftX(x, y, z, px, py, pz, amt, dtsm)
+  
+         call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
+  
+         call shiftP(px, py, pz, fxq, fyq, fzq, dtsm/2)
+  
+         if (inose.gt.0.and.iabin.ne.nabin) call thermostat(px, py, pz, amt, dtsm/2)
+      
+      enddo
+      
+      call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot_ref)
+      
+      call shiftP (px,py,pz,fxc,fyc,fzc,dt/2/nstep_ref)
+      
+      if (inose.gt.0.and.iref.ne.nstep_ref) call thermostat(px, py, pz, amt, dtsm/2)
+
+
+   end do
+
+   call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
+
+   call shiftP(px, py, pz, fxc_diff, fyc_diff, fzc_diff, dt/2)
+
+   if (inose.gt.0) call thermostat(px, py, pz, amt, dtsm/2)
+   
+   end subroutine doublerespastep
+
 end module mod_mdstep
+

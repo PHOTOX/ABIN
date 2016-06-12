@@ -29,21 +29,22 @@ subroutine cp2k_finalize()
 end subroutine cp2k_finalize
 #endif
 
-subroutine force_cp2k(x,y,z,fx,fy,fz,eclas)
-      use mod_general
+subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
+      use mod_general,  only: natom, iqmmm
       use mod_utils,    only: abinerror
       use mod_interfaces, only: oniom
       implicit none
       real(DP),intent(in)    :: x(:,:),  y(:,:),  z(:,:)
       real(DP),intent(out)   :: fx(:,:), fy(:,:), fz(:,:)
       real(DP),intent(out)   :: eclas
+      integer, intent(in)    :: walkmax
       real(DP)  :: e0
       integer :: iat,iw
       integer :: ierr, ind
 
      eclas=0.0d0
 
-     do iw=1,nwalk
+     do iw = 1, walkmax
 
        ind=1
        do iat=1,natom

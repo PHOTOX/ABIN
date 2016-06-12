@@ -89,13 +89,7 @@ module mod_transform
    real(DP)  :: lambda(size(amg,2)+1)
    integer :: iat,iw
 
-!  NOTE: am was multiplied by amu earlier in the init.f
-
-!  DH hack to prevent sigfpe when dividing by amt
-!  because size is actualy nwalk+1, so this would be invalid
-!  vx = px / amt
-   amt = 1
-   amg = 1
+!  NOTE: am was multiplied by amu earlier in the init.F90
 
 !  Setting mass array, which is only used without the stage transformation
    do iw=1,nwalk

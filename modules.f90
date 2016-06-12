@@ -46,9 +46,9 @@ module mod_general
    use mod_const, only: DP
    implicit none
    integer :: it=0, md=1, ihess
-   integer :: ipimd=0, istage=0, nwalk=1, inormalmodes
-   character(len=15) :: pot='none'
-   integer :: imini=0,nstep=1,nabin=50
+   integer :: ipimd=0, istage=0, nwalk=1, inormalmodes=0
+   character(len=15) :: pot='none', pot_ref='none'
+   integer :: imini=0, nstep=1, nabin=50, nstep_ref=1
    integer :: nwrite=1,nwritex=1,ncalc=1,nwritev=0,nwritef=0
    integer :: narchive=1000, nrest=1
    integer :: icv=0,irest=0,anal_ext=0,idebug=0
@@ -336,8 +336,7 @@ module mod_system
       use mod_general, only: nwalk, my_rank
       real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
       integer                 :: iw,iat
-      if (my_rank.eq.0) write(*,*)'Removing initial velocity of constrained atoms.'
-
+!      if (my_rank.eq.0) write(*,*)'Removing momentum of constrained atoms.'
       do iw=1,nwalk
          do iat=1,conatom
             px(iat,iw) = 0.0d0

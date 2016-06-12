@@ -32,7 +32,7 @@ C_OBJS := EWALD/ewaldf.o
 
 LIBS += WATERMODELS/libttm.a
 
-ifeq ($(NAB),TRUE)
+ifeq ($(strip $(NAB)),TRUE)
   C_OBJS += nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o # NAB/binpos.o
   # The following libraries were compiled with gfortran
   LIBS   += NAB/libnab.a # NAB/arpack.a  # NAB/blas.a
@@ -40,7 +40,7 @@ ifeq ($(NAB),TRUE)
   DFLAGS +=  -DNAB
 endif
 
-ifeq ($(FFTW),TRUE)
+ifeq ($(strip $(FFTW)),TRUE)
   ifneq ($(CP2K),TRUE)
    LIBS := -lfftw3 ${LIBS}
   endif
@@ -48,22 +48,21 @@ ifeq ($(FFTW),TRUE)
   F_OBJS := fftw_interface.o ${F_OBJS}
 endif
 
-ifeq ($(CP2K),TRUE)
+ifeq ($(strip $(CP2K)),TRUE)
   # The following variables should be the same that were used to compile CP2K.
   # Also, be carefull with FFTW clashes
   DFLAGS += -DCP2K 
   LIBS += -L${CP2KPATH} -lcp2k ${CP2K_LIBS} 
 endif
 
-ifeq ($(PLUM),TRUE)
+ifeq ($(strip $(PLUM)),TRUE)
  include ${PLUMLINK}
  DFLAGS += -DPLUM
  LIBS += ${PLUMED_STATIC_LOAD}
   F_OBJS := plumed.o ${F_OBJS}
 endif
 
-#MPI STUFF
-ifeq  ($(MPI),TRUE) 
+ifeq  ($(strip $(MPI)),TRUE) 
   DFLAGS += -DMPI
   INC    += $(MPI_INC)
   LIBS   += $(MPI_LIBS)

@@ -1,7 +1,7 @@
-subroutine force_abin(x, y, z, fx, fy, fz, eclas)
+subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_const,    only: DP, ANG
    use mod_files,    only: MAXUNITS
-   use mod_general
+   use mod_general,  only: ihess, ipimd, iqmmm, it, iremd, my_rank
    use mod_system,   only: names
    use mod_harmon,   only: hess
    use mod_sh,       only: nac_accu1, tocalc, en_array, istate, nstate
@@ -12,6 +12,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
    real(DP),intent(in)  :: x(:,:), y(:,:), z(:,:)
    real(DP),intent(out) :: fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(out) :: eclas
+   integer,intent(in)   :: walkmax
+   character(len=*),intent(in) :: chpot
    real(DP)             :: temp1
    character(len=100)   :: chsystem
    character(len=30)    :: chgeom,chforce,chhess,fgeom
@@ -30,7 +32,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
 
 !$OMP PARALLEL ! REDUCTION(+:eclas) alternativa k atomic
 !$OMP DO PRIVATE(temp1,chsystem,chgeom,chforce,chhess,itest,file_exists,iost)
-   do iw=1,nwalk
+   do iw = 1, walkmax
 
 !!$   ithread=OMP_get_thread_num()
       write(chgeom,'(A,I3.3)')'geom.dat.',iw
@@ -53,26 +55,26 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
       close(unit=MAXUNITS+iw)
 !---- SH     
       if(ipimd.eq.2)then
-         open(unit=MAXUNITS+iw+2*nwalk,file='state.dat')
-         write(MAXUNITS+iw+2*nwalk,'(I2)')istate(iw)
-         write(MAXUNITS+iw+2*nwalk,'(I2)')nstate
+         open(unit=MAXUNITS+iw+2*walkmax,file='state.dat')
+         write(MAXUNITS+iw+2*walkmax,'(I2)')istate(iw)
+         write(MAXUNITS+iw+2*walkmax,'(I2)')nstate
 
 ! upper triangular matrix without diagonal
 ! tocalc(,)=1 -> compute NA couplings
 ! tocalc(,)=0 -> do NOT compute NA cooupligs
          do ist1=1,nstate-1
             do ist2=ist1+1,nstate
-               write(MAXUNITS+iw+2*nwalk,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
+               write(MAXUNITS+iw+2*walkmax,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
             end do
          end do
-         close(MAXUNITS+iw+2*nwalk) 
+         close(MAXUNITS+iw+2*walkmax) 
       endif
 
 
 
 !---  HERE we decide which program we use to obtain gradients and energies
 !     e.g. ./G09/r.g09
-      chsystem='./'//trim(LowerToUpper(pot))//'/r.'//pot
+      chsystem='./'//trim(LowerToUpper(chpot))//'/r.'//chpot
 
       INQUIRE(FILE=chsystem, EXIST=file_exists)
       if (.not.file_exists)then
@@ -105,7 +107,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
       if(ISTATUS.ne.0.and.ISTATUS.ne.256)then
          write(*,*)'ERROR: Something went wrong during the execution of the ab initio external program.' 
          write(*,*)'See the approprite output files in& 
-         & folder '//trim(LowerToUpper(pot))//"/" 
+         & folder '//trim(LowerToUpper(chpot))//"/" 
          call abinerror('force_abin')
       end if
 
@@ -130,7 +132,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
       if(iost.ne.0)then
          write(*,*)'Fatal problem with reading energy from file ', chforce
          write(*,*)'This usually means, that the ab initio program failed to converge.'
-         write(*,*)'See the appropriate output files from the external program in folder '//trim(LowerToUpper(pot))//"/."
+         write(*,*)'See the appropriate output files from the external program in folder '//trim(LowerToUpper(chpot))//"/."
          call abinerror('force_abin')
       endif
 !$OMP ATOMIC
@@ -152,7 +154,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
             write(*,*)'Fatal problem with reading gradients from file ', chforce
             write(*,*)'This usually means, that the ab initio program failed.'
             write(*,*)'See the appropriate output files from external program in folder ' &
-            //trim(LowerToUpper(pot))//"/."
+            //trim(LowerToUpper(chpot))//"/."
             call abinerror('force_abin')
          endif
 !---Conversion to forces        
@@ -173,14 +175,14 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
             itest = itest + 1
          end do
 
-         open(unit=MAXUNITS+iw+nwalk,file=chhess,status='old',ACTION='READ')
+         open(unit=MAXUNITS+iw+walkmax,file=chhess,status='old',ACTION='READ')
 
          do iat2=1,natqm*3
             do iat1=1,natqm*3,3
-               read(MAXUNITS+iw+nwalk,*)hess(iat1,iat2,iw),hess(iat1+1,iat2,iw),hess(iat1+2,iat2,iw)
-               hess(iat1,iat2,iw)=hess(iat1,iat2,iw)/nwalk
-               hess(iat1+1,iat2,iw)=hess(iat1+1,iat2,iw)/nwalk
-               hess(iat1+2,iat2,iw)=hess(iat1+2,iat2,iw)/nwalk
+               read(MAXUNITS+iw+walkmax,*)hess(iat1,iat2,iw),hess(iat1+1,iat2,iw),hess(iat1+2,iat2,iw)
+               hess(iat1,iat2,iw)=hess(iat1,iat2,iw)/walkmax
+               hess(iat1+1,iat2,iw)=hess(iat1+1,iat2,iw)/walkmax
+               hess(iat1+2,iat2,iw)=hess(iat1+2,iat2,iw)/walkmax
             enddo
          enddo
 
@@ -189,7 +191,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas)
 
       close(unit=MAXUNITS+iw,status='delete')
       if(ihess.eq.1)then
-         close(unit=MAXUNITS+iw+nwalk,status='delete')
+         close(unit=MAXUNITS+iw+walkmax,status='delete')
       endif
 
       if (iqmmm.eq.1) call oniom(x, y, z, fx, fy, fz, eclas, iw)

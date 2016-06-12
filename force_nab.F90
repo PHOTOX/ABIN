@@ -90,15 +90,16 @@
 
       end subroutine
 
-      subroutine force_nab(x,y,z,fx,fy,fz,eclas)
+      subroutine force_nab(x, y, z, fx, fy, fz, eclas, walkmax)
       use mod_const,       only: AUtoKCAL, ANG, AUtoKK
-      use mod_general,     only: ihess, natom, nwalk, ncalc, idebug, iqmmm, it
+      use mod_general,     only: ihess, natom, ncalc, idebug, iqmmm, it
       use mod_estimators,  only: h
       use mod_harmon,      only: hess
       use mod_qmmm,        only: natqm
       real(DP), intent(in)    :: x(:,:),y(:,:),z(:,:)
       real(DP), intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
       real(DP), intent(inout) :: eclas
+      integer,  intent(in)    :: walkmax
       real(DP), parameter     :: fac=autokcal*ang
       real(DP), parameter     :: fac2=autokcal*ang*ang,fac3=autoKK*ang
       real(DP)                :: grad(size(x,1)*3),xyz(size(x,1)*3)
@@ -114,15 +115,15 @@
       en_ewald=0.0d0
 
 
-      del=fac2*nwalk
-      iter=it   !dulezite pro update non-bond listu
+      del = fac2 * walkmax
+      iter = it   !dulezite pro update non-bond listu
       if (idebug.eq.1.and.it.ne.nsnb) iter=-1
 
 !!    PRO PARALELNI IMPLEMENTACI JE TREBA  vztvorit wrapper pro update nblistu
 !!$   if ((modulo(it,nsnb).eq.0.or.it.eq.1) )call nblistupdate()
 
 !!$OMP PARALLEL DO PRIVATE(energy,pom,xyz,grad,idum4,dummy1,dummy2,dummy3) REDUCTION(+:eclas) !(asi neni bezpecne volat!gradhess paralelne)
-      do iw=1,nwalk
+      do iw = 1, walkmax
       idum4=1
       if( (modulo(it,nsnb).eq.0.or.it.eq.1).and.iw.gt.1 ) iter=-10  !update nblistu jen pro prvniho walkera
 
@@ -240,7 +241,7 @@
 !  enddo
 !  close(100)
 
-      eclas=eclas/nwalk
+      eclas = eclas / walkmax
    end subroutine force_nab
 
 end module

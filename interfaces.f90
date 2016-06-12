@@ -11,18 +11,21 @@ module mod_interfaces
 
    ! has to be here or in its own module, as it depends on mod_sh
    ! and mod_sh depends on force_clas
-   subroutine force_abin(x,y,z,fx,fy,fz,eclas)
+   subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    IMPORT :: DP
    real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(out)   :: fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(out)   :: eclas
+   integer,intent(in)     :: walkmax
+   character(len=*),intent(in) :: chpot
    end subroutine force_abin
 
-   subroutine force_clas(fx,fy,fz,x,y,z,eclas)
+   subroutine force_clas(fx, fy, fz, x, y, z, eclas, chpot)
    IMPORT :: DP
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(out)   :: eclas
+   character(len=*),intent(in) :: chpot
    end subroutine force_clas
 
    subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
@@ -32,6 +35,15 @@ module mod_interfaces
    real(DP),intent(in)  :: amg(:,:)
    real(DP),intent(out) :: energy
    end subroutine force_quantum
+
+   subroutine force_wrapper(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
+   IMPORT :: DP
+   real(DP),intent(in)    ::  x(:,:),  y(:,:),  z(:,:)
+   real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
+   real(DP),intent(out)   :: eclas
+   integer, intent(in)    :: walkmax
+   character(len=*),intent(in) :: chpot
+   end subroutine force_wrapper
 
    subroutine propagate_nm(x, y, z, px, py, pz, amg, dt)
    IMPORT :: DP
