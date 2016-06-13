@@ -75,7 +75,7 @@ module mod_mdstep
    subroutine verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
    use mod_general, ONLY: pot, ipimd, inormalmodes
    use mod_nhc, ONLY:inose
-   use mod_interfaces, only: force_clas
+   use mod_interfaces, only: force_clas, propagate_nm
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
    real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
