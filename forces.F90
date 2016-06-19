@@ -60,28 +60,9 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
 !  wraping molecules back to the box 
    if (chpot.eq.'nab'.and.ipbc.eq.1.and.modulo(it,nsnb).eq.0) call wrap(transx,transy,transz)
 
+
    ! LET'S GET FORCES! Ab initio interface is still deeper in force_abin
    call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, chpot, nwalk)
-
-!  For reference potential and ring-polymer contraction
-   if(pot_ref.ne.'none'.and.chpot.eq.pot)then
-      ! fxab now holds the full potential,
-      ! but we need the difference force on the output
-      fx = fxab; fy = fyab; fz = fzab
-      fxab = 0.0d0; fyab=0.0d0; fzab=0.0d0
-      energy = eclas
-      eclas = 0.0d0
-
-      call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, pot_ref, nwalk)
-
-      fxab = fx - fxab
-      fyab = fy - fyab
-      fzab = fz - fzab
-      ! fxab now holds the difference force
-      ! we return the difference forces, but full energy
-!      eclas = energy - eclas
-      eclas = energy
-   end if
 
 !  Spherical harmonic potential
    if (isbc.eq.1) call force_sbc(transx,transy,transz,fxab,fyab,fzab)
@@ -98,6 +79,32 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    if(iplumed.eq.1.and.it.gt.imini) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 !------------------------------------
 
+
+!  For reference potential and ring-polymer contraction
+   if(pot_ref.ne.'none'.and.chpot.eq.pot)then
+      ! fxab now holds the full potential,
+      ! but we need the difference force on the output
+      fx = fxab; fy = fyab; fz = fzab
+      fxab = 0.0d0; fyab=0.0d0; fzab=0.0d0
+      energy = eclas
+      eclas = 0.0d0
+
+      call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, pot_ref, nwalk)
+      if(isbc.eq.1)  call force_sbc(transx,transy,transz,fxab,fyab,fzab)
+      if(iqmmm.eq.2) call force_nab(transx, transy, transz, fxab, fyab, fzab, eclas, nwalk)
+      if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
+      if(iplumed.eq.1.and.it.gt.imini) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
+
+      fxab = fx - fxab
+      fyab = fy - fyab
+      fzab = fz - fzab
+      ! fxab now holds the difference force
+      ! we return the difference forces, but full energy
+!      eclas = energy - eclas
+      eclas = energy
+   end if
+
+
 !--TRANSFORMING FORCES FROM CARTESIAN TO STAGING or NORMAL MODE COORDS--!
 !--forces are divided by nwalk inside the FXtoFQ routine!---------------!
    if(istage.eq.1)then
@@ -105,6 +112,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
       call FXtoFQ(fxab,fyab,fzab,fx,fy,fz)
 
    else if(inormalmodes.gt.0)then
+      ! for PIGLET
 
       call XtoU(fxab, fyab, fzab, fx, fy, fz)
 
