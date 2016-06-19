@@ -19,52 +19,93 @@ module mod_gle
    implicit none
    private
    public :: readQT, ns, ps, langham
-   public :: gle_step, wn_step, wn_init, gle_init, finalize_gle
+   public :: gle_step, pile_step, pile_init, gle_init, finalize_gle,finalize_pile
    real(DP), allocatable :: gS(:,:), gT(:,:)
    real(DP), allocatable :: ps(:,:,:)
    ! For PIGLET
    real(DP), allocatable :: gS_centroid(:,:), gT_centroid(:,:)
    ! the following are only temporary helper arrays
    real(DP), allocatable :: gp(:,:), ngp(:,:), ran(:)
-   real(DP)         :: wnt, wns, langham
+   real(DP)         :: langham
    integer          :: ns, ns_centroid, readQT=1
+   real(DP), allocatable :: c1(:), c2(:)
+   integer  :: iglobal = 0
    save
 
 contains
+   ! initialize white-noise PILE thermostat.
+   ! can be used both for CMD and PIMD 
+   subroutine pile_init(dt, tau0)
+   use mod_const,  only: PI, AUtoFS
+   use mod_general,only: natom, nwalk, ipimd, inormalmodes
+   use mod_nhc,    only: temp
+   use mod_utils,  only: abinerror
+   real(DP), intent(in) :: dt, tau0
+   real(DP)    :: gam, omega, tau
+   integer     :: iw
 
-   ! initialize white-noise thermostat. 
-   ! the init and the propagator here are written with the same philosophy
-   ! used for the full-fledged colored-noise stuff.
-   subroutine wn_init(dt,wopt)
-   use mod_general,only:natom
-   use mod_nhc,only:temp
-   real(DP), intent(in) :: dt,wopt
-   real(DP) g
-   g = 2.d0 * wopt
-   wnt = exp(-dt*g)
-   wns = sqrt(temp*(1.d0-wnt*wnt))
+   ! Sanity check
+   if (ipimd.eq.1.and.inormalmodes.le.0)then
+      write(*,*)'ERROR: You must use normal mode coordinates with PILE thermostat.'
+      call abinerror('pile_init')
+   end if
+
+
    langham = 0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
-   allocate( ran(natom*3) )  !allocating arrays for random numbers produced by gautrg
+   allocate( ran(natom*3*nwalk) )  !allocating arrays for random numbers produced by gautrg
+
+   ! c1 and c2 as defined in the paper, but
+   ! c2 is further multiplied by sqrt(temp*nwalk)
+   allocate(c1(nwalk), c2(nwalk))
+
+   ! Centroid
+   tau = tau0 / AUtoFS * 1000
+   gam = 1 / tau
+   c1(1) = exp(-dt*gam)
+   c2(1) = dsqrt(1-c1(1)**2) * dsqrt(temp*nwalk)
+
+   ! Now normal modes of bead necklace
+   do iw = 2, nwalk
+      omega = 2 * temp * nwalk * sin((iw-1)*PI/nwalk)
+      gam   = 2 * omega
+      c1(iw) = exp(-dt*gam)
+      c2(iw) = dsqrt(1-c1(iw)**2) * dsqrt(temp*nwalk)
+   end do
+
+   write(*,*)'C1', (c1(iw),iw=1,nwalk)
+   write(*,*)'C2', (c2(iw),iw=1,nwalk)
+
    end subroutine
 
    ! white-noise propagator. time-step has been set in wn_init
-   subroutine wn_step(px,py,pz,m)
-   use mod_general, only: natom
+   subroutine pile_step(px,py,pz,m)
+   use mod_general, only: natom, nwalk
    real*8, intent(inout)  :: px(:,:)
    real*8, intent(inout)  :: py(:,:)
    real*8, intent(inout)  :: pz(:,:)
    real*8, intent(in)     :: m(:,:)
-   integer :: iat,iw,pom
-   iw=1
+   integer :: iat, iw, pom
+
    pom=1
-   call gautrg(ran,natom*3,0,6)
-   do iat=1,natom
-      px(iat,iw) = wnt*px(iat,iw)+wns*ran(pom)*sqrt(m(iat,iw))  
-      py(iat,iw) = wnt*py(iat,iw)+wns*ran(pom+1)*sqrt(m(iat,iw))
-      pz(iat,iw) = wnt*pz(iat,iw)+wns*ran(pom+2)*sqrt(m(iat,iw))
-      pom = pom + 3
+   call gautrg(ran,natom*3*nwalk,0,6)
+
+   ! This is a local version of the thermostat (PILE-L)
+   ! TODO: implement global version according to equations 51-54
+   do iw=1,nwalk
+      do iat=1,natom
+         px(iat,iw) = c1(iw)*px(iat,iw) + c2(iw)*ran(pom)*sqrt(m(iat,iw))  
+         py(iat,iw) = c1(iw)*py(iat,iw) + c2(iw)*ran(pom+1)*sqrt(m(iat,iw))
+         pz(iat,iw) = c1(iw)*pz(iat,iw) + c2(iw)*ran(pom+2)*sqrt(m(iat,iw))
+         pom = pom + 3
+       end do
    end do
    end subroutine
+  
+
+   subroutine finalize_pile()
+   if (allocated(ran)) deallocate(ran, c1, c2)
+   end subroutine finalize_pile
+
   
    subroutine gle_init(dt)
    use mod_const, only: AUtoEV
@@ -263,6 +304,8 @@ contains
    if(allocated(gS_centroid))then
       deallocate(gS_centroid, gT_centroid)
    end if
+   
+   if(allocated(ran)) deallocate(ran)
 
    end subroutine finalize_gle
 
@@ -437,7 +480,7 @@ contains
           if (D(j,j).gt. 1.0d-10) then
             L(i,j)=L(i,j)/D(j,j) 
           else
-            write(0,*) "Warning: zero eigenvalue in LDL^T decomposition."
+            write(*,*) "Warning: zero eigenvalue in LDL^T decomposition."
             L(i,j)=0.d0
           end if
        enddo

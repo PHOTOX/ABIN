@@ -40,7 +40,7 @@ module mod_mdstep
 
    subroutine thermostat(px,py,pz,amt,dt)
    use mod_nhc, only: inose, shiftNHC_yosh, shiftNHC_yosh_mass, imasst
-   use mod_gle, only: gle_step, wn_step, langham
+   use mod_gle, only: gle_step, pile_step, langham
    real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
    real(DP),intent(in)     :: amt(:,:)
    real(DP),intent(in)     :: dt
@@ -53,14 +53,20 @@ module mod_mdstep
          call shiftNHC_yosh(px,py,pz,amt,dt)
       endif
    
-   endif
-   
-   if (inose.eq.3)  call wn_step(px,py,pz,amt)
-   
-   if (inose.eq.2)then
+   ! colored-noise thermostats
+   else if (inose.eq.2)then
+
       langham = langham + ekin_p(px,py,pz)
       call gle_step(px,py,pz,amt)
       langham = langham - ekin_p(px,py,pz)
+
+   ! white-noise thermostat (PILE)
+   else if (inose.eq.3)then
+
+      langham = langham + ekin_p(px,py,pz)
+      call pile_step(px,py,pz,amt)
+      langham = langham - ekin_p(px,py,pz)
+
    end if
 
    end subroutine thermostat

@@ -57,7 +57,7 @@ subroutine init(dt, values1)
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
    LOGICAL :: file_exists
-   real(DP)  :: wnw=5.0d-5
+!   real(DP)  :: wnw=5.0d-5
    integer :: ierr
 !$ integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
@@ -73,7 +73,7 @@ subroutine init(dt, values1)
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
-   namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
+   namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,nrespnose,nyosh,      &
                      scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
 
    namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
@@ -377,7 +377,6 @@ print '(a)','**********************************************'
 #endif
 
 
-!-----conversion of temperature from K to au
       if (my_rank.eq.0)then
          if (temp0.gt.0)then
             write(*,*)'Initial temperature in Kelvins =', temp0
@@ -387,8 +386,9 @@ print '(a)','**********************************************'
          if (inose.ne.0) write(*,*)'Target temperature in Kelvins =', temp
       end if
 
-      temp = temp/autok
-      temp0 = temp0/autok
+!-----conversion of temperature from K to au
+      temp = temp / AUtoK
+      temp0 = temp0 / AUtoK
 
       if (ihess.eq.1)then 
          allocate ( hess(natom*3,natom*3,nwalk) )
@@ -417,7 +417,7 @@ print '(a)','**********************************************'
      call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      if (inose.eq.1) call nhc_init()
      if (inose.eq.2) call gle_init(dt*0.5/nabin/nstep_ref) !nabin is set to 1 unless ipimd=1
-     if (inose.eq.3) call wn_init(dt*0.5,wnw)
+     if (inose.eq.3) call pile_init(dt*0.5,tau0)
 
 
 !----performing RESTART from restart.xyz
@@ -751,8 +751,8 @@ print '(a)','**********************************************'
               nwrite=ncalc
       endif
 
-      if(ipimd.eq.1.and.inose.ne.1.and.inose.ne.2)then
-       write(*,*)'You have to use Nosé-Hoover or quantum thermostat with PIMD!(inose=1 or 2)'
+      if(ipimd.eq.1.and.inose.le.0)then
+       write(*,*)'You have to use thermostat with PIMD!(inose>=0)'
        write(*,*)chknow
        if(iknow.ne.1) error=1
       endif
@@ -841,11 +841,6 @@ print '(a)','**********************************************'
        write(*,*)'inose has to be 0,1,2 or 3.'
        error=1
       endif
-      if(inose.eq.3)then
-       write(*,*)'Langevin thermostat was not extensively tested.'
-       write(*,*)chknow
-       if (iknow.ne.1) error=1
-      endif
       if(istage.eq.1.and.ipimd.ne.1)then
          write(*,*)'The staging transformation is only meaningful for PIMD'
          error=1
@@ -854,7 +849,7 @@ print '(a)','**********************************************'
          write(*,*)'The normal mode transformation is only meaningful for PIMD. Exiting...'
          error=1
       endif
-      if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2)then
+      if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2.and.inormalmodes.eq.0)then
        write(*,*)'PIMD should be done with staging or normal mode transformation! Exiting...'
        write(*,*)chknow
        if (iknow.ne.1) error=1
