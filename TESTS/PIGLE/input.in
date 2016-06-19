@@ -1,6 +1,3 @@
-This is a sample input file for ABIN 
-NOTE: order of input sections matters!!
-
 &general
 nstep=10,
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!

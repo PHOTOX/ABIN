@@ -1,5 +1,5 @@
 !---mod_transform                  P.Slavicek and D.Hollas, 9.2.2012
-!--- Transformation routines for PIMD and PI+GLE.
+!---Transformation routines for PIMD and PI+GLE.
 !---Various staging transformation subroutines are placed here.
 !---NORMAL MODE TRANSFORMATION added during March 2013
 
@@ -264,9 +264,9 @@ module mod_transform
       cy(1) = complex(y(iat,1),0)
       cz(1) = complex(z(iat,1),0)
       do iw = 2, nmodes + odd
-         cx(iw) = complex(x(iat,iw), x(iat,iw+nmodes)) / fac
-         cy(iw) = complex(y(iat,iw), y(iat,iw+nmodes)) / fac
-         cz(iw) = complex(z(iat,iw), z(iat,iw+nmodes)) / fac
+         cx(iw) = complex(x(iat,iw), x(iat,nwalk+2-iw)) / fac
+         cy(iw) = complex(y(iat,iw), y(iat,nwalk+2-iw)) / fac
+         cz(iw) = complex(z(iat,iw), z(iat,nwalk+2-iw)) / fac
       end do
       if(odd.ne.1)then
          cx(nmodes+1) = complex(x(iat,nmodes+1),0)
@@ -353,11 +353,11 @@ endif
       transz(iat,1) = realpart(cz(1))
       do iw=2,nmodes+odd
          transx(iat,iw) = realpart(cx(iw)) * fac
-         transx(iat,iw+nmodes) = imagpart(cx(iw)) * fac
+         transx(iat,nwalk+2-iw) = imagpart(cx(iw)) * fac
          transy(iat,iw) = realpart(cy(iw)) * fac
-         transy(iat,iw+nmodes) = imagpart(cy(iw)) * fac
+         transy(iat,nwalk+2-iw) = imagpart(cy(iw)) * fac
          transz(iat,iw) = realpart(cz(iw)) * fac
-         transz(iat,iw+nmodes) = imagpart(cz(iw)) * fac
+         transz(iat,nwalk+2-iw) = imagpart(cz(iw)) * fac
       enddo
 
       if(odd.ne.1)then
@@ -404,9 +404,9 @@ endif
    equantz = 0.0d0
 
    do iat = 1, natom
-      x(iat, nwalk+1) = x(iat, nwalk)
-      y(iat, nwalk+1) = y(iat, nwalk)
-      z(iat, nwalk+1) = z(iat, nwalk)
+      x(iat, nwalk+1) = x(iat, 1)
+      y(iat, nwalk+1) = y(iat, 1)
+      z(iat, nwalk+1) = z(iat, 1)
    end do
 
    do iw = 1, nwalk

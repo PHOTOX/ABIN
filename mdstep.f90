@@ -192,7 +192,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
 
 
       if(inose.eq.1)then
-        call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
+         call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
       endif
 
       call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
@@ -202,7 +202,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
 
 
       if(inose.eq.1)then
-       call shiftNHC_yosh (px,py,pz,amt,-dt/(2*nabin))
+         call shiftNHC_yosh (px,py,pz,amt,-dt/(2*nabin))
       endif
 
 !------RESPA LOOP
