@@ -36,6 +36,7 @@ module mod_kinetic
       enddo
 
       est_temp=2*ekin_mom/(dime*natom*nwalk-nshake-f-dime*conatom)
+      if(inormalmodes.eq.1.or.inose.eq.2) est_temp = est_temp / nwalk
       est_temp_cumul=est_temp_cumul+est_temp
 
       if(ipimd.eq.0)then

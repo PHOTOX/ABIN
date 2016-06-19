@@ -36,7 +36,7 @@ module mod_shake
    end subroutine shake_init
 
    subroutine shake(x,y,z,px,py,pz,amt,iq,iv) 
-      use mod_general, only: natom, nwalk, istage
+      use mod_general, only: natom, nwalk, inormalmodes
       use mod_system, ONLY: am
       real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
       real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
@@ -68,7 +68,7 @@ module mod_shake
       maxcycle=1000
       do iw=1,nwalk
 
-      if(iw.eq.2.and.istage.eq.2) exit   !shake only centroid variable i.e. first normal mode
+      if(iw.eq.2.and.inormalmodes.gt.1) exit   !shake only centroid variable i.e. first normal mode
 
 ! PS&DHchange: SHAKE algorithm implemented, iteratively solved until convergence
 ! criterion agama < shake_tol are met for all bonds.

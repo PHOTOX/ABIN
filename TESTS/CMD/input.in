@@ -1,5 +1,6 @@
 # TESTING basic CMD
 # TESTING independence of order of  namelists
+# TESTING atom contraints
 
 &nhcopt
 inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
@@ -10,6 +11,7 @@ nyosh=7
 /
 
 &general
+conatom=1
 nproc=1
 idebug=0
 nstep=10,

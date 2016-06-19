@@ -38,7 +38,7 @@ module mod_sh
 
    subroutine sh_init(x, y, z, vx, vy, vz, dt)
    use mod_const,    only: AUtoEV
-   use mod_general,  only: irest, natom, it
+   use mod_general,  only: irest, natom, it, pot
    use mod_interfaces, only: force_clas
    use mod_kinetic,  only: ekin_v
    real(DP),intent(inout)  :: x(:,:), y(:,:), z(:,:)
@@ -124,7 +124,7 @@ module mod_sh
 
    !restarting the SH, reading NACM
 
-   call force_clas(dum_fx,dum_fy,dum_fz,x,y,z,dum_eclas)
+   call force_clas(dum_fx, dum_fy, dum_fz, x, y , z, dum_eclas, pot)
    !WARNING: itrj hack
    itrj=1
    eshift = -en_array(1, itrj)
@@ -886,7 +886,7 @@ enddo
    end subroutine surfacehop
 
    subroutine hop(vx,vy,vz,instate,outstate,itrj,eclas)
-      use mod_general,  ONLY:natom
+      use mod_general,  ONLY: natom, pot
       use mod_system,   ONLY: am
       use mod_files,    ONLY: UPOP
       use mod_kinetic,  only: ekin_v
@@ -955,7 +955,7 @@ enddo
       tocalc_temp = tocalc
       tocalc = 0
       write(*,*)'Calculating correct forces for the new state.'
-      call force_clas(fxc,fyc,fzc,x,y,z,eclas)
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
       tocalc = tocalc_temp
       deallocate(tocalc_temp)
 

@@ -31,187 +31,202 @@ module mod_nhc
    CONTAINS
 
    subroutine calc_nhcham()
-      use mod_general, only: natom,nwalk
-      use mod_system, only: dime
-      integer iat,inh,iw
+   use mod_general, only: natom,nwalk
+   use mod_system, only: dime
+   integer iat,inh,iw
 
-      nhcham=0.0d0
-      if (imasst.eq.1)then
-       do inh=1,nchain
-        do iw=1,nwalk
-         do iat=1,natom
-          nhcham=nhcham+pnhx(iat,iw,inh)*pnhx(iat,iw,inh)*0.5/Qm(iw)+temp*xi_x(iat,iw,inh)
-          if(dime.gt.1) nhcham=nhcham+pnhy(iat,iw,inh)*pnhy(iat,iw,inh)*0.5/Qm(iw)+temp*xi_y(iat,iw,inh)
-          if(dime.gt.2) nhcham=nhcham+pnhz(iat,iw,inh)*pnhz(iat,iw,inh)*0.5/Qm(iw)+temp*xi_z(iat,iw,inh)
+   nhcham=0.0d0
+   if (imasst.eq.1)then
+
+      do inh=1,nchain
+         do iw=1,nwalk
+            do iat=1,natom
+               nhcham=nhcham+pnhx(iat,iw,inh)*pnhx(iat,iw,inh)*0.5/Qm(iw)+temp*xi_x(iat,iw,inh)
+               if(dime.gt.1) nhcham=nhcham+pnhy(iat,iw,inh)*pnhy(iat,iw,inh)*0.5/Qm(iw)+temp*xi_y(iat,iw,inh)
+               if(dime.gt.2) nhcham=nhcham+pnhz(iat,iw,inh)*pnhz(iat,iw,inh)*0.5/Qm(iw)+temp*xi_z(iat,iw,inh)
+            end do
+         end do       
+      end do
+
+   else
+
+      iw=1 !TODO: az bude shake+pimd,tak je tohle treba vyresit
+      do iat=1,nmolt
+         nhcham=nhcham+0.5d0*pnhx(iat,iw,1)*pnhx(iat,iw,1)/ms(iat,1)+dime*natmolt(iat)*temp*xi_x(iat,iw,1)
+         do inh=2,nchain
+            nhcham=nhcham+pnhx(iat,iw,inh)*pnhx(iat,iw,inh)*0.5/ms(iat,inh)+temp*xi_x(iat,iw,inh)
          end do
-        end do       
-       end do
+      end do       
 
-      else
-       iw=1 !TODO: az bude shake+pimd,tak je tohle treba vyresit
-       do iat=1,nmolt
-        nhcham=nhcham+0.5d0*pnhx(iat,iw,1)*pnhx(iat,iw,1)/ms(iat,1)+dime*natmolt(iat)*temp*xi_x(iat,iw,1)
-        do inh=2,nchain
-         nhcham=nhcham+pnhx(iat,iw,inh)*pnhx(iat,iw,inh)*0.5/ms(iat,inh)+temp*xi_x(iat,iw,inh)
-        end do
-       end do       
+   endif
+   end subroutine
 
-      endif
-      end subroutine
+   subroutine nhc_init() 
+   use mod_const,    only: AMU, AUtoFS, PI
+   use mod_general,  only: ipimd, nwalk, natom, inormalmodes
+   use mod_system,   only: dime
+   use mod_random,   only: gautrg
+   implicit none
+   real(DP), allocatable  :: ran(:)
+   real(DP) :: omega
+   integer  :: inh,iw,iat,ipom,imol
 
-      subroutine nhc_init() 
-      use mod_const,    only: AMU, AUtoFS
-      use mod_general, only: ipimd, nwalk, natom
-      use mod_system, ONLY: dime
-      use mod_random, only: gautrg
-      implicit none
-      real(DP),allocatable  :: ran(:)
-      integer :: inh,iw,iat,ipom,imol
-      if (imasst.eq.1)then
-       allocate( pnhx(natom,nwalk,nchain) )
-       allocate( pnhy(natom,nwalk,nchain) )
-       allocate( pnhz(natom,nwalk,nchain) )
-       allocate( xi_x(natom,nwalk,nchain) )
-       allocate( xi_y(natom,nwalk,nchain) )
-       allocate( xi_z(natom,nwalk,nchain) )
-      else
-       allocate( pnhx(nmolt,nwalk,nchain) )
-       allocate( xi_x(nmolt,nwalk,nchain) )
-      endif
-      allocate( w(nyosh) )
-      allocate( Qm(nwalk) )
-      allocate( ms(nmolt,nchain) )
-      if (initNHC.eq.1) allocate( ran(natom*3) )
+   if (imasst.eq.1)then
+      allocate( pnhx(natom,nwalk,nchain) ); pnhx = 0.0d0
+      allocate( pnhy(natom,nwalk,nchain) ); pnhy = 0.0d0
+      allocate( pnhz(natom,nwalk,nchain) ); pnhz = 0.0d0
+      allocate( xi_x(natom,nwalk,nchain) ); xi_x = 0.0d0
+      allocate( xi_y(natom,nwalk,nchain) ); xi_y = 0.0d0
+      allocate( xi_z(natom,nwalk,nchain) ); xi_z = 0.0d0
+   else
+      allocate( pnhx(nmolt,nwalk,nchain) ); pnhx = 0.0d0
+      allocate( xi_x(nmolt,nwalk,nchain) ); xi_x = 0.0d0
+   endif
 
-!----------SETTING THERMOSTAT MASSES--------------------
-      ams=ams*amu
-      if(ams.lt.0.and.tau0.lt.0)then
-       write(*,*)'Warning. Ams and tau0 not set.'
-       write(*,*)'Using default value tau0=0.001'
-        tau=0.001d0/AUtoFS*1000
-       else
-        tau=tau0/AUtoFS*1000
-      endif
+   allocate( w(nyosh) )
+   allocate( Qm(nwalk) )
+   allocate( ms(nmolt,nchain) )
+   allocate( ran(natom*3) )
+
+!-------SETTING THERMOSTAT MASSES--------------------
+   ams=ams*amu
+   if(ams.lt.0.and.tau0.lt.0)then
+      write(*,*)'Warning. Ams and tau0 not set.'
+      write(*,*)'Using default value tau0=0.001'
+      tau=0.001d0/AUtoFS*1000
+   else
+      tau=tau0/AUtoFS*1000
+   endif
 !pokud neni ams v inputu, tak ji pro clasickou simulaci priradime take
 !automaticky, viz tuckermann, Statistical mechanics p.190
-      if(ams.lt.0)then
-       ams=temp*tau*tau
-      endif
-      do iw=1,nwalk
-        Qm(iw)=ams
-      enddo
-      do imol=1,nmolt
-        ms(imol,1)=(dime*natmolt(imol)-nshakemol(imol))*ams
-        do inh=2,nchain
+   if(ams.lt.0)then
+      ams=temp*tau*tau
+   endif
+   do iw=1,nwalk
+      Qm(iw)=ams
+   enddo
+   do imol=1,nmolt
+      ms(imol,1)=(dime*natmolt(imol)-nshakemol(imol))*ams
+      do inh=2,nchain
          ms(imol,inh)=ams
-        enddo
       enddo
-!in pimd the Nose-Hoover mass is set within the code (as 1/(beta*omega_p^2), where omega_p=sqrt(P)/(beta*hbar)
-      if(inose.eq.1.and.ipimd.eq.1)then 
-       do iw=1,nwalk   
-        Qm(iw)=1/(TEMP*NWALK)
-       enddo
-       if(tau0.gt.0) Qm(1)=ams  ! see tuckermann,stat.mech.
-      endif
+   enddo
+!  in pimd the Nose-Hoover mass is set within the code (as 1/(beta*omega_p^2), where omega_p=sqrt(P)/(beta*hbar)
+!  DH DEBUG
+   if (ipimd.eq.1.and.inormalmodes.ne.1)then
 
-      if(nmolt.le.50)then
-         write(*,*)'Thermostat masses'
-         if(imasst.eq.1) write(*,*)(Qm(iw),iw=1,nwalk)
-         if(imasst.eq.0)then 
-            do imol=1,nmolt
-               write(*,*)(ms(imol,inh),inh=1,nchain)
-            enddo
-         endif
+      do iw=1,nwalk
+         Qm(iw)=1/(TEMP*NWALK)
+      enddo
+      if(tau0.gt.0) Qm(1) = ams  ! see tuckermann,stat.mech.
+
+   else if(ipimd.eq.1.and.inormalmodes.eq.1)then
+
+      ! so far, NHC with normal modes does not work
+      temp = temp * nwalk
+      Qm(1) = temp * tau * tau * 4
+      do iw = 2, nwalk
+         omega = 2 * TEMP * sin((iw-1)*PI/NWALK)
+         Qm(iw) = 1 / TEMP / omega**2
+      enddo
+
+   end if
+
+
+   if(nmolt.le.50)then
+      write(*,*)'Thermostat masses'
+      if(imasst.eq.1) write(*,*)(Qm(iw),iw=1,nwalk)
+      if(imasst.eq.0)then 
+         do imol=1,nmolt
+            write(*,*)(ms(imol,inh),inh=1,nchain)
+         enddo
       endif
+   endif
 
 !---NOW INITIALIZE thermostat POSITION AND MOMENTA---
-      if(imasst.eq.1)then
+   if(initNHC.eq.1.and.imasst.eq.1)then
+      write(*,*)'Initializing NHC momenta.'
       do inh=1,nchain
-       do iw=1,nwalk
-        do iat=1,natom
-         pnhx(iat,iw,inh)=0.0d0
-         pnhy(iat,iw,inh)=0.0d0
-         pnhz(iat,iw,inh)=0.0d0
-         xi_x(iat,iw,inh)=0.0d0
-         xi_y(iat,iw,inh)=0.0d0
-         xi_z(iat,iw,inh)=0.0d0
-        enddo
-        if(initNHC.eq.1)then  
-        if (iw.eq.1) write(*,*)'Initializing NHC momenta.'
-        call gautrg(ran,natom*3,0,6)
-         ipom=1
-
-         do iat=1,natom 
-         pnhx(iat,iw,inh)=ran(ipom)*sqrt(temp*Qm(iw))
-         pnhy(iat,iw,inh)=ran(ipom+1)*sqrt(temp*Qm(iw))
-         pnhz(iat,iw,inh)=ran(ipom+2)*sqrt(temp*Qm(iw))
-        enddo
-         ipom=ipom+3
-        endif
-       enddo
-      enddo
-
-      else  !imasst.eq.0
-
-      do inh=1,nchain
-       do iw=1,nwalk
-        do iat=1,nmolt
-         pnhx(iat,iw,inh)=0.0d0
-         xi_x(iat,iw,inh)=0.0d0
-        enddo
-        if(initNHC.eq.1)then  
-         write(*,*)'Initializing NHC momenta.'
-         ! +1 if nmolt=1, gautrg needs array at least of length=2
-         call gautrg(ran,nmolt+1,0,6)
-         do imol=1,nmolt 
-          pnhx(imol,iw,inh)=ran(imol)*sqrt(temp*ms(imol,inh))
+         do iw=1,nwalk
+            call gautrg(ran,natom*3,0,6)
+            ipom=1
+            do iat=1,natom 
+               pnhx(iat,iw,inh) = ran(ipom)   * sqrt(temp*Qm(iw))
+               pnhy(iat,iw,inh) = ran(ipom+1) * sqrt(temp*Qm(iw))
+               pnhz(iat,iw,inh) = ran(ipom+2) * sqrt(temp*Qm(iw))
+            enddo
+            ipom=ipom+3
          enddo
-        endif
-       enddo
       enddo
 
-      endif
+   else if (initNHC.eq.1.and.imasst.eq.0)then
+
+      write(*,*)'Initializing NHC momenta.'
+      do inh=1,nchain
+         do iw=1,nwalk
+            ! +1 if nmolt=1, gautrg needs array at least of length=2
+            call gautrg(ran,nmolt+1,0,6)
+            do imol=1,nmolt 
+               pnhx(imol,iw,inh)=ran(imol)*sqrt(temp*ms(imol,inh))
+            enddo
+         enddo
+      enddo
+
+   endif
 
 !-----NOW SET SUZUKI-YOSHIDA WEIGHTS
-      if(nyosh.eq.3)then
-      w(1)=1.0_DP/(2.0_DP-2**(1.0_DP/3.0_DP))
-      w(3)=w(1)
-      w(2)=1-w(1)-w(3)
-!      write(*,*)w(1),w(2),w(3)
-      endif
-      if(nyosh.eq.1)then
-              w(1)=1
-      endif
-      if(nyosh.eq.7)then
-       w(1)=0.784513610477560_DP
-       w(7)=w(1)
-       w(2)=0.235573213359357_DP
-       w(6)=w(2)
-       w(3)=-1.17767998417887_DP
-       w(5)=w(3)
-       w(4)=1-w(1)-w(2)-w(3)-w(5)-w(6)-w(7)
-      endif
-!     open(100,file='temper_nhc')
-!     close(100,status='delete')
-      if (initNHC.eq.1) deallocate ( ran )
-      end subroutine
+   if(nyosh.eq.3)then
+      w(1) = 1.0d0 / ( 2.0d0-2**(1.0d0/3.0d0) )
+      w(3) = w(1)
+      w(2) = 1 - w(1) - w(3)
+!     write(*,*)w(1),w(2),w(3)
+   else if(nyosh.eq.1)then
+      w(1) = 1
+   else if(nyosh.eq.7)then
+      w(1) = 0.784513610477560_DP
+      w(7) = w(1)
+      w(2) = 0.235573213359357_DP
+      w(6) = w(2)
+      w(3) = -1.17767998417887_DP
+      w(5) = w(3)
+      w(4) = 1-w(1)-w(2)-w(3)-w(5)-w(6)-w(7)
+   endif
 
-      subroutine nhc_temp() !currently not in use
-      use mod_general, ONLY:nwalk,natom
-      implicit none
-      integer :: iw,iat
-      real(DP)  :: ekin_mom=0.0d0,temp1=0.0d0
-      do iw=1,nwalk
-       do iat=1,natom
-        temp1=pnhx(iat,iw,1)**2+pnhy(iat,iw,1)**2+pnhz(iat,iw,1)**2
-        temp1=0.5*temp1/ams
-        ekin_mom=ekin_mom+temp1
-       enddo
+!  open(100,file='temper_nhc')
+!  close(100,status='delete')
+
+   deallocate ( ran )
+   end subroutine
+
+
+   subroutine finalize_nhc()
+   if(allocated(w))     deallocate( w )
+   if(allocated(Qm))    deallocate( Qm )
+   if(allocated(ms))    deallocate( ms )
+   if(allocated(pnhx))  deallocate( pnhx )
+   if(allocated(pnhy))  deallocate( pnhy )
+   if(allocated(pnhz))  deallocate( pnhz )
+   if(allocated(xi_x))  deallocate( xi_x )
+   if(allocated(xi_y))  deallocate( xi_y )
+   if(allocated(xi_z))  deallocate( xi_z )
+   end subroutine finalize_nhc
+
+   subroutine nhc_temp() !currently not in use
+   use mod_general, ONLY:nwalk,natom
+   implicit none
+   integer :: iw,iat
+   real(DP)  :: ekin_mom=0.0d0,temp1=0.0d0
+   do iw=1,nwalk
+      do iat=1,natom
+         temp1=pnhx(iat,iw,1)**2+pnhy(iat,iw,1)**2+pnhz(iat,iw,1)**2
+         temp1=0.5*temp1/ams
+         ekin_mom=ekin_mom+temp1
       enddo
-      open(100,file='temper_nhc.dat',access='append')
-      write(100,*)2*ekin_mom/3/natom/nwalk
-      close(100)
-      end subroutine
+   enddo
+   open(100,file='temper_nhc.dat',access='append')
+   write(100,*)2*ekin_mom/3/natom/nwalk
+   close(100)
+   end subroutine
       
 !------------------------------------------------------
 
@@ -301,93 +316,95 @@ module mod_nhc
    end subroutine shiftNHC_yosh
 
    SUBROUTINE shiftNHC_yosh_mass (px,py,pz,amt,dt)
-      use mod_array_size
-      use mod_general
-      use mod_shake,only:nshake
-      implicit none
-      real(DP) :: px(:,:),py(:,:),pz(:,:)
-      real(DP) :: amt(:,:)
-      real(DP) :: Gx(maxchain),Gy(maxchain),Gz(maxchain)
-      real(DP) :: dt,AA
-      real(DP) :: wdt,wdt2,wdt4
-      integer  :: iw,iat,inh,istart
-      integer  :: iresp,iyosh
+   use mod_array_size, only: MAXCHAIN
+   use mod_general
+   use mod_shake, only:nshake
+   implicit none
+   real(DP) :: px(:,:),py(:,:),pz(:,:)
+   real(DP) :: amt(:,:)
+   real(DP) :: Gx(MAXCHAIN), Gy(MAXCHAIN), Gz(MAXCHAIN)
+   real(DP) :: dt, AA
+   real(DP) :: wdt, wdt2, wdt4
+   integer  :: iw, iat, inh, istart
+   integer  :: iresp, iyosh
 
 
-      istart=1 !will be different with normal modes and shake
-      if(nshake.gt.0) istart=2
+   istart=1 !will be different with normal modes and shake
+   if(nshake.gt.0) istart=2
 
-      do iw=istart,nwalk
-       do iat=1,natom
+   do iw=istart, nwalk
+      do iat=1,natom
 
-       Gx(1)=px(iat,iw)*px(iat,iw)/amt(iat,iw)-temp
-       Gy(1)=py(iat,iw)*py(iat,iw)/amt(iat,iw)-temp
-       Gz(1)=pz(iat,iw)*pz(iat,iw)/amt(iat,iw)-temp
+         Gx(1)=px(iat,iw)*px(iat,iw)/amt(iat,iw)-temp
+         Gy(1)=py(iat,iw)*py(iat,iw)/amt(iat,iw)-temp
+         Gz(1)=pz(iat,iw)*pz(iat,iw)/amt(iat,iw)-temp
 
-      do inh=2,nchain
-       Gx(inh)=pnhx(iat,iw,inh-1)**2/Qm(iw)-temp
-       Gy(inh)=pnhy(iat,iw,inh-1)**2/Qm(iw)-temp
-       Gz(inh)=pnhz(iat,iw,inh-1)**2/Qm(iw)-temp
-      enddo
+         do inh=2,nchain
+            Gx(inh)=pnhx(iat,iw,inh-1)**2/Qm(iw)-temp
+            Gy(inh)=pnhy(iat,iw,inh-1)**2/Qm(iw)-temp
+            Gz(inh)=pnhz(iat,iw,inh-1)**2/Qm(iw)-temp
+         enddo
 
-      do iresp=1,nrespnose
-       do iyosh=1,nyosh
-       wdt=w(iyosh)*dt/nrespnose        
-       wdt2=wdt/2
-       wdt4=wdt2/2
+         do iresp=1,nrespnose
+            do iyosh=1,nyosh
+               wdt=w(iyosh)*dt/nrespnose        
+               wdt2=wdt/2
+               wdt4=wdt2/2
 
-       pnhx(iat,iw,nchain)=pnhx(iat,iw,nchain)+Gx(nchain)*wdt2
-       pnhy(iat,iw,nchain)=pnhy(iat,iw,nchain)+Gy(nchain)*wdt2
-       pnhz(iat,iw,nchain)=pnhz(iat,iw,nchain)+Gz(nchain)*wdt2
-       !UPDATE THERMOSTAT VELOCITIES
-        do inh=1,nchain-1
-         AA= dexp(-wdt4*pnhx(iat,iw,nchain-inh+1)/Qm(iw))
-         pnhx(iat,iw,nchain-inh)=pnhx(iat,iw,nchain-inh)*AA*AA+wdt2*Gx(nchain-inh)*AA
-         AA= dexp(-wdt4*pnhy(iat,iw,nchain-inh+1)/Qm(iw))
-         pnhy(iat,iw,nchain-inh)=pnhy(iat,iw,nchain-inh)*AA*AA+wdt2*Gy(nchain-inh)*AA
-         AA= dexp(-wdt4*pnhz(iat,iw,nchain-inh+1)/Qm(iw))
-         pnhz(iat,iw,nchain-inh)=pnhz(iat,iw,nchain-inh)*AA*AA+wdt2*Gz(nchain-inh)*AA
-        enddo
+               pnhx(iat,iw,nchain)=pnhx(iat,iw,nchain)+Gx(nchain)*wdt2
+               pnhy(iat,iw,nchain)=pnhy(iat,iw,nchain)+Gy(nchain)*wdt2
+               pnhz(iat,iw,nchain)=pnhz(iat,iw,nchain)+Gz(nchain)*wdt2
 
-       !UPDATE PARTICLE VELOCITIES
-       AA=dexp(-wdt*pnhx(iat,iw,1)/Qm(iw))
-       px(iat,iw)=px(iat,iw)*AA
-       AA=dexp(-wdt*pnhy(iat,iw,1)/Qm(iw))
-       py(iat,iw)=py(iat,iw)*AA
-       AA=dexp(-wdt*pnhz(iat,iw,1)/Qm(iw))
-       pz(iat,iw)=pz(iat,iw)*AA
-       !UPDATE FORCES
-       Gx(1)=(px(iat,iw)*px(iat,iw)/amt(iat,iw)-temp)
-       Gy(1)=(py(iat,iw)*py(iat,iw)/amt(iat,iw)-temp)
-       Gz(1)=(pz(iat,iw)*pz(iat,iw)/amt(iat,iw)-temp)
+               !UPDATE THERMOSTAT VELOCITIES
+               do inh=1,nchain-1
+                  AA= dexp(-wdt4*pnhx(iat,iw,nchain-inh+1)/Qm(iw))
+                  pnhx(iat,iw,nchain-inh)=pnhx(iat,iw,nchain-inh)*AA*AA+wdt2*Gx(nchain-inh)*AA
+                  AA= dexp(-wdt4*pnhy(iat,iw,nchain-inh+1)/Qm(iw))
+                  pnhy(iat,iw,nchain-inh)=pnhy(iat,iw,nchain-inh)*AA*AA+wdt2*Gy(nchain-inh)*AA
+                  AA= dexp(-wdt4*pnhz(iat,iw,nchain-inh+1)/Qm(iw))
+                  pnhz(iat,iw,nchain-inh)=pnhz(iat,iw,nchain-inh)*AA*AA+wdt2*Gz(nchain-inh)*AA
+               enddo
 
-       !UPDATE THERMOSTAT POSITIONS
-       do inh=1,nchain
-        xi_x(iat,iw,inh)=xi_x(iat,iw,inh)+pnhx(iat,iw,inh)/Qm(iw)*wdt
-        xi_y(iat,iw,inh)=xi_y(iat,iw,inh)+pnhy(iat,iw,inh)/Qm(iw)*wdt
-        xi_z(iat,iw,inh)=xi_z(iat,iw,inh)+pnhz(iat,iw,inh)/Qm(iw)*wdt
-       enddo
+               !UPDATE PARTICLE VELOCITIES
+               AA=dexp(-wdt*pnhx(iat,iw,1)/Qm(iw))
+               px(iat,iw)=px(iat,iw)*AA
+               AA=dexp(-wdt*pnhy(iat,iw,1)/Qm(iw))
+               py(iat,iw)=py(iat,iw)*AA
+               AA=dexp(-wdt*pnhz(iat,iw,1)/Qm(iw))
+               pz(iat,iw)=pz(iat,iw)*AA
 
-       !UPDATE THERMOSTAT VELOCITIES
-       do inh=1,nchain-1
-        AA=dexp(-wdt4*pnhx(iat,iw,inh+1)/Qm(iw))
-        pnhx(iat,iw,inh)=pnhx(iat,iw,inh)*AA*AA+wdt2*Gx(inh)*AA
-        Gx(inh+1)=pnhx(iat,iw,inh)**2/Qm(iw)-temp
-        AA=dexp(-wdt4*pnhy(iat,iw,inh+1)/Qm(iw))
-        pnhy(iat,iw,inh)=pnhy(iat,iw,inh)*AA*AA+wdt2*Gy(inh)*AA
-        Gy(inh+1)=pnhy(iat,iw,inh)**2/Qm(iw)-temp
-        AA=dexp(-wdt4*pnhz(iat,iw,inh+1)/Qm(iw))
-        pnhz(iat,iw,inh)=pnhz(iat,iw,inh)*AA*AA+wdt2*Gz(inh)*AA
-        Gz(inh+1)=pnhz(iat,iw,inh)**2/Qm(iw)-temp
-       enddo
+               !UPDATE FORCES
+               Gx(1)=(px(iat,iw)*px(iat,iw)/amt(iat,iw)-temp)
+               Gy(1)=(py(iat,iw)*py(iat,iw)/amt(iat,iw)-temp)
+               Gz(1)=(pz(iat,iw)*pz(iat,iw)/amt(iat,iw)-temp)
 
-       pnhx(iat,iw,nchain)=pnhx(iat,iw,nchain)+Gx(nchain)*wdt2
-       pnhy(iat,iw,nchain)=pnhy(iat,iw,nchain)+Gy(nchain)*wdt2
-       pnhz(iat,iw,nchain)=pnhz(iat,iw,nchain)+Gz(nchain)*wdt2
+               !UPDATE THERMOSTAT POSITIONS
+               do inh=1,nchain
+                  xi_x(iat,iw,inh)=xi_x(iat,iw,inh)+pnhx(iat,iw,inh)/Qm(iw)*wdt
+                  xi_y(iat,iw,inh)=xi_y(iat,iw,inh)+pnhy(iat,iw,inh)/Qm(iw)*wdt
+                  xi_z(iat,iw,inh)=xi_z(iat,iw,inh)+pnhz(iat,iw,inh)/Qm(iw)*wdt
+               enddo
 
-       enddo
+               !UPDATE THERMOSTAT VELOCITIES
+               do inh=1,nchain-1
+                  AA=dexp(-wdt4*pnhx(iat,iw,inh+1)/Qm(iw))
+                  pnhx(iat,iw,inh)=pnhx(iat,iw,inh)*AA*AA+wdt2*Gx(inh)*AA
+                  Gx(inh+1)=pnhx(iat,iw,inh)**2/Qm(iw)-temp
+                  AA=dexp(-wdt4*pnhy(iat,iw,inh+1)/Qm(iw))
+                  pnhy(iat,iw,inh)=pnhy(iat,iw,inh)*AA*AA+wdt2*Gy(inh)*AA
+                  Gy(inh+1)=pnhy(iat,iw,inh)**2/Qm(iw)-temp
+                  AA=dexp(-wdt4*pnhz(iat,iw,inh+1)/Qm(iw))
+                  pnhz(iat,iw,inh)=pnhz(iat,iw,inh)*AA*AA+wdt2*Gz(inh)*AA
+                  Gz(inh+1)=pnhz(iat,iw,inh)**2/Qm(iw)-temp
+               enddo
 
-      enddo
+               pnhx(iat,iw,nchain)=pnhx(iat,iw,nchain)+Gx(nchain)*wdt2
+               pnhy(iat,iw,nchain)=pnhy(iat,iw,nchain)+Gy(nchain)*wdt2
+               pnhz(iat,iw,nchain)=pnhz(iat,iw,nchain)+Gz(nchain)*wdt2
+
+            enddo
+
+         enddo
 
 !iat enddo
       enddo

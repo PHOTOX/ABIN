@@ -78,7 +78,7 @@ CONTAINS
 
    i = reps(my_rank+1)
    ! TODO: we dont really need allgather
-   ! We should really track replicas a posteriori via pythos script, all output is there
+   ! We should really track replicas a posteriori via some script, all output is there
    call MPI_AllGather(i, 1, MPI_INTEGER, reps,1, MPI_INTEGER, MPI_COMM_WORLD, ierr )
    call MPI_Gather(prob, 1, MPI_DOUBLE_PRECISION, probs,1, MPI_DOUBLE_PRECISION,0, MPI_COMM_WORLD, ierr )
    call MPI_Gather(lswap, 1, MPI_LOGICAL, lswaps,1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr )

@@ -57,7 +57,7 @@ subroutine init(dt, values1)
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
    LOGICAL :: file_exists
-   real(DP)  :: wnw=5.0d-5
+!   real(DP)  :: wnw=5.0d-5
    integer :: ierr
 !$ integer :: nthreads,omp_get_max_threads
 ! wnw "optimal" frequency for langevin (inose=3) 
@@ -65,14 +65,15 @@ subroutine init(dt, values1)
 !   REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
    REAL, POINTER  :: REALPTR => NULL ()
 
-   namelist /general/natom, pot,ipimd,istage,nwalk,nstep,icv,ihess,imini,nproc,iqmmm, &
+   namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive, &
-            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile
+            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
+            pot_ref, nstep_ref
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
-   namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,wnw,nrespnose,nyosh,      &
+   namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,nrespnose,nyosh,      &
                      scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
 
    namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
@@ -106,7 +107,7 @@ subroutine init(dt, values1)
    pot=UpperToLower(pot)
 
 
-   if(pot.eq."_cp2k_")then
+   if(pot.eq."_cp2k_".or.pot_ref.eq."_cp2k_")then
 #ifdef CP2K
       call cp2k_init()
 #else
@@ -312,7 +313,7 @@ print '(a)','**********************************************'
          rewind(150)
       end if
 
-      if(iqmmm.eq.2.or.pot.eq.'nab')then
+      if(iqmmm.eq.2.or.pot.eq.'nab'.or.pot_ref.eq.'nab')then
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
          allocate ( natmol(natom) )
 #endif
@@ -343,31 +344,39 @@ print '(a)','**********************************************'
             write(*,*)'ipimd=0,Resetting number of walkers to 1.'
             write(*,*)'ipimd=0,Using velocity Verlet integrator'
          end if
-         md=2
-         nwalk=1
-         nabin=1   ! TODO:safety for respashake code
+         md = 2
+         nwalk = 1
+         nabin = 1   ! TODO:safety for respashake code
                    ! We should probably copy shake to velocity verlet
                    ! algorithm as well
       endif
 
 !for surface hopping      
       if(ipimd.eq.2)then
-         nwalk=ntraj
-         md=2
-         nabin=1
-      endif
+         nwalk = ntraj
+         md = 2 ! velocity verlet
+         nabin = 1
+      else if(ipimd.eq.1.and.inormalmodes.ne.1)then
+         if (my_rank.eq.0) write(*,*)'Using RESPA integrator.'
+         md = 1
+      else if(ipimd.eq.1.and.inormalmodes.eq.1)then
+         md = 2
+      end if
 
-      if(ipimd.eq.1)then
-         if (my_rank.eq.0) write(*,*)'ipimd=1,using RESPA integrator'
-         md=1
-      endif
+      ! we should include shake into the verlet routine
+      if(nshake.gt.0)then
+         md = 3
+      end if
+
+      if(pot_ref.ne.'none')then
+         md = 4
+      end if
 
 #ifdef USEFFTW
-      if(istage.eq.2) call fftw_init(nwalk)
+      if(inormalmodes.gt.0) call fftw_init(nwalk)
 #endif
 
 
-!-----conversion of temperature from K to au
       if (my_rank.eq.0)then
          if (temp0.gt.0)then
             write(*,*)'Initial temperature in Kelvins =', temp0
@@ -377,18 +386,19 @@ print '(a)','**********************************************'
          if (inose.ne.0) write(*,*)'Target temperature in Kelvins =', temp
       end if
 
-      temp = temp/autok
-      temp0 = temp0/autok
+!-----conversion of temperature from K to au
+      temp = temp / AUtoK
+      temp0 = temp0 / AUtoK
 
       if (ihess.eq.1)then 
-       allocate ( hess(natom*3,natom*3,nwalk) )
-       allocate ( cvhess_cumul(nwalk) )
-       cvhess_cumul=0.0d0
-       if (pot.eq.'nab')then
+         allocate ( hess(natom*3,natom*3,nwalk) )
+         allocate ( cvhess_cumul(nwalk) )
+         cvhess_cumul=0.0d0
+         if (pot.eq.'nab'.or.pot_ref.eq.'nab')then
 !!$OMP PARALLEL
-        allocate ( h(natom*natom*9) )
+            allocate ( h(natom*natom*9) )
 !!$OMP END PARALLEL
-       endif
+         endif
       endif
 
 !----SHAKE initialization,determining the constrained bond lenghts
@@ -399,15 +409,15 @@ print '(a)','**********************************************'
 
       call dist_init() !zeroing distribution arrays
 
-      if (pot.eq.'mmwater') call check_water(natom, names)
+      if (pot.eq.'mmwater'.or.pot_ref.eq.'mmwater') call check_water(natom, names)
 
 !-----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
 !    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      if (inose.eq.1) call nhc_init()
-     if (inose.eq.2) call gle_init(dt*0.5/nabin) !nabin is set to 1 unless ipimd=1
-     if (inose.eq.3) call wn_init(dt*0.5,wnw)
+     if (inose.eq.2) call gle_init(dt*0.5/nabin/nstep_ref) !nabin is set to 1 unless ipimd=1
+     if (inose.eq.3) call pile_init(dt*0.5,tau0)
 
 
 !----performing RESTART from restart.xyz
@@ -519,7 +529,7 @@ print '(a)','**********************************************'
 
 
 #ifdef NAB
-      if (pot.eq."nab".or.iqmmm.eq.2)then
+      if (pot.eq."nab".or.pot_ref.eq."nab".or.iqmmm.eq.2)then
          if (alpha_pme.lt.0) alpha_pme = pi / cutoff
          if (kappa_pme.lt.0) kappa_pme = alpha_pme
          call nab_init(alpha_pme, cutoff, nsnb, ipbc, ips, iqmmm) !C function...see nabinit.c
@@ -579,7 +589,7 @@ print '(a)','**********************************************'
 #endif
 
 #ifndef USEFFTW
-      if(istage.eq.2)then
+      if(inormalmodes.gt.0)then
          write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
          write(*,*)'Normal mode transformations cannot be performed.'
          call abinerror('init')
@@ -741,17 +751,22 @@ print '(a)','**********************************************'
               nwrite=ncalc
       endif
 
-      if(ipimd.eq.1.and.inose.ne.1.and.inose.ne.2)then
-       write(*,*)'You have to use Nosé-Hoover or quantum thermostat with PIMD!(inose=1 or 2)'
-       error=1
+      if(ipimd.eq.1.and.inose.le.0)then
+       write(*,*)'You have to use thermostat with PIMD!(inose>=0)'
+       write(*,*)chknow
+       if(iknow.ne.1) error=1
       endif
       if(ipimd.lt.0.or.ipimd.gt.3)then
        write(*,*)'ipimd has to be 0,1,2 or 3.'
        error=1
       endif
-      if(istage.ne.1.and.istage.ne.0.and.istage.ne.2)then
-       write(*,*)'istage has to be 0,1 or 2'
-       error=1 
+      if(istage.ne.1.and.istage.ne.0)then
+         write(*,*)'ERROR: istage has to be 0 or 1'
+         error=1 
+      endif
+      if(inormalmodes.lt.0.and.inormalmodes.gt.2)then
+         write(*,*)'ERROR: inormalmodes has to be 0, 1 or 2!'
+         error=1 
       endif
       if(readnhc.eq.1.and.initNHC.eq.1.and.irest.eq.1)then
        write(*,*)'Warning: Conflicting keywords readnhc and initNHC set to 1.'
@@ -826,27 +841,22 @@ print '(a)','**********************************************'
        write(*,*)'inose has to be 0,1,2 or 3.'
        error=1
       endif
-      if(inose.eq.3)then
-       write(*,*)'Langevin thermostat was not extensively tested.'
-       write(*,*)chknow
-       if (iknow.ne.1) error=1
-      endif
       if(istage.eq.1.and.ipimd.ne.1)then
-      write(*,*)'The staging transformation is only meaningful for PIMD'
-       error=1
+         write(*,*)'The staging transformation is only meaningful for PIMD'
+         error=1
       endif
-      if(istage.eq.2.and.ipimd.ne.1)then
-      write(*,*)'The normal mode transformation is only meaningful for PIMD. Exiting...'
-       error=1
+      if(inormalmodes.gt.0.and.ipimd.ne.1)then
+         write(*,*)'The normal mode transformation is only meaningful for PIMD. Exiting...'
+         error=1
       endif
-      if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2)then
+      if(istage.eq.0.and.ipimd.eq.1.and.inose.ne.2.and.inormalmodes.eq.0)then
        write(*,*)'PIMD should be done with staging or normal mode transformation! Exiting...'
        write(*,*)chknow
        if (iknow.ne.1) error=1
       endif
       if(istage.eq.1.and.inose.eq.2)then
-       write(*,*)'The staging transformation is not compatible with GLE thermostat.'
-       error=1
+         write(*,*)'The staging transformation is not compatible with GLE thermostat.'
+         error=1
       endif
       if(nyosh.ne.1.and.nyosh.ne.3.and.nyosh.ne.7)then
        write(*,*)'Variable nyosh(order of Suzuki-Yoshiga scheme) must be 1,3 or 7'
@@ -1121,7 +1131,7 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
    print *,' '
 
 #if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
-   print *, 'This file was compiled by ',  &
+   print *, 'This program was compiled by ',  &
              compiler_version(), ' using the options: '
    print *,     compiler_options()
 #endif

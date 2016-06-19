@@ -34,16 +34,17 @@ module mod_fftw3
    end subroutine
 
    subroutine fftw_end()
-      deallocate( x_in )
-      deallocate( y_in )
-      deallocate( z_in )
-
-      deallocate( cx )
-      deallocate( cy )
-      deallocate( cz )
-
-      call fftw_destroy_plan(plan_xtou)
-      call fftw_destroy_plan(plan_utox)
+      if(allocated(x_in))then
+         deallocate( x_in )
+         deallocate( y_in )
+         deallocate( z_in )
+         deallocate( cx )
+         deallocate( cy )
+         deallocate( cz )
+         call fftw_destroy_plan(plan_xtou)
+         call fftw_destroy_plan(plan_utox)
+      endif
    end subroutine fftw_end
+
 end module mod_fftw3
 

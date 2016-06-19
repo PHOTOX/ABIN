@@ -13,7 +13,7 @@ module mod_minimize
 
    subroutine minimize(x,y,z,fx,fy,fz,eclas)
       use mod_const,    only: ANG
-      use mod_general,  only: natom, nwrite, nwritex, imini
+      use mod_general,  only: natom, nwrite, nwritex, imini, pot
       use mod_system,   only: names, conatom
       use mod_analysis, only: trajout
       use mod_interfaces, only: force_clas
@@ -31,7 +31,7 @@ module mod_minimize
       iw=1
       open(100,file='minimize.dat')
       write(100,*)'#Iteration    gamma   eclas  deltaE '
-      call force_clas(fx,fy,fz,x,y,z,eclas)
+      call force_clas(fx,fy,fz,x,y,z,eclas,pot)
       write(100,'(A5,F10.4,1E20.8)')'#  0  ',gamm,eclas
 
       do iat=1,conatom
@@ -47,7 +47,7 @@ module mod_minimize
         y_new(iat,iw)=y(iat,iw)+gamm*fy(iat,iw)
         z_new(iat,iw)=z(iat,iw)+gamm*fz(iat,iw)
        enddo
-       call force_clas(fx_new,fy_new,fz_new,x_new,y_new,z_new,eclas_new)
+       call force_clas(fx_new,fy_new,fz_new,x_new,y_new,z_new,eclas_new,pot)
       if(eclas_new.lt.eclas)then 
        do iat=conatom+1,natom
         x(iat,iw)=x_new(iat,iw)

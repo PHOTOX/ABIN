@@ -19,7 +19,8 @@
 program abin_dyn
    use mod_const, only: DP, AUtoFS
    use mod_arrays
-   use mod_general
+   use mod_general, only: pot, pot_ref, sim_time, md, my_rank, it, &
+           ncalc, nstep, nwrite, iremd, ipimd, idebug, inormalmodes, istage, irest
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_kinetic, ONLY: temperature
    use mod_utils, only: abinerror, printf, archive_file
@@ -57,13 +58,9 @@ program abin_dyn
 !-   INPUT AND INITIALIZATION SECTION      
    call init(dt, values1) 
 
-   ! TODO: in case of _cp2k_, this needs to be done only by rank0
    if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then
       call archive_file('restart.xyz',it)
    end if
-
-   !DH this is a nasty hack TODO remove this
-   if(irest.eq.0) call system('rm -f wfn.dat nacmrest.dat')
 
 !-------SH initialization -- 
    if(ipimd.eq.2)then
@@ -81,36 +78,33 @@ program abin_dyn
 !  See Tuckermann's article in "Quantum Simulations of Complex Many Body Systems'. 
    if(istage.eq.1)then
       call XtoQ(x,y,z,transx,transy,transz)
-      x=transx
-      y=transy
-      z=transz
+      x = transx
+      y = transy
+      z = transz
       call XtoQ(vx,vy,vz,transxv,transyv,transzv)
-      vx=transxv
-      vy=transyv
-      vz=transzv
-   endif
+      vx = transxv
+      vy = transyv
+      vz = transzv
 !------NORMAL MODE TRANSFORMATION-------------
-   if(istage.eq.2)then
-      if(idebug.eq.1)then
+   else if(inormalmodes.gt.0)then
+      if(idebug.gt.1)then
          write(*,*)'Positions before transform'
-!        call printf(vx,vy,vz)
          call printf(x,y,z)
       endif
       call XtoU(x,y,z,transx,transy,transz)
-      x=transx
-      y=transy
-      z=transz
+      x = transx
+      y = transy
+      z = transz
       call XtoU(vx,vy,vz,transxv,transyv,transzv)
-      vx=transxv
-      vy=transyv
-      vz=transzv
-      if(idebug.eq.1)then
+      vx = transxv
+      vy = transyv
+      vz = transzv
+      if(idebug.gt.1)then
          write(*,*)'Positions after transform'
          call printf(x,y,z)
          call Utox(x,y,z,transx,transy,transz)
          write(*,*)'Positions after back transform'
          call printf(transx,transy,transz)
-         call abinerror('Only debug')
       endif
    endif
 
@@ -142,8 +136,14 @@ program abin_dyn
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
 !----getting initial forces and energies
-      call force_clas(fxc, fyc, fzc, x, y, z, eclas)
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
       if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
+      
+      ! if we use reference potential with RESPA
+      if(pot_ref.ne.'none')then
+         call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
+         call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
+      end if
      
 !----setting initial values for surface hoping
       if(ipimd.eq.2)then
@@ -169,17 +169,13 @@ program abin_dyn
          INQUIRE(FILE="EXIT", EXIST=file_exists)
          if(file_exists)then
             write(*,*)'Found file EXIT. Exiting...'
-            if (istage.gt.0)then
-       
-               if(istage.eq.1)then     
-                  call QtoX(vx,vy,vz,transxv,transyv,transzv)
-                  call QtoX(x,y,z,transx,transy,transz)
-               endif
-               if(istage.eq.2)then
-                  call UtoX(x,y,z,transx,transy,transz)
-                  call UtoX(vx,vy,vz,transxv,transyv,transzv)
-               endif
-       
+            if (istage.eq.1)then
+               call QtoX(vx,vy,vz,transxv,transyv,transzv)
+               call QtoX(x,y,z,transx,transy,transz)
+               call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
+            else if(inormalmodes.gt.0)then
+               call UtoX(x,y,z,transx,transy,transz)
+               call UtoX(vx,vy,vz,transxv,transyv,transzv)
                call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
             else
                call restout(x,y,z,vx,vy,vz,it-1)
@@ -204,16 +200,20 @@ program abin_dyn
          end if
 
 
-!-----CALL RESPA or VELOCITY VERLET--------------
-         if(nshake.eq.0)then
-            if (md.eq.1) call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-            if (md.eq.2) call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
-         else
-            call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-         endif
+!-----   CALL the integrator, propagate through one time step
+         SELECT CASE (md)
+            case (1)
+               call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+            case (2)
+               call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
+            case (3)
+               call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+            case (4)
+               call doublerespastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
+         END SELECT
 
          sim_time = sim_time + dt
-       
+
          vx = px / amt
          vy = py / amt
          vz = pz / amt
@@ -247,29 +247,27 @@ program abin_dyn
 
          if(modulo(it,ncalc).ne.0) cycle
       
+         call temperature(px,py,pz,amt,dt,eclas)
+
          if(istage.eq.1)then     
+
             call QtoX(vx,vy,vz,transxv,transyv,transzv)
             call QtoX(x,y,z,transx,transy,transz)
             call FQtoFX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
-         endif
-      
-         if(istage.eq.2)then
+            call analysis (transx,transy,transz,transxv,transyv,transzv,  &
+                         transfxc,transfyc,transfzc,amt,eclas,equant,dt)
+
+         else if(inormalmodes.gt.0)then
+
             call UtoX(x,y,z,transx,transy,transz)
             call UtoX(vx,vy,vz,transxv,transyv,transzv)
             call UtoX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
-            if(idebug.eq.1) then
-               write(*,*)'Back transformed forces'
-               call printf(transfxc,transfyc,transfzc)
-            endif
-         endif
-      
-         call temperature(px,py,pz,amt,dt,eclas)
-      
-         if(istage.eq.1.or.istage.eq.2)then
             call analysis (transx,transy,transz,transxv,transyv,transzv,  &
                          transfxc,transfyc,transfzc,amt,eclas,equant,dt)
          else
+      
             call analysis (x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
+
          endif
          
       
@@ -287,15 +285,13 @@ program abin_dyn
 !recent coordinates and velocities
       it = it - 1 
 
-      if (istage.gt.0)then
-         if(istage.eq.1)then     
-            call QtoX(vx,vy,vz,transxv,transyv,transzv)
-            call QtoX(x,y,z,transx,transy,transz)
-         endif
-         if(istage.eq.2)then
-            call UtoX(x,y,z,transx,transy,transz)
-            call UtoX(vx,vy,vz,transxv,transyv,transzv)
-         endif
+      if (istage.eq.1)then
+         call QtoX(vx,vy,vz,transxv,transyv,transzv)
+         call QtoX(x,y,z,transx,transy,transz)
+         call restout(transx,transy,transz,transxv,transyv,transzv,it)
+      else if(inormalmodes.gt.0)then
+         call UtoX(x,y,z,transx,transy,transz)
+         call UtoX(vx,vy,vz,transxv,transyv,transzv)
          call restout(transx,transy,transz,transxv,transyv,transzv,it)
       else
          call restout(x,y,z,vx,vy,vz,it)
@@ -333,7 +329,8 @@ subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general
    use mod_files,  only: MAXUNITS
-   use mod_nhc
+   use mod_nhc!,   only: finalize_nhc
+   use mod_gle,    only: finalize_gle
    use mod_estimators, only: h
    use mod_harmon, only: hess
 
@@ -396,18 +393,12 @@ subroutine finish(error_code)
    if (allocated(h)) deallocate ( h )
 
 #ifdef USEFFTW
-   if (istage.eq.2) call fftw_end()
+   if (inormalmodes.gt.0) call fftw_end()
 #endif
 
-   if(allocated(w))     deallocate( w )
-   if(allocated(Qm))    deallocate( Qm )
-   if(allocated(ms))    deallocate( ms )
-   if(allocated(pnhx))  deallocate( pnhx )
-   if(allocated(pnhy))  deallocate( pnhy )
-   if(allocated(pnhz))  deallocate( pnhz )
-   if(allocated(xi_x))  deallocate( xi_x )
-   if(allocated(xi_y))  deallocate( xi_y )
-   if(allocated(xi_z))  deallocate( xi_z )
+   if(inose.eq.1) call finalize_nhc()
+   if(inose.gt.1.and.inose.lt.5) call finalize_gle()
+
 !TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
 !   if(pot.eq.'nab') call mme(NULL,NULL,iter)
 

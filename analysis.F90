@@ -272,17 +272,11 @@ module mod_analysis
 
    if(inose.eq.2)then
       write(102,*)chQT
-         if(nwalk.eq.1)then
-            do iat=1,natom*3
-               write(102,*)(gp(iat,is),is=2,ns+1)
-            enddo
-         else
-            do iw=1,nwalk
-               do iat=1,natom*3
-                  write(102,*)(ps(iat,is,iw),is=1,ns)
-               enddo
-            enddo
-         endif
+      do iw=1,nwalk
+         do iat=1,natom*3
+            write(102,*)(ps(iat,is,iw),is=1,ns)
+         enddo
+      enddo
       write(102,*)langham
    endif
 
@@ -317,65 +311,65 @@ module mod_analysis
    ! Subroutine that reads from restart.xyz during restart
    ! It is called from subroutine init.
    subroutine restin(x,y,z,vx,vy,vz,it)
-     use mod_general,only: icv, ihess, nwalk, ipimd, natom, &
-                           iremd, my_rank, pot,sim_time
-     use mod_nhc,    only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
-     use mod_estimators
-     use mod_kinetic,only: entot_cumul, est_temp_cumul
-     use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
-     use mod_gle
-     use mod_random
-     use mod_terampi_sh, only: read_wfn
-     real(DP),intent(out)  :: x(:,:),y(:,:),z(:,:)
-     real(DP),intent(out)  :: vx(:,:),vy(:,:),vz(:,:)
-     integer,intent(out)   :: it
-     integer :: iat,iw,inh,itrj,ist1,is
-     character(len=100) :: chtemp
-     logical :: prngread
-     character(len=20)  :: chin
+   use mod_general,only: icv, ihess, nwalk, ipimd, natom, &
+                         iremd, my_rank, pot,sim_time
+   use mod_nhc,    only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
+   use mod_estimators
+   use mod_kinetic,only: entot_cumul, est_temp_cumul
+   use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
+   use mod_gle
+   use mod_random
+   use mod_terampi_sh, only: read_wfn
+   real(DP),intent(out)  :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(out)  :: vx(:,:),vy(:,:),vz(:,:)
+   integer,intent(out)   :: it
+   integer :: iat,iw,inh,itrj,ist1,is
+   character(len=100) :: chtemp
+   logical :: prngread
+   character(len=20)  :: chin
 
-     if(pot.eq.'_tera_'.and.ipimd.eq.2) call read_wfn()
+   if(pot.eq.'_tera_'.and.ipimd.eq.2) call read_wfn()
 
-     prngread=.false. 
+   prngread=.false. 
 
-     if(iremd.eq.1)then
-        write(chin, '(A,I2.2)')'restart.xyz.', my_rank
-     else
-        chin='restart.xyz'
-     end if
+   if(iremd.eq.1)then
+      write(chin, '(A,I2.2)')'restart.xyz.', my_rank
+   else
+      chin='restart.xyz'
+   end if
 
-     write(*,*)'irest=1, Reading geometry, velocities and other information from restart.xyz.'
+   write(*,*)'irest=1, Reading geometry, velocities and other information from restart.xyz.'
 
-     open(111,file=chin,status = "OLD", action = "READ")
-     read(111,*)it, sim_time
-     read(111,'(A)')chtemp
-     call checkchar(chtemp, chcoords)
-     do iw=1,nwalk
+   open(111,file=chin,status = "OLD", action = "READ")
+   read(111,*)it, sim_time
+   read(111,'(A)')chtemp
+   call checkchar(chtemp, chcoords)
+   do iw=1,nwalk
       do iat=1,natom
-       read(111,*)x(iat,iw),y(iat,iw),z(iat,iw)
+         read(111,*)x(iat,iw),y(iat,iw),z(iat,iw)
       enddo
-     enddo
+   enddo
 
-     read(111,'(A)')chtemp
-     call checkchar(chtemp, chvel)
-     do iw=1,nwalk
+   read(111,'(A)')chtemp
+   call checkchar(chtemp, chvel)
+   do iw=1,nwalk
       do iat=1,natom
-       read(111,*)vx(iat,iw),vy(iat,iw),vz(iat,iw)
+         read(111,*)vx(iat,iw),vy(iat,iw),vz(iat,iw)
       enddo
-     enddo
+   enddo
 
-     if(ipimd.eq.2)then
+   if(ipimd.eq.2)then
       read(111,'(A)')chtemp
-     call checkchar(chtemp, chsh)
+      call checkchar(chtemp, chsh)
       do itrj=1,ntraj
-       read(111,*)istate(itrj)
-       do ist1=1,nstate
-        read(111,*)cel_re(ist1,itrj),cel_im(ist1,itrj)
-       enddo
+         read(111,*)istate(itrj)
+         do ist1=1,nstate
+            read(111,*)cel_re(ist1,itrj),cel_im(ist1,itrj)
+         enddo
       enddo
-     endif
+   endif
 
-     if(inose.eq.1.and.readNHC.eq.1)then
+   if(inose.eq.1.and.readNHC.eq.1)then
       read(111,'(A)')chtemp
       call checkchar(chtemp, chnose)
       if(imasst.eq.1)then
@@ -399,65 +393,58 @@ module mod_analysis
 
       endif
 
-     endif
+   endif
 
-     if(inose.eq.2.and.readQT.eq.1)then
+   if(inose.eq.2.and.readQT.eq.1)then
       read(111,'(A)')chtemp
       call checkchar(chtemp, chqt)
-      if(nwalk.eq.1)then
-       do iat=1,natom*3
-        read(111,*)(gp(iat,is),is=2,ns+1)
-       enddo
-      else
-       do iw=1,nwalk
-        do iat=1,natom*3
-         read(111,*)(ps(iat,is,iw),is=1,ns)
-        enddo
-       enddo
-     endif
+      do iw=1,nwalk
+         do iat=1,natom*3
+            read(111,*)(ps(iat, is, iw),is=1, ns)
+         enddo
+      enddo
       read(111,*)langham
-     endif
+   endif
 
-!-   reading cumulative averages of various estimators
-     read(111,'(A)')chtemp
-     call checkchar(chtemp, chavg)
-     read(111,*)est_temp_cumul
-     read(111,*)est_prim_cumul,est_vir_cumul
-     read(111,*)entot_cumul
-     
-     if(icv.eq.1)then
+!- reading cumulative averages of various estimators
+   read(111,'(A)')chtemp
+   call checkchar(chtemp, chavg)
+   read(111,*)est_temp_cumul
+   read(111,*)est_prim_cumul,est_vir_cumul
+   read(111,*)entot_cumul
+   
+   if(icv.eq.1)then
       read(111,*)est_prim2_cumul,est_prim_vir,est_vir2_cumul
       read(111,*)cv_prim_cumul,cv_vir_cumul
       if(ihess.eq.1)then 
-       read(111,*)cv_dcv_cumul
-       do iw=1,nwalk
-        read(111,*)cvhess_cumul(iw)
-       enddo
+         read(111,*)cv_dcv_cumul
+         do iw=1,nwalk
+            read(111,*)cvhess_cumul(iw)
+         enddo
       endif
-     endif
+   endif
 
-!-   Trying to restart PRNG
-!-   prngread is optional argument determining, whether we write or read
-!-   currently,prngread is not used, since vranf is initialize BEFORE restart
-!    and is possibly rewritten here
-     call rsavef(111,prngread) 
-      
-     close(111)
+!- Trying to restart PRNG
+!- prngread is optional argument determining, whether we write or read
+!- currently,prngread is not used, since vranf is initialize BEFORE restart
+!  and is possibly rewritten here
+   call rsavef(111,prngread) 
+    
+   close(111)
 
-     contains
+   contains
 
-     subroutine checkchar(chin,chref)
-        use mod_utils,  only: abinerror
-        character(len=*) :: chin, chref
+   subroutine checkchar(chin, chref)
+      use mod_utils,  only: abinerror
+      character(len=*) :: chin, chref
 
-        if(trim(adjustl(chin)).ne.trim(chref))then
-           write(*,*)'ERROR while reading from restart.xyz.'
-           write(*,*)'I read ',chin
-           write(*,*)'but expected ',chref
-           call abinerror('restin')
-        end if
-
-     end subroutine checkchar
+      if(trim(adjustl(chin)).ne.trim(chref))then
+         write(*,*)'ERROR while reading from restart.xyz.'
+         write(*,*)'I read ',chin
+         write(*,*)'but expected ',chref
+         call abinerror('restin')
+      end if
+   end subroutine checkchar
 
    end subroutine restin
 

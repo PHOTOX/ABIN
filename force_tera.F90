@@ -38,9 +38,9 @@ module mod_terampi
 
 contains
 
-subroutine force_tera(x, y, z, fx, fy, fz, eclas)
+subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
    use mod_const, only: DP, ANG
-   use mod_general, only: idebug, iqmmm, nwalk, DP
+   use mod_general, only: idebug, iqmmm, DP
 !   use mod_system, only: names
    use mod_qmmm, only: natqm
    use mod_utils, only: printf, abinerror
@@ -49,6 +49,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
    real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)   ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)   ::  eclas
+   integer,intent(in)      ::  walkmax
 !   integer, intent(in) :: qmtypes(natqm)    ! QM atom types (nuclear charge in au)
    real(DP) :: escf                 ! SCF energy
    real(DP) :: dipmom(4,3)          ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
@@ -72,7 +73,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas)
 
 !!$ OMP PARALLEL DO PRIVATE(qmcoords, mmcoords, ierr, iat, dxyz_all, escf) & !qmcharges,mmcharges and dipmom are not used at this point 
 !!$     IF(nwalk.gt.1.and.nteraservers.gt.1) NUM_THREADS(nteraservers)
-   do iw=1,nwalk
+   do iw=1, walkmax
 
 !!$OMP PARALLEL SECTIONS IF(parallel_qmmm.eq.true) NUM_THREADS(2)
 !!$OMP_SECTION

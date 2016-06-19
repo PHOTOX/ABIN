@@ -4,21 +4,21 @@ module mod_estimators
    use mod_const, only: DP, AUtoFS
    use mod_files, only: UCV, UCVDCV, UESTENERGY
    implicit none
-   real(DP)  :: est_prim_cumul=0.0d0,est_vir_cumul=0.0d0
-   real(DP)  :: est_prim2_cumul=0.0d0,est_prim_vir=0.0d0,est_vir2_cumul=0.0d0
-   real(DP)  :: cv_prim_cumul=0.0d0,cv_vir_cumul=0.0d0,cv_dcv_cumul=0.0d0
-   real(DP),allocatable :: cvhess_cumul(:)
-   real(DP),allocatable :: h(:)
+   real(DP)  :: est_prim_cumul=0.0d0, est_vir_cumul=0.0d0
+   real(DP)  :: est_prim2_cumul=0.0d0, est_prim_vir=0.0d0, est_vir2_cumul=0.0d0
+   real(DP)  :: cv_prim_cumul=0.0d0, cv_vir_cumul=0.0d0, cv_dcv_cumul=0.0d0
+   real(DP), allocatable :: cvhess_cumul(:)
+   real(DP), allocatable :: h(:)
 !!$OMP threadprivate(h)   
    integer :: enmini=100
    save
    CONTAINS
 !--Expecting cartesian coordinates and forces!
-   subroutine estimators(x,y,z,fxab,fyab,fzab,eclas,dt)
+   subroutine estimators(x, y, z, fxab, fyab, fzab, eclas, dt)
    use mod_general
-   use mod_nhc, ONLY:temp,inose
-   use mod_system, ONLY:am,dime
-   use mod_harmon, ONLY:hess_harmon,hess_morse,hess_2dho,hess
+   use mod_nhc, ONLY:temp, inose
+   use mod_system, ONLY:am, dime
+   use mod_harmon, ONLY:hess_harmon, hess_morse, hess_2dho, hess
    use mod_shake, only: nshake
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(in) :: fxab(:,:),fyab(:,:),fzab(:,:)
@@ -28,6 +28,9 @@ module mod_estimators
    real(DP)  :: est_vir,est_prim,cv_prim,cv_vir,cv_dcv
    integer :: iat,iw,ipom,iat1,iat2,nf
    real(DP)  :: it2,itnc
+
+
+   if(inormalmodes.eq.1.and.inose.eq.1)   temp = temp / nwalk
       
 !  fxab array is classical force in cartesian coordinates
 
@@ -42,9 +45,9 @@ module mod_estimators
    nf=dime*natom-nshake !degrees of freedom
 
    do iat=1,natom
-      x(iat,nwalk+1)=x(iat,1)
-      y(iat,nwalk+1)=y(iat,1)
-      z(iat,nwalk+1)=z(iat,1)
+      x(iat,nwalk+1) = x(iat,1)
+      y(iat,nwalk+1) = y(iat,1)
+      z(iat,nwalk+1) = z(iat,1)
    enddo
 
 !cccc CALCULATING PRIMITIVE ESTIMATORS cccccccccccc
@@ -53,16 +56,16 @@ module mod_estimators
 
    do iat=1,natom
       do iw=1,nwalk
-         est_prim=est_prim + am(iat)*(x(iat,iw)-x(iat,iw+1))**2
-         est_prim=est_prim + am(iat)*(y(iat,iw)-y(iat,iw+1))**2
-         est_prim=est_prim + am(iat)*(z(iat,iw)-z(iat,iw+1))**2
+         est_prim = est_prim + am(iat)*(x(iat,iw)-x(iat,iw+1))**2
+         est_prim = est_prim + am(iat)*(y(iat,iw)-y(iat,iw+1))**2
+         est_prim = est_prim + am(iat)*(z(iat,iw)-z(iat,iw+1))**2
       enddo
    enddo
 
-   cv_prim=(nwalk*temp*temp**2)*est_prim
+   cv_prim = (nwalk*temp*temp**2) * est_prim
 
-   est_prim=nf*nwalk*temp*0.5d0-0.5d0*nwalk*temp**2*est_prim+eclas
-   est_prim_cumul=est_prim_cumul+est_prim
+   est_prim = nf*nwalk*temp*0.5d0 - 0.5d0*nwalk*temp**2*est_prim + eclas
+   est_prim_cumul = est_prim_cumul + est_prim
 
    if(icv.eq.1.and.itnc.gt.0)then
       est_prim2_cumul=est_prim2_cumul+est_prim*est_prim
@@ -74,7 +77,7 @@ module mod_estimators
 
 
 !cccccccc CALCULATING VIRIAL ESTIMATORS cccccccccccccccccccccc
-   est_vir=0.0d0      
+   est_vir=0.0d0
    cv_vir=0.0d0
 
 ! Calculating centroids
@@ -83,9 +86,9 @@ module mod_estimators
       yc(iat)=0.0d0
       zc(iat)=0.0d0
       do iw=1,nwalk
-         xc(iat)=xc(iat)+x(iat,iw)           
-         yc(iat)=yc(iat)+y(iat,iw)           
-         zc(iat)=zc(iat)+z(iat,iw)   
+         xc(iat)=xc(iat)+x(iat,iw)
+         yc(iat)=yc(iat)+y(iat,iw)
+         zc(iat)=zc(iat)+z(iat,iw)
       enddo
          xc(iat)=xc(iat)/nwalk
          yc(iat)=yc(iat)/nwalk
@@ -94,17 +97,17 @@ module mod_estimators
 
    do iat=1,natom
       do iw=1,nwalk
-         est_vir=est_vir-(x(iat,iw)-xc(iat))*fxab(iat,iw) 
-         est_vir=est_vir-(y(iat,iw)-yc(iat))*fyab(iat,iw) 
-         est_vir=est_vir-(z(iat,iw)-zc(iat))*fzab(iat,iw) 
+         est_vir = est_vir-(x(iat,iw)-xc(iat))*fxab(iat,iw) 
+         est_vir = est_vir-(y(iat,iw)-yc(iat))*fyab(iat,iw) 
+         est_vir = est_vir-(z(iat,iw)-zc(iat))*fzab(iat,iw) 
       enddo
    enddo
 
-   if(inose.eq.2)then
-      est_vir=est_vir/nwalk
+   if(inose.eq.2.or.inormalmodes.eq.1)then
+      est_vir = est_vir / nwalk
    endif
 
-   est_vir=0.5d0*est_vir+nf*temp*0.5d0+eclas      
+   est_vir = 0.5d0*est_vir + nf*temp*0.5d0 + eclas
    est_vir_cumul=est_vir_cumul+est_vir
 
    if(icv.eq.1.and.itnc.gt.0)then
@@ -149,7 +152,7 @@ module mod_estimators
                cvhess(iw)=cvhess(iw)-(z(iat,iw)-zc(iat))*fzab(iat,iw)*1.5d0
             enddo
        !    PIGLE --- different hamiltonian,fxc not divided by nwalk
-            if (inose.eq.2) cvhess(iw)=cvhess(iw)/nwalk
+            if (inose.eq.2.or.inormalmodes.eq.1) cvhess(iw) = cvhess(iw)/nwalk
 
             do iat1=1,natom*3
                do iat2=1,natom*3
@@ -217,6 +220,8 @@ module mod_estimators
       write(UESTENERGY,'(F15.2,5E20.10)')sim_time*AUtoFS,eclas,est_prim,est_vir,est_prim_cumul/itnc,est_vir_cumul/itnc
 
    endif
+
+   if(inormalmodes.eq.1.and.inose.eq.1)   temp = temp * nwalk
         
    return
 
