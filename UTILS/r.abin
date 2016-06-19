@@ -21,8 +21,10 @@ INPUTVELOC=
 source SetEnvironment.sh ABIN 1.0
 
 pot=$(awk -F"[! ,=\"']+" '{if($1=="pot")print $2}' $INPUTPARAM)
+pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 # Upper case, this is the folder with file interface
 INTERFACE=${pot^^}
+INTERFACE_REF=${pot_ref^^}
 
 #$ -V -cwd
 
@@ -57,6 +59,14 @@ fi
 cp -p * $SCRDIR/.
 if [[ -d $INTERFACE ]];then
    cp -r $INTERFACE $SCRDIR/
+fi
+if [[ ! -z $INTERFACE_REF ]]then
+   if [[ -d $INTERFACE_REF ]];then
+      cp -r $INTERFACE_REF $SCRDIR/
+   fi
+fi
+if [[ -d MM ]];then
+   cp -r MM $SCRDIR/
 fi
 
 cd $SCRDIR
