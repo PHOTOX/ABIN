@@ -95,7 +95,7 @@ elif  [[ $2 = "all" || $2 = "clean" ]];then
    if [[ $4 = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=REMD
-      let index++
+#      let index++
       #      folders[index]=TERAPI # does not yet work
    fi
    if [[ $5 = "TRUE" ]];then
@@ -108,7 +108,9 @@ elif  [[ $2 = "all" || $2 = "clean" ]];then
    fi
    if [[ $6 = "TRUE" ]];then
       let index=${#folders[@]}+1
-      folders[index]=FFTW
+      folders[index]=PIGLET
+      let index++
+      folders[index]=PILE
    fi
    if [[ $7 = "TRUE" ]];then
       let index=${#folders[@]}+1
