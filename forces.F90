@@ -4,7 +4,7 @@
 subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_const,    only: DP
    use mod_general,  only: natom, nwalk, istage, inormalmodes, iqmmm, it, &
-                           pot, pot_ref
+                           pot, pot_ref, imini
    use mod_qmmm,     only: force_LJCoul
    use mod_nab,      only: ipbc,wrap,nsnb,force_nab
    use mod_sbc,      only: force_sbc, isbc !,ibag
@@ -12,9 +12,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_nhc,      only: inose
    use mod_transform
    use mod_interfaces, only: force_wrapper
-#ifdef PLUM
    use mod_plumed,   only: iplumed, plumedfile, force_plumed
-#endif
    implicit none
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
@@ -59,7 +57,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
       enddo 
    endif
 
-! wraping molecules back to the box 
+!  wraping molecules back to the box 
    if (chpot.eq.'nab'.and.ipbc.eq.1.and.modulo(it,nsnb).eq.0) call wrap(transx,transy,transz)
 
    ! LET'S GET FORCES! Ab initio interface is still deeper in force_abin
@@ -96,9 +94,8 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
 
 !--------PLUMED SECTION---------------
-#ifdef PLUM
+   ! not sure there should be imini, might produce weird results in US
    if(iplumed.eq.1.and.it.gt.imini) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
-#endif
 !------------------------------------
 
 !--TRANSFORMING FORCES FROM CARTESIAN TO STAGING or NORMAL MODE COORDS--!

@@ -1,8 +1,5 @@
-This is a sample input file for ABIN 
-NOTE: order of input sections matters!!
-
 &general
-nstep=1000,
+nstep=100,
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
 
 pot='harm'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
@@ -25,8 +22,6 @@ plumedfile='plumed.in', ! plumed input file
 /
 
 &system
-!massnames=H,
-!masses=1.,
 r0=5.66917796,                  ! [BOHR] = 3.0A
 k=0.05,                     ! Ha*bohr-2 
 ndist=1,

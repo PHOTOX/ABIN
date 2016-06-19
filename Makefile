@@ -24,7 +24,7 @@ ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
-F_OBJS :=  arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o \
+F_OBJS :=  arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o plumed.o \
 force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o surfacehop.o force_tera.o  force_terash.o force_abin.o analyze_ext_template.o density.o analysis.o  \
 minimizer.o mdstep.o forces.o abin.o
 
@@ -59,7 +59,6 @@ ifeq ($(strip $(PLUM)),TRUE)
  include ${PLUMLINK}
  DFLAGS += -DPLUM
  LIBS += ${PLUMED_STATIC_LOAD}
-  F_OBJS := plumed.o ${F_OBJS}
 endif
 
 ifeq  ($(strip $(MPI)),TRUE) 

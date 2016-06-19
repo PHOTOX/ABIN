@@ -33,14 +33,12 @@ subroutine init(dt, values1)
    use mod_minimize, only: gamm, gammthr
    use mod_analysis, only: restin
    use mod_water,    only: watpot, check_water
+   use mod_plumed,   only: iplumed, plumedfile, plumed_init
 #ifdef USEFFTW
    use mod_fftw3,    only: fftw_init
 #endif
 #ifdef CP2K
    use mod_cp2k,     only: cp2k_init
-#endif
-#ifdef PLUM
-   use mod_plumed,   only: iplumed, plumedfile, plumed_init
 #endif
 #ifdef MPI
    use mod_remd
