@@ -4,7 +4,7 @@
 !---- Parameters should be set in module mod_harmon or in input section system
 !------------------------------------------------------
 !------------------------------------------------------
-!     some constanst for analytical potentials      
+!     some constansts for analytical potentials      
 module mod_harmon
    use mod_const, only: DP
    implicit none
@@ -13,7 +13,7 @@ module mod_harmon
 !--constants for 1D 2-particle harmonic oscillator
    real(DP) :: k=0.000d0, r0=0.0d0
 !--constants for double well 
-   real(DP) :: lambda=0.0d0, D0=0.0d0
+   real(DP) :: lambda_dw=0.0d0, D0_dw=0.0d0, k_dw, r0_dw
 !--CONSTANTS for morse potential ccc
 !  V=De*(1-exp(-a(r-r0)))^2
    real(DP) :: De=0.059167d0,a=-1.0d0
@@ -51,18 +51,17 @@ module mod_harmon
       real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
       real(DP),intent(out) :: fxab(:,:),fyab(:,:),fzab(:,:)
       real(DP),intent(out) :: eclas
-      real(DP)             :: dx,dy,dz,r,fac
       integer              :: i
 
       eclas=0.0d0
  
       do i=1,nwalk
-         fxab(1,i) = -4*D0*x(1,i)*(x(1,i)**2-r0**2)-lambda*y(1,i)
-         fyab(1,i) = -k1 * y(1,i) - lambda*x(1,i)
+         fxab(1,i) = -4*D0_dw*x(1,i) * (x(1,i)**2-r0_dw**2) - lambda_dw*y(1,i)
+         fyab(1,i) = -k_dw * y(1,i) - lambda_dw*x(1,i)
          fzab(1,i) = 0
+         eclas = eclas + D0_dw*(x(1,i)**2-r0_dw**2)**2 + &
+            0.5*k_dw*y(1,i)**2 + lambda_dw*x(1,i)*y(1,i)
       enddo
-
-      eclas = D0*(x(1,i)**2-r0**2)**2 + 0.5*k1*y(1,i)**2 + lambda*x(1,i)*y(1,i)
 
   end subroutine force_doublewell
 
