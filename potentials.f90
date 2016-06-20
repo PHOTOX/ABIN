@@ -1,8 +1,10 @@
-!-----Various analytical potentials
-!---- Now including harmonic potential for diatomic molecule, 3D-harmonic and Morse
-!     For all there, hessian is also available.
-!---- Parameters should be set in module mod_harmon or in input section system
-!------------------------------------------------------
+!  Various analytical potentials
+!  Now including harmonic potential for diatomic molecule, 3D-harmonic and Morse
+!  For all these, hessian is also available.
+!  Now also includes double-well potential, originaly used for testing PLUMED.
+!  
+!  Parameters should be set in input section system
+
 !------------------------------------------------------
 !     some constansts for analytical potentials      
 module mod_harmon
@@ -63,6 +65,8 @@ module mod_harmon
             0.5*k_dw*y(1,i)**2 + lambda_dw*x(1,i)*y(1,i)
       enddo
 
+      eclas = eclas / nwalk
+
   end subroutine force_doublewell
 
 
@@ -75,20 +79,20 @@ module mod_harmon
       real(DP)             :: dx,dy,dz,r,fac
       integer            :: i
 
-      eclas=0.0d0
+      eclas = 0.0d0
 
       do i=1,nwalk
-         dx=x(2,i)-x(1,i)
-         dy=y(2,i)-y(1,i)
-         dz=z(2,i)-z(1,i)
-         r=dx**2+dy**2+dz**2
-         r=sqrt(r)
-         fac=k*(r-r0)/r
-         fxab(1,i) = fac*dx
+         dx = x(2,i) - x(1,i)
+         dy = y(2,i) - y(1,i)
+         dz = z(2,i) - z(1,i)
+         r = dx**2 + dy**2 + dz**2
+         r = sqrt(r)
+         fac = k*(r-r0) / r
+         fxab(1,i) = fac * dx
          fxab(2,i) = -fxab(1,i)
-         fyab(1,i) = fac*dy
+         fyab(1,i) = fac * dy
          fyab(2,i) = -fyab(1,i)
-         fzab(1,i) = fac*dz
+         fzab(1,i) = fac * dz
          fzab(2,i) = -fzab(1,i)
          eclas = eclas + 0.5d0*k*(r-r0)**2 / nwalk
       enddo
