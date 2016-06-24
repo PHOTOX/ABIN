@@ -177,7 +177,7 @@ end subroutine force_clas
 subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    use mod_const,    only: DP
    use mod_interfaces, only: force_abin
-   use mod_general,  only: natom
+   use mod_general,  only: natom, ipimd
    use mod_water,    only: watpot
    use mod_qmmm,     only: force_LJCoul
    use mod_nab,      only: force_nab
@@ -221,9 +221,9 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
 #ifdef MPI
       case ("_tera_")
          if(ipimd.eq.2)then
-            call  force_terash(x,  y,  z,  fx,  fy,  fz, eclas)
+            call force_terash(x, y, z, fx, fy, fz, eclas)
          else
-            call  force_tera(x,  y,  z,  fx,  fy,  fz, eclas, walkmax)
+            call force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
          end if
 #endif
       case DEFAULT

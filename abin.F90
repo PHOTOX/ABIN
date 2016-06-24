@@ -19,8 +19,7 @@
 program abin_dyn
    use mod_const, only: DP, AUtoFS
    use mod_arrays
-   use mod_general, only: pot, pot_ref, sim_time, md, my_rank, it, &
-           ncalc, nstep, nwrite, iremd, ipimd, idebug, inormalmodes, istage, irest
+   use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_kinetic, ONLY: temperature
    use mod_utils, only: abinerror, printf, archive_file

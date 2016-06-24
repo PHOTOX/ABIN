@@ -40,7 +40,7 @@ contains
 
 subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
    use mod_const, only: DP, ANG
-   use mod_general, only: idebug, iqmmm, DP
+   use mod_general, only: idebug, iqmmm, nwalk
 !   use mod_system, only: names
    use mod_qmmm, only: natqm
    use mod_utils, only: printf, abinerror
