@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#$ -V -cwd
+
 # This is a sample script for launching ABIN simulations in cluster environments.
 # 1. Copy all data from CWD to the node's scratch. 
 #    (not copying folders except the interface folder, e.g G09)
@@ -16,19 +18,22 @@ delscratch=true
 INPUTVELOC=
 ########################################
 
+SCRDIR=/scratch/$USER/$JOBNAME
+
 # ABINEXE determined via SetEnvironment.sh script
 # ABINEXE=/home/hollas/PHOTOX/bin/abin
 source SetEnvironment.sh ABIN 1.0
 
 pot=$(awk -F"[! ,=\"']+" '{if($1=="pot")print $2}' $INPUTPARAM)
-pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 # Upper case, this is the folder with file interface
 INTERFACE=${pot^^}
+
+
+# when using reference potential ala O. Marsalek
+pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 INTERFACE_REF=${pot_ref^^}
 
-#$ -V -cwd
 
-SCRDIR=/scratch/$USER/$JOBNAME
 
 echo "Job started at: " >> $OUTPUT
 date >> $OUTPUT
@@ -60,10 +65,8 @@ cp -p * $SCRDIR/.
 if [[ -d $INTERFACE ]];then
    cp -r $INTERFACE $SCRDIR/
 fi
-if [[ ! -z $INTERFACE_REF ]]then
-   if [[ -d $INTERFACE_REF ]];then
-      cp -r $INTERFACE_REF $SCRDIR/
-   fi
+if [[ -d $INTERFACE_REF ]];then
+   cp -r $INTERFACE_REF $SCRDIR/
 fi
 if [[ -d MM ]];then
    cp -r MM $SCRDIR/

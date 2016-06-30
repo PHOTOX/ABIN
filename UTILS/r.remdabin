@@ -18,16 +18,20 @@ delscratch=true
 INPUTVELOC=
 ########################################
 
+# for SGE queing sytem
 #$ -V -cwd
+
 NPROC=${NSLOTS} # determined for queuing system: -pe mpi x
 source SetEnvironment.sh ABIN 1.0-mpi
 
 SCRDIR=/scratch/$USER/$JOBNAME
 
 pot=$(awk -F"[! ,=\"']+" '{if($1=="pot")print $2}' $INPUTPARAM)
-pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 # Upper case, this is the folder with file interface
 INTERFACE=${pot^^}
+
+
+pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 INTERFACE_REF=${pot_ref^^}
 
 echo "Job started at: " >> $OUTPUT
@@ -55,10 +59,8 @@ cp -p * $SCRDIR/.
 if [[ -d $INTERFACE ]];then
    cp -r $INTERFACE $SCRDIR/
 fi
-if [[ ! -z $INTERFACE_REF ]]then
-   if [[ -d $INTERFACE_REF ]];then
-      cp -r $INTERFACE_REF $SCRDIR/
-   fi
+if [[ -d $INTERFACE_REF ]];then
+   cp -r $INTERFACE_REF $SCRDIR/
 fi
 if [[ -d MM ]];then
    cp -r MM $SCRDIR/

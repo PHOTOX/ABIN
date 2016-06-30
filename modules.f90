@@ -50,7 +50,7 @@ module mod_general
    character(len=15) :: pot='none', pot_ref='none'
    integer :: imini=0, nstep=1, nabin=50, nstep_ref=1
    integer :: nwrite=1,nwritex=1,ncalc=1,nwritev=0,nwritef=0
-   integer :: narchive=1000, nrest=1
+   integer :: narchive=10000, nrest=1
    integer :: icv=0,irest=0,anal_ext=0,idebug=0
    integer :: irandom=156873,natom=0,pid
    integer :: iqmmm=0
