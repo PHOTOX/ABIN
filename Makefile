@@ -96,7 +96,7 @@ clean :
 
 # Remove NAB objects as well
 distclean :
-	/bin/rm -f *.o *.mod NAB/*.o $(OUT)
+	/bin/rm -f *.o *.mod NAB/*.o EWALD/*.o $(OUT)
 	cd WATERMODELS && make clean
 
 # Run test suite 
