@@ -9,7 +9,7 @@ module mod_analysis
    private 
    public :: trajout, restout, analysis, restin
    !These are the character string that we check for during restart.
-   character(len=*),parameter :: chnose='NHC momenta',chQT='Quantum Thermostat', &
+   character(len=*),parameter :: chnose='NHC momenta',chQT='Quantum Thermostat',chLT='Langevin Thermostat', &
             chSH='Coefficients for SH', chAVG='Cumulative averages of various estimators', &
             chcoords='Cartesian Coordinates [au]', chvel='Cartesian Velocities [au]'
 
@@ -279,6 +279,10 @@ module mod_analysis
       enddo
       write(102,*)langham
    endif
+   if(inose.eq.3)then
+      write(102,*)chLT
+      write(102,*)langham
+   endif
 
    write(102,*)chAVG
    write(102,*)est_temp_cumul
@@ -403,6 +407,12 @@ module mod_analysis
             read(111,*)(ps(iat, is, iw),is=1, ns)
          enddo
       enddo
+      read(111,*)langham
+   endif
+
+   if(inose.eq.3.and.readQT.eq.1)then
+      read(111,'(A)')chtemp
+      call checkchar(chtemp, chLT)
       read(111,*)langham
    endif
 

@@ -52,7 +52,7 @@ module mod_kinetic
          if(inose.eq.1)then
             call calc_nhcham()
             write(UTEMPER,'(E20.10)',advance="no")nhcham+ekin_mom+eclas
-         else if (inose.eq.2)then
+         else if (inose.eq.2.or.inose.eq.3)then
             write(UTEMPER,'(E20.10)',advance="no")langham+ekin_mom+eclas
          end if
 
