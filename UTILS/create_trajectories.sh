@@ -140,6 +140,7 @@ while [[ $i -le "$nsample" ]];do
       if [[ "$rewrite" -eq "1" ]];then
 
          rm -r $folder/TRAJ.$i ; mkdir $folder/TRAJ.$i
+         rm -f $folder/$molname.$isample.$j.sh
 
       else
 

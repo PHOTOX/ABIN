@@ -999,13 +999,16 @@ enddo
 
 
    subroutine hop_dot(vx,vy,vz,instate,outstate,itrj,eclas)
-      use mod_general, ONLY:natom,idebug
+      use mod_general, ONLY:natom, idebug, pot
       use mod_kinetic ,ONLY: ekin_v
-      real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
-      real(DP),intent(inout) :: eclas
-      integer,intent(in)     :: itrj,instate,outstate
+      use mod_arrays,   ONLY: fxc, fyc, fzc, x, y, z
+      use mod_interfaces, only: force_clas
+      real(DP),intent(inout)  :: vx(:,:),vy(:,:),vz(:,:)
+      real(DP),intent(inout)  :: eclas
+      integer,intent(in)      :: itrj,instate,outstate
       integer   :: iat
       real(DP)  :: de,ekin,alfa,ekin_new
+      integer, allocatable    :: tocalc_temp(:,:)
 
       ekin=0.0d0
       ekin_new=0.0d0
@@ -1030,6 +1033,14 @@ enddo
          write(*,*)'# Adjusting velocities by simple scaling.'
          write(*,'(A,2E20.10)')'#Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
+         allocate(tocalc_temp(nstate, nstate))
+         tocalc_temp = tocalc
+         tocalc = 0
+         write(*,*)'Calculating correct forces for the new state.'
+         call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+         tocalc = tocalc_temp
+         deallocate(tocalc_temp)
+
       else
 
          write(*,'(A35,I3,A10,I3)')'# Frustrated Hop occured from state ',instate,' to state ',outstate
@@ -1043,6 +1054,7 @@ enddo
       endif
 
       write(*,'(A31,2E20.10)')'# deltaE_pot  E_kin-total',dE,ekin
+
 
    end subroutine hop_dot
 
