@@ -314,13 +314,13 @@ module mod_analysis
 
    ! Subroutine that reads from restart.xyz during restart
    ! It is called from subroutine init.
-   subroutine restin(x,y,z,vx,vy,vz,it)
-   use mod_general,only: icv, ihess, nwalk, ipimd, natom, &
+   subroutine restin(x, y, z, vx, vy, vz, it)
+   use mod_general,  only: icv, ihess, nwalk, ipimd, natom, &
                          iremd, my_rank, pot,sim_time
-   use mod_nhc,    only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
+   use mod_nhc,      only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
    use mod_estimators
-   use mod_kinetic,only: entot_cumul, est_temp_cumul
-   use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
+   use mod_kinetic,  only: entot_cumul, est_temp_cumul
+   use mod_sh,       only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
    use mod_gle
    use mod_random
    use mod_terampi_sh, only: read_wfn
@@ -332,7 +332,6 @@ module mod_analysis
    logical :: prngread
    character(len=20)  :: chin
 
-   if(pot.eq.'_tera_'.and.ipimd.eq.2) call read_wfn()
 
    prngread=.false. 
 
@@ -441,6 +440,8 @@ module mod_analysis
    call rsavef(111,prngread) 
     
    close(111)
+
+   if(pot.eq.'_tera_'.and.ipimd.eq.2) call read_wfn()
 
    contains
 

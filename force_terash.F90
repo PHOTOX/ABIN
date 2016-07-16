@@ -383,7 +383,7 @@ end subroutine write_wfn
 
 subroutine read_wfn()
    use mod_files, only: UWFN
-   use mod_general, only: iremd, my_rank, iknow
+   use mod_general, only: iremd, my_rank, iknow, it
    use mod_chars, only: chknow
    use mod_utils, only: abinerror, archive_file
    use mod_sh,    only: nstate
@@ -431,6 +431,7 @@ subroutine read_wfn()
    close(UWFN)
 
    oldWFN = 1
+   call archive_file('wfn.bin',it)
 
    RETURN
 
