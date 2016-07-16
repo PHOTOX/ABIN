@@ -225,7 +225,7 @@ print '(a)','**********************************************'
    open(111,file=chcoords,status = "old", action = "read", iostat=iost) 
    read(111,*, iostat=iost)natom1
    !TODO following line does not work
-   if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.")
+   if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.", iost)
    if(natom1.ne.natom)then
      write(*,'(A,A)')'No. of atoms in ',chinput
      write(*,'(A,A)')'and in ',chcoords
@@ -236,7 +236,7 @@ print '(a)','**********************************************'
    do iat=1,natom
 
      read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
-     if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates')
+     if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates', iost)
      names(iat) = LowerToUpper(names(iat))
      x(iat,1) = x(iat,1) * ANG
      y(iat,1) = y(iat,1) * ANG
@@ -458,7 +458,7 @@ print '(a)','**********************************************'
 
          do iw=1,nwalk
             read(500,*, IOSTAT=iost)natom1
-            if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
+            if (iost.ne.0) call err_read(chveloc,"Could not read velocities on line 1.", iost)
             if(natom1.ne.natom)then
                write(*,'(A,A)')'No. of atoms in ',chinput
                write(*,'(A,A)')'and in ',chcoords
@@ -466,12 +466,12 @@ print '(a)','**********************************************'
                call abinerror('init')
             endif
             read(500,*, IOSTAT=iost)
-            if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
+            if (iost.ne.0) call err_read(chveloc,"Could not read velocities on line 2.", iost)
           
             do iat=1,natom
                read(500,*, IOSTAT=iost)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
-               if (iost.ne.0) call err_read(chveloc,"Could not read velocities.")
-               if (atom.ne.names(iat)) call err_read(chveloc,"Inconsistent atom types in input velocities.")
+               if (iost.ne.0) call err_read(chveloc,"Could not read velocities.", iost)
+               if (atom.ne.names(iat)) call err_read(chveloc,"Inconsistent atom types in input velocities.", iost)
             end do
          end do
 
@@ -988,10 +988,12 @@ print '(a)','**********************************************'
 
    end subroutine check_inputsanity
 
-   subroutine err_read(chfile, chmsg)
+   subroutine err_read(chfile, chmsg, iost)
       character(len=*), intent(in)  :: chmsg, chfile
-      write(*,*)'Error when reading file ', chfile
-      write(*,*) chmsg
+      integer, intent(in)  :: iost
+      write(*,*) trim(chmsg)
+      write(*,'(A,A)')'Error when reading file ', trim(chfile)
+      write(*,*)'Error code was', iost
       call abinerror('init')
    end subroutine err_read
 
