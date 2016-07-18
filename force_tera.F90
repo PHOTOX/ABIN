@@ -18,8 +18,8 @@ module mod_terampi
    use mod_const, only: DP
    implicit none
    private
-   ! This does not work at this moment.
-   character*50  ::  teraport = 'terachem_port', chsys_sleep
+   ! By default, take port name from a file
+   character*50  ::  teraport = '', chsys_sleep
    integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
 !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
    integer, parameter     ::  natmm_tera=0
@@ -270,58 +270,62 @@ subroutine connect_terachem( )
    include 'mpif.h'
    character(255)  :: port_name
    integer         :: ierr
-!   real*8          :: timer
-!   logical         :: done=.false.
-!   character(len=50) :: server_name
+   real*8          :: timer
+   logical         :: done=.false.
+   character(len=50) :: server_name
 
-    ! -----------------------------------
-    ! Look for server_name, get port name
-    ! After 60 seconds, exit if not found
-    ! -----------------------------------
-!     server_name = trim(teraport)  !//'.'//trim(id)
-!     write(*,*)''
-!     write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
-!     call flush(6)
+   ! -----------------------------------
+   ! Look for server_name, get port name
+   ! After 60 seconds, exit if not found
+   ! -----------------------------------
+   server_name = trim(teraport)  !//'.'//trim(id)
+!  write(*,*)''
+   write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
+   call flush(6)
 
-!    timer = MPI_WTIME(ierr)
-!    do while (done .eqv. .false.)
+!   timer = MPI_WTIME(ierr)
+   done = .false.
 
-!    done = .true.
+   !call MPI_Comm_set_errhandler(ierr);
 
-!      call MPI_LOOKUP_NAME(server_name, MPI_INFO_NULL, port_name, ierr)
-!      if (ierr == MPI_SUCCESS) then
-!        if ( idebug > 1 ) then
-!          write(6,'(2a)') 'Found port: ', trim(port_name)
-!          call flush(6)
-!        end if
-!        done=.true.
+   if (server_name.ne.'')then 
 
-!      else
-!         write(*,*)'Error in MPI_LOOKUP_NAME. Error code:', ierr
-!      end if
+      call MPI_LOOKUP_NAME(server_name, MPI_INFO_NULL, port_name, ierr)
+      if (ierr == MPI_SUCCESS) then
+         write(6,'(2a)') 'Found port: ', trim(port_name)
+         call flush(6)
+         done=.true.
 
-!      if ( (MPI_WTIME(ierr)-timer) > 60 ) then ! Time out after 60 seconds
-!              write(*,*)'Port"'//trim(server_name)//'" not found. Timed out after 60 seconds.'
-!              call abinerror("connect_to_terachem")
-!      end if
+      else
 
-!    end do
+         write(*,*)'Error in MPI_LOOKUP_NAME. Error code:', ierr
 
-    ! DH hack, since MPI_LOOKUP_NAME does not work:
-    write(6,'(A)') 'Reading TeraChem port name from file port.txt...'
-    open(500, file="port.txt", action="read")
-    read(500, *)port_name
-    close(500)
-    write(6,'(2a)') 'Looking up TeraChem port under name:', trim(port_name)
-    ! ----------------------------------------
-    ! Establish new communicator via port name
-    ! ----------------------------------------
-    write(*,*)'Establishing connection...'
-    call flush(6)
-    call MPI_COMM_CONNECT(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
-    write(6,'(a,i0)') 'Established new communicator:', newcomm
+      end if
 
-  end subroutine connect_terachem
+    !  if ( (MPI_WTIME(ierr)-timer) > 60 ) then ! Time out after 60 seconds
+    !     write(*,*)'Port"'//trim(server_name)//'" not found. Timed out after 60 seconds.'
+    !     call abinerror("connect_to_terachem")
+    !  end if
+
+   else
+
+      write(6,'(A)') 'Reading TeraChem port name from file port.txt...'
+      open(500, file="port.txt", action="read")
+      read(500, *)port_name
+      close(500)
+
+   end if
+
+   write(6,'(2a)') 'Looking up TeraChem port under name:', trim(port_name)
+   ! ----------------------------------------
+   ! Establish new communicator via port name
+   ! ----------------------------------------
+   write(*,*)'Establishing connection...'
+   call flush(6)
+   call MPI_COMM_CONNECT(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
+   write(6,'(a,i0)') 'Established new communicator:', newcomm
+
+   end subroutine connect_terachem
 
    subroutine initialize_terachem()
    use mod_qmmm,  only: natqm

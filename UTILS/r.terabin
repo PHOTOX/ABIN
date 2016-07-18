@@ -20,11 +20,12 @@ INPUTVELOC=
 # ABINEXE=/home/hollas/PHOTOX/bin/abin.mpi
 # ABINEXE is determined automatically from SetEnvironment.sh
 
+export LD_LIBRARY_PATH=
 source SetEnvironment.sh TERACHEM dev
 MPIRUN_TERA="$MPIRUN -np 1 "
 source SetEnvironment.sh ABIN 1.0-mpi
-MPIRUN_ABIN="$MPIRUN -np 1 "
-
+# This needs to be the same as MPIRUN_TERA
+MPIRUN_ABIN="$MPIRUN_TERA -np 1 "
 
 rm -f port.txt
 
@@ -62,20 +63,30 @@ fi
 
 
 cp -p * $SCRDIR/.
-
 cd $SCRDIR
 
-$MPIRUN_TERA $TERAEXE --inputfile=tera.inp --UseMPI=0 --MPIPort=teraport 2>&1 > tera.out &
+host=$(uname -a | awk '{print $2}')
+port=teraport$$
+# This needs to be done better
+sed -i "s/teraport=\"terachem_port\"/teraport=\"$port\"/" $INPUTPARAM
+
+# Make sure hydra_nameserver is running
+hdra=$(ps -e | grep hydra_nameser)
+if [[ -z $hdra ]];then
+   hydra_nameserver &
+fi
+
+$MPIRUN_TERA $TERAEXE --inputfile=tera.inp --UseMPI=0 --MPIPort=teraport > tera.out 2>&1 &
 # Get PID of the last process
 terapid=$!
-sleep 5
+sleep 9
 # Ugly workaround because MPI_Lookup does not work
 grep port_name: tera.out | awk '{print $6}' > port.txt
 
 if [[ -z $INPUTVELOC ]];then
-   $MPIRUN_ABIN $ABINEXE -i $INPUTPARAM -x $INPUTGEOM 2>&1 >> $OUTPUT &
+   $MPIRUN_ABIN $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT 2>&1 &
 else
-   $MPIRUN_ABIN $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM 2>&1 >> $OUTPUT &
+   $MPIRUN_ABIN $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT 2>&1 &
 fi
 abinpid=$!
 

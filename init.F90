@@ -67,7 +67,7 @@ subroutine init(dt, values1)
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
-            pot_ref, nstep_ref
+            pot_ref, nstep_ref, teraport
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
