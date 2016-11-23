@@ -73,9 +73,9 @@ coeff1=`expr $natom / $gradientvar`
 coeff2=`expr $natom % $gradientvar`
 
 if [ "$coeff2" -eq  0 ] ; then
-  coeff=`expr $coeff1`
+  coeff=$coeff1
 else
-coeff=`expr $coeff1 + 1`
+   let coeff=coeff1+1
 fi 
 
 gradx=2

@@ -16,16 +16,18 @@ INPUTPARAM=input.in
 INPUTGEOM=mini.dat
 delscratch=true
 INPUTVELOC=
+MPITYPE=0   # 0 - ground state AIMD
+            # 1 - Surface Hopping
 ########################################
 # ABINEXE=/home/hollas/PHOTOX/bin/abin.mpi
 # ABINEXE is determined automatically from SetEnvironment.sh
 
 export LD_LIBRARY_PATH=
-source SetEnvironment.sh TERACHEM dev
+source SetEnvironment.sh TERACHEM
 MPIRUN_TERA="$MPIRUN -np 1 "
 source SetEnvironment.sh ABIN 1.0-mpi
 # This needs to be the same as MPIRUN_TERA
-MPIRUN_ABIN="$MPIRUN_TERA -np 1 "
+MPIRUN_ABIN="$MPIRUN_TERA"
 
 rm -f port.txt
 
@@ -67,16 +69,18 @@ cd $SCRDIR
 
 host=$(uname -a | awk '{print $2}')
 port=teraport$$
-# This needs to be done better
-sed -i "s/teraport=\"terachem_port\"/teraport=\"$port\"/" $INPUTPARAM
+
+# Direct connection via teraport currently not in use
+sed -i "s/teraport=.*/teraport=\"\"/" $INPUTPARAM
+#sed -i "s/teraport=.*/teraport=\"$port\"/" $INPUTPARAM
 
 # Make sure hydra_nameserver is running
-hdra=$(ps -e | grep hydra_nameser)
-if [[ -z $hdra ]];then
-   hydra_nameserver &
-fi
+#hdra=$(ps -e | grep hydra_nameser)
+#if [[ -z $hdra ]];then
+#   hydra_nameserver &
+#fi
 
-$MPIRUN_TERA $TERAEXE --inputfile=tera.inp --UseMPI=0 --MPIPort=teraport > tera.out 2>&1 &
+$MPIRUN_TERA $TERAEXE --inputfile=tera.inp --UseMPI=$MPITYPE --MPIPort=$port > tera.out 2>&1 &
 # Get PID of the last process
 terapid=$!
 sleep 9

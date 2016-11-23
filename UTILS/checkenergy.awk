@@ -7,9 +7,11 @@
 # checkenergy -v itrj=$i inputfile
 
 function abs(x){return ((x < 0.0) ? -x : x)}
-BEGIN{max_de=0.0}
+BEGIN{max_de=0.0; en0=0}
 {
-   if ( NR<=2 ) { 
+   if ($1 == "#")
+      next
+   if ( en0==0 ) { 
       en=$4
       en0=$4
       next

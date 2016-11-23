@@ -14,7 +14,7 @@ nelectrons=22  # total number of electrons
 spin=0         # 0 for singlet, 1 for dublet etc.
 nocc=14        # occupied orbitals
 nclosed=8      # closed orbitals
-memory=70      # molpro memory in MegaWords (1MW = 8 Mb)
+memory=70      # molpro memory in MegaWords (1MW = 8 MB)
 multi="multi"  # or  "df-casscf" for density fitting version
 delscratch=1   # If job fails, try to delete scratch and start over without initial wavefunction
 numerforce=1   # How do we calculate forces?

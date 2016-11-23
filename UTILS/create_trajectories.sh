@@ -64,7 +64,7 @@ if [[ ! -z "$veloc" ]] && [[ ! -f "$veloc" ]];then
    File_not_found "$veloc"
 fi
 
-if [[ ! -e "$abinexe" ]];then
+if [[ ! -e "$abinexe" && ! `which $abinexe` ]];then
    File_not_found "$abinexe"
 fi
 

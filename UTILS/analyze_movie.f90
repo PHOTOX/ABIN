@@ -206,22 +206,25 @@ case (1)
    allocate( r(ndist) )
    allocate( bins_dist(nbin_dist, ndist) )
    bins_dist=0.0d0
-   if (iost.ne.0) call PrintInputError()
  
    if(lecho)  write(*,*)'Please, specify first atom element.'
    read(*,'(A2)', IOSTAT=iost)rdfname1
+   if (iost.ne.0) call PrintInputError()
  
    if(lecho)  write(*,*)'Please, specify second atom element.'
    read(*,'(A2)')rdfname2
+   if (iost.ne.0) call PrintInputError()
  
    if(lecho)  write(*,*)'How many atoms should I ignore?'
    read(*,*)nignore
+   if (iost.ne.0) call PrintInputError()
  
    if(nignore.gt.0)then
       allocate( ignore(nignore) )
       if(lecho)  write(*,*)'Please, specify indices of atoms to ignore, one per line.'
       do i=1,nignore
          read(*,*)ignore(i)
+         if (iost.ne.0) call PrintInputError()
       end do
    end if
 
