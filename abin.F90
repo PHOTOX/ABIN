@@ -107,7 +107,6 @@ program abin_dyn
       endif
    endif
 
-   call init_mass(amg, amt)
 !-----End of transformations
 
 !-----Note that amt equals am if staging is off

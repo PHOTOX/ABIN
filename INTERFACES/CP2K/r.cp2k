@@ -16,7 +16,7 @@ cat ../geom.dat.$ibead >> input$ibead.xyz  #only xyz coordinates
 # MODIFY accordingly and set pot='cp2k' in input.in
 
 # Number of processors
-nproc=16
+nproc=${NSLOTS}
 
 cat > $input << EOF
 &GLOBAL

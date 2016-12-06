@@ -34,6 +34,7 @@ subroutine init(dt, values1)
    use mod_analysis, only: restin
    use mod_water,    only: watpot, check_water
    use mod_plumed,   only: iplumed, plumedfile, plumed_init
+   use mod_transform, only:init_mass
 #ifdef USEFFTW
    use mod_fftw3,    only: fftw_init
 #endif
@@ -271,7 +272,11 @@ print '(a)','**********************************************'
          end do
       end if
 
+     ! Determine atomic masses from periodic table
      call mass_init(masses, massnames)
+     ! Transform masses for PIMD
+     ! TODO: rename this function
+     call init_mass(amg, amt)
      ! Lower the second character of atom name.
      ! This is because of TeraChem.
       do iat=1,natom

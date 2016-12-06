@@ -4,7 +4,7 @@
 subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_const,    only: DP
    use mod_general,  only: natom, nwalk, istage, inormalmodes, iqmmm, it, &
-                           pot, pot_ref, imini
+                           pot, pot_ref, imini, idebug
    use mod_qmmm,     only: force_LJCoul
    use mod_nab,      only: ipbc,wrap,nsnb,force_nab
    use mod_sbc,      only: force_sbc, isbc !,ibag
@@ -46,6 +46,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    if(istage.eq.1)then
       call QtoX(x,y,z,transx,transy,transz)
    else if(inormalmodes.gt.0)then
+      if(idebug.gt.0) write(*,*)'Transforming coordinates back to cartesian'
       call UtoX(x,y,z,transx,transy,transz)
    else
       do iat=1,natom
@@ -235,11 +236,12 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
 end subroutine force_wrapper
 
 
-subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
+subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
    use mod_const,      only: DP
    use mod_array_size
-   use mod_general
-   use mod_nhc,   ONLY: temp, inose
+   use mod_general, only: nwalk, inormalmodes, istage, natom, idebug
+   use mod_nhc,   only: temp, inose
+   use mod_utils, only: printf
    implicit none
    real(DP), intent(in) :: x(:,:),y(:,:),z(:,:)
    real(DP), intent(in) :: amg(:,:)
@@ -259,34 +261,38 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
 !  ak is defined is m*P/(beta^2*hbar^2)
    do iw=1,nwalk
       do i=1,natom
-         ak(i,iw)=nwalk*amg(i,iw)*TEMP**2
+         ak(i,iw) = nwalk * amg(i,iw) * TEMP**2
       enddo
    enddo
 
-! for PI+GLE we have different hamiltonian
+!  for PI+GLE we have different hamiltonian
    if(inose.eq.2)then
-      do iw=1,nwalk
-         do i=1,natom
-            ak(i,iw)=nwalk*ak(i,iw)
-         enddo
-      enddo
+     ak = nwalk * ak
    endif
+
+!   if(inormalmodes.eq.2)then
+!      ak = ak / dsqrt(nwalk*1.0d0)
+!   end if
+   ! Tuckerman normal modes Hamiltonian
+   if (inormalmodes.eq.2) then
+     ak = NWALK * TEMP**2 * amg / sqrt(nwalk*1.0d0)
+   end if
 
 
    equant=0.0d0
 
 
-! If the staging transformation is not used
-   if(istage.eq.0)then
+!  If the staging transformation is not used
+   if(istage.eq.0.and.inormalmodes.eq.0)then
       do j=1,natom 
          do i=1,nwalk 
             kplus=i+1
             kminus=i-1
             if(i.eq.1)then
-             kminus=nwalk
+               kminus=nwalk
             endif
             if(i.eq.nwalk)then
-             kplus=1
+               kplus=1
             endif
             fx(j,i)=(x(j,i)-x(j,kplus))
             fx(j,i)=fx(j,i)+(x(j,i)-x(j,kminus))
@@ -297,9 +303,9 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
             fz(j,i)=(z(j,i)-z(j,kplus))
             fz(j,i)=fz(j,i)+(z(j,i)-z(j,kminus))
             fz(j,i)=-fz(j,i)*ak(j,i)
-            equant=equant+0.5*ak(j,i)*(x(j,i)-x(j,kplus))**2
-            equant=equant+0.5*ak(j,i)*(y(j,i)-y(j,kplus))**2
-            equant=equant+0.5*ak(j,i)*(z(j,i)-z(j,kplus))**2
+            equant = equant + 0.5*ak(j,i)*(x(j,i)-x(j,kplus))**2
+            equant = equant + 0.5*ak(j,i)*(y(j,i)-y(j,kplus))**2
+            equant = equant + 0.5*ak(j,i)*(z(j,i)-z(j,kplus))**2
          enddo
       enddo
    endif
@@ -308,17 +314,21 @@ subroutine force_quantum(fx,fy,fz,x,y,z,amg,energy)
    if(istage.eq.1.or.inormalmodes.gt.0)then
       do j=1,natom 
          do i=1,nwalk 
-            fx(j,i)=-ak(j,i)*x(j,i)   
-            fy(j,i)=-ak(j,i)*y(j,i)       
-            fz(j,i)=-ak(j,i)*z(j,i) 
-            equant=equant+0.5d0*ak(j,i)*x(j,i)**2
-            equant=equant+0.5d0*ak(j,i)*y(j,i)**2
-            equant=equant+0.5d0*ak(j,i)*z(j,i)**2
+            fx(j,i) = -ak(j,i) * x(j,i)   
+            fy(j,i) = -ak(j,i) * y(j,i)       
+            fz(j,i) = -ak(j,i) * z(j,i) 
+            equant = equant + 0.5d0*ak(j,i)*x(j,i)**2
+            equant = equant + 0.5d0*ak(j,i)*y(j,i)**2
+            equant = equant + 0.5d0*ak(j,i)*z(j,i)**2
          enddo
       enddo
    endif 
 
    energy = equant
+
+   if(idebug.eq.1)then
+      write(*,*)'EQUANT', equant
+   end if
       
 end subroutine force_quantum
 

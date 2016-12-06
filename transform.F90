@@ -83,11 +83,11 @@ module mod_transform
                                         
    subroutine init_mass(amg, amt)
    use mod_const, only: PI
-   use mod_general, only: istage, inormalmodes
+   use mod_general, only: istage, inormalmodes, idebug
    use mod_system, ONLY: am
    real(DP),intent(out) :: amg(:,:), amt(:,:)
    real(DP)  :: lambda(size(amg,2)+1)
-   integer :: iat,iw
+   integer :: iat, iw, k
 
 !  NOTE: am was multiplied by amu earlier in the init.F90
 
@@ -118,21 +118,28 @@ module mod_transform
    if(inormalmodes.eq.2)then ! this one apparently does not work
       do iat=1,natom
          lambda(1)=0
-         do iw=2,nwalk
+         do iw=2, nwalk
+            k = iw -1
+            lambda(iw) = 2 * sin(k * PI / nwalk)
+            lambda(iw) = lambda(iw)**2 * nwalk
+         enddo
+!         do iw=2,nwalk
 !            lambda(iw) = 2 * nwalk * (1-cos(PI*iw/nwalk))
 !            lambda(iw+1)=lambda(iw)
-             lambda = 2 * nwalk * sin(PI*(iw-1)/nwalk)
-         enddo
+!             lambda = 2 * nwalk * sin(PI*(iw-1)/nwalk)
+!         enddo
          do iw=2,nwalk
             amg(iat,iw) = am(iat)*lambda(iw)
             amt(iat,iw) = am(iat)*lambda(iw)
          enddo
          amg(iat,1)=0.0d0
          amt(iat,1)=am(iat)
-         write(*,*)'lambda',(lambda(iw),iw=1,nwalk)
-         write(*,*)'amg',(amg(iat,iw),iw=1,nwalk)
-         write(*,*)'amt',(amt(iat,iw),iw=1,nwalk)
+         if(idebug.gt.0)then
+            write(*,*)'lambda',(lambda(iw),iw=1,nwalk)
+            write(*,*)'amg',(amg(iat,iw),iw=1,nwalk)
+            write(*,*)'amt',(amt(iat,iw),iw=1,nwalk)
 !        write(*,*)'amg2',(amg(iat,iw)*2*sin(pi*(iw-1)/nwalk),iw=1,nwalk)
+         end if
       enddo
 
    else if (inormalmodes.eq.1)then
@@ -243,19 +250,22 @@ module mod_transform
    real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
    real(DP), intent(out)   :: transx(:,:), transy(:,:), transz(:,:)
    integer  :: iat, iw
-   real(DP) :: dnwalk, fac
+   real(DP) :: dnwalk, fac, equant
    integer  :: nmodes, odd
 
    if(inormalmodes.eq.1)then
       dnwalk = dsqrt(1.0d0 * nwalk)
       fac = dsqrt(2.0d0)
    else
-      dnwalk = 1.0d0
+      dnwalk = dsqrt(1.0d0 * nwalk)
+     ! dnwalk = 1.0d0
       fac = 1.0d0
    end if
 
    nmodes = nwalk / 2
    odd = nwalk - 2 * nmodes ! 0 if even, 1 if odd
+
+   call equant_nm(x, y, z, equant)
 
 #ifdef USEFFTW
    do iat = 1, natom
@@ -294,6 +304,8 @@ module mod_transform
 
    enddo
 
+   call equant_cart(transx, transy, transz, equant)
+
 !  write(*,*)'normal modes back to cartesian'
 !  call printf(transx/ang,transy/ang,transz/ang)
 #else
@@ -322,14 +334,15 @@ module mod_transform
       dnwalk = dsqrt(1.0d0 * nwalk)
       fac = dsqrt(2.0d0)
    else
-      dnwalk = nwalk
+      !dnwalk = nwalk
+      dnwalk = dsqrt(1.0d0 * nwalk)
       fac = 1.0d0
    end if
 
    nmodes = nwalk / 2
    odd = nwalk - 2 * nmodes ! 0 if even, 1 if odd
 
-   call equant_cart(x, y, z, equant)
+!   call equant_cart(x, y, z, equant)
 
 #ifdef USEFFTW
    do iat = 1, natom
@@ -372,7 +385,7 @@ endif
    transy = transy / dnwalk
    transz = transz / dnwalk
 
-   call equant_nm(transx, transy, transz, equant)
+!   call equant_nm(transx, transy, transz, equant)
 
 !  write(*,*)'original cartesian to normal modes'
 !  call printf(x/ang,y/ang,z/ang)
@@ -389,7 +402,7 @@ endif
    end subroutine XtoU
 
    subroutine equant_cart(x, y, z, equant)
-   use mod_general , only: nwalk, natom, idebug
+   use mod_general , only: nwalk, natom, idebug, inormalmodes
    use mod_system, only: am
    use mod_nhc,    only: temp
    use mod_utils, only: printf
@@ -399,6 +412,9 @@ endif
    integer  :: iat, iw, k
 
    omega_n = NWALK * TEMP
+   if (inormalmodes.eq.2) then
+     omega_n = omega_n * sqrt(NWALK*1.d0)
+   end if
    equantx = 0.0d0
    equanty = 0.0d0
    equantz = 0.0d0
@@ -409,12 +425,14 @@ endif
       z(iat, nwalk+1) = z(iat, 1)
    end do
 
-   do iw = 1, nwalk
-      do iat = 1, natom
+   do iat = 1, natom
+      do iw = 1, nwalk
          equantx = equantx + 0.5d0 * am(iat) * omega_n**2 * (x(iat,iw)-x(iat,iw+1))**2
          equanty = equanty + 0.5d0 * am(iat) * omega_n**2 * (y(iat,iw)-y(iat,iw+1))**2
          equantz = equantz + 0.5d0 * am(iat) * omega_n**2 * (z(iat,iw)-z(iat,iw+1))**2
       end do
+!      write(*,*)"Quantum energy per atom in cartesian coordinates"
+!      write(*,*)equantx, equanty, equantz, equantx+equanty+equantz
    end do
 
    equant = equantx + equanty + equantz
@@ -430,16 +448,21 @@ endif
 
    subroutine equant_nm(x, y, z, equant)
    use mod_const, only: PI
-   use mod_general , only: nwalk, natom, idebug
+   use mod_general , only: nwalk, natom, idebug, inormalmodes
    use mod_system,   only: am
    use mod_nhc,    only: temp
    use mod_utils, only: printf
+   use mod_arrays, only: amg
    real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
    real(DP), intent(out) :: equant
    real(DP) :: equantx, equanty, equantz, omega_n, omega(size(x,2))
    integer  :: iat, iw, k
 
    omega_n = NWALK * TEMP
+   ! Tuckerman Hamiltonian
+   if (inormalmodes.eq.2) then
+     omega_n = omega_n * dsqrt(NWALK*1.d0)
+   end if
    equantx = 0.0d0
    equanty = 0.0d0
    equantz = 0.0d0
@@ -449,12 +472,20 @@ endif
       omega(iw) = 2 * omega_n * sin(k * PI / nwalk)
    enddo
 
-   do iw = 1, nwalk
-      do iat = 1, natom
-         equantx = equantx + 0.5d0 * am(iat) * omega(iw)**2 * (x(iat,iw))**2
-         equanty = equanty + 0.5d0 * am(iat) * omega(iw)**2 * (y(iat,iw))**2
-         equantz = equantz + 0.5d0 * am(iat) * omega(iw)**2 * (z(iat,iw))**2
+   do iat = 1, natom
+      do iw = 1, nwalk
+         if(inormalmodes.eq.1)then
+            equantx = equantx + 0.5d0 * am(iat) * omega(iw)**2 * (x(iat,iw))**2
+            equanty = equanty + 0.5d0 * am(iat) * omega(iw)**2 * (y(iat,iw))**2
+            equantz = equantz + 0.5d0 * am(iat) * omega(iw)**2 * (z(iat,iw))**2
+         else
+            equantx = equantx + 0.5d0 * amg(iat,iw) * omega_n**2 * (x(iat,iw))**2
+            equanty = equanty + 0.5d0 * amg(iat,iw) * omega_n**2 * (y(iat,iw))**2
+            equantz = equantz + 0.5d0 * amg(iat,iw) * omega_n**2 * (z(iat,iw))**2
+         end if
       end do
+!      write(*,*)"Quantum energy in normal modes coordinates"
+!      write(*,*)equantx, equanty, equantz, equantx+equanty+equantz
    end do
 
    equant = equantx + equanty + equantz

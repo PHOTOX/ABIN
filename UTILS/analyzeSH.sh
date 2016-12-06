@@ -211,8 +211,8 @@ dy=0.05
 
 set yrange [0:1]
 set xrange [0:totaltime]
-set ylabel font "Arial,16" "Populations [ - ]" offset 2
-set xlabel font "Arial,16" "Time [ fs ]" offset 2
+set ylabel font ",16" "Populations [ - ]" offset 2
+set xlabel font ",16" "Time [ fs ]" offset 2
 EOF
 for((i=0;i<nstate;i++));do
    let ls=i+1

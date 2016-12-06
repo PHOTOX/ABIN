@@ -127,7 +127,7 @@ module mod_mdstep
    real(DP),intent(in)     :: dt
    real(DP),intent(inout)  :: eclas,equant
    integer                 :: iabin
-   
+
    call thermostat(px, py, pz, amt, dt/(2*nabin))
    
    call shiftP (px, py, pz, fxc, fyc, fzc, dt/2)
@@ -148,9 +148,9 @@ module mod_mdstep
    
    enddo
    
-   call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot)
+   call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
    
-   call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+   call shiftP (px, py, pz, fxc, fyc, fzc, dt/2)
    
    call thermostat(px, py, pz, amt, dt/(2*nabin))
    
