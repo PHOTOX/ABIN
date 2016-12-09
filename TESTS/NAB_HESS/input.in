@@ -35,6 +35,7 @@ temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 tau0=0.0015
 nrespnose=3
 nyosh=3
+rem_comrot=.false.
 /
 
 &nab

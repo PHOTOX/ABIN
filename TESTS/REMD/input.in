@@ -26,6 +26,7 @@ natom=3,		!number of atoms
 inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
 temp=100.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 nrespnose=8
+rem_comrot=.false.
 /
 
 &remd

@@ -1,6 +1,7 @@
 # TESTING basic CMD
 # TESTING independence of order of  namelists
 # TESTING atom contraints
+# TESTING removing COM rotations
 
 &nhcopt
 inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
@@ -8,15 +9,15 @@ temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 tau0=0.0015
 nrespnose=3
 nyosh=7
+rem_comrot=.true.       ! this is a default value, remove rotations at the beginning
 /
 
 &general
 conatom=1
 nproc=1
-idebug=0
 nstep=10,
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
-idebug=0
+idebug=1
 iknow=0
 
 pot='mmwater'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho

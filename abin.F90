@@ -1,6 +1,6 @@
 ! -----------------------------------------------------------------
 !  ABIN: Multipurpose ab initio MD program.
-!  Potential is calculated on-the-fly by an external program.
+!  The potential is calculated on-the-fly by an external program.
 !------------------------------------------------------------------  
 !  Copyright (C) 2014             D.Hollas, M.Oncak, O.Svoboda and P.Slavicek
 !
@@ -240,8 +240,9 @@ program abin_dyn
 ! Transformed (cartesian) coordinates are stored in trans matrices.
 ! DHmod-21.12.2012 enter this section only every ncalc step
 
-! maybe we should visit this section only when my_rank.eq.0
-! this would not be the case for REMD
+         ! maybe we should visit this section only when my_rank.eq.0
+         ! this would not be the case for REMD
+
 
          if(modulo(it,ncalc).ne.0) cycle
       

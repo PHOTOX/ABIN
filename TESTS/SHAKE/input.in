@@ -46,6 +46,7 @@ ishake2=2,3,5,6,9,10,12,13,
 /
 
 &nhcopt
+rem_comrot=.false.
 nmolt=53
 natmolt=53*3
 nshakemol=2,2,0,2,2,3*0,            ! number of constraints in molecules

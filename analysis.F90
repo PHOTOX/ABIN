@@ -1,6 +1,6 @@
 !----Initial version                    by Daniel Hollas,9.2.2012
-!- This module contains some routines that do analyses and do I/O operations.
-!- Crucially, it also contains routines performing restart.
+!- This module contains some routines that do analyses and I/O operations.
+!- It also contains routines performing restart.
 
 module mod_analysis
    use mod_const, only: DP
@@ -15,26 +15,30 @@ module mod_analysis
 
    CONTAINS
 
-!----Contains all analysis stuff
+!  Contains all analysis stuff
    SUBROUTINE analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
    use mod_analyze_ext, only: analyze_ext
    use mod_estimators , only: estimators
-   use mod_general,     only: it, ipimd, icv, nwritef, nwritev, &
-                              nrest, nwritex, imini, nstep, anal_ext
+   use mod_general,     only: it, ipimd, icv,nwrite, nwritef, nwritev, &
+                              nrest, nwritex, imini, nstep, anal_ext, idebug
    use mod_system
    use mod_density
    use mod_io 
+   use mod_vinit,    only: remove_rotations
+   use mod_system,   only: am
    implicit none
    !intent inout because of estimators, writing to nwalk+1
    real(DP),intent(inout) :: x(:,:),   y(:,:),   z(:,:)
    real(DP),intent(in)    :: fxc(:,:), fyc(:,:), fzc(:,:)
-   real(DP),intent(in)    :: vx(:,:),  vy(:,:),  vz(:,:)
+   real(DP),intent(inout)    :: vx(:,:),  vy(:,:),  vz(:,:)
    real(DP),intent(in)    :: amt(:,:)
    real(DP),intent(in)    :: eclas, equant
    real(DP) :: dt  !,energy
 
 !  eclas comes from force_clas,equant from force_quantum
 !  energy=eclas+equant
+
+   if(modulo(it,nwrite).eq.0.and.idebug.gt.0) call remove_rotations(x, y, z, vx, vy, vz, am, .false.)
 
    if (ipimd.eq.1.or.icv.eq.1)then
       call estimators(x, y, z, fxc, fyc, fzc, eclas, dt)

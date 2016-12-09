@@ -1,5 +1,5 @@
-!-----This messy function performs many thing, among others:
-! 1. Read input
+! This messy function performs many things, among others:
+! 1. Reading input
 ! 2. Input sanity check
 ! 3. Allocation of arrays
 ! 4. Reading restart OR reading input geometry
@@ -7,7 +7,6 @@
 ! 6. Initialize everything else
 ! At this moment, coordinate and velocity transformations are NOT performed here
 ! Surface hopping is NOT initialized here.
-! Daniel Hollas,9.2.2012 
 
 subroutine init(dt, values1)
    use mod_const
@@ -56,13 +55,14 @@ subroutine init(dt, values1)
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
    LOGICAL :: file_exists
-!   real(DP)  :: wnw=5.0d-5
+!  real(DP) :: wnw=5.0d-5
    integer :: ierr
 !$ integer :: nthreads,omp_get_max_threads
-! wnw "optimal" frequency for langevin (inose=3) 
+!  wnw "optimal" frequency for langevin (inose=3) 
    REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
-!   REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
+!  REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
    REAL, POINTER  :: REALPTR => NULL ()
+   logical        :: rem_comvel, rem_comrot
 
    namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
@@ -73,7 +73,7 @@ subroutine init(dt, values1)
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
    namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,nrespnose,nyosh,      &
-                     scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol
+                     scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol,rem_comrot,rem_comvel
 
    namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
                      nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
@@ -85,7 +85,7 @@ subroutine init(dt, values1)
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 
-   namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol, nmol
+   namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol,nmol
 
 
    chcoords='mini.dat'
@@ -94,6 +94,9 @@ subroutine init(dt, values1)
    dt=-1  
    error=0
    iplumed=0
+   ! By default, remove COM translation and rotation
+   rem_comrot=.true.
+   rem_comvel=.true.
 
 
    call Get_cmdline(chinput, chcoords, chveloc)
@@ -445,12 +448,11 @@ print '(a)','**********************************************'
       endif
 
 !-----SETTING initial velocities according to the Maxwell-Boltzmann distribution
-!     TODO: odstraneni rotace
       if(irest.eq.0.and.chveloc.eq.'')then
          if (temp0.ge.0)then
-            call vinit(TEMP0,am,vx,vy,vz)
+            call vinit(TEMP0, am, vx, vy, vz, rem_comvel, rem_comrot)
          else
-            call vinit(TEMP,am,vx,vy,vz)
+            call vinit(TEMP, am, vx, vy, vz, rem_comvel, rem_comrot)
          end if
       end if
 
@@ -460,7 +462,6 @@ print '(a)','**********************************************'
          write(*,*)'Reading initial velocities in a.u. from external file:'
          write(*,*)chveloc 
          open(500,file=chveloc, status='OLD', action = "READ")
-
          do iw=1,nwalk
             read(500,*, IOSTAT=iost)natom1
             if (iost.ne.0) call err_read(chveloc,"Could not read velocities on line 1.", iost)
