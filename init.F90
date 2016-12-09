@@ -26,7 +26,7 @@ subroutine init(dt, values1)
    use mod_random
    use mod_guillot,  only: inames_guillot
    use mod_utils
-   use mod_vinit,    only: vinit, scalevelocities
+   use mod_vinit
    use mod_density
    use mod_shake
    use mod_minimize, only: gamm, gammthr
@@ -94,9 +94,6 @@ subroutine init(dt, values1)
    dt=-1  
    error=0
    iplumed=0
-   ! By default, remove COM translation and rotation
-   rem_comrot=.true.
-   rem_comvel=.true.
 
 
    call Get_cmdline(chinput, chcoords, chveloc)
@@ -219,6 +216,16 @@ print '(a)','**********************************************'
 #endif
    ishake1 = 0
    ishake2 = 0
+
+   ! By default, remove COM translation and rotation
+   if(irest.eq.1)then
+      rem_comrot=.false.
+      rem_comvel=.false.
+   else
+      rem_comrot=.true.
+      rem_comvel=.true.
+   end if
+
 
 !  allocate all basic arrays and set them to 0.0d0
    call allocate_arrays( natom, nwalk+1 )
@@ -487,9 +494,13 @@ print '(a)','**********************************************'
 
 !     END OF READING VELOCITIES--------------------
 
+      ! doing this here so that we can do it even when reading velocities from file
+      if(rem_comvel) call remove_comvel(vx, vy, vz, am, rem_comvel)
+      if(rem_comrot) call remove_rotations(x, y, z, vx, vy, vz, am, rem_comrot)
+
       if(conatom.gt.0) call constrainP(vx,vy,vz)
 
-      ! If scaleveloc=1, scale initial velocitites
+      ! If scaleveloc=1, scale initial velocitites to match the temperature
       ! Otherwise, just print the temperature.
       call ScaleVelocities(vx, vy, vz)
 

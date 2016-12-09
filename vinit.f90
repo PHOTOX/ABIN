@@ -2,7 +2,7 @@ module mod_vinit
    use mod_const, only: DP
    implicit none
    private
-   public :: vinit, scalevelocities, remove_rotations
+   public :: vinit, scalevelocities, remove_rotations, remove_comvel
    contains
 !------------------------------------------------------------------------
 !    
@@ -52,9 +52,9 @@ SUBROUTINE vinit(TEMP, MASS, vx, vy, vz, rem_comvel, rem_rot)
          sigma = SQRT ( TEMP/MASS(iat) )
  
 ! Velocity vector of i-th atom
-         VX(iat,iw) = sigma * rans(pom) 
-         VY(iat,iw) = sigma * rans(pom+1) 
-         VZ(iat,iw) = sigma * rans(pom+2)
+         vx(iat,iw) = sigma * rans(pom) 
+         vy(iat,iw) = sigma * rans(pom+1) 
+         vz(iat,iw) = sigma * rans(pom+2)
          pom=pom+3
 
          if(abs(vx(iat,iw)).gt.1d-2.or.abs(vy(iat,iw)).gt.1d-2.or.abs(vz(iat,iw)).gt.1d-2)then
@@ -71,15 +71,8 @@ SUBROUTINE vinit(TEMP, MASS, vx, vy, vz, rem_comvel, rem_rot)
          vz(1,iw)=0.0d0
       endif
 
-   end do !nwalk
+   end do
 
-   call remove_comvel(vx, vy, vz, mass, rem_comvel)
-
-   call remove_rotations(x, y, z, vx, vy, vz, mass, rem_rot)
-
-   if(my_rank.eq.0) write(*,*)'Removing center of mass velocity'
-
-   RETURN
 END subroutine vinit
 
  
@@ -130,6 +123,8 @@ subroutine remove_comvel(vx, vy, vz, mass, lremove)
    real(DP)                :: vcmx, vcmy, vcmz, tm
    integer                 :: iat, iw
 
+   if(my_rank.eq.0.and.lremove) write(*,*)'Removing center of mass velocity.'
+
    do iw=1,nwalk
 
 !     Velocity vector of center of mass
@@ -160,6 +155,7 @@ subroutine remove_comvel(vx, vy, vz, mass, lremove)
 
 END SUBROUTINE remove_comvel
 
+
 subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
    use mod_general,     only: natom, nwalk, my_rank, pot
    real(DP),intent(in)     :: x(:,:), y(:,:), z(:,:)
@@ -175,6 +171,7 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
 
    if (pot.eq.'2dho') return
 
+   if(my_rank.eq.0.and.lremove) write(*,*)'Removing angular momentum.'
 
    ! It would probably be more correct to calculate angular momentum
    ! for the whole bead necklace, same with COM velocity
@@ -247,10 +244,6 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
       end if
 
    end do
-
-   if(lremove)then
-      if(my_rank.eq.0) write(*,*)'Removing angular momentum.'
-   end if
 
    CONTAINS
    ! brute force inverse of 3x3 matrix
