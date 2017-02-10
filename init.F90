@@ -18,6 +18,7 @@ subroutine init(dt, values1)
    use mod_nhc
    use mod_estimators
    use mod_harmon
+   use mod_sh_integ, only: nstate, integ, phase
    use mod_sh
    use mod_qmmm
    use mod_gle
@@ -45,6 +46,7 @@ subroutine init(dt, values1)
    use mod_terampi
    use mod_terampi_sh, only: init_terash
 #endif
+   implicit none
    real(DP),intent(out) :: dt
    integer,dimension(8) :: values1
    real(DP) :: masses(MAXTYPES)

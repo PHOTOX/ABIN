@@ -46,7 +46,8 @@ subroutine receive_terash(fx, fy, fz, eclas)
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
    use mod_io, only: print_charges, print_dipoles, print_transdipoles
-   use mod_sh, only: check_CIVector, en_array, nstate, istate, nacx, nacy, nacz, tocalc
+   use mod_sh_integ, only: nstate
+   use mod_sh, only: check_CIVector, en_array, istate, nacx, nacy, nacz, tocalc
    include 'mpif.h'
    real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
    real(DP),intent(inout) :: eclas
@@ -181,7 +182,8 @@ subroutine send_terash(x, y, z, vx, vy, vz)
    use mod_system, only: names
    use mod_qmmm,  only: natqm
    use mod_utils, only: abinerror
-   use mod_sh,    only: istate, tocalc, nstate, ignore_state 
+   use mod_sh_integ, only: nstate
+   use mod_sh,    only: istate, tocalc, ignore_state 
    include 'mpif.h'
    real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)   ::  vx(:,:),vy(:,:),vz(:,:)
@@ -283,7 +285,7 @@ subroutine init_terash(x, y, z)
    use mod_general, only: idebug, nwalk, DP, natom
    use mod_system, only: names
    use mod_qmmm, only: natqm
-   use mod_sh, only: nstate
+   use mod_sh_integ, only: nstate
    include 'mpif.h'
    real(DP),intent(in)  ::  x(:,:), y(:,:), z(:,:)
    integer  :: status(MPI_STATUS_SIZE)
@@ -350,7 +352,7 @@ end subroutine finalize_terash
 subroutine write_wfn()
    use mod_files, only: UWFN
    use mod_general, only: it, sim_time, iremd, my_rank, narchive
-   use mod_sh,    only: nstate
+   use mod_sh_integ, only: nstate
    use mod_utils, only: archive_file
    character(len=200)    :: chout, chsystem
    logical  :: file_exists
@@ -386,7 +388,7 @@ subroutine read_wfn()
    use mod_general, only: iremd, my_rank, iknow, it
    use mod_chars, only: chknow
    use mod_utils, only: abinerror, archive_file
-   use mod_sh,    only: nstate
+   use mod_sh_integ,    only: nstate
    character(len=200)    :: chout, chsystem
    logical  :: file_exists
    integer  :: temp, temp2, time_step

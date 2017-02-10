@@ -1,46 +1,46 @@
-! modules and routines for Surface hopping dynamics
+! Driver routines for Surface hopping dynamics
 ! D. Hollas, O. Svoboda, P. Slavíček, M. Ončák
 
 module mod_sh
    use mod_const, only: DP
-   use mod_array_size, only: nstmax, ntrajmax
+   use mod_array_size, only: NSTMAX, NTRAJMAX
    use mod_utils, only: abinerror, printf
+   use mod_sh_integ
    implicit none
    private
-   public :: istate_init,substep,deltae,integ,inac,nohop,alpha,popthr,nac_accu1,nac_accu2 
-   public :: surfacehop, sh_init, istate, ntraj, nstate, cel_re, cel_im, tocalc, en_array
+   public :: istate_init, substep, deltaE, inac,nohop, alpha,popthr, nac_accu1, nac_accu2
+   public :: surfacehop, sh_init, istate, ntraj, tocalc, en_array
    public :: nacx, nacy, nacz
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
-   public :: energydifthr, energydriftthr, popsumthr, phase, adjmom, revmom
+   public :: energydifthr, energydriftthr, popsumthr, adjmom, revmom
    public :: check_CIVector
    public :: ignore_state
 
-   integer,parameter :: ntraj = ntrajmax
-   integer   :: istate_init=1, nstate=1, substep=100
-   integer   :: inac=0, nohop=0, phase=0, adjmom=0, revmom=0
+   integer,parameter :: ntraj = NTRAJMAX
+   integer   :: istate_init=1, substep=100
+   integer   :: inac=0, nohop=0, adjmom=0, revmom=0
    integer   :: nac_accu1=7, nac_accu2=5 !7 is MOLPRO default
-   real(DP)  :: dtp, alpha=0.1d0
+   real(DP)  :: alpha=0.1d0
    real(DP)  :: deltae=5.0d0, popthr=0.001d0
    real(DP)  :: popsumthr=0.001d0, energydifthr=1.0d0, energydriftthr=1.0d0 !eV
-   character(len=10)    :: integ='butcher'
    real(DP),allocatable :: nacx(:,:,:,:), nacy(:,:,:,:), nacz(:,:,:,:)
    real(DP),allocatable :: nacx_old(:,:,:,:), nacy_old(:,:,:,:), nacz_old(:,:,:,:)
    real(DP),allocatable :: dotproduct(:,:,:), dotproduct_old(:,:,:) !for inac=1
    real(DP),allocatable :: en_array(:,:), en_array_old(:,:)
-   real(DP) :: cel_re(nstmax,ntrajmax), cel_im(nstmax,ntrajmax)
-   real(DP) :: eshift, entot0, gama(nstmax,nstmax,ntrajmax)
+   real(DP) :: entot0
    integer, allocatable :: tocalc(:,:)
-   integer  :: istate(ntrajmax)
+   integer  :: istate(NTRAJMAX)
    ! for ethylene 2-state SA3 dynamics
    integer  :: ignore_state = 0
    save
-   contains
+
+   CONTAINS
 
    subroutine sh_init(x, y, z, vx, vy, vz, dt)
-   use mod_const,    only: AUtoEV
-   use mod_general,  only: irest, natom, it, pot
+   use mod_const,      only: AUtoEV
+   use mod_general,    only: irest, natom, it, pot
    use mod_interfaces, only: force_clas
-   use mod_kinetic,  only: ekin_v
+   use mod_kinetic,    only: ekin_v
    real(DP),intent(inout)  :: x(:,:), y(:,:), z(:,:)
    real(DP),intent(in)     :: vx(:,:), vy(:,:), vz(:,:)
    real(DP),intent(in)     :: dt
@@ -49,18 +49,16 @@ module mod_sh
    real(DP)  :: dum_fz(size(z,1),size(z,2))
    real(DP)  :: dum_eclas
    integer   :: itrj,ist1
-   real(DP)  :: pom=0.0d0,maxosc=0.0d0
 
-   deltaE=deltaE/AUtoEV
-   dtp=dt/substep
-   gama=0.0d0
+   deltaE = deltaE / AUtoEV
+   dtp = dt / substep
 
-   allocate( nacx(natom, ntrajmax, nstate, nstate) )
-   allocate( nacy(natom, ntrajmax, nstate, nstate) )
-   allocate( nacz(natom, ntrajmax, nstate, nstate) )
-   allocate( nacx_old(natom, ntrajmax, nstate, nstate) )
-   allocate( nacy_old(natom, ntrajmax, nstate, nstate) )
-   allocate( nacz_old(natom, ntrajmax, nstate, nstate) )
+   allocate( nacx(natom, NTRAJMAX, nstate, nstate) )
+   allocate( nacy(natom, NTRAJMAX, nstate, nstate) )
+   allocate( nacz(natom, NTRAJMAX, nstate, nstate) )
+   allocate( nacx_old(natom, NTRAJMAX, nstate, nstate) )
+   allocate( nacy_old(natom, NTRAJMAX, nstate, nstate) )
+   allocate( nacz_old(natom, NTRAJMAX, nstate, nstate) )
    nacx=0.0d0
    nacy=0.0d0
    nacz=0.0d0
@@ -68,8 +66,8 @@ module mod_sh
    nacy_old=nacx
    nacz_old=nacx
    if (inac.eq.1)then
-      allocate( dotproduct_old(nstate, nstate, ntrajmax) )
-      allocate( dotproduct(nstate, nstate, ntrajmax) )
+      allocate( dotproduct_old(nstate, nstate, NTRAJMAX) )
+      allocate( dotproduct(nstate, nstate, NTRAJMAX) )
       dotproduct_old=0.0d0
       dotproduct=dotproduct_old
       adjmom=1
@@ -80,60 +78,42 @@ module mod_sh
    en_array=0.0d0
    en_array_old=en_array
 
-!--Determining the initial WF coefficients
+!  Determining the initial state
    if(irest.ne.1)then
-
-!--   automatic determination of initial state based on osc. streght
-!     NOT TESTED yet
-      if(istate_init.eq.-1)then
-         open(500,file='oscil.dat')
-      endif
 
       do itrj=1,ntraj
  
+!        Automatic determination of initial state based on osc. strenght
          if(istate_init.eq.-1)then
-            do ist1=1,nstate
-               read(500,*)pom
-               if(pom.gt.maxosc)then
-                  istate(itrj)=ist1
-                  maxosc=pom
-               endif
-            enddo
+            call choose_initial_state(itrj)
          else
-            istate(itrj)=istate_init
+            istate(itrj) = istate_init
          endif
  
-         do ist1=1,nstate
-            cel_re(ist1,itrj)=0.0d0
-            cel_im(ist1,itrj)=0.0d0
-         enddo
-         cel_re(istate(itrj),itrj)=1.0d0
       enddo
  
-      if(istate_init.eq.-1)then
-         close(500)
-      endif
-!irest endif
    endif
 
-!--computing only energies, used for subsequent determination of tocalc according to deltae
+!--computing only energies, used for subsequent determination of TOCALC according to deltaE threshold
    allocate( tocalc(nstate, nstate) )
-   tocalc=0
-   dum_eclas=0.0d0
+   tocalc = 0
+   dum_eclas = 0.0d0
    dum_fx=0.0d0   ; dum_fy=0.0d0    ;dum_fz=0.0d0
 
-   !restarting the SH, reading NACM
-
    call force_clas(dum_fx, dum_fy, dum_fz, x, y , z, dum_eclas, pot)
-   !WARNING: itrj hack
-   itrj=1
-   eshift = -en_array(1, itrj)
-   entot0 = en_array(istate(itrj), itrj)+ekin_v(vx, vy, vz)
-   entot0 = entot0 * AUtoEV
 
-   do itrj=1,ntraj
+   do itrj = 1, ntraj
+
+      call sh_set_initialwf(istate(itrj), en_array(1, itrj), itrj)
+
+      ! WARNING: entot0 does not respect itrj, same for tocalc
+      entot0 = en_array(istate(itrj), itrj)+ekin_v(vx, vy, vz)
+      entot0 = entot0 * AUtoEV
+
       call set_tocalc(itrj)
+
    end do
+
    if(it.ne.0.and.irest.eq.1) call read_nacmrest()
 
    end subroutine sh_init
@@ -157,7 +137,9 @@ module mod_sh
    endif
    end subroutine Get_Nacm
 
+
    subroutine set_tocalc(itrj)
+   ! WARNING: tocalc array is currently the same for all trajs
    integer,intent(in) :: itrj 
    integer   :: ist1,ist2
    real(DP)  :: pop,pop2
@@ -183,9 +165,9 @@ module mod_sh
    if(popthr.gt.0)then  
       !COMPUTE NACME only if population of the states is gt.popthr
       do ist1=1,nstate-1
-         pop=cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
+         pop = cel_re(ist1,itrj)**2 + cel_im(ist1,itrj)**2
          do ist2=ist1+1,nstate
-            pop2=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
+            pop2 = cel_re(ist2,itrj)**2 + cel_im(ist2,itrj)**2
             if(pop.lt.popthr.and.pop2.lt.popthr.and.ist1.ne.istate(itrj).and.ist2.ne.istate(itrj)) tocalc(ist1,ist2)=0
          enddo
       enddo
@@ -197,10 +179,9 @@ module mod_sh
    use mod_qmmm, only:natqm
    use mod_utils, only: archive_file
    integer :: ist1,ist2,iat,itrj
-   integer :: iunit1, iunit2
-   iunit1 = 600; iunit2 = 601
+   integer :: iunit1
+   iunit1 = 600
    open(iunit1,file='nacmrest.dat',action="write")
-   if (phase.eq.1) open(iunit2,file='phaserest.dat',action="write")
 
    do itrj=1, ntraj
 
@@ -227,24 +208,23 @@ module mod_sh
    write(iunit1, *)entot0
 
    if(phase.eq.1)then
-      do ist1=1,nstate
-         write(iunit2,*)(gama(ist1,ist2,itrj),ist2=1,nstate)
-      end do
+      call write_phaserest(iunit1, itrj)
    end if
    
-
+   ! ntraj enddo
    end do
 
    close(iunit1)
-   if(phase.eq.1) close(iunit2)
+
 
    if(modulo(it,narchive).eq.0)then
       call archive_file('nacmrest.dat',it)
-      if (phase.eq.1) call archive_file('phaserest.dat',it)
    end if
 
    end subroutine write_nacmrest
 
+   ! TODO: rename to sh_restart
+   ! save everything SH related to file sh_restart.dat
    subroutine read_nacmrest()
    use mod_general, only: it
    use mod_qmmm,  only: natqm
@@ -444,6 +424,9 @@ module mod_sh
    end subroutine check_popsum
 
 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   ! This is the main routine !
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!
    subroutine surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt,eclas)
    use mod_const,    only: ANG, AUTOFS
    use mod_general,  only: natom, pot, nwrite, idebug, it, sim_time
@@ -463,24 +446,24 @@ module mod_sh
    real(DP)  :: vx_newint(size(vx,1),size(vx,2))
    real(DP)  :: vy_newint(size(vy,1),size(vy,2))
    real(DP)  :: vz_newint(size(vz,1),size(vz,2))
-   real(DP)  :: en_array_int(nstmax,ntrajmax),en_array_newint(nstmax,ntrajmax)
-   real(DP)  :: nacx_int(size(vx,1),ntrajmax,nstmax,nstmax)  
-   real(DP)  :: nacy_int(size(vx,1),ntrajmax,nstmax,nstmax)
-   real(DP)  :: nacz_int(size(vx,1),ntrajmax,nstmax,nstmax)
-   real(DP)  :: nacx_newint(size(vx,1),ntrajmax,nstmax,nstmax)
-   real(DP)  :: nacy_newint(size(vx,1),ntrajmax,nstmax,nstmax)
-   real(DP)  :: nacz_newint(size(vx,1),ntrajmax,nstmax,nstmax)
-   real(DP)  :: dotproduct_int(nstmax,nstmax,ntrajmax),dotproduct_newint(nstmax,nstmax,ntrajmax) !rename dotproduct_int
-   real(DP)  :: t(nstmax,nstmax)           !switching probabilities
-   real(DP)  :: t_tot(nstmax,nstmax)       !cumulative switching probabilities
+   real(DP)  :: en_array_int(NSTMAX,NTRAJMAX),en_array_newint(NSTMAX,NTRAJMAX)
+   real(DP)  :: nacx_int(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)  
+   real(DP)  :: nacy_int(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP)  :: nacz_int(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP)  :: nacx_newint(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP)  :: nacy_newint(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP)  :: nacz_newint(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP)  :: dotproduct_int(NSTMAX,NSTMAX,NTRAJMAX),dotproduct_newint(NSTMAX,NSTMAX,NTRAJMAX) !rename dotproduct_int
+   real(DP)  :: t(NSTMAX,NSTMAX)           !switching probabilities
+   real(DP)  :: t_tot(NSTMAX,NSTMAX)       !cumulative switching probabilities
    real(DP)  :: ran(10)
-   real(DP)  :: pop(size(tocalc,1),ntrajmax),popsum !populations
+   real(DP)  :: pop(size(tocalc,1),NTRAJMAX),popsum !populations
    integer :: iat,ist1,ist2,itrj,itp     !iteration counters
    integer :: ist                    ! =istate(itrj)
    real(DP)  :: vect_olap,fr,frd
    real(DP)  :: ekin_mom,apom,edif,tau,fact,sum_norm
    integer :: ihop,ijunk
-   real(DP)  :: pop0, a_re, a_im, prob(nstmax), cn, stepfs
+   real(DP)  :: pop0, a_re, a_im, prob(NSTMAX), hop_rdnum, stepfs
    character(len=500) :: formt
    character(len=20) :: chist,chihop,chit
    integer :: iost, iunit=600
@@ -609,53 +592,56 @@ do itrj=1,ntraj
 
 !#### MAIN LOOP
 
-! Smaller time step for electron population transfer
+!  Smaller time step for electronic population transfer
    do itp=1,substep      
 
       ist=istate(itrj)
-      !pop0 is later used for tully's fewest switches
+      ! pop0 is later used for Tully's fewest switches
       pop0=cel_re(ist,itrj)**2+cel_im(ist,itrj)**2
 
-!-----------------INTERPOLACE--------------------------------------------------
 
+!-----INTERPOLATION
 
-       fr=real(itp,DP)/real(substep,DP)
-       frd=1.0d0-fr
+      fr = real(itp,DP) / real(substep,DP)
+      frd = 1.0d0 - fr
 
-       call interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_newint,vy_newint,vz_newint, &
-                      nacx_newint,nacy_newint,nacz_newint,en_array_newint, &
-                      dotproduct_newint,fr,frd,itrj)
+      call interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_newint,vy_newint,vz_newint, &
+                     nacx_newint,nacy_newint,nacz_newint,en_array_newint, &
+                     dotproduct_newint,fr,frd,itrj)
 
-       if(inac.eq.1)then
-        call interpolate_dot(dotproduct_newint,fr,frd,itrj)
-       endif
+      ! In HST model, we do not have NACME, only dotproduct
+      if(inac.eq.1)then
+         call interpolate_dot(dotproduct_newint, fr, frd, itrj)
+      endif
 
+      fr = real(itp-1,DP) / real(substep,DP)
+      frd = 1.0d0 - fr
 
-       fr=real(itp-1,DP)/real(substep,DP)
-       frd=1.0d0-fr
-
-       call interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_int,vy_int,vz_int, &
+      call interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_int,vy_int,vz_int, &
                       nacx_int,nacy_int,nacz_int,en_array_int, &
                       dotproduct_int,fr,frd,itrj)
 
-       if(inac.eq.1)then
+      if(inac.eq.1)then
         call interpolate_dot(dotproduct_int,fr,frd,itrj)
-       endif
+      endif
 
-
-      !------END-OF-INTERPOLATIONS-------------------------------------
+!-----END-OF-INTERPOLATIONS
        
-      if(integ.eq.'rk4') call rk4step(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
 
-      if(integ.eq.'butcher') call butcherstep(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
+      ! Integrate electronic wavefunction for one dtp time step
+      call sh_integrate_wf(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
 
-      if(integ.eq.'euler') call eulerstep(en_array_int, en_array_newint, dotproduct_int, itrj)
-
+      ! Check whether total population is 1.0
       call check_popsum(itrj)
 
-!--calculation of switching probabilities
-!- do not calculated the whole transition matrix
-!- t array could be one dimensional but whatever
+      !--calculation of switching probabilities
+      !- do not calculated the whole transition matrix
+      !- t array could be one dimensional but whatever
+
+      ! TODO: make this a separate function
+      ! Prepare it for other schemes, i.e. for autoionization
+
+      ! call sh_calc_hopprob(pop0, trans_matrix)
       do ist2=1,nstate 
          pop(ist2,itrj)=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
          a_re=( cel_re(ist,itrj)*cel_re(ist2,itrj)+cel_im(ist,itrj)*cel_im(ist2,itrj) )
@@ -668,7 +654,7 @@ do itrj=1,ntraj
              t(ist,ist2)=a_re*(dotproduct_int(ist,ist2,itrj)+dotproduct_newint(ist,ist2,itrj) )
          endif
          t(ist,ist2)=t(ist,ist2)*dtp/(pop0+1d-20)
-      enddo        
+      enddo
 
       if(idebug.gt.1)then
          ! WaRNING: this will not work for adaptive time step
@@ -704,7 +690,7 @@ do itrj=1,ntraj
 
       prob=0.0d0
 
-! Auxiliary calculations of probabilities
+!     Auxiliary calculations of probabilities
       do ist1=1,nstate
          if(ist1.eq.ist.and.ist1.eq.1)  prob(ist1) = 0.0d0
          if(ist1.ne.ist.and.ist1.eq.1)  prob(ist1) = t(ist,ist1)
@@ -712,25 +698,34 @@ do itrj=1,ntraj
          if(ist1.eq.ist.and.ist1.ne.1)  prob(ist1) = prob(ist1-1)
       enddo
 
-      ! should we hop before decoherence?????
-      ! every article says something different
-      ! newton-X hops before decoherence
+      ! Should we hop before decoherence?
+      ! Every article says something different.
+      ! Newton-X hops before decoherence.
 
-!     HOPPING  SECTION     
+!     HOPPING SECTION
       if (nohop.ne.1)then
 
          ihop=0
          call vranf(ran,1,0,6)
-         cn=ran(1)
+         hop_rdnum = ran(1)
+         ! TODO streamline this
+         !do ist1=1, nstate
+         !   if (ist1.eq.ist) cycle
+         !   if(hop_rdum.lt.prob(ist1))then
+         !      ihop = ist1
+         !      exit
+         !   end if
+         !end do
+
          if(ist.ne.1)then
-            if(cn.ge.0.0d0.and.cn.lt.prob(1))then
+            if(hop_rdnum.ge.0.0d0.and.hop_rdnum.lt.prob(1))then
                ihop=1
             endif
          endif
        
          do ist1=2,nstate
             if(ist.ne.ist1)then
-               if(cn.ge.prob(ist1-1).and.cn.lt.prob(ist1))then 
+               if(hop_rdnum.ge.prob(ist1-1).and.hop_rdnum.lt.prob(ist1))then
                   ihop=ist1
                endif
             endif
@@ -742,8 +737,8 @@ do itrj=1,ntraj
             if(adjmom.eq.1) call hop_dot(vx,vy,vz,ist,ihop,itrj,eclas)
             write(formt,'(A8,I3,A7)')'(A1,I10,',nstate+1,'E20.10)'
             if(idebug.gt.0)then
-              write(UPOP,*)'# Substep   RandomNum   Probabilities'
-              write(UPOP,fmt=formt)'#',itp,cn,(t(ist,ist1),ist1=1,nstate)
+              write(UPOP,*)'# Substep RandomNum   Probabilities'
+              write(UPOP,fmt=formt)'#',itp, hop_rdnum, (t(ist,ist1),ist1=1,nstate)
             end if
        
             ! write current geometry
@@ -820,7 +815,7 @@ do itrj=1,ntraj
 !itp loop
    enddo
 
-!    set tocalc array for the next step
+!  set tocalc array for the next step
    call set_tocalc(itrj)
 
    if(idebug.eq.1)then
@@ -1058,262 +1053,10 @@ enddo
 
    end subroutine hop_dot
 
-   subroutine integstep(k_re,k_im,en,y_re,y_im,dotprod,gam)
-   real(DP),intent(out) :: k_re(nstmax),k_im(nstmax)
-   real(DP),intent(in)  :: dotprod(nstmax,nstmax), gam(nstmax,nstmax)
-   real(DP),intent(in)  :: en(nstmax),y_im(nstmax),y_re(nstmax)
-   real(DP) :: g
-   integer  :: ist1,ist2
-
-
-   if (phase.eq.0)then
-      do ist1=1,nstate
-         k_re(ist1)=en(ist1)*y_im(ist1)
-         k_im(ist1)=-en(ist1)*y_re(ist1)
-         do ist2=1,nstate
-            if(ist1.ne.ist2)then
-               k_re(ist1)=k_re(ist1)-y_re(ist2)*dotprod(ist1,ist2)
-               k_im(ist1)=k_im(ist1)-y_im(ist2)*dotprod(ist1,ist2)
-            end if
-         enddo
-         k_re(ist1)=dtp*k_re(ist1)
-         k_im(ist1)=dtp*k_im(ist1)
-      enddo
-   end if
-
-   if (phase.eq.1)then
-      do ist1=1,nstate
-         k_re(ist1)=0.0_DP
-         k_im(ist1)=0.0_DP
-         do ist2=1,nstate
-            if(ist1.ne.ist2)then
-               g=gam(ist1,ist2)
-               k_re(ist1)=k_re(ist1)-(y_re(ist2)*cos(g)-y_im(ist2)*sin(g))*dotprod(ist1,ist2)
-               k_im(ist1)=k_im(ist1)-(y_im(ist2)*cos(g)+y_re(ist2)*sin(g))*dotprod(ist1,ist2)
-            end if
-         end do
-         k_re(ist1)=dtp*k_re(ist1)
-         k_im(ist1)=dtp*k_im(ist1)
-      end do
-   end if
-   end subroutine integstep
-
-   subroutine integ_gama(en_array_int, en_array_newint, itrj)
-   real(DP),intent(in) :: en_array_int(:,:)
-   real(DP),intent(in) :: en_array_newint(:,:)
-   integer, intent(in) :: itrj
-   real(DP) :: g
-   integer  :: ist1, ist2
-
-   do ist1=1,nstate
-      do ist2=1,nstate
-      if (ist1.ne.ist2)then
-         g=(en_array_int(ist1,itrj)+en_array_newint(ist1,itrj))/2
-         g=g-(en_array_int(ist2,itrj)+en_array_newint(ist2,itrj))/2
-         gama(ist1,ist2,itrj)=gama(ist1,ist2,itrj)+g*dtp
-      end if
-      end do
-   end do
-   end subroutine integ_gama
-
-   subroutine eulerstep(en_array_int, en_array_newint, dotproduct_int,itrj)
-      real(DP),intent(in) :: en_array_int(:,:)
-      real(DP),intent(in) :: en_array_newint(:,:)
-      real(DP),intent(in) :: dotproduct_int(:,:,:)
-      integer,intent(in)  :: itrj
-      real(DP) :: dotprod0(nstmax,nstmax), gam0(nstmax, nstmax)
-      real(DP) :: k1_re(nstmax),k1_im(nstmax)
-      real(DP) :: y_im(nstmax),y_re(nstmax)
-      real(DP) :: en0(nstmax)
-      integer   :: ist1, ist2
-
-      do ist1=1,nstate
-       en0(ist1)=en_array_int(ist1,itrj)+eshift
-       y_re(ist1)=cel_re(ist1,itrj)
-       y_im(ist1)=cel_im(ist1,itrj)
-       do ist2=1,nstate
-         dotprod0(ist1,ist2)=dotproduct_int(ist1,ist2,itrj)
-         gam0(ist1,ist2)=gama(ist1,ist2,itrj)
-       enddo
-      end do
-
-      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0, gam0)
-
-      do ist1=1,nstate
-       cel_re(ist1,itrj)=cel_re(ist1,itrj)+k1_re(ist1)
-       cel_im(ist1,itrj)=cel_im(ist1,itrj)+k1_im(ist1)
-      enddo
-
-      call integ_gama(en_array_int, en_array_newint, itrj)
-   end subroutine eulerstep
-
-   subroutine rk4step(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
-      real(DP),intent(in) :: en_array_int(nstmax,ntrajmax)
-      real(DP),intent(in) :: en_array_newint(nstmax,ntrajmax)
-      real(DP),intent(in) :: dotproduct_int(nstmax,nstmax,ntrajmax)
-      real(DP),intent(in) :: dotproduct_newint(nstmax,nstmax,ntrajmax)
-      integer, intent(in) :: itrj
-      real(DP) :: dotprod2(nstmax,nstmax)
-      real(DP) :: dotprod0(nstmax,nstmax),dotprod1(nstmax,nstmax)
-      real(DP) :: k1_re(nstmax),k1_im(nstmax)
-      real(DP) :: k2_re(nstmax),k2_im(nstmax)
-      real(DP) :: k3_re(nstmax),k3_im(nstmax)
-      real(DP) :: k4_re(nstmax),k4_im(nstmax)
-      real(DP) :: y_im(nstmax),y_re(nstmax)
-      real(DP) :: en0(nstmax),en1(nstmax),en2(nstmax)
-      real(DP) :: gam0(nstmax,nstmax),gam1(nstmax,nstmax),gam2(nstmax,nstmax)
-      integer :: ist1,ist2     
-
-!     initial interpolations
-      do ist1=1,nstate
-       en0(ist1)=en_array_int(ist1,itrj)+eshift
-       en1(ist1)=en_array_newint(ist1,itrj)+eshift
-       en2(ist1)=(en0(ist1)+en1(ist1))/2
-       y_re(ist1)=cel_re(ist1,itrj)
-       y_im(ist1)=cel_im(ist1,itrj)
-       do ist2=1,nstate
-       dotprod0(ist1,ist2)=dotproduct_int(ist1,ist2,itrj)
-       dotprod1(ist1,ist2)=dotproduct_newint(ist1,ist2,itrj)
-       dotprod2(ist1,ist2)=(dotprod0(ist1,ist2)+dotprod1(ist1,ist2))/2
-       if(phase.eq.1) gam0(ist1,ist2)=gama(ist1,ist2,itrj)
-       enddo
-      enddo
-
-      if (phase.eq.1)then
-         call integ_gama(en_array_int, en_array_newint, itrj)
-         do ist1=1,nstate
-            do ist2=1,nstate
-               gam1(ist1,ist2)=gama(ist1,ist2,itrj)
-               gam2(ist1,ist2)=(gam0(ist1,ist2)+gam1(ist1,ist2))/2
-            end do
-         end do 
-      end if
-
-      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0,gam0)
-
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/2
-       y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/2
-      enddo
-      call integstep(k2_re,k2_im,en2,y_re,y_im,dotprod2,gam2)
-
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)+k2_re(ist1)/2
-       y_im(ist1)=cel_im(ist1,itrj)+k2_im(ist1)/2
-      enddo
-      call integstep(k3_re,k3_im,en2,y_re,y_im,dotprod2,gam2)
-
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)+k3_re(ist1)
-       y_im(ist1)=cel_im(ist1,itrj)+k3_im(ist1)
-      enddo
-      call integstep(k4_re,k4_im,en1,y_re,y_im,dotprod1,gam1)
-
-      do ist1=1,nstate
-       cel_re(ist1,itrj)=cel_re(ist1,itrj)+k1_re(ist1)/6+k2_re(ist1)/3+k3_re(ist1)/3+k4_re(ist1)/6
-       cel_im(ist1,itrj)=cel_im(ist1,itrj)+k1_im(ist1)/6+k2_im(ist1)/3+k3_im(ist1)/3+k4_im(ist1)/6
-      enddo
-
-   end subroutine rk4step
-
-
-   subroutine butcherstep(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
-      real(DP),intent(in) :: en_array_int(nstmax,ntrajmax)
-      real(DP),intent(in) :: en_array_newint(nstmax,ntrajmax)
-      real(DP),intent(in) :: dotproduct_int(nstmax,nstmax,ntrajmax)
-      real(DP),intent(in) :: dotproduct_newint(nstmax,nstmax,ntrajmax)
-      real(DP) :: dotprod2(nstmax,nstmax),dotprod4(nstmax,nstmax),dotprod34(nstmax,nstmax)
-      real(DP) :: dotprod0(nstmax,nstmax),dotprod1(nstmax,nstmax)
-      real(DP) :: k1_re(nstmax),k1_im(nstmax)
-      real(DP) :: k2_re(nstmax),k2_im(nstmax)
-      real(DP) :: k3_re(nstmax),k3_im(nstmax)
-      real(DP) :: k4_re(nstmax),k4_im(nstmax)
-      real(DP) :: k5_re(nstmax),k5_im(nstmax)
-      real(DP) :: k6_re(nstmax),k6_im(nstmax)
-      real(DP) :: y_im(nstmax),y_re(nstmax)
-      real(DP) :: en0(nstmax),en1(nstmax),en2(nstmax),en4(nstmax),en34(nstmax)
-      real(DP) :: gam0(nstmax,nstmax),gam1(nstmax,nstmax),gam2(nstmax,nstmax)
-      real(DP) :: gam4(nstmax,nstmax),gam34(nstmax,nstmax)
-      integer :: ist1,ist2,itrj     !iteration counters
-
-!pripravne interpolace....
-      do ist1=1,nstate
-       en0(ist1)=en_array_int(ist1,itrj)+eshift
-       en1(ist1)=en_array_newint(ist1,itrj)+eshift
-       en2(ist1)=(en0(ist1)+en1(ist1))/2
-       en4(ist1)=(en0(ist1)+en2(ist1))/2
-       en34(ist1)=(en2(ist1)+en1(ist1))/2
-       y_re(ist1)=cel_re(ist1,itrj)
-       y_im(ist1)=cel_im(ist1,itrj)
-       do ist2=1,nstate
-        dotprod0(ist1,ist2)=dotproduct_int(ist1,ist2,itrj)
-        dotprod1(ist1,ist2)=dotproduct_newint(ist1,ist2,itrj)
-        dotprod2(ist1,ist2)=(dotprod0(ist1,ist2)+dotprod1(ist1,ist2))/2
-        dotprod4(ist1,ist2)=(dotprod0(ist1,ist2)+dotprod2(ist1,ist2))/2
-        dotprod34(ist1,ist2)=(dotprod2(ist1,ist2)+dotprod1(ist1,ist2))/2
-        if (phase.eq.1) gam0(ist1,ist2)=gama(ist1,ist2,itrj)
-       enddo
-      enddo
-
-      if (phase.eq.1)then
-         call integ_gama(en_array_int, en_array_newint, itrj)
-         do ist1=1,nstate
-            do ist2=1,nstate
-               gam1(ist1,ist2)=gama(ist1,ist2,itrj)
-               gam2(ist1,ist2)=(gam0(ist1,ist2)+gam1(ist1,ist2))/2
-               gam4(ist1,ist2)=(gam0(ist1,ist2)+gam2(ist1,ist2))/2
-               gam34(ist1,ist2)=(gam2(ist1,ist2)+gam1(ist1,ist2))/2
-            end do
-         end do 
-      end if
-
-      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0,gam0)
-
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/4
-       y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/4
-      enddo
-      call integstep(k2_re,k2_im,en4,y_re,y_im,dotprod4,gam4)
-
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/8+k2_re(ist1)/8
-       y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/8+k2_im(ist1)/8
-      enddo
-      call integstep(k3_re,k3_im,en4,y_re,y_im,dotprod4,gam4)
-      
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)-k2_re(ist1)/2+k3_re(ist1)
-       y_im(ist1)=cel_im(ist1,itrj)-k2_im(ist1)/2+k3_im(ist1)
-      enddo
-      call integstep(k4_re,k4_im,en2,y_re,y_im,dotprod2,gam2)
-      
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)+3*k1_re(ist1)/16+9*k4_re(ist1)/16
-       y_im(ist1)=cel_im(ist1,itrj)+3*k1_im(ist1)/16+9*k4_im(ist1)/16
-      enddo
-      call integstep(k5_re,k5_im,en34,y_re,y_im,dotprod34,gam34)
-
-      do ist1=1,nstate
-       y_re(ist1)=cel_re(ist1,itrj)-3*k1_re(ist1)/7+2*k2_re(ist1)/7+12*k3_re(ist1)/7 &
-                  -12*k4_re(ist1)/7+8*k5_re(ist1)/7
-       y_im(ist1)=cel_im(ist1,itrj)-3*k1_im(ist1)/7+2*k2_im(ist1)/7+12*k3_im(ist1)/7 &
-                  -12*k4_im(ist1)/7+8*k5_im(ist1)/7
-      enddo
-      call integstep(k6_re,k6_im,en1,y_re,y_im,dotprod1,gam1)
-
-
-      do ist1=1,nstate
-       cel_re(ist1,itrj)=cel_re(ist1,itrj)+7*k1_re(ist1)/90+32*k3_re(ist1)/90+12*k4_re(ist1)/90 &
-                        +32*k5_re(ist1)/90+7*k6_re(ist1)/90
-       cel_im(ist1,itrj)=cel_im(ist1,itrj)+7*k1_im(ist1)/90+32*k3_im(ist1)/90+12*k4_im(ist1)/90 &
-                        +32*k5_im(ist1)/90+7*k6_im(ist1)/90
-      enddo
-
-   end subroutine butcherstep
 
 
    subroutine interpolate_dot(dotproduct_int,fr,frd,itrj)
-      real(DP) dotproduct_int(nstmax,nstmax,ntrajmax)
+      real(DP) dotproduct_int(NSTMAX,NSTMAX,NTRAJMAX)
       integer :: ist1,ist2,itrj     !iteration counters
       real(DP) :: fr,frd
 
@@ -1396,5 +1139,27 @@ enddo
    check_CIVector=0
    return
    end function check_CIVector
+
+
+   ! Choose initial state according to oscillator stretgth
+   subroutine choose_initial_state(itrj)
+      integer, intent(in)  :: itrj
+      real(DP) :: pom, maxosc
+      integer  :: ist1
+      open(500,file='oscil.dat')
+
+      pom = 0.0d0
+      maxosc = 0.0d0
+
+      do ist1=1,nstate
+         read(500,*)pom
+         if(pom.gt.maxosc)then
+            istate(itrj) = ist1
+            maxosc = pom
+         endif
+      enddo
+ 
+      close(500)
+   end subroutine choose_initial_state
 
 end module mod_sh

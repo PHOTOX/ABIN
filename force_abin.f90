@@ -4,7 +4,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_general,  only: ihess, ipimd, iqmmm, it, iremd, my_rank
    use mod_system,   only: names
    use mod_harmon,   only: hess
-   use mod_sh,       only: nac_accu1, tocalc, en_array, istate, nstate
+   use mod_sh_integ, only: nstate
+   use mod_sh,       only: nac_accu1, tocalc, en_array, istate
    use mod_qmmm,     only: natqm
    use mod_utils,    only: abinerror,lowertoupper
    use mod_interfaces, only: oniom

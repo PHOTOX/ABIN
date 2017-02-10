@@ -194,14 +194,15 @@ module mod_analysis
    use mod_nhc,    only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
    use mod_estimators
    use mod_kinetic,only: entot_cumul, est_temp_cumul
-   use mod_sh,     only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
+   use mod_sh_integ, only: sh_write_wf
+   use mod_sh,     only: write_nacmrest,ntraj,istate
    use mod_gle
    use mod_random
    use mod_terampi_sh, only: write_wfn
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
    integer,intent(in) :: time_step
-   integer :: iat,iw,inh,itrj,ist1,is
+   integer :: iat,iw,inh,itrj,is
    LOGICAL :: file_exists
    character(len=200)    :: chout, chsystem
 
@@ -240,13 +241,11 @@ module mod_analysis
 
    if(ipimd.eq.2)then
       call write_nacmrest()
+      ! hack, only one trajectory supported at this point
+      itrj = 1
       write(102,*)chSH
-      do itrj=1,ntraj
-         write(102,*)istate(itrj)
-         do ist1=1,nstate
-            write(102,*)cel_re(ist1,itrj),cel_im(ist1,itrj)
-         enddo
-      enddo
+      write(102,*)istate(itrj)
+      call sh_write_wf(102, itrj)
    endif
 
    if(inose.eq.1)then
@@ -324,7 +323,8 @@ module mod_analysis
    use mod_nhc,      only: readNHC,inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
    use mod_estimators
    use mod_kinetic,  only: entot_cumul, est_temp_cumul
-   use mod_sh,       only: write_nacmrest,cel_re,cel_im,ntraj,nstate,istate
+   use mod_sh_integ, only: sh_read_wf
+   use mod_sh,       only: write_nacmrest,ntraj,istate
    use mod_gle
    use mod_random
    use mod_terampi_sh, only: read_wfn
@@ -368,12 +368,10 @@ module mod_analysis
    if(ipimd.eq.2)then
       read(111,'(A)')chtemp
       call checkchar(chtemp, chsh)
-      do itrj=1,ntraj
-         read(111,*)istate(itrj)
-         do ist1=1,nstate
-            read(111,*)cel_re(ist1,itrj),cel_im(ist1,itrj)
-         enddo
-      enddo
+      ! only 1 trajectory supported at this point
+      itrj = 1
+      read(111,*)istate(itrj)
+      call sh_read_wf(111, itrj)
    endif
 
    if(inose.eq.1.and.readNHC.eq.1)then
