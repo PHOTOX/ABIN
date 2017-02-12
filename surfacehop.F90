@@ -8,11 +8,11 @@ module mod_sh
    use mod_sh_integ
    implicit none
    private
-   public :: istate_init, substep, deltaE, inac,nohop, alpha,popthr, nac_accu1, nac_accu2
+   public :: istate_init, substep, deltaE, inac,nohop, decoh_alpha,popthr, nac_accu1, nac_accu2
    public :: surfacehop, sh_init, istate, ntraj, tocalc, en_array
    public :: nacx, nacy, nacz
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
-   public :: energydifthr, energydriftthr, popsumthr, adjmom, revmom
+   public :: energydifthr, energydriftthr, adjmom, revmom
    public :: check_CIVector
    public :: ignore_state
 
@@ -20,9 +20,9 @@ module mod_sh
    integer   :: istate_init=1, substep=100
    integer   :: inac=0, nohop=0, adjmom=0, revmom=0
    integer   :: nac_accu1=7, nac_accu2=5 !7 is MOLPRO default
-   real(DP)  :: alpha=0.1d0
+   real(DP)  :: decoh_alpha=0.1d0
    real(DP)  :: deltae=5.0d0, popthr=0.001d0
-   real(DP)  :: popsumthr=0.001d0, energydifthr=1.0d0, energydriftthr=1.0d0 !eV
+   real(DP)  :: energydifthr=1.0d0, energydriftthr=1.0d0 !eV
    real(DP),allocatable :: nacx(:,:,:,:), nacy(:,:,:,:), nacz(:,:,:,:)
    real(DP),allocatable :: nacx_old(:,:,:,:), nacy_old(:,:,:,:), nacz_old(:,:,:,:)
    real(DP),allocatable :: dotproduct(:,:,:), dotproduct_old(:,:,:) !for inac=1
@@ -165,9 +165,9 @@ module mod_sh
    if(popthr.gt.0)then  
       !COMPUTE NACME only if population of the states is gt.popthr
       do ist1=1,nstate-1
-         pop = cel_re(ist1,itrj)**2 + cel_im(ist1,itrj)**2
+         pop = el_pop(ist1, itrj)
          do ist2=ist1+1,nstate
-            pop2 = cel_re(ist2,itrj)**2 + cel_im(ist2,itrj)**2
+            pop2 = el_pop(ist2, itrj)
             if(pop.lt.popthr.and.pop2.lt.popthr.and.ist1.ne.istate(itrj).and.ist2.ne.istate(itrj)) tocalc(ist1,ist2)=0
          enddo
       enddo
@@ -400,36 +400,14 @@ module mod_sh
 
    end subroutine move_vars
    
-   subroutine check_popsum(itrj,popsumin)
-      real(DP),intent(in),optional :: popsumin
-      integer,intent(in)           :: itrj
-      real(DP)                     :: popsum
-      integer                      :: ist1
-
-      popsum=0.0d0
-      if(present(popsumin))then
-         popsum=popsumin
-      else
-         do ist1=1,nstate 
-            popsum=popsum+cel_re(ist1,itrj)**2+cel_im(ist1,itrj)**2
-         end do
-      end if
-
-      if (abs(popsum-1.0d0).gt.popsumthr)then
-         write(*,*)'ERROR:Sum of electronic populations = ',popsum
-         write(*,*)'which differs from 1.0 by more than popsumthr = ',popsumthr
-         write(*,*)'Increase the number of substeps or use more accurate integrator.'
-         call abinerror('surfacehop')
-      end if
-   end subroutine check_popsum
 
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   ! This is the main routine !
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   subroutine surfacehop(x,y,z,vx,vy,vz,vx_old,vy_old,vz_old,dt,eclas)
-   use mod_const,    only: ANG, AUTOFS
-   use mod_general,  only: natom, pot, nwrite, idebug, it, sim_time
+   !******************************
+   ! This is the main SH routine !
+   !******************************
+   subroutine surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
+   use mod_const,    ONLY: ANG, AUTOFS
+   use mod_general,  ONLY: natom, pot, nwrite, idebug, it, sim_time
    use mod_system,   ONLY: names
    use mod_files,    ONLY: UPOP,UPROB,UPES,UWFCOEF,UWFCOEF,UNACME, UBKL,UPHASE,UDOTPROD
    use mod_qmmm,     ONLY: natqm
@@ -440,31 +418,31 @@ module mod_sh
    real(DP),intent(inout) :: vx_old(:,:),vy_old(:,:),vz_old(:,:)
    real(DP),intent(inout) :: eclas
    real(DP),intent(in)    :: dt
-   real(DP)  :: vx_int(size(vx,1),size(vx,2))
-   real(DP)  :: vy_int(size(vy,1),size(vy,2))
-   real(DP)  :: vz_int(size(vz,1),size(vz,2))
-   real(DP)  :: vx_newint(size(vx,1),size(vx,2))
-   real(DP)  :: vy_newint(size(vy,1),size(vy,2))
-   real(DP)  :: vz_newint(size(vz,1),size(vz,2))
-   real(DP)  :: en_array_int(NSTMAX,NTRAJMAX),en_array_newint(NSTMAX,NTRAJMAX)
-   real(DP)  :: nacx_int(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)  
-   real(DP)  :: nacy_int(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
-   real(DP)  :: nacz_int(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
-   real(DP)  :: nacx_newint(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
-   real(DP)  :: nacy_newint(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
-   real(DP)  :: nacz_newint(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
-   real(DP)  :: dotproduct_int(NSTMAX,NSTMAX,NTRAJMAX),dotproduct_newint(NSTMAX,NSTMAX,NTRAJMAX) !rename dotproduct_int
-   real(DP)  :: t(NSTMAX,NSTMAX)           !switching probabilities
-   real(DP)  :: t_tot(NSTMAX,NSTMAX)       !cumulative switching probabilities
-   real(DP)  :: ran(10)
-   real(DP)  :: pop(size(tocalc,1),NTRAJMAX),popsum !populations
-   integer :: iat,ist1,ist2,itrj,itp     !iteration counters
-   integer :: ist                    ! =istate(itrj)
-   real(DP)  :: vect_olap,fr,frd
-   real(DP)  :: ekin_mom,apom,edif,tau,fact,sum_norm
-   integer :: ihop,ijunk
+   real(DP) :: vx_int(size(vx,1),size(vx,2))
+   real(DP) :: vy_int(size(vy,1),size(vy,2))
+   real(DP) :: vz_int(size(vz,1),size(vz,2))
+   real(DP) :: vx_newint(size(vx,1),size(vx,2))
+   real(DP) :: vy_newint(size(vy,1),size(vy,2))
+   real(DP) :: vz_newint(size(vz,1),size(vz,2))
+   real(DP) :: en_array_int(NSTMAX,NTRAJMAX),en_array_newint(NSTMAX,NTRAJMAX)
+   real(DP) :: nacx_int(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)  
+   real(DP) :: nacy_int(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP) :: nacz_int(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP) :: nacx_newint(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP) :: nacy_newint(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP) :: nacz_newint(size(vx,1),NTRAJMAX,NSTMAX,NSTMAX)
+   real(DP) :: dotproduct_int(NSTMAX,NSTMAX,NTRAJMAX),dotproduct_newint(NSTMAX,NSTMAX,NTRAJMAX) !rename dotproduct_int
+   real(DP) :: t(NSTMAX,NSTMAX)           ! switching probabilities
+   real(DP) :: t_tot(NSTMAX,NSTMAX)       ! cumulative switching probabilities
+   real(DP) :: ran(10)
+   real(DP) :: popsum !populations
+   integer  :: iat,ist1,ist2,itrj,itp  ! iteration counters
+   integer  :: ist                     ! =istate(itrj)
+   real(DP) :: vect_olap,fr,frd
+   real(DP) :: Ekin
+   integer  :: ihop,ijunk
    real(DP)  :: pop0, a_re, a_im, prob(NSTMAX), hop_rdnum, stepfs
-   character(len=500) :: formt
+   character(len=500)   :: formt
    character(len=20) :: chist,chihop,chit
    integer :: iost, iunit=600
 
@@ -474,9 +452,8 @@ do itrj=1,ntraj
    call check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
    call check_energydrift(vx, vy, vz, itrj)
 
-   t_tot=1.0d0
+   t_tot = 1.0d0
 
-   popsum=0.0d0
 
 !-------READING NACM-----------------------     
    if(inac.eq.0)then
@@ -531,31 +508,31 @@ do itrj=1,ntraj
 
       end if
 
-!--------------calculating overlap between nacmes-------------------
+!     Calculating overlap between nacmes
       do ist1=1,nstate
          do ist2=1,nstate
             vect_olap=0.0d0
             do iat=1,natom
-               vect_olap=vect_olap+nacx_old(iat,itrj,ist1,ist2)*nacx(iat,itrj,ist1,ist2)
-               vect_olap=vect_olap+nacy_old(iat,itrj,ist1,ist2)*nacy(iat,itrj,ist1,ist2)
-               vect_olap=vect_olap+nacz_old(iat,itrj,ist1,ist2)*nacz(iat,itrj,ist1,ist2)
+               vect_olap = vect_olap + nacx_old(iat,itrj,ist1,ist2)*nacx(iat,itrj,ist1,ist2)
+               vect_olap = vect_olap + nacy_old(iat,itrj,ist1,ist2)*nacy(iat,itrj,ist1,ist2)
+               vect_olap = vect_olap + nacz_old(iat,itrj,ist1,ist2)*nacz(iat,itrj,ist1,ist2)
             enddo
 
             if(vect_olap.lt.0)then
                do iat=1,natom
-                  nacx(iat,itrj,ist1,ist2)=-nacx(iat,itrj,ist1,ist2)
-                  nacy(iat,itrj,ist1,ist2)=-nacy(iat,itrj,ist1,ist2)
-                  nacz(iat,itrj,ist1,ist2)=-nacz(iat,itrj,ist1,ist2)
+                  nacx(iat,itrj,ist1,ist2) = -nacx(iat,itrj,ist1,ist2)
+                  nacy(iat,itrj,ist1,ist2) = -nacy(iat,itrj,ist1,ist2)
+                  nacz(iat,itrj,ist1,ist2) = -nacz(iat,itrj,ist1,ist2)
                enddo 
             endif
 
          enddo
        enddo
 
-!----------- INAC=1  endif
+!  INAC=1  endif
    endif
 
-!------READING time-derivative couplings----------------------------------
+!  reading time-derivative couplings
    if ( inac.eq.1 ) then
 
       open(100,file='tdcoups.dat')
@@ -590,18 +567,15 @@ do itrj=1,ntraj
    endif
 !------------------END-OF-TDC-------------------------------
 
-!#### MAIN LOOP
-
+!  MAIN LOOP
 !  Smaller time step for electronic population transfer
-   do itp=1,substep      
+   do itp=1,substep
 
       ist=istate(itrj)
       ! pop0 is later used for Tully's fewest switches
-      pop0=cel_re(ist,itrj)**2+cel_im(ist,itrj)**2
+      pop0 = el_pop(ist, itrj)
 
-
-!-----INTERPOLATION
-
+!     INTERPOLATION
       fr = real(itp,DP) / real(substep,DP)
       frd = 1.0d0 - fr
 
@@ -625,78 +599,30 @@ do itrj=1,ntraj
         call interpolate_dot(dotproduct_int,fr,frd,itrj)
       endif
 
-!-----END-OF-INTERPOLATIONS
-       
-
       ! Integrate electronic wavefunction for one dtp time step
       call sh_integrate_wf(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
 
       ! Check whether total population is 1.0
-      call check_popsum(itrj)
+      popsum = check_popsum(itrj)
 
-      !--calculation of switching probabilities
-      !- do not calculated the whole transition matrix
-      !- t array could be one dimensional but whatever
-
-      ! TODO: make this a separate function
-      ! Prepare it for other schemes, i.e. for autoionization
-
-      ! call sh_calc_hopprob(pop0, trans_matrix)
-      do ist2=1,nstate 
-         pop(ist2,itrj)=cel_re(ist2,itrj)**2+cel_im(ist2,itrj)**2
-         a_re=( cel_re(ist,itrj)*cel_re(ist2,itrj)+cel_im(ist,itrj)*cel_im(ist2,itrj) )
-         if (phase.eq.1)then
-             a_im=(- cel_im(ist,itrj)*cel_re(ist2,itrj) + cel_re(ist, itrj)*cel_im(ist2, itrj) )
-             t(ist,ist2)=a_re*cos(gama(ist, ist2, itrj))-sin(gama(ist, ist2, itrj))*a_im
-             t(ist,ist2)=t(ist,ist2)*(dotproduct_int(ist,ist2,itrj) + dotproduct_newint(ist,ist2,itrj) )
-         else
-!            t(ist,ist2)=2*a_re*dotproduct_int(ist,ist2,itrj)
-             t(ist,ist2)=a_re*(dotproduct_int(ist,ist2,itrj)+dotproduct_newint(ist,ist2,itrj) )
-         endif
-         t(ist,ist2)=t(ist,ist2)*dtp/(pop0+1d-20)
-      enddo
+      ! Calculate switching probabilities according to Tully's fewest switches
+      ! Probabilities are stored in matrix t
+      ! (although at this point we calculate only the relevant part of the matrix)
+      call sh_TFS_transmat(dotproduct_int, dotproduct_newint, itrj, istate(itrj), pop0, t)
 
       if(idebug.gt.1)then
-         ! WaRNING: this will not work for adaptive time step
-         stepfs=(it*substep+itp-substep)*dt*AUtoFS/substep
-         write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
-         write(UBKL,fmt=formt)stepfs,(t(ist,ist1),ist1=1,nstate)
-
-         write(UWFCOEF,fmt=formt,advance="no")stepfs,(cel_re(ist1,itrj),ist1=1,nstate)
-         write(formt,'(A1,I3,A7)')'(',nstate,'E20.10)'
-         write(UWFCOEF,fmt=formt,advance="no")(cel_im(ist1,itrj),ist1=1,nstate)
-         write(UWFCOEF,*)''
-
-         if(phase.eq.1)then
-            write(UPHASE,'(F15.2,E20.10)',advance="no")stepfs,gama(2,1,itrj)
-            do ist1=3,nstate
-               write(formt,'(A1,I3,A7)')'(',ist1-1,'E20.10)'
-               write(UPHASE,fmt=formt,advance="no")(gama(ist1,ist2,itrj),ist2=1,ist1-1)
-            end do
-            write(UPHASE,*)''
-         end if
+         ! WARNING: this will not work for adaptive time step
+         ! stepfs = (it*substep+itp-substep) * dt * AUtoFS / substep
+         stepfs = (sim_time+dtp*itp-substep*dtp) * AUtoFS
+         call sh_debug_wf(ist, itrj, stepfs, t)
       end if
 
-      do ist2=1,nstate 
-         if(t(ist,ist2).gt.1.0_DP)then
-            write(*,*)'ERROR: Hopping probability greater than 1.'
-            call abinerror('surfacehop')
-         end if
-         if(t(ist,ist2).lt.0.0d0)  t(ist,ist2)=0.0d0
-         !cumulative probability over whole big step
-         t_tot(ist,ist2)=t_tot(ist,ist2)*(1-t(ist,ist2))
+      do ist1 = 1,nstate 
+         ! Cumulative probability over whole big step
+         ! This is only auxiliary variably used for output
+         t_tot(ist,ist1) = t_tot(ist,ist1) * (1-t(ist,ist1))
       enddo
 
-
-      prob=0.0d0
-
-!     Auxiliary calculations of probabilities
-      do ist1=1,nstate
-         if(ist1.eq.ist.and.ist1.eq.1)  prob(ist1) = 0.0d0
-         if(ist1.ne.ist.and.ist1.eq.1)  prob(ist1) = t(ist,ist1)
-         if(ist1.ne.ist.and.ist1.ne.1)  prob(ist1) = prob(ist1-1)+t(ist,ist1)
-         if(ist1.eq.ist.and.ist1.ne.1)  prob(ist1) = prob(ist1-1)
-      enddo
 
       ! Should we hop before decoherence?
       ! Every article says something different.
@@ -705,32 +631,27 @@ do itrj=1,ntraj
 !     HOPPING SECTION
       if (nohop.ne.1)then
 
+!        Auxiliary calculations of probabilities on a number line
+         prob = 0.0d0
+         if(ist.ne.1)  prob(ist1) = t(ist,1)
+         do ist1 = 2, nstate
+            if(ist1.ne.ist)  prob(ist1) = prob(ist1-1)+t(ist,ist1)
+            if(ist1.eq.ist)  prob(ist1) = prob(ist1-1)
+         enddo
+
          ihop=0
          call vranf(ran,1,0,6)
          hop_rdnum = ran(1)
-         ! TODO streamline this
-         !do ist1=1, nstate
-         !   if (ist1.eq.ist) cycle
-         !   if(hop_rdum.lt.prob(ist1))then
-         !      ihop = ist1
-         !      exit
-         !   end if
-         !end do
 
-         if(ist.ne.1)then
-            if(hop_rdnum.ge.0.0d0.and.hop_rdnum.lt.prob(1))then
-               ihop=1
-            endif
-         endif
-       
-         do ist1=2,nstate
-            if(ist.ne.ist1)then
-               if(hop_rdnum.ge.prob(ist1-1).and.hop_rdnum.lt.prob(ist1))then
-                  ihop=ist1
-               endif
-            endif
-         enddo
-       
+         ! determine, whether we hopped or not
+         do ist1=1, nstate
+            if (ist1.eq.ist) cycle
+            if(hop_rdnum.lt.prob(ist1))then
+               ihop = ist1
+               exit
+            end if
+         end do
+
 !        Did HOP occur?
          if(ihop.ne.0)then
             if(adjmom.eq.0) call hop(vx,vy,vz,ist,ihop,itrj,eclas)
@@ -742,7 +663,6 @@ do itrj=1,ntraj
             end if
        
             ! write current geometry
-            write(formt,'(A5,I10,A1,I2,A1,I2)')'geom.',it,'.',ist,'.',ihop
             write(chist,*)ist
             write(chihop,*)ihop
             write(chit,*)it
@@ -759,57 +679,15 @@ do itrj=1,ntraj
          !nohop endif
       endif
 
-!     Quantum decoherence part----------------------------------
-      if(alpha.gt.0)then
+!     Apply decoherence correction from Persico et al
+      if(decoh_alpha.gt.0)then
+
+         Ekin = ekin_v(vx_int,vy_int,vz_int)
+         if(Ekin.gt.1.0d-4)then ! Decoherence diverges for zero velocities 
+            call sh_decoherence_correction(en_array_int, decoh_alpha, Ekin, istate(itrj), itrj)
+         end if
       
-         ekin_mom=ekin_v(vx_int,vy_int,vz_int)
-
-         if(ekin_mom.gt.1.0d-4)then !Why this number? In almost all cases it won't matter
-
-            do ist1=1,nstate
-               if(ist1.ne.istate(itrj)) then
-
-!                 Calculation of exponential factor               
-                  edif=abs( en_array_int(ist1,itrj)-en_array_int(istate(itrj),itrj) )
-                  tau=1/edif
-                  apom=alpha/ekin_mom
-                  tau=tau*(1.0d0+apom)
-                  fact=dexp(-dtp/tau)
-   
-                  cel_re(ist1,itrj)=cel_re(ist1,itrj)*fact
-                  cel_im(ist1,itrj)=cel_im(ist1,itrj)*fact
-               endif
-            enddo
-
-! RENORMALIZATION OF ISTATE     
-            sum_norm=1.0d0
-            do ist1=1,nstate
-               if(ist1.ne.istate(itrj)) then
-                  sum_norm=sum_norm-cel_re(ist1,itrj)**2-cel_im(ist1,itrj)**2
-               endif
-            enddo
-            fact=sum_norm/(cel_re(istate(itrj),itrj)**2+cel_im(istate(itrj),itrj)**2+1.0d-7)
-
-            !Following should never happen as we check for popsumthr later in this subroutine
-            if(fact.lt.0.0d0)then
-               write(*,*)'Fatal error in surfacehop during decoherence renormalization.'
-               write(*,*)'fact=',fact,'but should be > 0'
-               write(*,*)'This usually means inaccurate integration of electronic SE.'
-               write(*,*)'Increase number of substeps or use more accurate integrator.'
-               call abinerror('surfacehop')
-            end if
-
-            fact=sqrt(fact)
-
-            cel_re(istate(itrj),itrj)=cel_re(istate(itrj),itrj)*fact
-            cel_im(istate(itrj),itrj)=cel_im(istate(itrj),itrj)*fact
-
-         ! ekin endif
-         endif
-
-!-----END-OF-DECOHERENCE------------------------      
       endif
-
 
 
 !itp loop
@@ -835,21 +713,18 @@ do itrj=1,ntraj
    endif
 
 
-   do ist1=1,nstate
-      popsum=popsum+pop(ist1,itrj)
-   enddo
 
-   call check_popsum(itrj,popsum)
-   call move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
+   popsum = check_popsum(itrj)
+   call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
 
    if(modulo(it,nwrite).eq.0)then
       stepfs = sim_time * AUtoFS
       write(formt,'(A10,I3,A13)')'(F15.2,I3,',nstate,'F10.5,1F10.7)'
-      write(UPOP,fmt=formt)stepfs,istate(itrj),(pop(ist1,itrj), ist1=1,nstate),popsum
+      write(UPOP,fmt=formt)stepfs, istate(itrj), (el_pop(ist1,itrj), ist1=1,nstate), popsum
 
-      t_tot=1-t_tot !up to know, t_tot is the probability of not hopping
+      t_tot = 1 - t_tot    ! up to know, t_tot was the probability of not hopping
       write(formt,'(A10,I3,A6)')'(F15.2,I3,',nstate,'F10.5)'
-      write(UPROB,fmt=formt)stepfs,istate(itrj),(t_tot(ist,ist1),ist1=1,nstate)
+      write(UPROB,fmt=formt)stepfs, istate(itrj), (t_tot(ist,ist1),ist1=1,nstate)
       write(formt,'(A7,I3,A7)')'(F15.2,',nstate,'E20.10)'
       write(UPES,fmt=formt)stepfs,(en_array(ist1,itrj),ist1=1,nstate)
       if (inac.eq.0)  write(UNACME,*)'Time step:',it
@@ -879,6 +754,7 @@ do itrj=1,ntraj
 enddo
 
    end subroutine surfacehop
+
 
    subroutine hop(vx,vy,vz,instate,outstate,itrj,eclas)
       use mod_general,  ONLY: natom, pot
@@ -955,6 +831,7 @@ enddo
       deallocate(tocalc_temp)
 
    end subroutine hop
+
 
    subroutine interpolate(vx,vy,vz,vx_old,vy_old,vz_old,vx_int,vy_int,vz_int, &
                       nacx_int,nacy_int,nacz_int,en_array_int, &
@@ -1054,7 +931,6 @@ enddo
    end subroutine hop_dot
 
 
-
    subroutine interpolate_dot(dotproduct_int,fr,frd,itrj)
       real(DP) dotproduct_int(NSTMAX,NSTMAX,NTRAJMAX)
       integer :: ist1,ist2,itrj     !iteration counters
@@ -1068,6 +944,7 @@ enddo
       enddo
 
    end subroutine interpolate_dot
+
 
    subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
       use mod_const, only: AUtoEV
@@ -1092,6 +969,7 @@ enddo
 
    end subroutine check_energy
 
+
    subroutine check_energydrift(vx, vy, vz, itrj)
       use mod_const, only: AUtoEV
       use mod_kinetic, only: ekin_v
@@ -1111,6 +989,7 @@ enddo
       end if
 
    end subroutine check_energydrift
+
 
    integer function check_CIVector(CIvecs, CIvecs_old, ci_len, nstates)
    use mod_const, only:AUtoFS

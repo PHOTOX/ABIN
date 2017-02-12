@@ -32,5 +32,5 @@ deltae=1.5,		! maximum energy difference [eV], for which we calculate NA couplin
 integ='rk4',	        ! Runge-Kutta 4th-order integrator for ESCHE
 inac=0,			! non-adiabatic coupling terms 0 - NAC vector; 1 - HST model
 nohop=1,		! 1 - hopping not allowed (default=0)
-alpha=0.1		! parameter for decoherence correction
+decoh_alpha=0.1		! parameter for decoherence correction
 /

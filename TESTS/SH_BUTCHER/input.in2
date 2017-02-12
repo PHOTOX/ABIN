@@ -33,7 +33,7 @@ deltae=100.,		! maximum energy difference [eV], for which we calculate NA coupli
 integ='butcher',	! integrator for ESCHE:euler,butcher or rk4
 inac=0,			! non-adiabatic coupling terms 0 - NAC vector; 1 - HST model
 nohop=0,		! 1 - hopping not allowed (default=0)
-alpha=0.1		! parameter for decoherence correction
+decoh_alpha=0.1		! parameter for decoherence correction
 popthr=0.01
 energydifthr=0.80
 energydriftthr=0.80

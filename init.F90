@@ -18,7 +18,7 @@ subroutine init(dt, values1)
    use mod_nhc
    use mod_estimators
    use mod_harmon
-   use mod_sh_integ, only: nstate, integ, phase
+   use mod_sh_integ, only: nstate, integ, phase, popsumthr
    use mod_sh
    use mod_qmmm
    use mod_gle
@@ -82,7 +82,7 @@ subroutine init(dt, values1)
                      k,r0,k1,k2,k3,De,a,D0_dw,lambda_dw,k_dw, r0_dw, &
                      Nshake,ishake1,ishake2,shake_tol
 
-   namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr,ignore_state, &
+   namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,decoh_alpha,popthr,ignore_state, &
                      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
