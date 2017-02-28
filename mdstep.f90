@@ -103,6 +103,10 @@ module mod_mdstep
    
    call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot)
 
+   ! TODO-EH: We actually need correct EH forces right here
+   ! which also means that we need to have NACME as well
+   ! call ehrenfest(fxc, fyc, fzc, px, py, pz) ! see surfacehop.F90
+
    call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
    if(inose.gt.0) call thermostat(px, py, pz, amt, dt/2)

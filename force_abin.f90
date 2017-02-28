@@ -54,19 +54,17 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          write(MAXUNITS+iw,fgeom,iostat=iost) names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG
       end do
       close(unit=MAXUNITS+iw)
-!---- SH     
+
+!     Surface hopping or Ehrenfest     
       if(ipimd.eq.2)then
+
          open(unit=MAXUNITS+iw+2*walkmax,file='state.dat')
-         write(MAXUNITS+iw+2*walkmax,'(I2)')istate(iw)
          write(MAXUNITS+iw+2*walkmax,'(I2)')nstate
 
-! upper triangular matrix without diagonal
-! tocalc(,)=1 -> compute NA couplings
-! tocalc(,)=0 -> do NOT compute NA cooupligs
-         do ist1=1,nstate-1
-            do ist2=ist1+1,nstate
-               write(MAXUNITS+iw+2*walkmax,'(I1,A1)',advance='no')tocalc(ist1,ist2),' ' 
-            end do
+!        Diagonal of tocalc holds info about needed forces 
+!        tocalc(x,x)= 1 -> compute forces for electronic state X
+         do ist1=1,nstate
+            write(MAXUNITS+iw+2*walkmax,'(I1,A1)',advance='no')tocalc(ist1,ist1),' '
          end do
          close(MAXUNITS+iw+2*walkmax) 
       endif
@@ -84,16 +82,16 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          call abinerror('force_abin')
       end if
 
-      !-Passing arguments to bash script
-      !-First argument is time step
-      !-Second argument is the bead index, neccessary for parallel calculations
+      ! Passing arguments to bash script
+      ! First argument is time step
+      ! Second argument is the bead index, neccessary for parallel calculations
       write(chsystem,'(A40,I13,I4.3)')chsystem,it,iw
 
       if(iremd.eq.1) write(chsystem,'(A,I2.2)')trim(chsystem)//'.', my_rank
 
-!-for SH, pass the 4th parameter:precision of NACME as 10^(-nac_accu1)
+!     for SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)
       if(ipimd.eq.2)then
-         write(chsystem,'(A60,I3,A12)')chsystem,nac_accu1,' < state.dat'
+         write(chsystem,'(A60,I3,A12)')chsystem, 7, ' < state.dat'
       endif
      
       !-----MAKE THE CALL----------!
@@ -112,7 +110,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          call abinerror('force_abin')
       end if
 
-!----make sure that the file exist and flush the disc buffer     
+!     make sure that the file exist and flush the disc buffer     
       itest=0
       INQUIRE( FILE=chforce, EXIST=file_exists )
       do while(.not.file_exists.and.itest.lt.10)
@@ -144,11 +142,13 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          do ist1=2,nstate
             read(MAXUNITS+iw,*)en_array(ist1,iw)
          enddo
+         ! TODO-EH: eclas must be correctly overwritten later
          eclas = en_array(istate(iw),iw)
       end if
 
+!     TODO-EH: Read additional forces probably somewhere here, use second index (iw) for different states
 
-!----READING energy gradients from engrad.dat
+!     reading energy gradients from engrad.dat
       do iat=1,natqm
          read(MAXUNITS+iw,*,IOSTAT=iost)fx(iat,iw), fy(iat,iw), fz(iat,iw)
          if(iost.ne.0)then

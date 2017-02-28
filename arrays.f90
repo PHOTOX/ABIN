@@ -87,6 +87,9 @@ module mod_arrays
       vx_old=vx;  vy_old=vx_old; vz_old=vx_old
       transxv=vx ;transyv=transxv; transzv=transxv
 
+      ! TODO-EH: we need to allocate fxc according to the number of states
+      ! but this subroutine is called before we now the number of states
+      ! so leave this as is and reallocate elsewhere
       allocate( fxc(natomalloc, nwalkalloc) )
       allocate( fyc(natomalloc, nwalkalloc) )
       allocate( fzc(natomalloc, nwalkalloc) )

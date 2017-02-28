@@ -1,0 +1,155 @@
+#!/bin/bash
+
+# This script is should be called by ABIN as
+# MOLPRO-SH/r.molpro-sh.nacm timestep 001 nacaccu < state.dat
+
+cd MOLPRO-SH
+timestep=$1
+ibead=$2
+input=input$ibead
+nacaccu=$3
+
+source ../SetEnvironment.sh MOLPRO
+# Definition of wavefunction
+# (common for both forces and NACME)
+source molpro.setup
+
+#-COMMENTS ON DF-CASSCF---------------------------------------------
+#-For new density fitting CASSCF code, seek more info here: http://www.molpro.net/info/2012.1/doc/update/node6.html
+#-http://www.molpro.net/info/2012.1/doc/manual/node114.html - about basis sets
+#-about Density Fitting: http://www.molpro.net/info/2012.1/doc/manual/node133.html
+#-Easiest way to do DF-CASSCF is to use turbomole (Ahlrichs) Def2 basis sets (SVP,TZVP etc.)
+#-For Dunnging basis sets, DF bases are available, but you won't calculate NAC
+#-For Pople basis sets, you need to specify DF basis manually, probably some of the DF Ahlrichs basis sets.
+
+rm -f ../engrad.dat.$ibead ../nacm.dat
+
+#-How many atoms?
+natom=$(cat ../geom.dat.$ibead | wc -l )
+let natom1=natom+1 
+let natom2=natom+2 
+
+# reading from state.dat
+# Number of states and which NACME to compute
+read -t 2 -a nstate
+read -t 2 -a tocalc
+
+# MOLPRO-CASSCF
+# wavefunction passed between steps via input.wfu
+# if you don't want that, comment out the second line
+# 3rd line is needed, we take forces and NACME from input.pun
+cat > $input.pom1 << EOF
+***Abin input
+memory,$memory,m;
+file,2,$input.wfu,unknown
+PUNCH,$input.pun,new
+gprint,orbital,civector
+
+Angstrom
+
+geometry=../geom.dat.$ibead
+
+basis=$basis
+
+!-for simple CASSCF, you don't need to modify anything below this
+
+!-we need to get rid of the SAMC records in file 2 (input.wfu,restart file)
+!-otherwise, the forces and NACME are wrong for the following reason
+!-cpmscf will not rewrite itself it but ather write into following records
+!-but the subsequent call to forces would read from old records -> wrong numbers
+!-we use file 2 for forces and NACME due to df-casscf
+data,truncate,2,5100
+
+if (lastorb.ne.MCSCF)then
+   {hf;wf,$nelectrons,0,$spin}
+endif
+EOF
+
+
+###############################################################
+#---------END OF USER INPUT--------!
+######  DO NOT MODIFY BELOW, unless you have problems reading forces or energies #####
+
+
+#---FOR NAC vectors-------------------
+cat > $input.pom3 << EOF
+$multi;
+occ,$nocc;
+closed,$nclosed;
+WF,$nelectrons,0,$spin;
+state,$nstate;
+maxiter,40;
+EOF
+
+rec=5001
+pom=0
+for ((ist1=1;ist1<=nstate-1;ist1++)) {
+   for ((ist2=ist1+1;ist2<=nstate;ist2++)) {
+      if [[ ${tocalc[$pom]} -eq 1 ]];then
+         echo "cpmcscf ,nacm,$ist1.1,$ist2.1,save=$rec.2,accu=1d-$nacaccu;" >> $input.pom3
+         let rec++
+      fi
+      let pom++
+   }
+}
+
+
+rec=5001
+pom=0
+for ((ist1=1;ist1<=nstate-1;ist1++)) {
+   for ((ist2=ist1+1;ist2<=nstate;ist2++)) {
+      if [[ ${tocalc[$pom]} -eq 1 ]];then
+         echo "forces ;nacm,$rec.2;" >> $input.pom3
+         let rec++
+      fi
+      let pom++
+   }
+}
+
+awk -F " " 'BEGIN{i=1;k=1;inp=1}{
+ if ( $1 == "cpmcscf" ) {
+	 cpm[i]=$0
+	 i++
+ }
+ else if ( $1 == "forces" ) {
+	 forces[k]=$0
+	 k++
+ }
+ else { 
+	 input[inp]=$0
+	 inp++
+ }
+ }END{
+ for (i=1;i<k;i=i+5) {
+	print ""
+  	for (j=1;j<inp;j++) print input[j]
+  	for (j=0;j<5;j++) print cpm[i+j]
+	for (j=0;j<5;j++) print forces[i+j]
+	}
+}' $input.pom3 > $input.pom4
+
+#--------------------------------------------------------------------
+#- BUILDING input.com------------------------------------------------
+cat $input.pom1 > $input.com  #basic parameters and commands
+cat $input.pom4 >> $input.com  #NACs
+#--END OF MOLPRO INPUT------------------------
+
+#----------MOLPRO JOB-------------------------
+export TMPDIR=$PWD/scratch$ibead
+$MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
+
+# Check whether all is OK.
+if [[ $? -eq 0 ]];then
+   cp $input.com.out $input.com.out.old
+else 
+   cp $input.com.out $input.com.out.error.$timestep
+   # TODO indicate to abin via exit signal whether NACME convergence problems
+   exit 2
+fi
+
+#####################################################################
+
+#-Extracting NonAdiabatic coupling matrix elements(NACME)
+#-Better precision in $input.pun
+grep 'NACME,' $input.pun | awk '{print $5,$6,$7}' > ../nacm.dat
+

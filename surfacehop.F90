@@ -36,6 +36,8 @@ module mod_sh
 
    CONTAINS
 
+
+!  INITIALIZATION ROUTINE (ugly, but works)
    subroutine sh_init(x, y, z, vx, vy, vz, dt)
    use mod_const,      only: AUtoEV
    use mod_general,    only: irest, natom, it, pot
@@ -68,8 +70,11 @@ module mod_sh
    if (inac.eq.1)then
       allocate( dotproduct_old(nstate, nstate, NTRAJMAX) )
       allocate( dotproduct(nstate, nstate, NTRAJMAX) )
-      dotproduct_old=0.0d0
-      dotproduct=dotproduct_old
+      dotproduct = 0.0d0
+
+      ! setting this to -10000 to indicate the first step for time-derivative couplings
+      ! see function get_tdc
+      dotproduct_old = -10000d0
       adjmom=1
    end if
 
@@ -114,56 +119,64 @@ module mod_sh
 
    end do
 
-   if(it.ne.0.and.irest.eq.1) call read_nacmrest()
+   ! TODO: only DEBUG, CHANGE ME BACK!
+   if(irest.eq.1) call read_nacmrest()
+   !if(irest.eq.1.and.it.ne.0) call read_nacmrest()
 
    end subroutine sh_init
+
 
    subroutine get_nacm(itrj)
    integer, intent(in) :: itrj
    integer :: iost
+
    if(inac.eq.0)then
-      iost=readnacm(itrj)
+      ! Calculate NACME using default accuracy
+      call calc_nacm(itrj, nac_accu1)
+
+      iost = read_nacm(itrj)
+
       if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
-!----------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-         call calcnacm(itrj)
-         iost=readnacm(itrj)
+!        if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY
+         call calc_nacm(itrj, nac_accu2)
+         iost = read_nacm(itrj)
       endif
+
       if(iost.ne.0)then
          write(*,*)'Some NACMEs not read. Exiting...'
-         call abinerror('main program')
+         call abinerror('get_nacm')
       endif
-      !we always have to set tocalc, as we change it in readnacm
+      ! we always have to set tocalc because we change it in readnacm
       call set_tocalc(itrj)
    endif
    end subroutine Get_Nacm
 
 
+!  In this routine, we decide which gradients and which NACME we need to compute
+!  TOCALC is a symmetric matrix, upper-triangle defines NACME,
+!  the diagonal defines gradients
    subroutine set_tocalc(itrj)
-   ! WARNING: tocalc array is currently the same for all trajs
+   ! WARNING: tocalc array is currently the same for all trajectories
    integer,intent(in) :: itrj 
-   integer   :: ist1,ist2
-   real(DP)  :: pop,pop2
+   integer   :: ist1, ist2
+   real(DP)  :: pop, pop2
+
+   tocalc = 0
    
-   do ist1=1,nstate-1
-      do ist2=ist1+1,nstate
-         if(abs(en_array(ist1,itrj)-en_array(ist2,itrj)).lt.deltae) then
-            tocalc(ist1,ist2)=1 
-         else
-            tocalc(ist1,ist2)=0 
-         endif
-      enddo
-   enddo
-   
-   if(inac.eq.2)then  ! for ADIABATIC dynamics
+   if(inac.ne.2)then  ! for ADIABATIC dynamics, do not calculate NACME
+
       do ist1=1,nstate-1
          do ist2=ist1+1,nstate
-         tocalc(ist1,ist2)=0
+            if(abs(en_array(ist1,itrj)-en_array(ist2,itrj)).lt.deltaE) then
+               tocalc(ist1,ist2)=1 
+            endif
          enddo
       enddo
+   
    endif
    
-   if(popthr.gt.0)then  
-      !COMPUTE NACME only if population of the states is gt.popthr
+   if(popthr.gt.0)then
+      ! COMPUTE NACME only if population of the states is gt.popthr
       do ist1=1,nstate-1
          pop = el_pop(ist1, itrj)
          do ist2=ist1+1,nstate
@@ -172,7 +185,14 @@ module mod_sh
          enddo
       enddo
    endif
+
+!  The diagonal holds information about gradients that we need
+!  for SH, we just need the gradient of the current state
+   tocalc(istate(itrj), istate(itrj)) = 1
+
+   ! TODO-EH: For Ehrenfest, we need gradients of all states
    end subroutine set_tocalc
+
 
    subroutine Write_nacmrest()
    use mod_general, only: narchive, it
@@ -295,27 +315,29 @@ module mod_sh
    end subroutine read_nacmrest
 
 
-   integer function readnacm(itrj)
+   integer function read_nacm(itrj)
    use mod_qmmm,only:natqm
-   integer :: iost,ist1,ist2,iat,itrj
-   iost=0  ! needed if each tocalc=0
-   open(127,file='nacm.dat')
+   integer :: iost, ist1, ist2, iat, itrj, iunit
+
+   iost = 0  ! needed if each tocalc=0
+   iunit = 600
+   open(iunit,file='nacm.dat')
    do ist1=1,nstate-1
       do ist2=ist1+1,nstate
    
          if(tocalc(ist1,ist2).eq.1)then
    
             do iat=1,natqm              ! reading only for QM atoms
-               read(127,*,IOSTAT=iost)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+               read(iunit,*,IOSTAT=iost)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                if(iost.eq.0)then
                   tocalc(ist1,ist2)=0   !marking as read, useful if we do decreased accuracy
                   nacx(iat,itrj,ist2,ist1)=-nacx(iat,itrj,ist1,ist2)
                   nacy(iat,itrj,ist2,ist1)=-nacy(iat,itrj,ist1,ist2)
                   nacz(iat,itrj,ist2,ist1)=-nacz(iat,itrj,ist1,ist2)
                else
-                  close(127,status='delete')
+                  close(iunit,status='delete')
                   write(*,*)'WARNING: NACME between states',ist1,ist2,'not read.'
-                  readnacm=iost
+                  read_nacm = iost
                   return
                endif
             enddo
@@ -326,20 +348,19 @@ module mod_sh
       enddo
    enddo
 
-   close(127,status='delete')
-   readnacm=iost
+   close(iunit,status='delete')
+   read_nacm = iost
    return
-   end function readnacm
+   end function read_nacm
 
 
-   subroutine calcnacm(itrj)
+   subroutine calc_nacm(itrj, nac_accu)
    use mod_utils, only: LowerToUpper
    use mod_general, only: it, pot
-   integer, intent(in) :: itrj
-   integer :: ist1,ist2
+   integer, intent(in) :: itrj, nac_accu
+   integer :: ist1, ist2
    character(len=100) :: chsystem
    open(unit=510,file='state.dat')
-   write(510,'(I2)')istate(itrj)
    write(510,'(I2)')nstate
    ! tocalc is upper triangular part of a matrix without diagonal
    ! tocalc(,)=1 -> calculate NACME
@@ -351,17 +372,59 @@ module mod_sh
    enddo
    close(510) 
 
-   chsystem='./'//trim(LowerToUpper(pot))//'/r.'//pot
-   ! We do not check whether the script is sensitive to the 3rd parameter
-   write(*,*)'WARNING: Some NACMs not computed. Trying with decreased accuracy...'
-   write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu2
-   write(chsystem,'(A20,I13,I4.3,I3,A12)')chsystem,it,itrj,nac_accu2,' < state.dat'
+   chsystem='./'//trim(LowerToUpper(pot))//'/r.'//trim(pot)//'.nacm '
+   ! TODO: move the following line somwhere else
+!   write(*,*)'WARNING: Some NACMs not computed. Trying with decreased accuracy...'
+!   write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu
+   write(chsystem,'(A30,I13,I4.3,I3,A12)')chsystem,it,itrj,nac_accu,' < state.dat'
 
    call system(chsystem)
 
-   end subroutine calcnacm
+   ! TODO: catch errors here
+
+   end subroutine calc_nacm
 
 
+   subroutine read_tdc(itrj, dt)
+   use mod_qmmm,only:natqm
+   integer, intent(in)  :: itrj
+   real(DP), intent(in) :: dt
+   integer :: ist1, ist2, iat, iunit, ijunk
+
+   iunit = 600
+
+   open(iunit,file='tdcoups.dat')
+   read(iunit,*)
+   read(iunit,*)
+   do ist1=1,nstate
+      read(iunit,*)ijunk,(dotproduct(ist1,ist2,itrj),ist2=1,nstate)
+   enddo
+   close(iunit)
+
+   do ist1=1,nstate
+      do ist2=1,nstate
+         dotproduct(ist1,ist2,itrj) = -dotproduct(ist1,ist2,itrj) / dt
+         if(ist1.eq.ist2) dotproduct(ist1,ist2,itrj) = 0.0d0
+      enddo
+   enddo
+
+   do ist1=1,nstate-1
+      do ist2=ist1+1,nstate
+         if(tocalc(ist1,ist2).eq.0)then
+            write(*,*)'Not computing NACM for states',ist1,ist2
+            dotproduct(ist1,ist2,itrj) = 0.0d0
+            dotproduct(ist2,ist1,itrj) = 0.0d0
+         endif
+      enddo
+   enddo
+
+   !  we don't have interpolation in the zeroth step
+   if(dotproduct(1,1,1).le.-1000) dotproduct_old = dotproduct
+
+   end subroutine read_tdc
+
+
+   ! move arrays from new step to old step
    subroutine move_vars(vx,vy,vz,vx_old,vy_old,vz_old,itrj)
    use mod_general,only:natom
    real(DP),intent(in)   :: vx(:,:),vy(:,:),vz(:,:)
@@ -400,6 +463,50 @@ module mod_sh
 
    end subroutine move_vars
    
+   ! TODO-EH
+   !*************************************
+   ! This is the main Ehrenfest routine !
+   !*************************************
+!   subroutine ehrenfest(x, y, z, fxc, fxy, fxz, px, py, pz, dt, eclas)
+!   This subroutine must be called midstep in velocity verlet, after we call force_clas
+!    use mod_arrays, only: vx, vy, vz, vx_old, vy_old, vz_old
+!    real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
+!    real(DP),intent(in)    :: px(:,:),py(:,:),pz(:,:)
+
+!    vx = px  ! these are momenta from time dt/2 !
+!    vy = py
+!    vz = pz
+
+!   call GET_NACME() ! calculate NACM at time DT
+
+
+   
+!   
+!   It has to extrapolate velocities from v(dt/2) to v(dt)
+!   This extrapolation can be quite accurate, since we can calculate approximate ehrenfest forces
+!   from eq XX simply by taking cel_re and cel_im from previous time step
+
+!   or better yet, we can propagate cel_re to cel_re(dt/2) and use these to calculate approximate forces
+!   then extrapolate velocities, and the propagate cel_re from dt/2 to dt
+
+!   do itp=1, substep / 2
+!     call interpolate() ! to dt/2
+!     call sh_integrate_wf(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
+!   end do
+!   
+
+!   call eh_calc_forces(fxc, fyz, fzc, fx_eh, fy_eh, fz_eh, nacx, nacy, nacz)
+!   call eh_extrapolate_velocities(vx_old, vy_old, vz_old, vx, vy, vz, fx_eh, fy_eh, fz_eh)
+!   do itp=1, substep / 2
+!     call interpolate() ! interpolate to dt, need to be carefull here
+!     call sh_integrate_wf(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
+!   end do
+
+!   At the end, don't forget to move ehrenfest forces to fxc(:,1) etc.
+!   fxc(:,1) = fx_eh
+
+!   end subroutine ehrenfest
+
 
 
    !******************************
@@ -440,7 +547,7 @@ module mod_sh
    integer  :: ist                     ! =istate(itrj)
    real(DP) :: vect_olap,fr,frd
    real(DP) :: Ekin
-   integer  :: ihop,ijunk
+   integer  :: ihop
    real(DP)  :: pop0, a_re, a_im, prob(NSTMAX), hop_rdnum, stepfs
    character(len=500)   :: formt
    character(len=20) :: chist,chihop,chit
@@ -455,60 +562,38 @@ do itrj=1,ntraj
    t_tot = 1.0d0
 
 
-!-------READING NACM-----------------------     
+!  FIRST, CALCULATE NACME
    if(inac.eq.0)then
 
       do ist1=1,nstate-1
          do ist2=ist1+1,nstate
             if(tocalc(ist1,ist2).eq.0)then
                write(*,*)'Not computing NACME between states',ist1,ist2
-               do iat=1,natqm        ! MUSIME NULOVAT UZ TADY,bo pak menime tocalc behem cteni
-                  nacx(iat,itrj,ist1,ist2)=0.0d0
-                  nacy(iat,itrj,ist1,ist2)=0.0d0
-                  nacz(iat,itrj,ist1,ist2)=0.0d0
-                  nacx(iat,itrj,ist2,ist1)=0.0d0
-                  nacy(iat,itrj,ist2,ist1)=0.0d0
-                  nacz(iat,itrj,ist2,ist1)=0.0d0
+               ! We need to flush these to zero
+               ! Need to do this here, since tocalc is changed in GET_NACME routine
+               do iat=1,natqm
+                  nacx(iat,itrj,ist1,ist2) = 0.0d0
+                  nacy(iat,itrj,ist1,ist2) = 0.0d0
+                  nacz(iat,itrj,ist1,ist2) = 0.0d0
+                  nacx(iat,itrj,ist2,ist1) = 0.0d0
+                  nacy(iat,itrj,ist2,ist1) = 0.0d0
+                  nacz(iat,itrj,ist2,ist1) = 0.0d0
                enddo
             endif
          enddo
       enddo
 
       if(pot.ne.'_tera_')then
-         iost=readnacm(itrj)
-!------------if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY--------------
-         if(iost.ne.0.and.nac_accu1.gt.nac_accu2)then
-            call calcnacm(itrj)
 
-            iost=readnacm(itrj)
-         endif
-!------------if NACME STILL NOT COMPUTED: USE OLD NACM--------------
-         if(iost.ne.0)then
-            write(*,*)'ERROR:Some NACMEs not read.'
-            call abinerror('surfacehop')
-!        do ist1=1,nstate-1
-!         do ist2=ist1+1,nstate
-!
-!         if(tocalc(ist1,ist2).eq.1)then !!po uspesnem precteni nulujeme tocalc
-!          write(*,*)'Warning! NACM between states',ist1,'and',ist2,'not computed.'
-!          write(*,*)'Using NACM from previous step.'
-!          do iat=1,natom
-!           nacx(iat,itrj,ist1,ist2)=nacx_old(iat,itrj,ist1,ist2)
-!           nacy(iat,itrj,ist1,ist2)=nacy_old(iat,itrj,ist1,ist2)
-!           nacz(iat,itrj,ist1,ist2)=nacz_old(iat,itrj,ist1,ist2)
-!           nacx(iat,itrj,ist2,ist1)=-nacx(iat,itrj,ist1,ist2)
-!           nacy(iat,itrj,ist2,ist1)=-nacy(iat,itrj,ist1,ist2)
-!           nacz(iat,itrj,ist2,ist1)=-nacz(iat,itrj,ist1,ist2)
-!          enddo
-!         endif
-
-!         enddo
-!        enddo
-         endif
+         ! This computes and reads NACME
+         call GET_NACM(itrj)
 
       end if
 
+!     TODO: move this to a separate routine
 !     Calculating overlap between nacmes
+!     This is crucial, since NACME vectors can change orientation 180 degrees between time steps
+!     and we need to correct that
       do ist1=1,nstate
          do ist2=1,nstate
             vect_olap=0.0d0
@@ -532,46 +617,18 @@ do itrj=1,ntraj
 !  INAC=1  endif
    endif
 
-!  reading time-derivative couplings
-   if ( inac.eq.1 ) then
-
-      open(100,file='tdcoups.dat')
-      read(100,*)
-      read(100,*)
-      do ist1=1,nstate
-         read(100,*)ijunk,(dotproduct(ist1,ist2,itrj),ist2=1,nstate)
-      enddo
-      close(100)
-
-      do ist1=1,nstate
-         do ist2=1,nstate
-            dotproduct(ist1,ist2,itrj)=-dotproduct(ist1,ist2,itrj)/dt
-            if(ist1.eq.ist2)  dotproduct(ist1,ist2,itrj)=0.0d0
-         enddo
-      enddo
-
-      do ist1=1,nstate-1
-         do ist2=ist1+1,nstate
-            if(tocalc(ist1,ist2).eq.0)then
-               write(*,*)'Not computing NACM for states',ist1,ist2
-               dotproduct(ist1,ist2,itrj)=0.0d0
-               dotproduct(ist2,ist1,itrj)=0.0d0
-            endif
-         enddo
-      enddo
-
-
-      !  we don't have interpolation in the zeroth step
-      if( it.eq.1) dotproduct_old=dotproduct
-   ! TDC end if
+!  Reading time-derivative couplings
+   if (inac.eq.1)then
+      call read_tdc(itrj, dt)
    endif
-!------------------END-OF-TDC-------------------------------
+
 
 !  MAIN LOOP
 !  Smaller time step for electronic population transfer
-   do itp=1,substep
+   do itp=1, substep
 
-      ist=istate(itrj)
+      ist = istate(itrj)
+
       ! pop0 is later used for Tully's fewest switches
       pop0 = el_pop(ist, itrj)
 
@@ -696,25 +753,8 @@ do itrj=1,ntraj
 !  set tocalc array for the next step
    call set_tocalc(itrj)
 
-   if(idebug.eq.1)then
-      ! this is rarely needed, since we always print dotproduct into
-      ! dotprod.dat
-      ! this is only to check that the matrix is really symmetrical
-      if(it.eq.1)then
-         open(iunit,file='dotprodmatrix.dat')
-      else
-         open(iunit,file='dotprodmatrix.dat',access='append')
-      endif
-      write(iunit,*)'Step: ',it
-      do ist1=1,nstate
-         write(iunit,*)(dotproduct_int(ist1,ist2,itrj),ist2=1,nstate)
-      enddo
-      close(iunit)
-   endif
-
-
-
    popsum = check_popsum(itrj)
+
    call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
 
    if(modulo(it,nwrite).eq.0)then
@@ -771,7 +811,7 @@ enddo
       integer   :: iat
       integer, allocatable :: tocalc_temp(:,:)
 
-!  Checking for frustrated hop
+!     Checking for frustrated hop
 
       a_temp=0.d0
       b_temp=0.d0

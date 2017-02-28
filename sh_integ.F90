@@ -21,6 +21,7 @@ module mod_sh_integ
    real(DP) :: eshift, dtp, popsumthr=0.001d0
    integer  :: phase = 0, nstate = 1
    character(len=10) :: integ='butcher'
+   ! TODO make dtp and gama private
 
    CONTAINS
 
@@ -525,6 +526,16 @@ module mod_sh_integ
       end if
 
    end subroutine sh_debug_wf
+
+
+   ! TODO-EH:
+!   subroutine eh_calc_forces(fxc, fyc, fzc, fx_eh, fy_eh, fz_eh, nacx, nacy, nacz)
+      ! calculate EH forces 
+      ! This is a bit tricky, we need current forces, NACME and cel_re, cel_im coefficients!
+
+!   end subroutine eh_calc_forces
+
+!   subroutine eh_extrapolate_velocities(vx_old, vy_old, vz_old, vx, vy, vz, fx, fy, fz)
 
 end module mod_sh_integ
 

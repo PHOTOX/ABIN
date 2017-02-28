@@ -51,17 +51,17 @@ program abin_dyn
    integer  :: ierr
 !$ integer  :: nthreads,omp_get_max_threads
 
-   ! This cannot be in init because of namelist 'system'
+!  This cannot be in init because of namelist 'system'
    if(my_rank.eq.0) call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
 
-!-   INPUT AND INITIALIZATION SECTION      
+!  INPUT AND INITIALIZATION SECTION
    call init(dt, values1) 
 
    if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then
       call archive_file('restart.xyz',it)
    end if
 
-!-------SH initialization -- 
+!  Surface hopping initialization
    if(ipimd.eq.2)then
       call sh_init(x, y, z, vx, vy, vz, dt)
    endif
@@ -84,7 +84,7 @@ program abin_dyn
       vx = transxv
       vy = transyv
       vz = transzv
-!------NORMAL MODE TRANSFORMATION-------------
+!  NORMAL MODE TRANSFORMATION
    else if(inormalmodes.gt.0)then
       if(idebug.gt.1)then
          write(*,*)'Positions before transform'
@@ -107,7 +107,7 @@ program abin_dyn
       endif
    endif
 
-!-----End of transformations
+!  End of transformations
 
 !-----Note that amt equals am if staging is off
    px = amt * vx   
@@ -133,7 +133,7 @@ program abin_dyn
 !     I don't know why the hell not.
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
-!----getting initial forces and energies
+!     getting initial forces and energies
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
       if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
       
@@ -143,25 +143,27 @@ program abin_dyn
          call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
       end if
      
-!----setting initial values for surface hoping
+!     setting initial values for surface hoping
       if(ipimd.eq.2)then
          do itrj=1, ntraj
-            if (it.eq.0.and.pot.ne.'_tera_') call get_nacm(itrj)
+         ! TODO: only DEBUG, change me back!!
+            if (irest.ne.1.and.pot.ne.'_tera_') call get_nacm(itrj)
+            !if (irest.ne.1.and.pot.ne.'_tera_'.or.it.eq.0) call get_nacm(itrj)
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
             if(pot.eq.'_tera_') call move_new2old_terash()
          end do
       end if
 
-!-----LOOP OVER TIME STEPS
-!---- "it" variable is set to 0 or read from restart.xyz in subroutine init
+!     LOOP OVER TIME STEPS
+!     "it" variable is set to 0 or read from restart.xyz in subroutine init
       it=it+1
       do it=(it),nstep
 
 #ifdef MPI
-! This is needed, because all ranks need to see EXIT
-! Maybe we should get rid of it for performance reasons
-! We could still call Abort from rank0,but we would not be sure that we are on
-! the same timestep. Does it matter??
+!        This is needed, because all ranks need to see EXIT
+!        Maybe we should get rid of it for performance reasons
+!        We could still call Abort from rank0, but we would not be sure that we are on
+!        the same timestep. Does it matter??
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
          INQUIRE(FILE="EXIT", EXIST=file_exists)
@@ -188,17 +190,7 @@ program abin_dyn
 
          endif
        
-         if(idebug.ge.2)then
-            write(*,*)'positions',it
-            call printf(x,y,z)
-            write(*,*)'momenta',it
-            call printf(px,py,pz)
-            write(*,*)'forces',it
-            call printf(fxc,fyc,fzc)
-         end if
-
-
-!-----   CALL the integrator, propagate through one time step
+!        CALL the integrator, propagate through one time step
          SELECT CASE (md)
             case (1)
                call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
@@ -216,7 +208,7 @@ program abin_dyn
          vy = py / amt
          vz = pz / amt
 
-!-------SURFACE HOPPING SECTION----------------------------      
+!        SURFACE HOPPING SECTION
          if(ipimd.eq.2)then
 
             call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
@@ -225,11 +217,13 @@ program abin_dyn
             py = amt * vy
             pz = amt * vz
 
+            ! TODO: probably this should be in surfacehop routine
             if(pot.eq.'_tera_') call move_new2old_terash()
 
          endif
 
 #ifdef MPI
+!        SWAP REMD REPLICAS
          if (iremd.eq.1.and.modulo(it,nswap).eq.0.and.it.gt.imini)then
             call remd_swap(x, y, z, x, y, z, fxc, fyc, fzc, eclas)
          end if
@@ -271,17 +265,17 @@ program abin_dyn
          
       
          if(modulo(it,nwrite).eq.0.and.my_rank.eq.0)then
-           write(*,'(I20,F15.2)')it, sim_time * AUtoFS
-           call flush(6)
+            write(*,'(I20,F15.2)')it, sim_time * AUtoFS
+            call flush(6)
          endif
 
-      !------------------------------------------------------------------------
-!   Time step loop      
+
+!     Time step loop      
       enddo
  
-!DUMP restart file at the end of a run even if the final step is not compatible with nrest
-!Because ncalc might be >1, we have to perform transformation to get the most
-!recent coordinates and velocities
+!     DUMP restart file at the end of a run
+!     Because NCALC might be >1, we have to perform transformation to get the most
+!     recent coordinates and velocities
       it = it - 1 
 
       if (istage.eq.1)then
@@ -296,12 +290,14 @@ program abin_dyn
          call restout(x,y,z,vx,vy,vz,it)
       endif
 
-!   minimization endif
+!  MINIMIZATION endif
    endif
    
    call finish(0)
 
-!---------TIMING-------------------------------
+!  TIMING
+!  TODO: Maybe we should print some statistics more often
+!  i.e. hours per picosecond or sth like that
    if (my_rank.eq.0)then
       call cpu_time(TIME)
       write(*,*)' Total cpu time [s] (does not include ab initio calculations)'
@@ -324,6 +320,7 @@ end
 
 
 
+! Finalizing routine, mostly for deallocating arrays
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general

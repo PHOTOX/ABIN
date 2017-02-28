@@ -1,13 +1,10 @@
 module mod_terampi_sh
-! ----------------------------------------------------------------
+!----------------------------------------------------------------
 ! Interface for TeraChem based Surface Hopping.
-! Based on the FMS interface from FMS90
-! (files TerachemModule.f90)
+! Based on the FMS interface from FMS90 (TerachemModule.f90)
 !
-! Original Author: Unknown, J. Snyder and Ed Hohenstein
-!
-! Date: December 2015
-! ----------------------------------------------------------------
+! Original Authors: Basile Curchod, J. Snyder and Ed Hohenstein
+!----------------------------------------------------------------
    use mod_const, only: DP
    use mod_terampi, only: newcomm, qmcharges, qmcoords, dxyz_all, chsys_sleep
    implicit none
@@ -89,7 +86,7 @@ subroutine receive_terash(fx, fy, fz, eclas)
    ! TODO: these things should be printed in analysis.F90
    ! TODO: move charges and dipoles to array module and make them universal
    ! TODO: move TDIP to surface hopping module
-   ! allow reading these stuff from other programs as well
+   ! allow reading this stuff from other programs as well
    call print_transdipoles(TDip, istate(itrj), nstate-1 )
 
 !  Receive dipole moment from TC
@@ -174,6 +171,7 @@ subroutine receive_terash(fx, fy, fz, eclas)
    oldWfn = 1
 
 end subroutine receive_terash
+
 
 subroutine send_terash(x, y, z, vx, vy, vz)
    use mod_array_size, only: NSTMAX
@@ -280,6 +278,7 @@ subroutine send_terash(x, y, z, vx, vy, vz)
 
 end subroutine send_terash
 
+
 subroutine init_terash(x, y, z)
    use mod_const, only: DP, ANG
    use mod_general, only: idebug, nwalk, DP, natom
@@ -382,6 +381,7 @@ subroutine write_wfn()
    if(modulo(it,narchive).eq.0)  call archive_file('wfn.bin',it)
 
 end subroutine write_wfn
+
 
 subroutine read_wfn()
    use mod_files, only: UWFN

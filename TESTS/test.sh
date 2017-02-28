@@ -150,9 +150,16 @@ do
    # Otherwise, STDIN is screwed up. I have no idea why.
    # http://stackoverflow.com/questions/1304600/read-error-0-resource-temporarily-unavailable
    if [[ -f "test.sh" ]];then
+
       ./test.sh $ABINEXE 2> /dev/null
+
    else
-      $ABINEXE > output  
+      if [[ -f "veloc.in.ref" ]];then
+         $ABINEXE -v "veloc.in.ref" > output  
+      else
+         $ABINEXE > output  
+      fi
+
       #for testing restart
       if [[ -e input.in2 ]];then
          $ABINEXE -i input.in2 >> output
