@@ -156,6 +156,7 @@ subroutine init(dt, values1)
       write(*,*) 'PLUMEDfile is ',plumedfile   
 #else
       write(*,*)'FATAL ERROR: ABIN was not compiled with PLUMED.'
+      stop 1
 #endif
 
    endif
