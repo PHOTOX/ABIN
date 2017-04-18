@@ -45,6 +45,7 @@ subroutine init(dt, values1)
    use mod_terampi
    use mod_terampi_sh, only: init_terash
 #endif
+   implicit none
    real(DP),intent(out) :: dt
    integer,dimension(8) :: values1
    real(DP) :: masses(MAXTYPES)
@@ -57,7 +58,7 @@ subroutine init(dt, values1)
    LOGICAL :: file_exists
 !  real(DP) :: wnw=5.0d-5
    integer :: ierr
-!$ integer :: nthreads,omp_get_max_threads
+!$ integer :: nthreads, omp_get_max_threads
 !  wnw "optimal" frequency for langevin (inose=3) 
    REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
 !  REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
@@ -66,9 +67,9 @@ subroutine init(dt, values1)
 
    namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
-            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive, &
+            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
-            pot_ref, nstep_ref, teraport
+            pot_ref, nstep_ref, teraport, nteraservers
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
 
@@ -135,15 +136,24 @@ subroutine init(dt, values1)
    if(pot.eq.'_tera_')then
       if (nwalk.gt.1)then
          write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
-         write(*,*)'You should have "integrator reset" or "integrator regular" in &
+         write(*,*)'You should have "integrator regular" in &
 & the TeraChem input file'
       end if
-      call connect_terachem()
+      write(*,*)'Number of TeraChem servers = ', nteraservers
+      do ipom=1, nteraservers
+         call connect_terachem(ipom)
+      end do
+      
+      if(nproc.ne.nteraservers)then
+         write(*,*)'WARNING: parameter "nproc" must equal "nteraservers"'
+         write(*,*)'Setting nproc = ', nteraservers
+         nproc = nteraservers
+      end if
    end if
 #else
    if(pot.eq.'_tera_')then
       write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
-      write(*,*)'You cannot use direct interface to TeraChem.'
+      write(*,*)'You cannot use the direct MPI interface to TeraChem.'
       call abinerror('init')
    end if
 #endif
@@ -340,7 +350,7 @@ print '(a)','**********************************************'
 !--END OF READING INPUT---------------
 
 !$ call OMP_set_num_threads(nproc)
-!$ nthreads=omp_get_max_threads()
+!$ nthreads = omp_get_max_threads()
 
 #ifdef MPI
    if(pot.eq.'_tera_')then
@@ -425,7 +435,7 @@ print '(a)','**********************************************'
 
       if (pot.eq.'mmwater'.or.pot_ref.eq.'mmwater') call check_water(natom, names)
 
-!-----THERMOSTAT INITIALIZATION------------------ 
+!----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
 !    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
@@ -438,8 +448,6 @@ print '(a)','**********************************************'
      if(irest.eq.1)then
         call restin(x,y,z,vx,vy,vz,it)
      end if
-
-
 !----END OF INPUT SECTION---------------------
 
 
@@ -506,7 +514,7 @@ print '(a)','**********************************************'
       call ScaleVelocities(vx, vy, vz)
 
        
-!----some stuff for spherical boundary onditions
+!-----some stuff for spherical boundary onditions
       if(isbc.eq.1) call sbc_init(x,y,z)
 
 !-----inames initialization for guillot rm MM part. 

@@ -34,7 +34,7 @@ pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 INTERFACE_REF=${pot_ref^^}
 
 
-
+# TODO: Check that the MD run in existing job.log is not running anymore
 echo "Job started at: " >> $OUTPUT
 date >> $OUTPUT
 echo "Running on node:" >> $OUTPUT
@@ -80,7 +80,7 @@ else
    $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
-cp -pr * $KDE/.
+cp -upr * $KDE/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"

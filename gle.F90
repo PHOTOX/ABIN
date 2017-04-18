@@ -214,7 +214,7 @@ contains
       write(6,*) "# Using canonical-sampling, Cp=kT"
       gC=0.0d0
       do i=1,ns+1
-         gC(i,i)=temp
+         gC(i,i) = temp
       enddo
    else    
       write(6,*)"# Reading specialized Cp matrix."

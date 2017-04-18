@@ -123,7 +123,6 @@ subroutine remove_comvel(vx, vy, vz, mass, lremove)
    real(DP)                :: vcmx, vcmy, vcmz, tm
    integer                 :: iat, iw
 
-   if(my_rank.eq.0.and.lremove) write(*,*)'Removing center of mass velocity.'
 
    do iw=1,nwalk
 
@@ -144,6 +143,7 @@ subroutine remove_comvel(vx, vy, vz, mass, lremove)
 
 !     Shift velocities such that momentum of center of mass is zero
       if(lremove)then
+         if(my_rank.eq.0) write(*,*)'Removing center of mass velocity.'
          do iat=1,natom
             vx(iat,iw) = vx(iat,iw) - vcmx
             vy(iat,iw) = vy(iat,iw) - vcmy
@@ -171,7 +171,6 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
 
    if (pot.eq.'2dho') return
 
-   if(my_rank.eq.0.and.lremove) write(*,*)'Removing angular momentum.'
 
    ! It would probably be more correct to calculate angular momentum
    ! for the whole bead necklace, same with COM velocity
@@ -233,9 +232,14 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
       Omz = Iinv(6)*Lx + Iinv(7)*Ly + Iinv(8)*Lz
       Om_tot = dsqrt(Omx**2+Omy**2+Omz**2)
  
-      write(*,*)"com rotation velocity:", Omx, Omy, Omz, Om_tot
+      ! We probably need to diagonalize I to get kinetic energy...
+      !write(*,*)"Angular velocity:", Omx, Omy, Omz, Om_tot
+      !Ekin = 0.5 * (Omx**2
+      !write(*,*)"Angular kinetic energy:", 0.5 * Om* Om_tot**2
+      !write(*,*)"Angular kinetic energy:", 0.5 * * Om_tot**2
  
       if(lremove)then
+         if(my_rank.eq.0) write(*,*)'Removing angular momentum.'
          do iat =1, natom
             vx(iat,iw) = vx(iat,iw) - Omy*z(iat,iw) + Omz*y(iat,iw)
             vy(iat,iw) = vy(iat,iw) - Omz*x(iat,iw) + Omx*z(iat,iw)

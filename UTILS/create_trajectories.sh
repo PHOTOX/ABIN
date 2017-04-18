@@ -26,7 +26,6 @@ folder=MP2-NH4           # Name of the folder with trajectories
 inputdir=TEMPLATE-$folder   # Directory with input files for ABIN
 abin_input=$inputdir/input.in   # main input file for ABIN
 launch_script=$inputdir/r.abin	# this is the file that is submitted by qsub
-abinexe=abin.v1.0          # path to abin binary
 submit="qsub -q nq -cwd  " # comment this line if you don't want to submit to queue yet
 rewrite=0            # if =1 -> rewrite trajectories that already exist
 jobs=20              # number of batch jobs to submit. Trajectories will be distributed accordingly.
@@ -62,10 +61,6 @@ fi
 
 if [[ ! -z "$veloc" ]] && [[ ! -f "$veloc" ]];then
    File_not_found "$veloc"
-fi
-
-if [[ ! -e "$abinexe" && ! `which $abinexe` ]];then
-   File_not_found "$abinexe"
 fi
 
 if [[ ! -e $abin_input ]];then
@@ -180,7 +175,6 @@ while [[ $i -le "$nsample" ]];do
 
    cat > $folder/TRAJ.$i/r.$molname.$i << EOF
 #!/bin/bash
-ABINEXE=$abinexe
 JOBNAME=ABIN.$molname.${i}_$$_\${JOB_ID}
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
@@ -191,7 +185,7 @@ EOF
       echo "INPUTVELOC=veloc.in" >> $folder/TRAJ.$i/r.$molname.$i
    fi
 
-   grep -v -e '/bin/bash' -e 'ABINEXE=' -e "JOBNAME=" -e "INPUTPARAM=" -e "INPUTGEOM=" -e "INPUTVELOC=" $launch_script >> $folder/TRAJ.$i/r.$molname.$i
+   grep -v -e '/bin/bash' -e "JOBNAME=" -e "INPUTPARAM=" -e "INPUTGEOM=" -e "INPUTVELOC=" $launch_script >> $folder/TRAJ.$i/r.$molname.$i
 
    chmod 755 $folder/TRAJ.$i/r.$molname.$i
 

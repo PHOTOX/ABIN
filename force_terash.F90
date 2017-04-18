@@ -9,7 +9,7 @@ module mod_terampi_sh
 ! Date: December 2015
 ! ----------------------------------------------------------------
    use mod_const, only: DP
-   use mod_terampi, only: newcomm, qmcharges, qmcoords, dxyz_all, chsys_sleep
+   use mod_terampi, only: chsys_sleep
    implicit none
    private
 #ifdef MPI
@@ -28,18 +28,21 @@ CONTAINS
 #ifdef MPI
 subroutine force_terash(x, y, z, fx, fy, fz, eclas)
    use mod_const, only: DP
+   use mod_terampi, only: newcomms
    include 'mpif.h'
    real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)   ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)   ::  eclas
 
-   call send_terash(x, y, z, fx, fy, fz)
+   ! for SH, we use only one TC server...
+   ! might be changes if we ever implement more elaborate SH schemes
+   call send_terash(x, y, z, fx, fy, fz, newcomms(1))
 
-   call receive_terash(fx, fy, fz, eclas)
+   call receive_terash(fx, fy, fz, eclas, newcomms(1))
 
 end subroutine force_terash
 
-subroutine receive_terash(fx, fy, fz, eclas)
+subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_const, only: DP, ANG
    use mod_array_size, only: NSTMAX
    use mod_general, only: idebug, natom
@@ -50,7 +53,9 @@ subroutine receive_terash(fx, fy, fz, eclas)
    include 'mpif.h'
    real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
    real(DP),intent(inout) :: eclas
+   integer, intent(in)    :: newcomm
    real(DP) :: dip(NSTMAX*3), tdip((NSTMAX-1)*3) ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
+   real(DP) :: qmcharges( size(fx,1) )
    integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iat,iw, ist1, ist2, itrj, ipom, i
    integer  :: bufints(20)
@@ -174,7 +179,7 @@ subroutine receive_terash(fx, fy, fz, eclas)
 
 end subroutine receive_terash
 
-subroutine send_terash(x, y, z, vx, vy, vz)
+subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
    use mod_array_size, only: NSTMAX
    use mod_const, only: DP, ANG, AUTOFS
    use mod_general, only: natom, idebug, sim_time
@@ -183,9 +188,11 @@ subroutine send_terash(x, y, z, vx, vy, vz)
    use mod_utils, only: abinerror
    use mod_sh,    only: istate, tocalc, nstate, ignore_state 
    include 'mpif.h'
-   real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
-   real(DP),intent(inout)   ::  vx(:,:),vy(:,:),vz(:,:)
-   real(DP)                 ::  bufdoubles(100), vels(3, 1000) !DH initial hack
+   real(DP),intent(in)     :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout)  :: vx(:,:),vy(:,:),vz(:,:)
+   integer, intent(in)     :: newcomm
+   real(DP)                ::  bufdoubles(100)
+   real(DP) :: qmcoords(3, size(x,1)), vels(3,size(vx,1) )
    integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iw, iat, itrj, i, ist1, ist2
    integer  :: bufints(NSTMAX*(NSTMAX-1)/2+NSTMAX)
@@ -197,9 +204,9 @@ subroutine send_terash(x, y, z, vx, vy, vz)
       qmcoords(1,iat) = x(iat,iw)
       qmcoords(2,iat) = y(iat,iw)
       qmcoords(3,iat) = z(iat,iw)
-      vels(1,iat) = vx(iat,iw) 
-      vels(2,iat) = vy(iat,iw) 
-      vels(3,iat) = vz(iat,iw) 
+      vels(1,iat) = vx(iat,iw)
+      vels(2,iat) = vy(iat,iw)
+      vels(3,iat) = vz(iat,iw)
    end do
 
    ! Send ESinit
@@ -284,12 +291,17 @@ subroutine init_terash(x, y, z)
    use mod_system, only: names
    use mod_qmmm, only: natqm
    use mod_sh, only: nstate
+   use mod_terampi, only: newcomms
    include 'mpif.h'
    real(DP),intent(in)  ::  x(:,:), y(:,:), z(:,:)
+   real(DP) :: qmcoords(3, size(x,1))
    integer  :: status(MPI_STATUS_SIZE)
-   integer  :: ierr, iat, iw
+   integer  :: ierr, iat, iw, newcomm
    integer, parameter :: FMSinit = 1
    integer  :: bufints(3)
+
+   ! use only one TC server !
+   newcomm = newcomms(1)
 
    iw = 1
    do iat=1, natqm

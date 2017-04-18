@@ -18,76 +18,92 @@ module mod_terampi
    use mod_const, only: DP
    implicit none
    private
+   integer, parameter   :: MAXTERASERVERS=4
    ! By default, take port name from a file
    character*50  ::  teraport = '', chsys_sleep
-   integer     ::  newcomm ! Communicator, initialized in mpi_init subroutine
+   integer     ::  newcomms(MAXTERASERVERS) ! Communicator, initialized in mpi_init subroutine
 !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
-   integer, parameter     ::  natmm_tera=0
-   character(len=2), allocatable :: names_qm(:)
-   real(DP), allocatable :: qmcharges(:)  ! QM charges from population analysis
-   real(DP), allocatable :: mmcharges(:)  ! QM charges from population analysis
-   real(DP), allocatable :: qmcoords(:,:)
-   real(DP), allocatable :: mmcoords(:,:) 
-   real(DP), allocatable :: dxyz_all(:,:)
-   real(DP)  :: mpisleep = 0.25
-   public :: teraport, newcomm, mpisleep, &
-             qmcharges, qmcoords, dxyz_all, chsys_sleep
+   integer, parameter   ::  natmm_tera=0
+   integer  :: nteraservers = 1
+   real(DP), allocatable :: mmcharges(:)
+   real(DP)  :: mpi_sleep = 0.05
+   public :: teraport, newcomms, mpi_sleep, nteraservers, chsys_sleep
 #ifdef MPI
-   public :: finalize_terachem, initialize_terachem,connect_terachem, force_tera
+   public :: finalize_terachem, initialize_terachem, connect_terachem, force_tera
    save
 
-contains
+CONTAINS
 
 subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
    use mod_const, only: DP, ANG
-   use mod_general, only: idebug, iqmmm, nwalk
-!   use mod_system, only: names
+   use mod_utils, only: abinerror
+   use mod_general, only: iqmmm, nwalk
+   use mod_interfaces, only: oniom
+   include 'mpif.h'
+   real(DP),intent(in)     ::  x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
+   real(DP),intent(inout)  ::  eclas
+   integer,intent(in)      ::  walkmax
+   integer  :: iw, itera
+   integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
+
+! DHnote: we cannot use Niklasson's propagator in TC if nwalk > 1
+! This is a responsibility of the user
+
+! For parallel terachem servers, we would need to read multiple port.txt
+! files and newcomm would be an array. That's not implemented at this moment.
+
+!
+   if(modulo(walkmax, nteraservers).ne.0)then
+      write(*,*)'ERROR: Parameter "nwalk" must be divisible by "nteraservers"!'
+      call abinerror("force_tera")
+   end if
+
+
+   itera = 1
+
+!$OMP PARALLEL DO PRIVATE(itera)
+   do iw=1, walkmax
+
+      ! map OMP thread to TC server
+!$    itera = OMP_GET_THREAD_NUM() + 1
+
+      call send_tera(x, y, z, iw, newcomms(itera))
+
+      call receive_tera(fx, fy,fz, eclas, iw, walkmax, newcomms(itera))
+
+      ! ONIOM was not yet tested!!
+      if (iqmmm.eq.1) call oniom(x, y, z, fx, fy, fz, eclas, iw)
+
+   end do
+!$OMP END PARALLEL DO
+
+end subroutine force_tera
+
+
+
+subroutine send_tera(x, y, z, iw, newcomm)
+   use mod_const, only: DP, ANG
+   use mod_general, only: idebug, iqmmm
+   use mod_system,only: names
    use mod_qmmm, only: natqm
    use mod_utils, only: printf, abinerror
    use mod_interfaces, only: oniom
    include 'mpif.h'
-   real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
-   real(DP),intent(inout)   ::  fx(:,:),fy(:,:),fz(:,:)
-   real(DP),intent(inout)   ::  eclas
-   integer,intent(in)      ::  walkmax
-!   integer, intent(in) :: qmtypes(natqm)    ! QM atom types (nuclear charge in au)
-   real(DP) :: escf                 ! SCF energy
-   real(DP) :: dipmom(4,3)          ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
-   real(DP) :: dummy=1.0d0
+   real(DP),intent(in)     ::  x(:,:),y(:,:),z(:,:)
+   integer,intent(in)      ::  iw, newcomm
+   real(DP) :: coords(3, size(x,1) )
+   character(len=2) :: names_qm(size(x,1)+5)
    integer  :: status(MPI_STATUS_SIZE)
-   integer  :: ierr, iw, iat
+   integer  :: ierr, iat
    logical  :: ltest
 
-! DHnote: we cannot use Niklasson's propagator if nwalk > 1
-! This is the responsibility of the user
 
-! For parallel terachem servers, we would need to read multiple port.txt
-! files and newcomm would be an array. That's not implemented at this moment.
-!!$ nteraservers=1
-!!$ call OMP_SET_NESTED(TRUE)
-!!$ if (OMP_GET_NESTED().ne.TRUE.and.parallel_qmmm.eq.1)then
-!!$   write(*,*)'Nested parallelism is not supported by this compiler.'
-!!$   write(*,*)'Please set parallel_qmmm=0.'
-!!$   call abinerror('force_tera')
-!!$ end if
-
-!!$ OMP PARALLEL DO PRIVATE(qmcoords, mmcoords, ierr, iat, dxyz_all, escf) & !qmcharges,mmcharges and dipmom are not used at this point 
-!!$     IF(nwalk.gt.1.and.nteraservers.gt.1) NUM_THREADS(nteraservers)
-   do iw=1, walkmax
-
-!!$OMP PARALLEL SECTIONS IF(parallel_qmmm.eq.true) NUM_THREADS(2)
-!!$OMP_SECTION
-
-      do iat=1,natqm
-         qmcoords(1,iat) = x(iat,iw)/ANG
-         qmcoords(2,iat) = y(iat,iw)/ANG
-         qmcoords(3,iat) = z(iat,iw)/ANG
-      end do
-      do iat=1,natmm_tera
-         mmcoords(1,iat) = x(iat+natqm,iw)/ANG
-         mmcoords(2,iat) = y(iat+natqm,iw)/ANG
-         mmcoords(3,iat) = z(iat+natqm,iw)/ANG
-      end do
+   do iat=1,natqm
+      coords(1,iat) = x(iat,iw)/ANG
+      coords(2,iat) = y(iat,iw)/ANG
+      coords(3,iat) = z(iat,iw)/ANG
+   end do
 
    ! -----------------------------------------
    ! Begin sending data each step to terachem
@@ -95,12 +111,15 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
 
 
    ! Send natqm and the type of each qmatom
-   if ( idebug > 1 ) then
+   if (idebug > 1) then
       write(6,'(/, a, i0)') 'Sending natqm = ', natqm
       call flush(6)
    end if
    call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
 
+   do iat=1,natqm
+      names_qm(iat) = names(iat)
+   end do
    if ( idebug > 1 ) then
       write(6,'(/,a)') 'Sending QM atom types: '
       write(*,*)(names_qm(iat), iat=1,natqm)
@@ -118,22 +137,26 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
       write(names_qm(natqm+4),'(I2.2)')iw
    end if
    write(names_qm(natqm+5),'(A2)')'++'
-!   write(names_qm(natqm+1),'(A9,I3.3,A2)')'++scratch',iw,'++'
-   call MPI_Send( names_qm, 2*size(names_qm), MPI_CHARACTER, 0, 2, newcomm, ierr )
+   call MPI_Send( names_qm, 2*natqm+10, MPI_CHARACTER, 0, 2, newcomm, ierr )
 
    ! Send QM coordinate array
    if ( idebug > 1 ) then
       write(6,'(a)') 'Sending QM coords: '
-   end if
-   if ( idebug > 1) then
       do iat=1, natqm
-         write(6,*) 'Atom ',iat,': ',qmcoords(:,iat)
+         write(6,*) 'Atom ',iat,': ',coords(:,iat)
          call flush(6)
       end do 
    end if
-   call MPI_Send( qmcoords, size(qmcoords), MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call MPI_Send( coords, natqm*3, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
 
 if(natmm_tera.gt.0)then
+
+   do iat=1,natmm_tera
+      coords(1,iat) = x(iat+natqm,iw)/ANG
+      coords(2,iat) = y(iat+natqm,iw)/ANG
+      coords(3,iat) = z(iat+natqm,iw)/ANG
+   end do
+
    ! Send natmm and the charge of each atom
    if ( idebug > 1 ) then
       write(6,'(a, i0)') 'Sending natmm = ', natmm_tera
@@ -151,9 +174,29 @@ if(natmm_tera.gt.0)then
       write(6,'(a)') 'Sending charges coords: '
    end if
 
-   call MPI_Send( mmcoords, 3*natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call MPI_Send( coords, 3*natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
 end if
 
+end subroutine send_tera
+
+
+subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
+   use mod_const, only: DP, ANG
+   use mod_general, only: idebug
+   use mod_qmmm, only: natqm
+   use mod_utils, only: printf, abinerror
+   include 'mpif.h'
+   real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
+   real(DP),intent(inout)  ::  eclas
+   integer,intent(in)      ::  iw, walkmax, newcomm
+   ! TODO: make qmcharges global variable
+   real(DP) :: qmcharges( size(fx,1) )
+   real(DP) :: dxyz_all(3, size(fx,1) )
+   real(DP) :: escf                 ! SCF energy
+   real(DP) :: dipmom(4,3)          ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
+   integer  :: status(MPI_STATUS_SIZE)
+   integer  :: ierr, iat
+   logical  :: ltest
    ! -----------------------------------
    ! Begin receiving data from terachem
    ! -----------------------------------
@@ -169,7 +212,7 @@ end if
 
    ltest = .false.
    do while(.not.ltest)
-      call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG,newcomm,ltest, status, ierr)
+      call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, ltest, status, ierr)
       call system(chsys_sleep)
    end do
 
@@ -240,55 +283,44 @@ end if
    end if
 !!$OMP CRITICAL
    do iat=1,natqm+natmm_tera
-      fx(iat,iw)=-dxyz_all(1,iat)
-      fy(iat,iw)=-dxyz_all(2,iat)
-      fz(iat,iw)=-dxyz_all(3,iat)
+      fx(iat,iw) = -dxyz_all(1,iat)
+      fy(iat,iw) = -dxyz_all(2,iat)
+      fz(iat,iw) = -dxyz_all(3,iat)
    end do
 !!$OMP END CRITICAL
 
-!!$OMP ATOMIC
-   eclas = eclas + escf / nwalk
+!$OMP ATOMIC
+   eclas = eclas + escf / walkmax
 
-!!$OMP SECTION
-
-!!$OMP SECTION
-   ! ONIOM was not yet tested!!
-   if (iqmmm.eq.1) call oniom(x, y, z, fx, fy, fz, eclas, iw)
-!!$OMP SECTION
-!!$OMP END PARALLEL SECTIONS
-   ! nwalk end do
-   end do
-!!$OMP END PARALLEL DO
+end subroutine receive_tera
 
 
-end subroutine force_tera
-
-
-
-subroutine connect_terachem( )
+subroutine connect_terachem( itera )
    use mod_utils, only: abinerror
    include 'mpif.h'
+   integer, intent(in)  :: itera
    character(255)  :: port_name
-   integer         :: ierr
+   integer         :: ierr, newcomm
    real*8          :: timer
    logical         :: done=.false.
-   character(len=50) :: server_name
+   character(len=50) :: server_name, portfile
+   character(len=1)  :: chtera
 
    ! -----------------------------------
    ! Look for server_name, get port name
    ! After 60 seconds, exit if not found
    ! -----------------------------------
-   server_name = trim(teraport)  !//'.'//trim(id)
-!  write(*,*)''
-   write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
-   call flush(6)
 
-!   timer = MPI_WTIME(ierr)
+!  timer = MPI_WTIME(ierr)
    done = .false.
 
    !call MPI_Comm_set_errhandler(ierr);
 
-   if (server_name.ne.'')then 
+   write(chtera,'(I1)')itera
+   if (teraport.ne.'')then 
+      server_name = trim(teraport)//'.'//trim(chtera)
+      write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
+      call flush(6)
 
       call MPI_LOOKUP_NAME(server_name, MPI_INFO_NULL, port_name, ierr)
       if (ierr == MPI_SUCCESS) then
@@ -309,8 +341,10 @@ subroutine connect_terachem( )
 
    else
 
-      write(6,'(A)') 'Reading TeraChem port name from file port.txt...'
-      open(500, file="port.txt", action="read")
+      portfile='port.txt.'//chtera
+      write(6,'(A)') 'Reading TeraChem port name from file '//portfile
+      call system('sync')    ! flush HDD buffer
+      open(500, file=portfile, action="read")
       read(500, *)port_name
       close(500)
 
@@ -325,6 +359,15 @@ subroutine connect_terachem( )
    call MPI_COMM_CONNECT(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
    write(6,'(a,i0)') 'Established new communicator:', newcomm
 
+   if(itera.gt.MAXTERASERVERS)then
+      write(*,*)'ERROR: We currently support only ',MAXTERASERVERS, 'TC servers!'
+      write(*,*)'Shutting down...'
+      write(*,*)'Running TC servers might not be shutdown properly!'
+      call abinerror('force_tera')
+   end if
+
+   newcomms(itera) = newcomm
+
    end subroutine connect_terachem
 
    subroutine initialize_terachem()
@@ -332,59 +375,58 @@ subroutine connect_terachem( )
    use mod_system,only: names
    use mod_utils, only: abinerror
    include 'mpif.h'
-   integer :: ierr, iat
+   integer :: ierr, iat, itera
 
    if (natmm_tera.gt.0)then
-      allocate(mmcharges(natmm_tera), mmcoords(3, natmm_tera))
+      allocate(mmcharges(natmm_tera))
    end if
-   allocate( qmcoords(3, natqm), qmcharges(natqm))
-   allocate( dxyz_all(3, natqm+natmm_tera) )
 
-   write(*,*)'Sending initial number of QM atoms to TeraChem.'
-   call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
-
-   allocate(names_qm(natqm+5))
-   do iat=1,natqm
-      names_qm(iat) = names(iat)
+   do itera=1, nteraservers
+      write(*,*)'Sending initial number of QM atoms to TeraChem.'
+      call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomms(itera), ierr )
    end do
-   write(*,*)'Sending initial QM atom names to TeraChem.'
-   call MPI_Send( names_qm, 2*natqm, MPI_CHARACTER, 0, 2, newcomm, ierr )
 
-   if(mpisleep.le.0)then
-      write(*,*)'Fatal: parameter "mpisleep" must be positive!'
+   do itera=1, nteraservers
+      write(*,*)'Sending initial QM atom names to TeraChem.'
+      call MPI_Send(names, 2*natqm, MPI_CHARACTER, 0, 2, newcomms(itera), ierr )
+   end do
+
+   if(mpi_sleep.le.0)then
+      write(*,*)'Fatal: parameter "mpi_sleep" must be positive!'
       call abinerror('initialize_terachem')
    else
-      write(chsys_sleep,'(A6,F10.4)')'sleep ',mpisleep
+      write(chsys_sleep,'(A6,F10.4)')'sleep ',mpi_sleep
    end if
 
-   end subroutine initialize_terachem
+  end subroutine initialize_terachem
 
 
   subroutine finalize_terachem(error_code)
-  include 'mpif.h'
-  integer, intent(in) :: error_code
-  integer :: request
-  integer :: ierr
-  integer :: empty=0
+   include 'mpif.h'
+   integer, intent(in) :: error_code
+   integer :: request
+   integer :: ierr, itera
+   integer :: empty=0
 
-  if(allocated(names_qm)) deallocate( names_qm )
-  write(*,*)'Shutting down TeraChem.'
-  if (error_code.eq.0)then
-     call MPI_Send( empty, 1, MPI_INTEGER, 0, 0, newcomm, ierr )
-  else
-     ! Not sure whether this can lead to deadlock when terachem sends and not
-     ! receive. Maybe we should avoid this.
-     call MPI_Send( empty, 1, MPI_INTEGER, 0, 13, newcomm, ierr )
-     !call MPI_ISend( empty, 1, MPI_INTEGER, 0, 13, newcomm, request, ierr )
-     ! for some reason, non-blocking ISend does not work :(
-  end if
-  if (ierr.ne.0)then
-     write(*,*)'I got a MPI Error when I tried to shutdown TeraChem'
-     write(*,*)'Please, verify manually that the TeraChem server was terminated.'
-     write(*,*)'Error code was:', ierr
-  end if
-  ! Ugly, but portable for different compilers
-!  call system("sleep 5")
+   do itera=1, nteraservers
+
+      write(*,*)'Shutting down TeraChem server; id=',itera
+      if (error_code.eq.0)then
+         call MPI_Send( empty, 1, MPI_INTEGER, 0, 0, newcomms(itera), ierr )
+      else
+      ! Not sure whether this can lead to deadlock when terachem sends and not
+      ! receive. Maybe we should avoid this.
+      call MPI_Send( empty, 1, MPI_INTEGER, 0, 13, newcomms(itera), ierr )
+      !call MPI_ISend( empty, 1, MPI_INTEGER, 0, 13, newcomm, request, ierr )
+      ! for some reason, non-blocking ISend does not work :(
+      end if
+      if (ierr.ne.0)then
+         write(*,*)'I got a MPI Error when I tried to shutdown TeraChem server id=',itera
+         write(*,*)'Please, verify manually that the TeraChem server was terminated.'
+         write(*,*)'The error code was:', ierr
+      end if
+
+   end do
   end subroutine finalize_terachem
 
 #endif
