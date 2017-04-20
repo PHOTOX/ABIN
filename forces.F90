@@ -185,10 +185,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    use mod_harmon,   only: force_harmon,force_2dho,force_morse,force_doublewell
    use mod_guillot,  only: force_guillot
    use mod_cp2k,     only: force_cp2k
-#ifdef MPI
    use mod_terampi,     only: force_tera
    use mod_terampi_sh,  only: force_terash
-#endif
    implicit none
    real(DP),intent(in)    ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) ::  fx(:,:),fy(:,:),fz(:,:)
@@ -219,14 +217,12 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
        call force_nab(x, y, z, fx, fy, fz, eclas, walkmax)
      case ("_cp2k_")
        call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
-#ifdef MPI
       case ("_tera_")
          if(ipimd.eq.2)then
             call force_terash(x, y, z, fx, fy, fz, eclas)
          else
             call force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
          end if
-#endif
       case DEFAULT
         call force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
         eclas = eclas / walkmax

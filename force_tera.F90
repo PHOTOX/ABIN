@@ -28,18 +28,19 @@ module mod_terampi
    real(DP), allocatable :: mmcharges(:)
    real(DP)  :: mpi_sleep = 0.05
    public :: teraport, newcomms, mpi_sleep, nteraservers, chsys_sleep
+   public :: force_tera
 #ifdef MPI
-   public :: finalize_terachem, initialize_terachem, connect_terachem, force_tera
+   public :: finalize_terachem, initialize_terachem, connect_terachem
+#endif
    save
 
 CONTAINS
 
 subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
-   use mod_const, only: DP, ANG
-   use mod_utils, only: abinerror
-   use mod_general, only: iqmmm, nwalk
+   use mod_const,    only: DP, ANG
+   use mod_utils,    only: abinerror
+   use mod_general,  only: iqmmm, nwalk
    use mod_interfaces, only: oniom
-   include 'mpif.h'
    real(DP),intent(in)     ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)  ::  eclas
@@ -68,9 +69,12 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
       ! map OMP thread to TC server
 !$    itera = OMP_GET_THREAD_NUM() + 1
 
+
+#ifdef MPI
       call send_tera(x, y, z, iw, newcomms(itera))
 
       call receive_tera(fx, fy,fz, eclas, iw, walkmax, newcomms(itera))
+#endif
 
       ! ONIOM was not yet tested!!
       if (iqmmm.eq.1) call oniom(x, y, z, fx, fy, fz, eclas, iw)
@@ -81,6 +85,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
 end subroutine force_tera
 
 
+#ifdef MPI
 
 subroutine send_tera(x, y, z, iw, newcomm)
    use mod_const, only: DP, ANG

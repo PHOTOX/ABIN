@@ -42,9 +42,9 @@ subroutine init(dt, values1)
 #endif
 #ifdef MPI
    use mod_remd
-   use mod_terampi
-   use mod_terampi_sh, only: init_terash
 #endif
+   use mod_terampi
+   use mod_terampi_sh
    implicit none
    real(DP),intent(out) :: dt
    integer,dimension(8) :: values1
@@ -71,7 +71,9 @@ subroutine init(dt, values1)
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
             pot_ref, nstep_ref, teraport, nteraservers
 
+#ifdef MPI
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
+#endif
 
    namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,nrespnose,nyosh,      &
                      scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol,rem_comrot,rem_comvel

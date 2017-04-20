@@ -13,9 +13,9 @@ module mod_terampi_sh
    implicit none
    private
 #ifdef MPI
-   public :: force_terash, init_terash, send_terash
+   public :: init_terash, send_terash
 #endif
-   public :: finalize_terash
+   public :: force_terash, finalize_terash
    public :: write_wfn, read_wfn, move_new2old_terash, move_old2new_terash
    real(DP), allocatable :: CIvecs(:,:), MO(:,:), blob(:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:,:), MO_old(:,:), blob_old(:)
@@ -25,22 +25,25 @@ module mod_terampi_sh
 
 CONTAINS
 
-#ifdef MPI
 subroutine force_terash(x, y, z, fx, fy, fz, eclas)
    use mod_const, only: DP
    use mod_terampi, only: newcomms
-   include 'mpif.h'
    real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)   ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)   ::  eclas
 
    ! for SH, we use only one TC server...
    ! might be changes if we ever implement more elaborate SH schemes
+#ifdef MPI
    call send_terash(x, y, z, fx, fy, fz, newcomms(1))
 
    call receive_terash(fx, fy, fz, eclas, newcomms(1))
+#endif
 
 end subroutine force_terash
+
+
+#ifdef MPI
 
 subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_const, only: DP, ANG
