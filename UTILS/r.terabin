@@ -28,7 +28,7 @@ N_TERA_SERVERS=1     # Use more TC servers for PIMD
 export LD_LIBRARY_PATH=
 source SetEnvironment.sh TERACHEM
 MPIRUN_TERA="$MPIRUN -np 1 "
-source SetEnvironment.sh ABIN 1.0-mpi
+source SetEnvironment.sh ABIN mpi
 # This needs to be the same as MPIRUN_TERA
 MPIRUN_ABIN="$MPIRUN_TERA"
 

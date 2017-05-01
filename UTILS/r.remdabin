@@ -22,7 +22,7 @@ INPUTVELOC=
 #$ -V -cwd
 
 NPROC=${NSLOTS} # determined for queuing system: -pe mpi x
-source SetEnvironment.sh ABIN 1.0-mpi
+source SetEnvironment.sh ABIN mpi
 
 SCRDIR=/scratch/$USER/$JOBNAME
 
@@ -54,6 +54,10 @@ if [[ -d $SCRDIR ]];then
 else
    mkdir $SCRDIR
 fi
+
+# Always copy up-to-date SetEnvironment
+where=$(which SetEnvironment.sh)
+cp $where .
 
 cp -p * $SCRDIR/.
 if [[ -d $INTERFACE ]];then

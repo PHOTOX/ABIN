@@ -25,7 +25,7 @@ INPUTVELOC=
 NPROC=${NSLOTS}  # determined from qsub -pe shm x
 
 #$ -V -cwd
-source SetEnvironment.sh ABIN 1.0-mpi
+source SetEnvironment.sh ABIN cp2k
 
 SCRDIR=/scratch/$USER/$JOBNAME
 

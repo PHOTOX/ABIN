@@ -22,7 +22,7 @@ SCRDIR=/scratch/$USER/$JOBNAME
 
 # ABINEXE determined via SetEnvironment.sh script
 # ABINEXE=/home/hollas/PHOTOX/bin/abin
-source SetEnvironment.sh ABIN 1.0
+source SetEnvironment.sh ABIN
 
 pot=$(awk -F"[! ,=\"']+" '{if($1=="pot")print $2}' $INPUTPARAM)
 # Upper case, this is the folder with file interface
@@ -56,10 +56,9 @@ else
    mkdir $SCRDIR
 fi
 
-if [[ ! -f SetEnvironment.sh ]];then
-   where=$(which SetEnvironment.sh)
-   cp $where .
-fi
+# Always copy up-to-date SetEnvironment
+where=$(which SetEnvironment.sh)
+cp $where .
 
 cp -p * $SCRDIR/.
 if [[ -d $INTERFACE ]];then
