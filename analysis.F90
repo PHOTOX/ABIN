@@ -345,7 +345,9 @@ module mod_analysis
       chin='restart.xyz'
    end if
 
-   write(*,*)'irest=1, Reading geometry, velocities and other information from restart.xyz.'
+   if (my_rank.eq.0)then
+      write(*,*)'irest=1, Reading geometry, velocities and other information from restart.xyz.'
+   end if
 
    open(111,file=chin,status = "OLD", action = "READ")
    read(111,*)it, sim_time

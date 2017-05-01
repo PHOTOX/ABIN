@@ -119,15 +119,17 @@ contains
    integer :: i, j, cns, ios, iw
    
 
-   write(6,*) "# Initialization of GLE thermostat.                           "
-   write(6,*) "# Please cite the relevant works among:                       "
-   write(6,*) "#                                                             "
-   write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-   write(6,*) "# Phy. Rev. Lett. 102, 020601 (2009)                          "
-   write(6,*) "#                                                             "
-   write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-   write(6,*) "# Phy. Rev. Lett. 103, 030603 (2009)                          "
-   write(6,*) "#                                                             "
+   if (my_rank.eq.0)then
+      write(6,*) "# Initialization of GLE thermostat.                           "
+      write(6,*) "# Please cite the relevant works among:                       "
+      write(6,*) "#                                                             "
+      write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
+      write(6,*) "# Phy. Rev. Lett. 102, 020601 (2009)                          "
+      write(6,*) "#                                                             "
+      write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
+      write(6,*) "# Phy. Rev. Lett. 103, 030603 (2009)                          "
+      write(6,*) "#                                                             "
+   end if
 
    ! reads in matrices
    ! reads A (in a.u. units)
@@ -151,7 +153,7 @@ contains
       allocate(gC_centroid(ns+1,ns+1))
       allocate(gS_centroid(ns+1,ns+1))
       allocate(gT_centroid(ns+1,ns+1))
-      write(6,*)'# Reading A-matrix for centroid. Expecting a.u. units!!!!'
+      if(my_rank.eq.0) write(6,*)'# Reading A-matrix for centroid. Expecting a.u. units!!!!'
       do i=1,ns+1
          read(121,*) gA_centroid(i,:)
       end do
@@ -163,7 +165,7 @@ contains
          write(*,*)'ERROR: Inconsistent size of A and C matrices for centroid.'
          call abinerror("gle_init")
       end if
-      write(6,*)'# Reading C-matrix for centroid. Expecting eV units!!!!'
+      if(my_rank.eq.0) write(6,*)'# Reading C-matrix for centroid. Expecting eV units!!!!'
       do i=1, ns+1
          read(122,*) gC_centroid(i,:)
          gC_centroid(i,:) = gC_centroid(i,:) / AUtoEV
@@ -201,7 +203,7 @@ contains
    allocate(ps(natom*3, ns, nwalk)) !each bead has to have its additional momenta
 
    
-   write(6,*)'# Reading A-matrix. Expecting a.u. units!!!!'
+   if (my_rank.eq.0) write(6,*)'# Reading A-matrix. Expecting a.u. units!!!!'
    do i=1,ns+1
       read(121,*) gA(i,:)
    enddo
@@ -211,14 +213,16 @@ contains
 
    ! reads C (in eV!), or init to kT
    if(inose.eq.4)then
-      write(6,*) "# Using canonical-sampling, Cp=kT"
+      if (my_rank.eq.0) write(6,*) "# Using canonical-sampling, Cp=kT"
       gC=0.0d0
       do i=1,ns+1
          gC(i,i) = temp
       enddo
    else    
-      write(6,*)"# Reading specialized Cp matrix."
-      write(6,*)'# Expecting eV units!!!'
+      if (my_rank.eq.0) then
+         write(6,*)"# Reading specialized Cp matrix."
+         write(6,*)'# Expecting eV units!!!'
+      end if
       read(122,*) cns
       if (cns.ne.ns)then
           write(0,*) " Error: size mismatch matrices in GLE-A and GLE-C!"
