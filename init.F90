@@ -1138,6 +1138,7 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
    end subroutine Get_cmdline
 
    subroutine print_compile_info()
+   character(len=1024)   :: cmdline
    !   include 'date.inc'
 
    print *,'Compiled at  ', DATE
@@ -1163,6 +1164,14 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
              compiler_version(), ' using the options: '
    print *,     compiler_options()
 #endif
+
+print '(a)','#################### RUNTIME INFO ####################'
+call get_command(cmdline)
+write(*,*)trim(cmdline)
+call flush(6)
+call get_command_argument(0, cmdline)
+call system('ldd '//cmdline)
+print '(a)','######################################################'
 
    end subroutine print_compile_info
 
