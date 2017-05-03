@@ -24,16 +24,17 @@ ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
+FFLAGS += -fno-underscoring 
+
 F_OBJS :=  arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o plumed.o \
 force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o surfacehop.o force_tera.o  force_terash.o force_abin.o analyze_ext_template.o density.o analysis.o  \
 minimizer.o mdstep.o forces.o abin.o
 
-C_OBJS := EWALD/ewaldf.o
 
 LIBS += WATERMODELS/libttm.a
 
 ifeq ($(strip $(NAB)),TRUE)
-  C_OBJS += nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o # NAB/binpos.o
+  C_OBJS = EWALD/ewaldf.o nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o # NAB/binpos.o
   # The following libraries were compiled with gfortran
   LIBS   += NAB/libnab.a # NAB/arpack.a  # NAB/blas.a
   CFLAGS +=  -INAB/include  
@@ -52,6 +53,7 @@ ifeq ($(strip $(CP2K)),TRUE)
   # The following variables should be the same that were used to compile CP2K.
   # Also, be carefull with FFTW clashes
   DFLAGS += -DCP2K 
+  FFLAGS += -fno-openmp
   LIBS += -L${CP2KPATH} -lcp2k ${CP2K_LIBS} 
 endif
 

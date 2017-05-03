@@ -870,8 +870,8 @@ double exacterud_sqrt_1(double xx,real *erd)
 /* end of module */
 
 // 2D arrays probably wont work see: http://www.astro.gla.ac.uk/~norman/star/sc13/sc13.htx/N-a2b5c4.html
-//void ewald_(double xyz[],double fx[][],double fy[][],double fz[][],double q[],double *energy,double *Lx,double *Ly,double *Lz,double *cutin,double *alfain,double *kappain,double *epsinf,int *natom,int *iw)
-void ewald_(double xyz[],double grad[],double q[],double *energy,double *Lx,double *Ly,double *Lz,double *cutin,double *alfain,double *kappain,double *epsinf,int *natom,int *iw)
+//void ewald(double xyz[],double fx[][],double fy[][],double fz[][],double q[],double *energy,double *Lx,double *Ly,double *Lz,double *cutin,double *alfain,double *kappain,double *epsinf,int *natom,int *iw)
+void ewald(double xyz[],double grad[],double q[],double *energy,double *Lx,double *Ly,double *Lz,double *cutin,double *alfain,double *kappain,double *epsinf,int *natom,int *iw)
 {
   static vector boxL;
   static vector *r,*f;

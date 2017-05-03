@@ -9,7 +9,7 @@ static  vector *r,*f;
 static  real *q;
 struct el_s el;
 
-int ewald_init_(double *Lx,double *Ly,double *Lz,double *cutin,double *alfain,double *kappain,int *natom3,int *ipom)
+int ewald_init(double *Lx,double *Ly,double *Lz,double *cutin,double *alfain,double *kappain,int *natom3,int *ipom)
 {
   int i;
   double sq;
@@ -48,7 +48,7 @@ int ewald_init_(double *Lx,double *Ly,double *Lz,double *cutin,double *alfain,do
   el.verbose=1;
   el.measure=1;
 }
-int ewald_(double xyz[],double grad[],double *energy,int *ipom)
+int ewald(double xyz[],double grad[],double *energy,int *ipom)
 {
   double Ek=0.0,Er=0.0;
   double t0,t1,t2;

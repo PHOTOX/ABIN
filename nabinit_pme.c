@@ -19,7 +19,7 @@ extern INT_T ipbc,nsnb_pme;
 extern REAL_T Lx_box,Ly_box,Lz_box;
 extern INT_T ips_pme;
 
-void nab_init_(REAL_T *alphain,REAL_T *cutoffin,INT_T *nsnbin,INT_T *pbcin,INT_T *ipsin, INT_T *iqmmm)
+void nab_init(REAL_T *alphain,REAL_T *cutoffin,INT_T *nsnbin,INT_T *pbcin,INT_T *ipsin, INT_T *iqmmm)
 {
 
 	nabout = stdout; /*default*/
@@ -54,7 +54,7 @@ file1 = fopen( "grad237.dat", "w" );
 fclose(file1);*/
 }
 
-void nab_getbox_(REAL_T *x,REAL_T *y,REAL_T *z) {
+void nab_getbox(REAL_T *x,REAL_T *y,REAL_T *z) {
 	*x = Lx_box;
 	*y = Ly_box;
         *z = Lz_box;

@@ -1849,7 +1849,7 @@ int mme_init_sff(PARMSTRUCT_T * prm_in, int *frozen_in, int *constrained_in,
 
 /* Here is the mme function for 3D. */
 
-REAL_T mme_(REAL_T * x, REAL_T * f, int *iter)
+REAL_T mme(REAL_T * x, REAL_T * f, int *iter)
 {
    dim = 3;
    return mme34(x, f, iter);
@@ -1883,7 +1883,7 @@ void mm_set_checkpoint(char **fname)
 }
 
 
-void nab_getcharges_(REAL_T q[]) {
+void nab_getcharges(REAL_T q[]) {
     int i;
     for (i=0;i<prm->Natom;i++) q[i]=prm->Charges[i];
 }	

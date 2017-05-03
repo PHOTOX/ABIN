@@ -78,14 +78,14 @@ fi
 
 err=0
 
-files=( WATER-RESTART.wfn* cp2k.out bkl.dat phase.dat wfcoef.dat phaserest.dat phaserest.?? nacmrest.dat nacmrest.dat.?? nacm_all.dat minimize.dat geom.mini.xyz temper.dat temper.dat radius.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? DYN/OUT* MM/OUT* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie.xyz movie_mini.xyz restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz )
+files=( *-RESTART.wfn* cp2k.out bkl.dat phase.dat wfcoef.dat phaserest.dat phaserest.?? nacmrest.dat nacmrest.dat.?? nacm_all.dat minimize.dat geom.mini.xyz temper.dat temper.dat radius.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? DYN/OUT* MM/OUT* state.dat stateall.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie.xyz movie_mini.xyz restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz )
 
 # EULER should check wf_thresh conditions
 # TODO: Make test_readme.txt, with specifications of every test, maybe include only in input.in
 if [[ $2 == "sh" ]];then
    folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
 elif  [[ $2 = "all" || $2 = "clean" ]];then
-   folders=( CMD GLE SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE SH_TDC PIGLE PIMD ABINITIO SHAKE HARMON MINI QMMM )
+   folders=( CMD GLE SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE SH_TDC PIGLE PIMD SHAKE HARMON MINI QMMM )
    if [[ $3 = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=NAB
@@ -105,6 +105,10 @@ elif  [[ $2 = "all" || $2 = "clean" ]];then
          let index++
          folders[index]=CP2K_MPI
       fi
+   else
+      let index=${#folders[@]}+1
+      # ABINITIO needs OpenMP, which is not compatible with CP2K interface
+      folders[index]=ABINITIO
    fi
    if [[ $6 = "TRUE" ]];then
       let index=${#folders[@]}+1

@@ -338,7 +338,7 @@ subroutine finish(error_code)
 #endif
 
 #ifdef CP2K
-   use mod_cp2k,   only: cp2k_finalize
+   use mod_cp2k,   only: finalize_cp2k
 #endif
 
 #ifdef PLUM
@@ -416,7 +416,7 @@ end if
 #endif
 #ifdef CP2K
 !  MPI_FINALIZE is called in this routine as well
-   if(pot.eq.'_cp2k_') call cp2k_finalize()
+   if(pot.eq.'_cp2k_') call finalize_cp2k()
 #endif
 
 !   PLUMED closing session

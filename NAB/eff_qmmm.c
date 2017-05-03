@@ -19,7 +19,7 @@
  */
 
 static
-REAL_T mme_qmmm_(REAL_T * x, REAL_T * f, int *iter)
+REAL_T mme_qmmm(REAL_T * x, REAL_T * f, int *iter)
 {
    REAL_T ebh, eba, eth, eta, eph, epa, enb, eel, enb14, eel14, ecn, edssp;
    REAL_T e_gb, esurf, evdwnp, frms, enbips, eelips;

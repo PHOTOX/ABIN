@@ -30,7 +30,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 extern"C" {
-void force_water_(const double *x,const double  *y,const double *z, double *fx,double *fy,double *fz, double *eclas,const int *natom,const int* nwalk, const int *watpot)
+void force_water(const double *x,const double  *y,const double *z, double *fx,double *fy,double *fz, double *eclas,const int *natom,const int* nwalk, const int *watpot)
 {
    const int nwater = *natom/3;
    double E;

@@ -38,7 +38,7 @@ subroutine init(dt, values1)
    use mod_fftw3,    only: fftw_init
 #endif
 #ifdef CP2K
-   use mod_cp2k,     only: cp2k_init
+   use mod_cp2k
 #endif
 #ifdef MPI
    use mod_remd
@@ -111,7 +111,7 @@ subroutine init(dt, values1)
 
    if(pot.eq."_cp2k_".or.pot_ref.eq."_cp2k_")then
 #ifdef CP2K
-      call cp2k_init()
+      call init_cp2k()
 #else
       write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
       write(*,*)''
@@ -596,6 +596,7 @@ print '(a)','**********************************************'
 
    !  We should exclude all non-abinitio options, but whatever....
 !$    if(nthreads.gt.1.and.(ipimd.ne.1.and.pot.ne.'_cp2k_'))then
+!$     write(*,*)'Number of threads is ', nthreads
 !$     write(*,*)'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
 !$     call abinerror('init')
 !$    endif
