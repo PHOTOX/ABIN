@@ -5,7 +5,7 @@
 
 ABIN is a program for performing ab initio molecular dynamics. It was designed specifically to deal with quantum nuclear effects. It can do path integral simulations and also utilizes recently developed quantum thermostat based on General Langevin equation. It can also simulate non-adiabatic events using Surface-hoping algorithm.
 
-The basic philosophy of this program is simple. While the program itself handles the propagation of the system according to the equations of motion, the forces and energies are taken from the external electronic structure program such as ORCA or TeraChem. The call to the chosen external program is handled via a simple shell script. Therefore, writing a new interface is rather straightforward and can be done without any changes to the ABIN code itself.
+The basic philosophy of this program is simple. While the program itself handles the propagation of the system according to the equations of motion, the forces and energies are taken from the external electronic structure program such as ORCA or TeraChem. The call to the chosen external program is handled via a simple shell script. Therefore, writing a new interface is rather straightforward and can be done without any changes to the ABIN code or ab initio code.
 
 The code is provided under the GNU General Public License.
 A full text of the license can be found in the file LICENCE.
@@ -33,7 +33,7 @@ The compilation can be as easy as:
 $ cd src; make
 
 You can test the installation by:
-$ make test  (one of the test requires a working instalation of ORCA package
+$ make test
 
 If you modify the source code and want to recompile, you should always clean up by:
 $ make  clean
@@ -52,12 +52,13 @@ UTIL/       - Contains some handy scripts that might be useful in conjuction wit
 abin.f90       - Main routine.
 modules.f90    - Modules containing all basic variables.
 init.f03       - Big ugly initialization routine.
-               - It reads the input parameters, restart files, check for errors in input.
-mdstep.f03     - Routines for propagation of equations of motion (velocity Verlet and RESPA). 
+               - It reads the input parameters, restart files and checks for errors in input.
+mdstep.f03     - Routines for propagation of equations of motion (velocity Verlet and RESPA).
 forces.f03     - Main routine for getting forces (force_clas) and quantum forces in PIMD (force_quant).
 force_abin.f90 - Routine that calls ab initio BASH interfaces.
-nosehoover.f03 - Contains routines for Nosé-Hoover thermostat.
-surfacehop.f90 - All routines for surface hopping dynamics.
+nosehoover.f03 - Nosé-Hoover thermostat.
+surfacehop.f90 - Surface Hopping dynamics
+sh_integ.f90   - Propagation of electronic WF in SH dynamics 
 gle.F90        - GLE thermostat
 shake.f03      - Contraints using SHAKE algorithm.
 analysis.f90   - Driver routine for printing output.
@@ -76,6 +77,4 @@ density.f90    - Evaluates distance, angle and dihedrals distributions during dy
 estimators.f90 - Energy and heat capacity estimators for PIMD.
 transform.F90  - Coordinate transformations for PIMD.
 utils.f90      - Some general purpose routines, e.g. Get_distance() and abinerror()    
-
-
 
