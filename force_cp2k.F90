@@ -25,6 +25,13 @@ INTERFACE
       REAL(C_DOUBLE), intent(out) :: E
    END SUBROUTINE CP2K_GET_POTENTIAL_ENERGY
 
+   SUBROUTINE cp2k_create_force_env_comm(env_id, inpath, outpath, mpicomm)
+      import :: C_CHAR
+      INTEGER, intent(out) ::  env_id
+      INTEGER, VALUE :: mpicomm
+      CHARACTER(LEN=1, KIND=C_CHAR), INTENT(IN) :: inpath(*), outpath(*)
+   END SUBROUTINE cp2k_create_force_env_comm
+
    SUBROUTINE CP2K_GET_FORCES(env_id, f, sz)
       IMPORT :: C_DOUBLE
       INTEGER, VALUE ::  env_id, sz
@@ -43,21 +50,54 @@ CONTAINS
 
 #ifdef CP2K
 subroutine init_cp2k()
-    use mod_general, only: natom, idebug
+    use mod_general, only: natom, idebug, nwalk, my_rank
     use iso_c_binding, only: C_CHAR,c_null_char
 #ifdef MPI
     include "mpif.h"
 #endif
-    integer :: ierr
-    integer :: cp2k_mpicomm
+    integer :: ierr, world_size, bead
+    integer :: new_size, new_rank
+    integer :: group_range(100)
+    integer :: cp2k_mpicomm, temp_comm
+    integer :: cp2k_mpigroups(100), world_group
+    integer :: iw, i, stride
     character(len=*, KIND=C_CHAR), parameter :: cp2k_input_file='cp2k.inp'//c_null_char
     character(len=*, KIND=C_CHAR), parameter :: cp2k_output_file='cp2k.out'//c_null_char
 
 #ifdef MPI
-    CALL cp2k_init()
+   CALL cp2k_init()
 
-    !call MPI_Comm_dup(MPI_COMM_WORLD, cp2k_mpicomm, ierr)
-    !if (idebug.gt.0) write(*,*)'Created new communicator ', cp2k_mpicomm
+!   call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
+!    call MPI_Comm_dup(MPI_COMM_WORLD, cp2k_mpicomm, ierr)
+!    if (idebug.gt.0) write(*,*)'Created new communicator ', cp2k_mpicomm
+!   call MPI_Comm_size(MPI_COMM_WORLD, world_size, ierr)
+!   call MPI_Comm_group(MPI_COMM_WORLD, world_group, ierr)
+
+! The following code probably works for MPICH, but not for OpenMPI
+! OpenMPI does not give unique communicators :( :(
+!   do iw = 1, nwalk
+!      stride = world_size / nwalk
+!      do i=1, stride
+!         group_range(i)=(iw-1)*stride + i - 1
+!      end do
+!      write(*,*)(group_range(i),i=1,world_size/nwalk)
+!      call MPI_GROUP_INCL(WORLD_GROUP, WORLD_SIZE / NWALK, group_range, CP2K_MPIGROUPS(iw), IERR)
+!      call MPI_Comm_Create_Group(MPI_Comm_World, CP2K_MPIGROUPS(iw),0, temp_comm, ierr)
+!      if(temp_comm.ne.MPI_COMM_NULL)   cp2k_mpicomm = temp_comm
+!   end do
+
+!    bead = modulo(my_rank, nwalk)
+
+! The following code probably works for MPICH, but not for OpenMPI
+! OpenMPI does not give unique communicators :( :(
+!    call MPI_Comm_split(MPI_COMM_WORLD, bead, 0, cp2k_mpicomm, ierr)
+!    IF (ierr/=0) STOP "Could not cplit communicators"
+!    write(*,*)'newcomm', cp2k_mpicomm, bead
+
+    
+!    call MPI_Comm_size(cp2k_mpicomm, new_size, ierr)
+!    call MPI_Comm_rank(cp2k_mpicomm, new_rank, ierr)
+
 
     ! TODO: we might want to create different communicators for different beads
     !CALL cp2k_create_force_env_comm(f_env_id, cp2k_input_file, cp2k_output_file, cp2k_mpicomm)
