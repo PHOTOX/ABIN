@@ -386,7 +386,7 @@ module mod_files
       chfiles(i)=''
    end do
 
-   chfiles(UVELOC)='vel.xyz'
+   chfiles(UVELOC)='velocities.xyz'
    chfiles(UFORCE)='forces.xyz'
    chfiles(UENERGY)='energies.dat'
    chfiles(UTEMPER)='temper.dat'
