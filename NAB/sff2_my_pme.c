@@ -7763,7 +7763,7 @@ REAL_T egb2(INT_T * lpears, INT_T * upears, INT_T ** pearlist,
  */
 //DHmod: should be thread safe...but is it really?
 
-REAL_T mme2(REAL_T * x, REAL_T * f, REAL_T * g, REAL_T * m, REAL_T * grad,
+REAL_T mme2_(REAL_T * x, REAL_T * f, REAL_T * g, REAL_T * m, REAL_T * grad,
             INT_T * descF_PxQ, INT_T * descF_1x1, INT_T * descG_PxQ,
             INT_T * context_PxQ, INT_T * context_1x1, INT_T * context_Nx1,
             INT_T * gridim, INT_T * natom, INT_T * iter, char *name )

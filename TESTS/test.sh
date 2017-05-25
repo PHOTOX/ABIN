@@ -105,6 +105,9 @@ elif  [[ $2 = "all" || $2 = "clean" ]];then
          let index++
          folders[index]=CP2K_MPI
       fi
+      # At this point, we do not support MMWATER with CP2K
+      # which is used in majority of tests
+      folders=(SH_BUTCHER HARMON CP2K CP2K_MPI)
    else
       let index=${#folders[@]}+1
       # ABINITIO needs OpenMP, which is not compatible with CP2K interface
