@@ -37,9 +37,9 @@ subroutine init(dt, values1)
 #ifdef USEFFTW
    use mod_fftw3,    only: fftw_init
 #endif
-#ifdef CP2K
+! #ifdef CP2K
    use mod_cp2k
-#endif
+! #endif
 #ifdef MPI
    use mod_remd
 #endif
@@ -69,7 +69,7 @@ subroutine init(dt, values1)
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
-            pot_ref, nstep_ref, teraport, nteraservers
+            pot_ref, nstep_ref, teraport, nteraservers, cp2k_mpi_beads
 
 #ifdef MPI
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
@@ -135,6 +135,7 @@ subroutine init(dt, values1)
 ! because we want to shut down TeraChem nicely in case something goes wrong.
 #ifdef MPI
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
+   call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
    if(pot.eq.'_tera_')then
       if (nwalk.gt.1)then
          write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
@@ -551,7 +552,7 @@ print '(a)','**********************************************'
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
    pid=GetPID()
-   write(*,*)'Pid of the current proccess is:',pid
+   if(my_rank.eq.0) write(*,*)'Pid of the current proccess is:',pid
 
 
 #ifdef NAB

@@ -55,7 +55,7 @@ module mod_general
    integer :: irandom=156873,natom=0,pid
    integer :: iqmmm=0
    integer :: parrespa=0 
-   integer :: my_rank=0, iremd=0
+   integer :: my_rank=0, mpi_world_size=1, iremd=0
    integer :: iknow=0
    real(DP) :: dt0, sim_time=0.0d0
    save
@@ -438,9 +438,13 @@ module mod_files
    end if
 
 !  OPEN trajectory file
-!   open(UMOVIE,file=chfiles(UMOVIE),access=chaccess,action='write')
 !  Trajectory file is opened later in output function trajout
 !  to prevent creating empty movie.xyz and then failing
+!  We still open when using CP2K interface, since otherwise 
+!  strangely more MPI ranks can write to this file if not opened here...
+!   if(pot.eq.'_cp2k_')then
+!      open(UMOVIE,file=chfiles(UMOVIE),access=chaccess,action='write')
+!   end if
 
    if (nwritev.gt.0)then
 !      if(iremd.eq.1)then
