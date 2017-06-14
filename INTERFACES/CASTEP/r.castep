@@ -1,9 +1,6 @@
 #!/bin/bash
 cd CASTEP
 
-# Don't forget to specify the number of processors!
-NPROC=16
-
 # These to files needs to be prepared for CASTEP
 CELL_FILE=template.cell
 PARAM_FILE=template.param
@@ -14,50 +11,38 @@ PARAM_FILE=template.param
 timestep=$1
 ibead=$2
 input=input$ibead
-input=beta
 natom=$(cat ../geom.dat.$ibead | wc -l )
 
-# Prepare the cell file
 ./prepare_castep_cellfile.py -c $CELL_FILE -x ../geom.dat.$ibead > $input.cell
 
 # Copy param file
 cp $PARAM_FILE $input.param
 
 output=$input.castep
+# CASTEP by default apppends, so remove the old output files
+rm -f $output $input.cst_esp $input.check $input.castep_bin
 # LAUNCHING CASTEP #
-mpirun -np $NPROC castep $input
+
+# It seems that CASTEP also outputs to stdin, so we need to get rid of that
+mpiexec castep $input > /dev/null
 
 if [[ $? -eq 0 ]];then
    cp $output $output.old
+#  cat $output >  $output.all
 else
    echo "WARNING from r.castep: CASTEP calculation probably failed."
    echo "See $output.error" 
    cp $output $output.error
-fi
-
-# EXTRACTING ENERGY AND FORCES
-
-# grep 'Total energy corrected for finite basis set' $output | awk '{printf("%10.8f\n",$9/27.2113838)}' > ../engrad.dat.$ibead
-
-# First look whether we have dispersion corrections
-energy=$(grep 'Dispersion corrected final energy' $output | tail -1 | awk '{printf("%10.8e\n",$6/27.2113838)}')
-
-if [[ -z $energy ]];then
-   energy=$(grep 'Final energy ' $output | tail -1 | awk '{printf("%10.8e\n",$4/27.2113838)}')
-fi
-
-# Crash if we do not have energy!
-if [[ -z $energy ]];then
-   echo "ERROR: I could not find the energy in the CASTEP output file!"
    exit 2
-else
-   echo $energy > ../engrad.dat.$ibead
 fi
 
-# Now grep forces
-let natom5=natom+5
-# Don't forget to convert to atomic units
-# Also, we need energy gradients, not forces. Hence the minus sign
-grep -A $natom5 Forces $output | awk 'BEGIN{c=1/27.2113838/1.88972613}{printf("%10.6f  %10.6f  %10.6f\n", -$4*c, -$5*c, -$6*c)}' >> ../engrad.dat.$ibead
+### EXTRACTING ENERGY AND FORCES
 
+# ---------------------
+# This assumes that CASTEP output forces in Hartrees/Bohr
+# This must be specified in the CASTEP input file like this...
+# force_unit : hartree/bohr
+# energy_unit : hartree
+# ---------------------
 
+awk -v natom="$natom" '{if ($4=="energy*") {printf"%10.12f\n",$6*natom}} /z    */ {getline;for(i=1; i<=natom; i++) {getline; printf "%10.12f %10.12f %10.12f \n",-1*$4*natom,-1*$5*natom,-1*$6*natom}}' $output > ../engrad.dat.$ibead
