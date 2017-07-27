@@ -231,7 +231,7 @@ program abin_dyn
 
 #ifdef MPI
          if (iremd.eq.1.and.modulo(it,nswap).eq.0.and.it.gt.imini)then
-            call remd_swap(x, y, z, x, y, z, fxc, fyc, fzc, eclas)
+            call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
          end if
 #endif
 

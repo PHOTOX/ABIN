@@ -440,6 +440,12 @@ print '(a)','**********************************************'
 
 !----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
+     if (my_rank .ne. 0) then
+        call srand(irandom)
+        do ipom=0,my_rank
+        irandom = irand()
+        end do
+     end if
 !    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      if (inose.eq.1) call nhc_init()
