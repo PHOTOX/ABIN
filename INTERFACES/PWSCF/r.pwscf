@@ -1,0 +1,105 @@
+#!/bin/bash
+cd PWSCF
+
+timestep=$1
+ibead=$2
+input=input$ibead
+natom=$(cat ../geom.dat.$ibead | wc -l )
+
+cat > $input << EOF
+&CONTROL 
+calculation = 'scf'
+prefix='pwscf'
+pseudo_dir = './'
+outdir='./'
+tstress=.false.
+tprnfor = .true.
+/
+&SYSTEM 
+ibrav=0
+nat=120
+ntyp=3 
+ecutwfc=66.148755885
+ts_vdw=.true.
+/ 
+    &ELECTRONS
+mixing_beta=0.7
+conv_thr =  1.0d-8
+electron_maxstep=200
+/
+
+ATOMIC_SPECIES
+   H   1.0079   h.optgga1.UPF
+   C  12.0110   c.optgga1.UPF
+   O  15.9994   o.optgga1.UPF
+
+CELL_PARAMETERS angstrom 
+      10.755390000000000      -0.000000000000009      -0.000000000000009
+       0.000000000000000      11.354730000000000      -0.000000000000009
+       0.000000000000000       0.000000000000000      11.298720000000000
+
+K_POINTS {automatic}
+ 2 2 2  1 1 1 
+
+ATOMIC_POSITIONS angstrom
+EOF
+
+# Now append the geometry
+cat ../geom.dat.$ibead >> $input 
+
+output=$input.out
+
+# Launching Quantum Espresso
+
+node=$(uname -a | awk '{print $2}')
+if [[ $node =~ ^p[0-9]+$ ]];then
+   #echo "Recognized PROMETHEUS cluster!"
+   module add plgrid/apps/espresso/6.1
+
+   # Assuming multiprocessor environment
+   mpiexec pw.x -input $input > $output 2>&1
+else
+
+   echo "ERROR in r.pwscf: unrecognized cluster."
+   echo "Please, modify me accordingly for your cluster environment."
+
+fi
+
+
+if [[ $? -eq 0 ]];then
+   cp $output $output.old
+#  cat $output >  $output.all
+else
+   echo "WARNING from r.pwscf: PWSCF calculation probably failed."
+   echo "See $output.error" 
+   cp $output $output.error
+   exit 2
+fi
+
+### EXTRACTING ENERGY AND FORCES
+
+# ---------------------
+# This assumes output forces in units Rydberg/Bohr and energies in Rydbergs
+# ---------------------
+energy=$(grep 'total energy    ' $output | tail -1 | awk '{printf("%15.9f \n", $5/2)}')
+units=$(grep 'total energy    ' $output | tail -1 | awk '{print $6}')
+
+if [[ -z $energy ]];then
+   echo "ERROR from r.pwscf: Could not find energy in the output file PWSCF/$output"
+   exit 2
+else
+   echo $energy > ../engrad.dat.$ibead
+fi
+
+# Check units of energy
+if [[ $units != "Ry" ]];then
+   echo "ERROR from r.pwscf: The expected units of energy are different from what I expected!"
+   echo "Wanter Ry, but got $units"
+   echo "Please, inspect the PWSCF output file PWSCF/$output"
+   exit 2
+fi
+
+let natom1=natom+1
+grep -A $natom1 'Forces acting on atoms (cartesian axes, Ry/au):' $output  | tail -n $natom | awk '{printf("%15.8f %15.8f %15.8f\n",-$7/2,-$8/2,-$9/2)}' >> ../engrad.dat.$ibead
+
+
