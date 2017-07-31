@@ -21,10 +21,25 @@ cp $PARAM_FILE $input.param
 output=$input.castep
 # CASTEP by default apppends, so remove the old output files
 rm -f $output $input.cst_esp $input.check $input.castep_bin
-# LAUNCHING CASTEP #
 
-# It seems that CASTEP also outputs to stdin, so we need to get rid of that
-mpiexec castep $input > /dev/null
+##### LAUNCHING CASTEP ########################
+
+# First, try to determine the cluster
+node=$(uname -a | awk '{print $2}')
+if [[ $node =~ ^p[0-9]+$ ]];then
+   #echo "Recognized PROMETHEUS cluster!"
+   # It seems that CASTEP also outputs to stdin, so we need to get rid of that
+   mpiexec castep $input > /dev/null
+
+else
+   # Assume that if we are not at Prometheus, we are at SCARF
+
+   export PSPOT_DIR=/apps/castep/pseudopotentials
+   . /etc/profile.d/modules.sh
+   module load contrib/castep/7.0.1
+
+#   mpirun -lsf castep $input
+fi
 
 if [[ $? -eq 0 ]];then
    cp $output $output.old
@@ -36,20 +51,27 @@ else
    exit 2
 fi
 
-### EXTRACTING ENERGY AND FORCES
+############## EXTRACTING ENERGY AND FORCES ##########################
 # We are expecting energy and forces in defult CASTEP units
 # i.e. eV and eV/Angstroms
 
 # First look whether we have dispersion corrections
 energy=$(grep 'Dispersion corrected final energy' $output | tail -1 | awk '{printf("%10.8e\n",$6/27.2113838)}')
+units=$(grep 'Dispersion corrected final energy' $output | awk '{print $7}')
 
 if [[ -z $energy ]];then
    energy=$(grep 'Final energy ' $output | tail -1 | awk '{printf("%10.8e\n",$4/27.2113838)}')
+   units=$(grep 'Final energy ' $output | tail -1 | awk '{print $5}')
 fi
 
 # Crash if we do not have energy!
 if [[ -z $energy ]];then
    echo "ERROR: I could not find the energy in the CASTEP output file!"
+   exit 2
+elif [[ ! "$units"  =~ ^eV ]];then
+   echo "ERROR in r.castep: Wrong energy units!"
+   echo "Expected eV, but got ${units}"
+   echo ${#units} 
    exit 2
 else
    echo $energy > ../engrad.dat.$ibead
@@ -57,8 +79,16 @@ fi
 
 let natom5=natom+5
 # Now grep forces
+# Check the units, we expect eV / Angstrom (default CASTEP units)
+force_units=$(grep -A2 "Forces" $output |tail -1| awk '{print $4}')
+fun="^\(eV/A\)"
+if [[ ! ${force_units} =~ $fun ]];then
+   echo "ERROR in r.castep: Wrong force units!"
+   echo "Expected eV/A, but got ${force_units}"
+   exit 2
+fi
+
 # Don't forget to convert to atomic units
 # Also, we need energy gradients, not forces. Hence the minus sign
-grep -A $natom5 Forces $output | tail -n $natom | awk 'BEGIN{c=1/27.2113838/1.88972613}{printf("%10.6f  %10.6f  %10.6f\n", -$4*c, -$5*c, -$6*c)}' >> ../engrad.dat.$ibead
-
+grep -A $natom5 Forces $output | tail -n $natom | awk 'BEGIN{c=1/27.2113838/1.88972613}{printf("%10.6f  %10.6f  %10.6f\n", -$4*c, -$5*c, -$6*c)}'  >> ../engrad.dat.$ibead
 

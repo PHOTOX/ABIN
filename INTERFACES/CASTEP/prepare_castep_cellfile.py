@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import math
+import numpy as np
 import argparse, sys
 
 # Some usefull string constants
@@ -13,19 +14,11 @@ FRAC = "POSITIONS_FRAC"
 def read_cmd():
    """Function for reading command line options."""
    desc = "A simple program for converting XYZ coordinates to a CASTEP cell file."
-#  parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
    parser = argparse.ArgumentParser(description=desc)
    parser.add_argument('-c',dest='cfile',required = True, help='Input template cell file.')
    parser.add_argument('-x',dest='xfile',required = True, help='Input XYZ file.')
    return parser.parse_args()
 
-
-def vector_norm(vector):
-   assert (len(vector)>0),"Empty vector passed!"
-   norm = 0.0
-   for v in vector:
-      norm += v*v
-   return math.sqrt(norm)
 
 def dotprod(vec1, vec2):
    assert (len(vec1)==len(vec2)), "Cannot do dotproduct for vectors of different lengths!"
@@ -133,19 +126,21 @@ def read_lattice_cart(cfile, h):
 
 
 def convert_xyz2frac(h, xyz, frac_coords):
-   nhx = vector_norm(h[0])
-   nhy = vector_norm(h[1])
-   nhz = vector_norm(h[2])
-
-   for x in xyz:
-      nx = vector_norm(x)
-      ny = vector_norm(x)
-      nz = vector_norm(x)
-      fx = dotprod(x,h[0]) / nhx**2
-      fy = dotprod(x,h[1]) / nhy**2
-      fz = dotprod(x,h[2]) / nhz**2
-      frac_coords.append((fx,fy,fz))
-      
+   sigma_a = np.cross(h[1],h[2])
+   sigma_b = np.cross(h[2],h[0])
+   sigma_c = np.cross(h[0],h[1])
+   Omega = dotprod(h[0],sigma_a)
+   
+   cart2frac = [sigma_a/Omega, sigma_b/Omega, sigma_c/Omega]
+   
+   cart = [0.0,0.0,0.0]
+   for i in range(len(xyz)):
+            cart = [float(xyz[i][0]), float(xyz[i][1]), float(xyz[i][2])]
+            frac = [0.0,0.0,0.0]
+            for i in range(0,3):
+                for j in range(0,3):
+                    frac[i] = cart2frac[i][j]*cart[j] + frac [i]
+            frac_coords.append((frac[0], frac[1], frac[2]))
 
 # MAIN CODE #
 
