@@ -58,6 +58,7 @@ module mod_general
    integer :: my_rank=0, iremd=0
    integer :: iknow=0
    real(DP) :: dt0, sim_time=0.0d0
+   integer  :: en_restraint=0
    save
 end module
       

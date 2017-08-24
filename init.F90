@@ -33,6 +33,7 @@ subroutine init(dt, values1)
    use mod_analysis, only: restin
    use mod_water,    only: watpot, check_water
    use mod_plumed,   only: iplumed, plumedfile, plumed_init
+   use mod_en_restraint
    use mod_transform, only:init_mass
 #ifdef USEFFTW
    use mod_fftw3,    only: fftw_init
@@ -68,6 +69,7 @@ subroutine init(dt, values1)
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
+            en_restraint, restr, restrain_pot, &
             pot_ref, nstep_ref, teraport
 
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
@@ -159,6 +161,10 @@ subroutine init(dt, values1)
 #endif
 
    endif
+
+   if (en_restraint.eq.1) then
+      call en_rest_init(dt)
+   end if
    
    if (my_rank.eq.0)then
       write(*,*)'Reading parameters from input file ',chinput
@@ -423,6 +429,7 @@ print '(a)','**********************************************'
       call dist_init() !zeroing distribution arrays
 
       if (pot.eq.'mmwater'.or.pot_ref.eq.'mmwater') call check_water(natom, names)
+
 
 !-----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
