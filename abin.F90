@@ -52,7 +52,7 @@ program abin_dyn
 !$ integer  :: nthreads,omp_get_max_threads
 
    ! This cannot be in init because of namelist 'system'
-   if(my_rank.eq.0) call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+   if(my_rank.eq.0) call clean_temp_files()
 
 !-   INPUT AND INITIALIZATION SECTION      
    call init(dt, values1) 
@@ -66,9 +66,9 @@ program abin_dyn
       call sh_init(x, y, z, vx, vy, vz, dt)
    endif
 
-!$ nthreads=omp_get_max_threads()
+!$ nthreads = omp_get_max_threads()
    if (my_rank.eq.0)then
-!$    write(*,*)'Number of threads used = ',nthreads
+!$    write(*,*)'Number of OpenMP threads used = ', nthreads
       write(*,*)''
    end if
 
@@ -427,4 +427,12 @@ end if
 #endif
 end subroutine finish
 
+
+subroutine clean_temp_files
+use mod_system, only: clean_prop_tempfiles
+
+   call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+   call clean_prop_tempfiles()
+
+end subroutine clean_temp_files
 

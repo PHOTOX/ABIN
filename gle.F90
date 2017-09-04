@@ -109,7 +109,7 @@ contains
   
    subroutine gle_init(dt)
    use mod_const, only: AUtoEV
-   use mod_general,only: natom, nwalk, inormalmodes
+   use mod_general,only: my_rank, natom, nwalk, inormalmodes
    use mod_utils, only: abinerror
    use mod_nhc,only: temp,inose
    implicit none

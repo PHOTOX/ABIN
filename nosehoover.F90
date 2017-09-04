@@ -63,7 +63,7 @@ module mod_nhc
 
    subroutine nhc_init() 
    use mod_const,    only: AMU, AUtoFS, PI
-   use mod_general,  only: ipimd, nwalk, natom, inormalmodes
+   use mod_general,  only: my_rank, ipimd, nwalk, natom, inormalmodes
    use mod_system,   only: dime
    use mod_random,   only: gautrg
    implicit none
@@ -91,8 +91,10 @@ module mod_nhc
 !-------SETTING THERMOSTAT MASSES--------------------
    ams=ams*amu
    if(ams.lt.0.and.tau0.lt.0)then
-      write(*,*)'Warning. Ams and tau0 not set.'
-      write(*,*)'Using default value tau0=0.001'
+      if(my_rank.eq.0)then
+         write(*,*)'Warning. Ams and tau0 not set.'
+         write(*,*)'Using default value tau0=0.001'
+      end if
       tau=0.001d0/AUtoFS*1000
    else
       tau=tau0/AUtoFS*1000

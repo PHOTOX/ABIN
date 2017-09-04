@@ -981,10 +981,10 @@ print '(a)','**********************************************'
       INQUIRE(FILE=chout, EXIST=file_exists)
       if(file_exists)then
        if(irest.eq.0)then
-        write(*,*)'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
+        if (my_rank.eq.0) write(*,*)'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
         error=1
        else
-        write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
+         if (my_rank.eq.0) write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
        endif
       endif
 
