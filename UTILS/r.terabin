@@ -8,6 +8,7 @@
 # 4. Remove scratch directory. (if delscratch = true)
 
 #$ -V -cwd
+#$ -l num_gpu=1
 
 # SETUP --------------------------------
 OUTPUT=output
@@ -132,7 +133,7 @@ while true;do
    # If ABIN dies, kill all living TC servers
    if ! `ps|grep -q $abinpid` ;then
       for tcpid in ${terapid[@]};do
-         if `ps|grep -q $terapid` ;then
+         if `ps|grep -q $tcpid` ;then
             died=true
             echo "ABIN died. Killing TeraChem."
             kill -9 $tcpid 
@@ -152,7 +153,7 @@ while true;do
             kill -9 $abinpid 
             # Kill all remaining TC servers if any
             for tpid in ${terapid[@]};do
-               if `ps|grep -q $terapid` ;then
+               if `ps|grep -q $tpid` ;then
                   kill -9 $tpid 
                fi
             done
