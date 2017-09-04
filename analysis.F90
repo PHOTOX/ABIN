@@ -214,8 +214,14 @@ module mod_analysis
    end if
 
    INQUIRE(FILE=chout, EXIST=file_exists)
-   chsystem='cp '//trim(chout)//'  '//trim(chout)//'.old'
-   if(file_exists) call system(chsystem)
+   if(file_exists)then
+      chsystem='cp '//trim(chout)//'  '//trim(chout)//'.old'
+      if (iremd.eq.1)then
+         call system(chsystem)
+      else if (my_rank.eq.0)then
+         call system(chsystem)
+      end if
+   end if
 
 !  open(102, file=chout, action='WRITE',recl=250)
 !  intel compilers don't write too many columns on single line

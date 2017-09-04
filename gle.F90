@@ -109,7 +109,7 @@ contains
   
    subroutine gle_init(dt)
    use mod_const, only: AUtoEV
-   use mod_general,only: my_rank, natom, nwalk, inormalmodes
+   use mod_general,only: natom, nwalk, inormalmodes, my_rank, iremd
    use mod_utils, only: abinerror
    use mod_nhc,only: temp,inose
    implicit none
@@ -117,9 +117,9 @@ contains
    real(DP), allocatable :: gA(:,:), gC(:,:), gr(:)
    real(DP), allocatable :: gA_centroid(:,:), gC_centroid(:,:)
    integer :: i, j, cns, ios, iw
-   
+   character(len=10)     :: glea, glec, char_my_rank
 
-   if (my_rank.eq.0)then
+   if(my_rank.eq.0)then 
       write(6,*) "# Initialization of GLE thermostat.                           "
       write(6,*) "# Please cite the relevant works among:                       "
       write(6,*) "#                                                             "
@@ -133,15 +133,25 @@ contains
 
    ! reads in matrices
    ! reads A (in a.u. units)
-   open(121,file='GLE-A',status='OLD',iostat=ios,action='read')
+   if(iremd.eq.1)then
+      if(my_rank.eq.0) write(*,*) "iremd=1 - Expecting matrices in form GLE-A.id_of_replica, GLE-C.id_of_replica (ie ./GLE-A.00)"
+      write(char_my_rank,'(I0.2)') my_rank
+      glea = 'GLE-A.'//char_my_rank
+      glec = 'GLE-C.'//char_my_rank
+   else
+      glea = 'GLE-A'
+      glec = 'GLE-C'
+   end if
+
+   open(121,file=glea,status='OLD',iostat=ios,action='read')
    if (ios.ne.0)then
       write(0,*) "Error: could not read GLE-A file!"
       write(0,*) "Exiting..."
       call abinerror('gle_init')
-   end if
+   end if 
 
    ! try to open GLE-C file
-   open(122,file='GLE-C',status='OLD',action='read',iostat=ios)
+   open(122,file=glec,status='OLD',action='read',iostat=ios)
    if (ios.ne.0.and.inose.eq.2)then
       write(0,*) "Error: could not read GLE-C file!"
       call abinerror("gle_init")

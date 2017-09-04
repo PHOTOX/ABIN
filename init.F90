@@ -37,9 +37,9 @@ subroutine init(dt, values1)
 #ifdef USEFFTW
    use mod_fftw3,    only: fftw_init
 #endif
-#ifdef CP2K
-   use mod_cp2k,     only: cp2k_init
-#endif
+! #ifdef CP2K
+   use mod_cp2k
+! #endif
 #ifdef MPI
    use mod_remd
 #endif
@@ -69,7 +69,7 @@ subroutine init(dt, values1)
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
-            pot_ref, nstep_ref, teraport, nteraservers
+            pot_ref, nstep_ref, teraport, nteraservers, cp2k_mpi_beads
 
 #ifdef MPI
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
@@ -111,7 +111,7 @@ subroutine init(dt, values1)
 
    if(pot.eq."_cp2k_".or.pot_ref.eq."_cp2k_")then
 #ifdef CP2K
-      call cp2k_init()
+      call init_cp2k()
 #else
       write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
       write(*,*)''
@@ -135,6 +135,7 @@ subroutine init(dt, values1)
 ! because we want to shut down TeraChem nicely in case something goes wrong.
 #ifdef MPI
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
+   call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
    if(pot.eq.'_tera_')then
       if (nwalk.gt.1)then
          write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
@@ -439,6 +440,12 @@ print '(a)','**********************************************'
 
 !----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
+     if (my_rank .ne. 0) then
+        call srand(irandom)
+        do ipom=0,my_rank
+        irandom = irand()
+        end do
+     end if
 !    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      if (inose.eq.1) call nhc_init()
@@ -551,7 +558,7 @@ print '(a)','**********************************************'
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
    pid=GetPID()
-   write(*,*)'Pid of the current proccess is:',pid
+   if(my_rank.eq.0) write(*,*)'Pid of the current proccess is:',pid
 
 
 #ifdef NAB
@@ -596,6 +603,7 @@ print '(a)','**********************************************'
 
    !  We should exclude all non-abinitio options, but whatever....
 !$    if(nthreads.gt.1.and.(ipimd.ne.1.and.pot.ne.'_cp2k_'))then
+!$     write(*,*)'Number of threads is ', nthreads
 !$     write(*,*)'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
 !$     call abinerror('init')
 !$    endif

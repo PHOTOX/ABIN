@@ -231,7 +231,7 @@ program abin_dyn
 
 #ifdef MPI
          if (iremd.eq.1.and.modulo(it,nswap).eq.0.and.it.gt.imini)then
-            call remd_swap(x, y, z, x, y, z, fxc, fyc, fzc, eclas)
+            call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
          end if
 #endif
 
@@ -338,7 +338,7 @@ subroutine finish(error_code)
 #endif
 
 #ifdef CP2K
-   use mod_cp2k,   only: cp2k_finalize
+   use mod_cp2k,   only: finalize_cp2k
 #endif
 
 #ifdef PLUM
@@ -416,7 +416,7 @@ end if
 #endif
 #ifdef CP2K
 !  MPI_FINALIZE is called in this routine as well
-   if(pot.eq.'_cp2k_') call cp2k_finalize()
+   if(pot.eq.'_cp2k_') call finalize_cp2k()
 #endif
 
 !   PLUMED closing session
@@ -429,10 +429,10 @@ end subroutine finish
 
 
 subroutine clean_temp_files
-use mod_system, only: clean_prop_tempfiles
+!use mod_system, only: clean_prop_tempfiles
 
    call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
-   call clean_prop_tempfiles()
+!   call clean_prop_tempfiles()
 
 end subroutine clean_temp_files
 

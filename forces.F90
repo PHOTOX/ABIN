@@ -199,24 +199,28 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
 ! Here we decide which forces we want.
 ! By default we call external program in force_abin routine
    SELECT CASE (chpot)
-     case ("mm")
-       call force_LJCoul(x, y, z, fx, fy, fz, eclas)
-     case ("mmwater")
-       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
-     case ("harm")
-       call force_harmon(x, y, z, fx, fy, fz, eclas)
-     case ("2dho")
-       call force_2dho(x, y, z, fx, fy, fz, eclas)
-     case ("morse")
-       call force_morse(x, y, z, fx, fy, fz, eclas)
-     case ("guillot")
-       call force_guillot(x, y, z, fx, fy, fz, eclas)
-     case ("doublewell")
-       call force_doublewell(x, y, z, fx, fy, fz, eclas)
-     case ("nab")
-       call force_nab(x, y, z, fx, fy, fz, eclas, walkmax)
-     case ("_cp2k_")
-       call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
+      case ("mm")
+         call force_LJCoul(x, y, z, fx, fy, fz, eclas)
+#ifndef CP2K
+! With CP2K interface there is a problem with underscoring, so we don't support NAB and
+! water force fields
+      case ("mmwater")
+         call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
+#endif
+      case ("harm")
+         call force_harmon(x, y, z, fx, fy, fz, eclas)
+      case ("2dho")
+         call force_2dho(x, y, z, fx, fy, fz, eclas)
+      case ("morse")
+         call force_morse(x, y, z, fx, fy, fz, eclas)
+      case ("guillot")
+         call force_guillot(x, y, z, fx, fy, fz, eclas)
+      case ("doublewell")
+         call force_doublewell(x, y, z, fx, fy, fz, eclas)
+      case ("nab")
+         call force_nab(x, y, z, fx, fy, fz, eclas, walkmax)
+      case ("_cp2k_")
+         call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
       case ("_tera_")
          if(ipimd.eq.2)then
             call force_terash(x, y, z, fx, fy, fz, eclas)
@@ -224,8 +228,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
             call force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
          end if
       case DEFAULT
-        call force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
-        eclas = eclas / walkmax
+         call force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
+         eclas = eclas / walkmax
    END SELECT
 
    e_pot = eclas
