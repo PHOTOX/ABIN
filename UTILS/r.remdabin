@@ -34,13 +34,6 @@ INTERFACE=${pot^^}
 pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 INTERFACE_REF=${pot_ref^^}
 
-echo "Job started at: " >> $OUTPUT
-date >> $OUTPUT
-echo "Running on node:" >> $OUTPUT
-uname -n >> $OUTPUT
-echo "Working directory:" >> $OUTPUT
-echo "$SCRDIR" >> $OUTPUT
-echo " " >> $OUTPUT
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 

@@ -35,13 +35,6 @@ INTERFACE_REF=${pot_ref^^}
 
 
 # TODO: Check that the MD run in existing job.log is not running anymore
-echo "Job started at: " >> $OUTPUT
-date >> $OUTPUT
-echo "Running on node:" >> $OUTPUT
-uname -n >> $OUTPUT
-echo "Working directory:" >> $OUTPUT
-echo "$SCRDIR" >> $OUTPUT
-echo " " >> $OUTPUT
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 

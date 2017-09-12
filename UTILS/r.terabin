@@ -44,13 +44,6 @@ fi
 
 SCRDIR=/scratch/$USER/$JOBNAME
 
-echo "Job started at: " >> $OUTPUT
-date >> $OUTPUT
-echo "Running on node:" >> $OUTPUT
-uname -n >> $OUTPUT
-echo "Working directory:" >> $OUTPUT
-echo "$SCRDIR" >> $OUTPUT
-echo " " >> $OUTPUT
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 

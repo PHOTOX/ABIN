@@ -285,7 +285,7 @@ print '(a)','**********************************************'
       rewind(150)
       !check, whether we hit End-Of-File or other error
       if(IS_IOSTAT_END(iost))then  !fortran intrinsic for EOF
-         if (my_rank.eq.0) write(*,*)'Namelist "system" not found. Ignoring...'
+         continue
       else if (iost.ne.0)then
          write(*,*)'ERROR when reading namelist "system".'
          write(*,*)chiomsg
@@ -1052,8 +1052,11 @@ print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek 2011-2015'
 print '(a)',' '
 
 call print_compile_info()
-
-write(*,*)'Job started at:'
+write(*,'(A17)',advance='no')'Running on node: '
+call system('uname -n')
+write(*,'(A19)',advance='no')'Working directory: '
+call system('pwd')
+write(*,'(A16)',advance='no')'Job started at: '
 write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
         values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
         values1(1)
