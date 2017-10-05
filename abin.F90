@@ -134,7 +134,8 @@ program abin_dyn
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
 !     getting initial forces and energies
-      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot) 
+
       if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
       
       ! if we use reference potential with RESPA
@@ -143,7 +144,7 @@ program abin_dyn
          call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
       end if
      
-!     setting initial values for surface hoping
+!     setting initial values for SURFACE HOPPING 
       if(ipimd.eq.2)then
          do itrj=1, ntraj
          ! TODO: only DEBUG, change me back!!
@@ -195,7 +196,9 @@ program abin_dyn
             case (1)
                call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
             case (2)
-               call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
+               call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc) 
+               ! include entire Ehrenfest step, in first step, we start from pure initial state so at first step we dont
+               ! need NAMCE and take forces just as a grad E 
             case (3)
                call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
             case (4)
@@ -209,7 +212,8 @@ program abin_dyn
          vz = pz / amt
 
 !        SURFACE HOPPING SECTION
-         if(ipimd.eq.2)then
+!        SH is called here, Ehrenfest in MD step
+         if(ipimd.eq.2.and.ehrenfest.eq.0)then
 
             call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
 

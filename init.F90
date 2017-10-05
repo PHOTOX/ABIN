@@ -83,7 +83,7 @@ subroutine init(dt, values1)
                      Nshake,ishake1,ishake2,shake_tol
 
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,decoh_alpha,popthr,ignore_state, &
-                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
+                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, ehrenfest
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 
@@ -96,7 +96,7 @@ subroutine init(dt, values1)
    dt=-1  
    error=0
    iplumed=0
-
+   ehrenfest=0
 
    call Get_cmdline(chinput, chcoords, chveloc)
 
@@ -231,6 +231,10 @@ print '(a)','**********************************************'
 
 !  allocate all basic arrays and set them to 0.0d0
    call allocate_arrays( natom, nwalk+1 )
+! Ehrenfest require larger array since gradients for all of the states are need   
+   if(ehrenfest.eq.1)then
+   call allocate_ehrenfest( natom, nstate )
+   end if
 
 !-----READING GEOMETRY
    if(iremd.eq.1) write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank

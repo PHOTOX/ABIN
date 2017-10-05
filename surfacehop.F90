@@ -463,11 +463,11 @@ module mod_sh
 
    end subroutine move_vars
    
-   ! TODO-EH
+
    !*************************************
    ! This is the main Ehrenfest routine !
    !*************************************
-!   subroutine ehrenfest(x, y, z, fxc, fxy, fxz, px, py, pz, dt, eclas)
+   subroutine enrehfest_forces(x, y, z, fxc, fxy, fxz, px, py, pz, dt, eclas)
 !   This subroutine must be called midstep in velocity verlet, after we call force_clas
 !    use mod_arrays, only: vx, vy, vz, vx_old, vy_old, vz_old
 !    real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)

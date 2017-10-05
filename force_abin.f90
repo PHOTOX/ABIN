@@ -33,6 +33,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 
 !$OMP PARALLEL ! REDUCTION(+:eclas) alternativa k atomic
 !$OMP DO PRIVATE(temp1,chsystem,chgeom,chforce,chhess,itest,file_exists,iost)
+
    do iw = 1, walkmax
 
 !!$   ithread=OMP_get_thread_num()
@@ -55,7 +56,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       end do
       close(unit=MAXUNITS+iw)
 
-!     Surface hopping or Ehrenfest     
+!     Surface hopping or Ehrenfest  
+! TO DO - calc forces for all the states or according to WF state coeficients under certain threshold   
       if(ipimd.eq.2)then
 
          open(unit=MAXUNITS+iw+2*walkmax,file='state.dat')
@@ -63,6 +65,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 
 !        Diagonal of tocalc holds info about needed forces 
 !        tocalc(x,x)= 1 -> compute forces for electronic state X
+!        totalc for Ehrenfest muset be set just for required states according to c coef. TO-DO in ehrenfest enrehfest_forces
+!         right now we calc forces for all the states
          do ist1=1,nstate
             write(MAXUNITS+iw+2*walkmax,'(I1,A1)',advance='no')tocalc(ist1,ist1),' '
          end do
@@ -148,7 +152,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 
 !     TODO-EH: Read additional forces probably somewhere here, use second index (iw) for different states
 
-!     reading energy gradients from engrad.dat
+!     reading energy gradients from engrad.dat      
+
       do iat=1,natqm
          read(MAXUNITS+iw,*,IOSTAT=iost)fx(iat,iw), fy(iat,iw), fz(iat,iw)
          if(iost.ne.0)then

@@ -23,6 +23,10 @@ module mod_arrays
    ! for multiple time-stepping and ring contraction ala O. Marsalek
    real(DP), allocatable  :: fxc_diff(:,:),fyc_diff(:,:),fzc_diff(:,:)
    real(DP)               :: epot_diff=0.0d0 ! not really array, but for now let's keep it here
+   !ehrenfest forces
+   real(DP), allocatable  :: fxeh(:,:), fyeh(:,:), fzeh(:,:) ! interpolation forces
+   real(DP), allocatable  :: fxeh_old(:,:), fyeh_old(:,:), fzeh_old(:,:) ! interpolation forces
+   real(DP), allocatable  :: fxmid(:,:), fymid(:,:), fzmid(:,:)  ! mid step approximative forces 
    save
    contains
 
@@ -117,7 +121,32 @@ module mod_arrays
       end if
 
    end subroutine allocate_arrays
-
+   
+   !EHRENFEST gradients and midstep approximative forces for all states
+   subroutine allocate_ehrenfest( natom, nstate )
+    integer,intent(in)  :: nstate
+    integer,intent(in)  :: natom
+    ! NOT added: avoid segfault for natom=1 and ndist>0 as above
+      allocate( fxeh(natom, nstate) )
+      allocate( fyeh(natom, nstate) )
+      allocate( fzeh(natom, nstate) )
+      allocate( fxeh_old(natom, nstate) )
+      allocate( fyeh_old(natom, nstate) )
+      allocate( fzeh_old(natom, nstate) ) 
+      allocate( fxmid(natom, nstate) )
+      allocate( fymid(natom, nstate) )
+      allocate( fzmid(natom, nstate) )           
+      fxeh=0.0d0  
+      fyeh=0.0d0
+      fzeh=0.0d0
+      fxeh_old=0.0d0
+      fyeh_old=0.0d0
+      fzeh_old=0.0d0
+      fxmid=0.0d0
+      fymid=0.0d0
+      fzmid=0.0d0
+   end subroutine allocate_ehrenfest
+   
    subroutine deallocate_arrays
       ! If x is allocated, all of them should be.
       ! If not, something is horribly wrong anyway
@@ -139,6 +168,18 @@ module mod_arrays
       if (allocated(fxc_diff))then
          deallocate( fxc_diff ); deallocate( fyc_diff ); deallocate( fzc_diff );
       end if
+      if(ehrenfest.eq.1)then
+      allocate( fxeh(natom, nstate) )
+      allocate( fyeh(natom, nstate) )
+      allocate( fzeh(natom, nstate) )
+      allocate( fxeh_old(natom, nstate) )
+      allocate( fyeh_old(natom, nstate) )
+      allocate( fzeh_old(natom, nstate) ) 
+      allocate( fxapp(natom, nstate) )
+      allocate( fyapp(natom, nstate) )
+      allocate( fzapp(natom, nstate) ) 
+      end if
+      !to do deallocate ehrenfest variables
    end subroutine deallocate_arrays
        
 
