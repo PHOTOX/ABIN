@@ -211,7 +211,7 @@ EOF
 done
 
 # Submit jobs
-
+$k=1
 if [[ ! -z "$submit" ]];then
    cd $folder
    while [[ $k -le $j ]]
