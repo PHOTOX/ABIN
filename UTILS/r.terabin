@@ -112,6 +112,8 @@ sleep 9
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
    grep port_name: tera.out.$itera | awk '{print $6}' | tail -1 > port.txt.$itera
 }
+# Temporary fix for OLDER ABIN version
+cp port.txt.1 port.txt
 
 
 if [[ -z $INPUTVELOC ]];then
