@@ -457,11 +457,9 @@ print '(a)','**********************************************'
      if(irest.eq.1)then
         call restin(x,y,z,vx,vy,vz,it)
      end if
-!----END OF INPUT SECTION---------------------
+!----END OF INPUT SECTION------
 
-
-
-!-----INITIALIZATION-----------------------
+!-----INITIALIZATION-----------
 
 
       if(pot.eq.'2dho')then
@@ -472,7 +470,7 @@ print '(a)','**********************************************'
          ! what about massive therm?
       endif
 
-!-----SETTING initial velocities according to the Maxwell-Boltzmann distribution
+!     SETTING initial velocities according to the Maxwell-Boltzmann distribution
       if(irest.eq.0.and.chveloc.eq.'')then
          if (temp0.ge.0)then
             call vinit(TEMP0, am, vx, vy, vz, rem_comvel, rem_comrot)
@@ -482,7 +480,8 @@ print '(a)','**********************************************'
       end if
 
 !     Reading velocities from file
-      if (chveloc.ne.'')then
+      if (chveloc.ne.''.and.irest.eq.0)then
+         ! TODO: move the following to a separate function
          if(iremd.eq.1) write(chveloc,'(A,I2.2)')trim(chveloc)//'.',my_rank
          write(*,*)'Reading initial velocities in a.u. from external file:'
          write(*,*)chveloc 
@@ -630,23 +629,25 @@ print '(a)','**********************************************'
       end if
 #endif
       if(irest.eq.1.and.chveloc.ne.'')then
-         write(*,*)'ERROR: Input velocities are not compatible with irest=1.'
-         write(*,*)chknow
-         if(iknow.ne.1) error=1
+      !   write(*,*)'ERROR: Input velocities are not compatible with irest=1.'
+         write(*,*)'WARNING: Input velocities from file'//trim(chveloc) //' will be ignored!'
+         write(*,*)'Velocities will be taken from restart file because irest=1.'
+      !   write(*,*)chknow
+      !   if(iknow.ne.1) error=1
       end if
 
-      !-----Check,whether input variables don't exceeds array limits
+      !-----Check, whether input variables don't exceeds array limits
       if(ntraj.gt.ntrajmax)then
-       write(*,*)'Maximum number of trajectories is:'
-       write(*,*)ntrajmax
-       write(*,*)'Adjust variable ntrajmax in modules.f90'
-       error=1
+         write(*,*)'Maximum number of trajectories is:'
+         write(*,*)ntrajmax
+         write(*,*)'Adjust variable ntrajmax in modules.f90'
+         error=1
       endif
       if(nstate.gt.nstmax)then
-       write(*,*)'Maximum number of states is:'
-       write(*,*)nstmax
-       write(*,*)'Adjust variable nstmax in modules.f90'
-       error=1
+         write(*,*)'Maximum number of states is:'
+         write(*,*)nstmax
+         write(*,*)'Adjust variable nstmax in modules.f90'
+         error=1
       endif
       if(nchain.gt.maxchain)then
        write(*,*)'Maximum number of Nose-Hoover chains is:'
