@@ -23,12 +23,12 @@ module mod_terampi
    character*50  ::  teraport = '', chsys_sleep
    integer     ::  newcomms(MAXTERASERVERS) ! Communicator, initialized in mpi_init subroutine
 !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
-   integer, parameter   ::  natmm_tera=0
+   integer  ::  natmm_tera=0
    integer  :: nteraservers = 1
    real(DP), allocatable :: mmcharges(:)
    real(DP)  :: mpi_sleep = 0.05
    public :: teraport, newcomms, mpi_sleep, nteraservers, chsys_sleep
-   public :: force_tera
+   public :: force_tera, natmm_tera
 #ifdef MPI
    public :: finalize_terachem, initialize_terachem, connect_terachem
 #endif

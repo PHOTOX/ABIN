@@ -84,7 +84,7 @@ subroutine init(dt, values1)
                      Nshake,ishake1,ishake2,shake_tol
 
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,alpha,popthr,ignore_state, &
-                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
+                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom,natmm_tera
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 

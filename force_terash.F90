@@ -294,7 +294,7 @@ subroutine init_terash(x, y, z)
    use mod_system, only: names
    use mod_qmmm, only: natqm
    use mod_sh, only: nstate
-   use mod_terampi, only: newcomms
+   use mod_terampi, only: newcomms, natmm_tera
    include 'mpif.h'
    real(DP),intent(in)  ::  x(:,:), y(:,:), z(:,:)
    real(DP) :: qmcoords(3, size(x,1))
@@ -314,8 +314,9 @@ subroutine init_terash(x, y, z)
    end do
 
    bufints(1) = FMSinit
-   bufints(2) = natom
-   call MPI_SSend( bufints, 2, MPI_INTEGER, 0, 2, newcomm, ierr )
+   bufints(2) = natom-natmm_tera
+   bufints(3) = natmm_tera
+   call MPI_SSend( bufints, 3, MPI_INTEGER, 0, 2, newcomm, ierr )
    if (idebug.gt.0) write(*, '(a)') 'Sent initial FMSinit.'
 
 !  Send atom types
