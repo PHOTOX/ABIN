@@ -8,7 +8,7 @@ irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working
 pot='mmwater'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
 ipimd=3,		!classical simulation 0, quantum simulation 1
 nwalk=1,		!number of random walkers 
-imini=200,		!equilibration period,!not properly implemented yet
+nstep=200,		!equilibration period,!not properly implemented yet
 istage=0,		!staging transformation (1), without staging (0)
 
 dt=20.,			!number of steps and timestep

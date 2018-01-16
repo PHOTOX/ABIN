@@ -1,14 +1,13 @@
-This is a sample input file for ABIN for CMD simulation
+This is a sample input file for ABIN for Classical MD simulation
 
 &general
 pot='g09'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,qchem 
-natom=27,		!number of atoms
-ipimd=0,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
-imini=2000,		! equilibration period (should be at least 2000), or number of steps for minimization
+natom=27,		! number of atoms
+ipimd=0,		! classical simulation=0, Path Integral MD=1, surface-hopping MD=2
 nstep=50000,		! number of steps
 dt=20.,			! timestep [au]
 irandom=1651563,  	! random seed
-irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
+irest=0,		! should we restart from restart.xyz? (ignoring input coordinates and velocities)
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=5,		! how often should we print coordinates?

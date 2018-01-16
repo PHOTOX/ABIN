@@ -20,7 +20,7 @@ module mod_analysis
    use mod_analyze_ext, only: analyze_ext
    use mod_estimators , only: estimators
    use mod_general,     only: it, ipimd, icv,nwrite, nwritef, nwritev, &
-                              nrest, nwritex, imini, nstep, anal_ext, idebug
+                              nrest, nwritex, nstep, anal_ext, idebug
    use mod_system
    use mod_density
    use mod_io 
@@ -60,15 +60,15 @@ module mod_analysis
       endif
    endif
 
-   if(ndist.ge.1.and.it.gt.imini)then
+   if(ndist.ge.1)then
       call density(x, y, z)
    endif
 
-   if(nang.ge.1.and.it.gt.imini)then
+   if(nang.ge.1)then
       call density_ang(x, y, z)
    endif
 
-   if(ndih.ge.1.and.it.gt.imini)then
+   if(ndih.ge.1)then
       call density_dih(x, y, z)
    endif
 
@@ -85,7 +85,7 @@ module mod_analysis
    subroutine trajout(x,y,z,time_step)
    use mod_const, only: ANG
    use mod_files, only: UMOVIE
-   use mod_general,  only: imini, nwalk, natom, iremd, my_rank, sim_time
+   use mod_general,  only: nwalk, natom, iremd, my_rank, sim_time
    use mod_system,   only: names
    implicit none
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
@@ -94,17 +94,10 @@ module mod_analysis
    character(len=20)  :: fgeom, chout
    logical            :: lopened
 
-   ! close has no effect if UMOVIE is not open according to the standard
-   if (imini.eq.time_step) close(UMOVIE) 
-
    INQUIRE(UMOVIE,opened=lopened)
 
    if(.not.lopened)then
-      if (imini.gt.time_step)then
-         chout='movie_mini.xyz'
-      else
-         chout='movie.xyz'
-      end if
+      chout='movie.xyz'
       if(iremd.eq.1) write(chout, '(A,I2.2)')trim(chout)//'.', my_rank
       open(UMOVIE, file=chout, access='append', action="write")
    end if
@@ -115,7 +108,7 @@ module mod_analysis
 
    do iw=1,nwalk
        write(UMOVIE,*)natom
-       ! In the future, we should get rid of time step
+       ! In the future, we should get rid of the time step?
        write(UMOVIE,'(A10,I20,A15,F15.2)')'Time step:',time_step,' Sim. Time [au]',sim_time
        do iat=1,natom
           write(UMOVIE,10)names(iat), x(iat,iw)/ANG, y(iat,iw)/ANG, z(iat,iw)/ANG

@@ -4,7 +4,7 @@
 subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_const,    only: DP
    use mod_general,  only: natom, nwalk, istage, inormalmodes, iqmmm, it, &
-                           pot, pot_ref, imini, idebug
+                           pot, pot_ref, idebug
    use mod_qmmm,     only: force_LJCoul
    use mod_nab,      only: ipbc,wrap,nsnb,force_nab
    use mod_sbc,      only: force_sbc, isbc !,ibag
@@ -75,10 +75,8 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    if(iqmmm.eq.2) call force_nab(transx, transy, transz, fxab, fyab, fzab, eclas, nwalk)
    if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
 
-!--------PLUMED SECTION---------------
-   ! not sure there should be imini, might produce weird results in US
-   if(iplumed.eq.1.and.it.gt.imini) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
-!------------------------------------
+!  PLUMED SECTION
+   if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
 
 !  For reference potential and ring-polymer contraction
@@ -94,7 +92,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
       if(isbc.eq.1)  call force_sbc(transx,transy,transz,fxab,fyab,fzab)
       if(iqmmm.eq.2) call force_nab(transx, transy, transz, fxab, fyab, fzab, eclas, nwalk)
       if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
-      if(iplumed.eq.1.and.it.gt.imini) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
+      if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
       fxab = fx - fxab
       fyab = fy - fyab

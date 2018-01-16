@@ -417,22 +417,15 @@ module mod_files
 
    !--Here we ensure, that previous files are deleted----
    if(irest.eq.0)then
-      open(UMOVIE,file='movie_mini.xyz')
-      close(UMOVIE,status='delete')
       chaccess='SEQUENTIAL'
    else
       chaccess='APPEND'
    endif
 
-   if(imini.gt.it)then
-      chfiles(UMOVIE)='movie_mini.xyz'
-   else
-      chfiles(UMOVIE)='movie.xyz'
-   end if
+   chfiles(UMOVIE)='movie.xyz'
 
    if(iremd.eq.1)then
       do i=1, MAXUNITS
-         write(*,*)trim(chfiles(40))//'.'
          write(chfiles(i),'(A,I2.2)')trim(chfiles(i))//'.', my_rank
       end do
    end if
