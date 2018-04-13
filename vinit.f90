@@ -157,6 +157,7 @@ END SUBROUTINE remove_comvel
 
 
 subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
+   use mod_system,      only: dime
    use mod_general,     only: natom, nwalk, my_rank, pot
    real(DP),intent(in)     :: x(:,:), y(:,:), z(:,:)
    real(DP),intent(inout)  :: vx(:,:), vy(:,:), vz(:,:)
@@ -169,7 +170,7 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
    real(DP) :: Omx, Omy, Omz, Om_tot
    integer  :: iat, iw
 
-   if (pot.eq.'2dho') return
+   if (dime.eq.1) return
 
 
    ! It would probably be more correct to calculate angular momentum

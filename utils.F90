@@ -1,20 +1,20 @@
-! Various small functions and subroutines, that may be used throughout the program.
-! Daniel Hollas         2014
+! Various helper functions and subroutines that may be used throughout the program.
 module mod_utils
    use iso_fortran_env
    use mod_const, only: DP
    implicit none
+   public
    contains
 
-   real(DP) function get_distance(x,y,z,at1,at2,iw)
-   real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
+   real(DP) function get_distance(x, y, z, at1, at2, iw)
+   real(DP),intent(in) :: x(:,:), y(:,:), z(:,:)
    integer,intent(in)  :: at1, at2, iw
    real(DP) :: r
-   r=(x(at1,iw)-x(at2,iw))**2
-   r=r+(y(at1,iw)-y(at2,iw))**2
-   r=r+(z(at1,iw)-z(at2,iw))**2
-   r=sqrt(r)
-   get_distance=r
+   r =     ( x(at1, iw) - x(at2, iw) )**2
+   r = r + ( y(at1, iw) - y(at2, iw) )**2
+   r = r + ( z(at1, iw) - z(at2, iw) )**2
+   r = sqrt(r)
+   get_distance = r
    end function get_distance
 
    function SanitizeString(string) result (return_string)

@@ -14,7 +14,7 @@ module mod_nhc
    real(DP)  :: temp0=-1, temp=0.0d0
    integer :: inose=-1,nchain=4,initNHC=-1
    integer :: imasst=1  ! switch for massive thermostatting
-   integer :: nrespnose=3,nyosh=7,nmolt=0
+   integer :: nrespnose=3, nyosh=7, nmolt=1
    integer :: scaleveloc, readNHC=1
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
    integer,allocatable :: natmolt(:)

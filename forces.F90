@@ -181,6 +181,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    use mod_qmmm,     only: force_LJCoul
    use mod_nab,      only: force_nab
    use mod_harmon,   only: force_harmon,force_2dho,force_morse,force_doublewell
+   use mod_splined_grid
    use mod_guillot,  only: force_guillot
    use mod_cp2k,     only: force_cp2k
    use mod_terampi,     only: force_tera
@@ -194,8 +195,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    real(DP)               :: eclas
 
    eclas = 0.0d0
-! Here we decide which forces we want.
-! By default we call external program in force_abin routine
+!  Here we decide which forces we want.
+!  By default we call external program in force_abin routine
    SELECT CASE (chpot)
       case ("mm")
          call force_LJCoul(x, y, z, fx, fy, fz, eclas)
@@ -205,6 +206,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
       case ("mmwater")
          call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
 #endif
+      case ("splined_grid")
+         call force_splined_grid(x, y, z, fx, fy, fz, eclas)
       case ("harm")
          call force_harmon(x, y, z, fx, fy, fz, eclas)
       case ("2dho")

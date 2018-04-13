@@ -25,6 +25,7 @@ subroutine init(dt, values1)
    use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
    use mod_guillot,  only: inames_guillot
+   use mod_splined_grid, only: initialize_spline
    use mod_utils
    use mod_vinit
    use mod_density
@@ -106,7 +107,14 @@ subroutine init(dt, values1)
    open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
    read(150,general)
    rewind(150)
-   pot=UpperToLower(pot)
+   pot = UpperToLower(pot)
+
+   if(pot.eq.'splined_grid')then
+      natom = 1
+      dime = 1
+      f = 0
+      call initialize_spline()
+   end if
 
 
    if(pot.eq."_cp2k_".or.pot_ref.eq."_cp2k_")then
@@ -312,6 +320,7 @@ print '(a)','**********************************************'
       allocate ( nshakemol(natom)  )
 #endif
       natmolt   = 0
+      natmolt(1) = natom ! default for global NHC thermostat
       nshakemol = 0
 
       read(150,nhcopt)

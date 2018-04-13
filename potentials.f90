@@ -30,7 +30,7 @@ module mod_harmon
       real(DP),intent(out) :: fxab(:,:),fyab(:,:),fzab(:,:)
       real(DP),intent(out) :: eclas
       real(DP)             :: energy
-      integer            :: iw
+      integer              :: iw
 
       eclas = 0.0d0
       energy = 0.0d0
@@ -263,3 +263,182 @@ module mod_harmon
    end subroutine hess_2dho
 
 end module mod_harmon
+
+
+module mod_splined_grid
+   use mod_const, only: DP
+   implicit none
+   integer, parameter :: MAX_GRID_SIZE = 10000
+   integer  :: grid_size
+   real(DP), allocatable :: second_derivatives(:)
+   real(DP) :: x_grid(MAX_GRID_SIZE)
+   real(DP) :: y_grid(MAX_GRID_SIZE)
+   real(DP) :: x_max, x_min
+   private
+   public :: force_splined_grid, initialize_spline
+   save
+CONTAINS
+
+   real(DP) function  potential_cubic_spline(X)
+      REAL(DP), INTENT(IN) :: X
+      REAL(DP) :: Y
+      call splint(x_grid, y_grid, second_derivatives, grid_size, X, Y)
+      potential_cubic_spline = Y
+      return
+   end function potential_cubic_spline
+
+   subroutine force_splined_grid(x, y, z, fx, fy, fz, eclas)
+      use mod_general,  only: nwalk
+      use mod_utils,    only: abinerror
+      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
+      real(DP),intent(out) :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(out) :: eclas
+      real(DP) :: en_1, en_2, dx = 0.0001d0
+!      real(DP) :: potential_cubic_spline
+      integer  :: iw
+
+      fy = 0.0d0; fz = 0.0d0; eclas = 0.0d0
+      do iw = 1, nwalk
+
+         if(x(1, iw).lt.x_min.or.x(1, iw).gt.x_max)then
+            write(*,*)"ERROR: Particle got out of the grid!"
+            call abinerror("force_splined_grid")
+         end if
+
+         eclas = eclas + potential_cubic_spline(x(1,iw))
+            
+         ! Let's just do numerical forces for now!
+         ! use 3-point numerical derivative
+         en_1 = potential_cubic_spline(x(1,iw)-dx)
+         en_2 = potential_cubic_spline(x(1,iw)+dx)
+         fx(1, iw) = (en_1-en_2) / 2 / dx
+
+      end do
+
+   end subroutine force_splined_grid
+
+   subroutine initialize_spline()
+      use mod_general, only: idebug
+      implicit none
+      character(len=100) :: chfile_pot='potential.dat'
+      real(DP) :: yp1, ypn ! first derivatives at the grid edges
+      integer  :: IUNIT=600, i
+      real(DP) :: x, dx
+    
+      grid_size = 0
+
+      ! TODO: make x_grid et al allocatable 
+      open(IUNIT,file=chfile_pot, status='OLD', action='read')
+      do
+         read(IUNIT, *, end = 51)x_grid(grid_size+1), y_grid(grid_size+1)
+         grid_size = grid_size + 1
+      enddo
+51    close(IUNIT)
+
+      if(grid_size.lt.3)then
+         write(*,*)"ERROR: Could not find grid in "//chfile_pot
+         stop 1
+      end if
+
+      allocate(second_derivatives(grid_size))
+      x_min = x_grid(1)
+      x_max = x_grid(grid_size)
+
+!     Settings for natural cubic spline
+      yp1 = 1e31
+      ypn = 1e31
+!     On second thought, let's just set the first derivatives the same
+!     as at the boundaries
+!      yp1 = (xa(2)-xa(1)) / (ya(1)-ya(2))
+!      ypn = 1e31
+      call spline(x_grid, y_grid, grid_size, yp1, ypn, second_derivatives)
+
+      ! Print out the splined potential just to be sure
+      if (idebug.eq.1)then
+         x = x_min
+         dx = (x_max - x_min) / grid_size / 5
+         open(IUNIT, file="potential_splined.dat", action="write")
+!         write(IUNIT, *)x_min, x_max, grid_size
+         do i = 1, grid_size * 5
+            write(IUNIT,*)x, potential_cubic_spline(x)
+            x = x + dx
+         end do
+         close(IUNIT)
+      end if
+   end subroutine initialize_spline
+
+
+
+   ! From numerical recipies, sliglty modified
+   SUBROUTINE SPLINT(XA,YA,Y2A,N,X,Y)
+      implicit real*8(a-h,o-z)
+      INTEGER, INTENT(IN)  :: N
+      REAL(DP), INTENT(IN) :: X, XA(N), YA(N), Y2A(N)
+      REAL(DP), INTENT(OUT) :: Y
+      INTEGER  :: KLO, KHI, K
+      KLO=1
+      KHI=N
+      DO WHILE (KHI-KLO.GT.1)
+        K=(KHI+KLO)/2
+        IF(XA(K).GT.X)THEN
+          KHI=K
+        ELSE
+          KLO=K
+        ENDIF
+      END DO
+      H = XA(KHI) - XA(KLO)
+      IF (H.EQ.0.) THEN
+         write(*,*) 'Bad XA input.'
+         stop 1 
+      END IF
+!     DH: when extrapolating out of boundaries, just do linear
+!     TODO: do this also to the END boundary
+!      if(x.lt.xa(1))then
+!         Y2A(KHI) = 0
+!         Y2A(KLO) = 0
+!      end if
+      A = (XA(KHI)-X)/H
+      B = (X-XA(KLO))/H
+      Y = A*YA(KLO) + B*YA(KHI) + &
+           ((A**3-A) * Y2A(KLO) + (B**3-B)*Y2A(KHI))*(H**2)/6.
+
+      ! TODO implement first derivative
+      RETURN
+   END
+
+   SUBROUTINE spline(x,y,n,yp1,ypn,y2)
+      INTEGER  :: n, NMAX
+      REAL(DP)   :: yp1, ypn, x(n), y(n), y2(n)
+      PARAMETER (NMAX=500)
+      INTEGER i, k
+      REAL(DP)  p, qn, sig, un, u(NMAX)
+
+      if (yp1.gt..99e30) then
+         y2(1) = 0.
+         u(1) = 0.
+      else
+         y2(1) = -0.5
+         u(1) = (3./(x(2)-x(1)))*((y(2)-y(1))/(x(2)-x(1))-yp1)
+      endif
+      do i = 2, n-1
+         sig = (x(i)-x(i-1))/(x(i+1)-x(i-1))
+         p = sig*y2(i-1)+2.
+         y2(i) = (sig-1.)/p
+         u(i) = (6.*((y(i+1)-y(i))/(x(i+1)-x(i))-(y(i)-y(i-1))  &
+              / (x(i)-x(i-1)))/(x(i+1)-x(i-1))-sig*u(i-1))/p
+      enddo
+      if (ypn.gt..99e30) then
+         qn = 0.
+         un = 0.
+      else
+         qn = 0.5
+         un = (3./(x(n)-x(n-1))) * (ypn-(y(n)-y(n-1)) / (x(n)-x(n-1)))
+      endif
+      y2(n) = (un-qn*u(n-1))/(qn*y2(n-1)+1.)
+      do k = n-1, 1, -1
+         y2(k) = y2(k) * y2(k+1) + u(k)
+      enddo
+      return
+    END SUBROUTINE SPLINE
+
+end module
