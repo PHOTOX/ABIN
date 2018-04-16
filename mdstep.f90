@@ -38,34 +38,34 @@ module mod_mdstep
    end subroutine shiftP
 
 
-   subroutine thermostat(px,py,pz,amt,dt)
+   subroutine thermostat(px, py, pz, amt, dt)
    use mod_nhc, only: inose, shiftNHC_yosh, shiftNHC_yosh_mass, imasst
    use mod_gle, only: gle_step, pile_step, langham
-   real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
+   real(DP),intent(inout)  :: px(:,:), py(:,:), pz(:,:)
    real(DP),intent(in)     :: amt(:,:)
    real(DP),intent(in)     :: dt
 
    if(inose.eq.1)then
    
       if (imasst.eq.1)then
-         call shiftNHC_yosh_mass(px,py,pz,amt,dt)
+         call shiftNHC_yosh_mass(px, py, pz, amt, dt)
       else
-         call shiftNHC_yosh(px,py,pz,amt,dt)
+         call shiftNHC_yosh(px, py, pz, amt, dt)
       endif
    
    ! colored-noise thermostats
    else if (inose.eq.2)then
 
-      langham = langham + ekin_p(px,py,pz)
-      call gle_step(px,py,pz,amt)
-      langham = langham - ekin_p(px,py,pz)
+      langham = langham + ekin_p(px, py, pz)
+      call gle_step(px, py, pz, amt)
+      langham = langham - ekin_p(px, py, pz)
 
    ! white-noise thermostat (PILE)
    else if (inose.eq.3)then
 
-      langham = langham + ekin_p(px,py,pz)
-      call pile_step(px,py,pz,amt)
-      langham = langham - ekin_p(px,py,pz)
+      langham = langham + ekin_p(px, py, pz)
+      call pile_step(px, py, pz, amt)
+      langham = langham - ekin_p(px, py, pz)
 
    end if
 
@@ -78,13 +78,13 @@ module mod_mdstep
 !  Works with NHC, GLE and PIGLET thermostats.
 !  Contains propagation of normal modes according to:
 !  eq 23 from J. Chem. Phys. 133, 124104 2010
-   subroutine verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc)
+   subroutine verletstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
    use mod_general, ONLY: pot, ipimd, inormalmodes
    use mod_nhc, ONLY:inose
    use mod_interfaces, only: force_clas, propagate_nm
-   real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
-   real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
-   real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
+   real(DP),intent(inout) :: x(:,:), y(:,:), z(:,:)
+   real(DP),intent(inout) :: fxc(:,:), fyc(:,:), fzc(:,:)
+   real(DP),intent(inout) :: px(:,:), py(:,:), pz(:,:)
    real(DP),intent(in)    :: amt(:,:)
    real(DP),intent(in)    :: dt
    real(DP),intent(inout) :: eclas
@@ -92,7 +92,7 @@ module mod_mdstep
 
    if(inose.gt.0) call thermostat(px, py, pz, amt, dt/2)
    
-   call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+   call shiftP (px, py, pz, fxc, fyc, fzc, dt/2)
    
    if(inormalmodes.eq.1)then
       ! Warning, initial hack, passing amt here
@@ -101,9 +101,9 @@ module mod_mdstep
       call shiftX(x, y, z, px, py, pz, amt, dt)
    end if
    
-   call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot)
+   call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
-   call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+   call shiftP (px, py, pz, fxc, fyc, fzc, dt/2)
 
    if(inose.gt.0) call thermostat(px, py, pz, amt, dt/2)
    
@@ -114,16 +114,16 @@ module mod_mdstep
    ! General algorithm of the propagation:
    ! see eq. 64 in Mol. Phys. 1996, vol. 87, 1117 (Martyna et al.)  
    ! further info is before subroutine respa_shake
-   subroutine respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
-              fxc,fyc,fzc,fxq,fyq,fzq)
+   subroutine respastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, &
+              fxc, fyc, fzc, fxq, fyq, fzq)
    use mod_general,  only: nabin, pot
    use mod_nhc,      only: inose
    use mod_interfaces, only: force_clas, force_quantum
-   real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
-   real(DP),intent(inout)  :: fxc(:,:),fyc(:,:),fzc(:,:)
-   real(DP),intent(inout)  :: fxq(:,:),fyq(:,:),fzq(:,:)
-   real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
-   real(DP),intent(in)     :: amg(:,:),amt(:,:)
+   real(DP),intent(inout)  :: x(:,:), y(:,:), z(:,:)
+   real(DP),intent(inout)  :: fxc(:,:), fyc(:,:), fzc(:,:)
+   real(DP),intent(inout)  :: fxq(:,:), fyq(:,:), fzq(:,:)
+   real(DP),intent(inout)  :: px(:,:), py(:,:), pz(:,:)
+   real(DP),intent(in)     :: amg(:,:), amt(:,:)
    real(DP),intent(in)     :: dt
    real(DP),intent(inout)  :: eclas,equant
    integer                 :: iabin
@@ -271,7 +271,7 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
    real(DP)                :: dtsm
    integer                 :: iabin, iref
 
-   dtsm = dt/(nabin*nstep_ref)
+   dtsm = dt / (nabin * nstep_ref)
 
    if (inose.gt.0) call thermostat(px, py, pz, amt, dtsm/2)
       
@@ -299,9 +299,9 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
       
       enddo
       
-      call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot_ref)
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
       
-      call shiftP (px,py,pz,fxc,fyc,fzc,dt/2/nstep_ref)
+      call shiftP (px, py, pz, fxc, fyc, fzc, dt/2/nstep_ref)
       
       if (inose.gt.0.and.iref.ne.nstep_ref) call thermostat(px, py, pz, amt, dtsm/2)
 
