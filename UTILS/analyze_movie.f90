@@ -21,9 +21,16 @@ real*8 function get_distance( at1, at2, boxx, boxy, boxz)
    real*8, intent(in) :: boxx, boxy, boxz
    real*8  :: dx, dy, dz, temp
 
-   dx = x(at1) - x(at2)
-   dy = y(at1) - y(at2)
-   dz = z(at1) - z(at2)
+   if (at1.eq.at2)then
+      dx = x(at1)
+      dy = y(at1)
+      dz = z(at1)
+   else
+      dx = x(at1) - x(at2)
+      dy = y(at1) - y(at2)
+      dz = z(at1) - z(at2)
+
+   end if
    if (boxx.gt.0)then
       dx = dx - boxx * nint(dx/boxx)
       dy = dy - boxy * nint(dy/boxy)
