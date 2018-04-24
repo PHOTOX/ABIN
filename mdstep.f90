@@ -214,45 +214,37 @@ subroutine respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &
 !------RESPA LOOP
       do iabin=1,nabin
      
-       if(inose.eq.1)then
-        call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
-       endif
+         if(inose.eq.1) call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
 
-       call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
+         call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
 
 !--------RATTLE HERE!
-   if(nshake.ge.1) call shake(x,y,z,px,py,pz,amt,0,1) 
+         if(nshake.ge.1) call shake(x,y,z,px,py,pz,amt,0,1) 
 
-    call shiftX(x,y,z,px,py,pz,amt,dt/nabin)
+         call shiftX(x,y,z,px,py,pz,amt,dt/nabin)
 
-!------SHAKE , iq=1, iv=0
-   if(NShake.gt.0) call shake(x,y,z,px,py,pz,amt,1,0) 
+!------  SHAKE , iq=1, iv=0
+         if(NShake.gt.0) call shake(x,y,z,px,py,pz,amt,1,0) 
 
-    call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
+         call force_quantum(fxq,fyq,fzq,x,y,z,amg,equant)
 
-    call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
+         call shiftP (px,py,pz,fxq,fyq,fzq,dt/(2*nabin))
 
-   if(inose.eq.1)then
-     call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
-   endif
+         if(inose.eq.1) call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
 
-   enddo
+      enddo
 !-----END OF RESPA LOOP
 
-   if(inose.eq.1)then
-    call shiftNHC_yosh (px,py,pz,amt,-dt/(2*nabin))
-   endif
+      if(inose.eq.1) call shiftNHC_yosh (px,py,pz,amt,-dt/(2*nabin))
 
-   call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot)
+      call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot)
 
-   call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+      call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
 
-   if(inose.eq.1)then
-     call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
-   endif
-
+      if(inose.eq.1) call shiftNHC_yosh (px,py,pz,amt,dt/(2*nabin))
 
    end subroutine respashake
+
 
    !-double RESPA ALGORITHM using reference semiempirical potential (or any other potential)
    subroutine doublerespastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas, &

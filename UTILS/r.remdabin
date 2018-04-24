@@ -1,10 +1,8 @@
 #!/bin/bash
-# This is a sample script for launching ABIN simulations in cluster environments
-# using internal CP2K interface.
-# The input for CP2K must be in file cp2k.inp
+# This is a sample script for launching REMD ABIN simulations in cluster environments
 
 # 1. Copy all data from CWD to the node's scratch.
-# 2. Launch ABIN.
+# 2. Launch MPI version of ABIN.
 # 3. Copy data back (only newer files are copied!).
 # 4. Remove scratch directory. (if delscratch = true)
 

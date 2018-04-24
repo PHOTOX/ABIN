@@ -3,6 +3,12 @@
 module mod_arrays
    use mod_const, only: DP
    implicit none
+
+   ! TODO: Stop this madness, put everything into Traj_Data derived type
+   ! and then create type(Traj_Data) :: trajectory. trajectory_prev
+   ! (to implement adaptive time step for SH)
+
+   ! will require some refactor (i.e. everywhere where we import mod_arrays)
    real(DP), allocatable  :: x(:,:),y(:,:),z(:,:)
    real(DP), allocatable  :: x_old(:,:),y_old(:,:),z_old(:,:)
    real(DP), allocatable  :: amt(:,:),amg(:,:)

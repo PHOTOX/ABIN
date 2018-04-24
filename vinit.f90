@@ -32,7 +32,6 @@ module mod_vinit
 !
 !------------------------------------------------------------------------
 SUBROUTINE vinit(TEMP, MASS, vx, vy, vz, rem_comvel, rem_rot)
-   USE mod_arrays,   ONLY: x, y, z
    USE mod_general,  ONLY: natom, pot, nwalk, my_rank
    USE mod_random,   ONLY: gautrg
    real(DP),intent(out)    :: vx(:,:), vy(:,:), vz(:,:)

@@ -69,14 +69,71 @@ module mod_system
    ! cannot use this
 !   use mod_utils, only: abinerror
    implicit none
-   real(DP),allocatable  :: am(:)
+   ! TODO: move more stuff into Properties derived type
+   ! https://kiwi.atmos.colostate.edu/fortran/docs/fortran2012.key-8.pdf
+
+   ! Extra electronic properties (not mandatory)
+   type Bead_Extra_Properties
+      ! PRIVATE ! probably cannot encapsulate due to MPI TC interface
+      real(DP), allocatable :: QMcharges(:)
+      real(DP), allocatable :: MMcharges(:)
+      real(DP), allocatable :: dipole_moment(:,:) ! second argument should be 4
+      real(DP), allocatable :: transdipole_moment(:,:) ! second argument should be 4
+      real(DP), allocatable :: user_defined(:)    ! let user track anything here
+                                                  ! need to specify dimension in
+                                                  ! input.in. Output file should
+                                                  ! be called magic_property.dat
+   end type Bead_Extra_Properties
+
+   type Traj_Properties
+      ! Allocate based on number of nwalk
+      type(Bead_Extra_Properties), allocatable :: bead_prop(:)
+   end type Traj_Properties
+   type(Traj_Properties) :: traj_prop, traj_prop_prev
+
+   real(DP), allocatable :: am(:)
    character(len=2), allocatable :: names(:)
-   integer,allocatable  :: inames(:)
-   integer              :: dime=3,f=3 !dimenze systemu a pocet zakonu zachovani 
-   integer              :: conatom=0
-!---distributions (distance,angle,dihedral)
+   integer, allocatable  :: inames(:)
+   integer               :: dime=3 ! dimension of the system 
+   integer               :: f = 3  ! number of constants of motion 
+                                   ! (for calculating kinetic temperature)
+                                   ! sensitive to the type of thermostat
+                                   ! currently prob. not implemented correctly
+   integer               :: conatom=0 ! number of constrained atoms
    save
    CONTAINS
+
+   ! We should loop over this function over different beads
+   subroutine read_properties(traj_prop)
+   use mod_general, only: nwalk, natom
+   type(Traj_Properties), intent(out) :: traj_prop(:)
+   integer :: iw
+
+   ! we should make some generalized reading function in utils
+   ! i.e. dipole moments and transition dipolo moments can reuse
+   ! (e.g. simply read..) but where should we open the unit? 
+   ! but maybe not, these things might be rather different?
+
+   do iw = 1, nwalk
+
+   end do
+
+   end subroutine read_properties
+
+   subroutine write_properties(traj_prop)
+   type(Traj_Properties), intent(out) :: traj_prop
+
+   ! should introduce nwriteprop
+   ! by default should equal nwritex
+
+   end subroutine write_properties
+
+   subroutine clean_prop_tempfiles
+
+   call system("rm -f temp_dip.*.dat temp_tdip.*.dat")
+
+   end subroutine clean_prop_tempfiles
+
    subroutine mass_init(masses, massnames)
    use mod_const,    only: AMU
    use mod_general,  only: natom, my_rank
@@ -332,6 +389,7 @@ module mod_system
 
    end subroutine mass_init
 
+   !TODO: Why the hell is this here?
    subroutine constrainP (px,py,pz)
       use mod_general, only: nwalk, my_rank
       real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
