@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/28882168.svg)](https://zenodo.org/badge/latestdoi/28882168)
 
 ----------------
 1. What is ABIN?
