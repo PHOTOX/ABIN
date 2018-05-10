@@ -1058,11 +1058,12 @@ print '(a)','  /_/        \_\   |_____/    |_|   |_|    \_|'
 print '(a)',' '
 
 print '(a)','     version 1.0'
-print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek 2011-2015'
+print '(a)',' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek 2011-2015'
 print '(a)',' '
 
 call print_compile_info()
-write(*,'(A17)',advance='no')'Running on node: '
+write(*,*)
+write(*,'(A17)',advance='no')"Running on node: "
 call system('uname -n')
 write(*,'(A19)',advance='no')'Working directory: '
 call system('pwd')
@@ -1186,6 +1187,7 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
    print *,     compiler_options()
 #endif
 
+print '(a)',''
 print '(a)','#################### RUNTIME INFO ####################'
 call get_command(cmdline)
 write(*,*)trim(cmdline)

@@ -10,18 +10,21 @@
 #$ -V -cwd
 #$ -l num_gpu=1
 
-# SETUP --------------------------------
+# ABIN SETUP 
 OUTPUT=output
 JOBNAME=ABIN_${JOB_ID}_$$
-INPUTPARAM=input.in.pigle
-INPUTGEOM=acrolein_opt.xyz
-delscratch=true
+INPUTPARAM=input.in
+INPUTGEOM=mini.dat
 INPUTVELOC=
+
+# TeraChem SETUP
+TC_INPUT=tera.inp
 MPITYPE=0   # 0 - ground state AIMD
             # 2 - Surface Hopping
 
+delscratch=true
 ################
-N_TERA_SERVERS=1     # Use more TC servers for PIMD
+N_TERA_SERVERS=1     # Use more TC servers for PIMD (Experimental)
 ########################################
 # ABINEXE=/home/hollas/PHOTOX/bin/abin.mpi
 # ABINEXE should be determined automatically from SetEnvironment.sh
@@ -86,11 +89,11 @@ sed -i "s/teraport=.*/teraport=\"\"/" $INPUTPARAM
 
 declare -A terapid
 
-numgpus=$(grep gpus tera.inp | awk '{print $2}')
+numgpus=$(grep gpus $TC_INPUT | awk '{print $2}')
 
 if [[ $numgpus -gt 1 && $N_TERA_SERVERS -gt 1 ]];then
    echo "ERROR: Number of gpus per TC server should be 1!"
-   echo "Set parameters \"gpus 1\" in tera.inp or"
+   echo "Set parameters \"gpus 1\" in $TC_INPUT or"
    echo "parameter N_TERASERVERS=1 in r.terabin"
    exit 1
 fi
@@ -106,19 +109,20 @@ fi
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
    if [[ $N_TERA_SERVERS -gt 1 ]];then
       let gpuid=itera-1
-      sed -r "s/gpus.+/gpus $numgpus  $gpuid/" tera.inp > tera.inp.$itera
+      sed -r "s/gpus.+/gpus $numgpus  $gpuid/" $TC_INPUT > $TC_INPUT.$itera
    else
-      cp tera.inp tera.inp.1
+      cp $TC_INPUT $TC_INPUT.1
    fi
-   $MPIRUN_TERA $TERAEXE --inputfile=tera.inp.$itera --UseMPI=$MPITYPE --MPIPort=$port.$itera >> tera.out.$itera 2>&1 &
+   $MPIRUN_TERA $TERAEXE --inputfile=$TC_INPUT.$itera --UseMPI=$MPITYPE --MPIPort=$port.$itera >> $TC_INPUT.out.$itera 2>&1 &
 #  Get PID of the last process
    terapid[$itera]=$!
 }
 
 sleep 9
+sync
 # Ugly workaround because MPI_Lookup does not work
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
-   grep port_name: tera.out.$itera | awk '{print $6}' | tail -1 > port.txt.$itera
+   grep port_name: $TC_INPUT.out.$itera | awk '{print $6}' | tail -1 > port.txt.$itera
 }
 # Temporary fix for OLDER ABIN version
 cp port.txt.1 port.txt
