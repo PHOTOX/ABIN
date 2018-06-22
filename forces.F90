@@ -4,7 +4,7 @@
 subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_const,    only: DP
    use mod_general,  only: natom, nwalk, istage, inormalmodes, iqmmm, it, &
-                           pot, pot_ref, idebug
+                           pot, pot_ref, idebug, en_restraint
    use mod_qmmm,     only: force_LJCoul
    use mod_nab,      only: ipbc,wrap,nsnb,force_nab
    use mod_sbc,      only: force_sbc, isbc !,ibag
@@ -13,6 +13,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_transform
    use mod_interfaces, only: force_wrapper
    use mod_plumed,   only: iplumed, plumedfile, force_plumed
+   use mod_en_restraint
    implicit none
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
@@ -78,6 +79,9 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
 !  PLUMED SECTION
    if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
+!------- ER(energy restraint) SECTION ---
+if(en_restraint.ge.1) call energy_restraint(x, y, z, fxab,fyab,fzab,eclas)
+!----------------------------------------
 
 !  For reference potential and ring-polymer contraction
    if(pot_ref.ne.'none'.and.chpot.eq.pot)then

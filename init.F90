@@ -34,6 +34,7 @@ subroutine init(dt, values1)
    use mod_analysis, only: restin
    use mod_water,    only: watpot, check_water
    use mod_plumed,   only: iplumed, plumedfile, plumed_init
+   use mod_en_restraint
    use mod_transform, only:init_mass
 #ifdef USEFFTW
    use mod_fftw3,    only: fftw_init
@@ -70,6 +71,7 @@ subroutine init(dt, values1)
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
+            en_restraint, en_diff, en_kk, restrain_pot, &
             pot_ref, nstep_ref, teraport, nteraservers, cp2k_mpi_beads
 
 #ifdef MPI
@@ -144,7 +146,7 @@ subroutine init(dt, values1)
 #ifdef MPI
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
    call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
-   if(pot.eq.'_tera_')then
+   if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
       if (nwalk.gt.1)then
          write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
          write(*,*)'You should have "integrator regular" in &
@@ -181,6 +183,19 @@ subroutine init(dt, values1)
 #endif
 
    endif
+
+   if (en_restraint.ge.1) then
+      call en_rest_init(dt)
+ 
+      if (en_restraint.eq.1)then
+      write(*,*) 'Energy restraint is ON(1): Using method of Lagrange multipliers.'
+      else if (en_restraint.eq.2.and.en_kk.ge.0)then
+      write(*,*) 'Energy restraint is ON(2): Using quadratic potential restarint.'
+      else
+      write(*,*) 'FATAL ERROR: en_restraint must be either 0,1(Lagrange multipliers),2(umbrella, define en_kk)'
+      call abinerror('init')
+      end if
+   end if
    
    if (my_rank.eq.0)then
       write(*,*)'Reading parameters from input file ',chinput
@@ -365,7 +380,7 @@ print '(a)','**********************************************'
 !$ nthreads = omp_get_max_threads()
 
 #ifdef MPI
-   if(pot.eq.'_tera_')then
+   if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
       call initialize_terachem()
       if (ipimd.eq.2) call init_terash(x, y, z)
    end if
@@ -839,7 +854,7 @@ print '(a)','**********************************************'
        write(*,*)chknow
        if(iknow.ne.1) error=1
       endif
-      if(inose.eq.1.and.ipimd.eq.2)then
+      if(inose.eq.1.and.ipimd.eq.2.and.en_restraint.eq.0)then
        write(*,*)'Thermostating is not meaningful for surface hopping simulation.'
        write(*,*)chknow
        if(iknow.ne.1) error=1

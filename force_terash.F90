@@ -48,7 +48,7 @@ end subroutine force_terash
 subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_const, only: DP, ANG
    use mod_array_size, only: NSTMAX
-   use mod_general, only: idebug, natom
+   use mod_general, only: idebug, natom, en_restraint
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
    use mod_io, only: print_charges, print_dipoles, print_transdipoles
@@ -161,7 +161,19 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
                ipom = ipom + 3
             end do
          else if (ist1.eq.ist2)then
-            cycle
+            ! DH2Jirka: here we will read excited state forces..
+            ! perhaps we can use the iw index for the excited state force e.g.
+            ! (this assumes, that the initial state is ground state)
+            if (en_restraint.ge.1)then
+               do iat=1,natom
+                  fx(iat,2)=-NAC(ipom)
+                  fy(iat,2)=-NAC(ipom+1)
+                  fz(iat,2)=-NAC(ipom+2)
+                  ipom = ipom + 3
+               end do
+            else
+               cycle
+            end if
          else
          ! NACME
             do iat=1,natom
@@ -185,7 +197,7 @@ end subroutine receive_terash
 subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
    use mod_array_size, only: NSTMAX
    use mod_const, only: DP, ANG, AUTOFS
-   use mod_general, only: natom, idebug, sim_time
+   use mod_general, only: natom, idebug, sim_time, en_restraint
    use mod_system, only: names
    use mod_qmmm,  only: natqm
    use mod_utils, only: abinerror
@@ -242,7 +254,13 @@ subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
          if(ist1.eq.ist2.and.ist1.eq.istate(itrj))then
             bufints(i) = 1
          else if (ist1.eq.ist2)then
-            bufints(i) = 0
+            ! DH hack for jirka
+            ! this will work only if we compute only S0 and S1 states
+            if(en_restraint.ge.1)then
+               bufints(i) = 1
+            else
+               bufints(i) = 0
+            end if
          else
             bufints(i) = tocalc(ist1, ist2)
          end if
