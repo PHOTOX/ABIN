@@ -29,6 +29,7 @@ program abin_dyn
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
    use mod_interfaces, only: force_clas, force_quantum
+   use mod_en_restraint
 #ifdef PLUM
    use mod_plumed
 #endif
@@ -134,21 +135,22 @@ program abin_dyn
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
 !----getting initial forces and energies
+
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
       if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
-      
+
       ! if we use reference potential with RESPA
       if(pot_ref.ne.'none')then
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
          call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
       end if
-     
+
 !----setting initial values for surface hoping
       if(ipimd.eq.2)then
          do itrj=1, ntraj
-            if (it.eq.0.and.pot.ne.'_tera_') call get_nacm(itrj)
+            if (it.eq.0.and.pot.ne.'_tera_'.and.restrain_pot.ne.'_tera_') call get_nacm(itrj)
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
-            if(pot.eq.'_tera_') call move_new2old_terash()
+            if(pot.eq.'_tera_'.or.restrain_pot.ne.'_tera_') call move_new2old_terash()
          end do
       end if
 

@@ -156,7 +156,7 @@ subroutine receive_terash(fx, fy, fz, eclas)
             ! DH2Jirka: here we will read excited state forces..
             ! perhaps we can use the iw index for the excited state force e.g.
             ! (this assumes, that the initial state is ground state)
-            if (en_restraint.eq.1)then
+            if (en_restraint.ge.1)then
                do iat=1,natom
                   fx(iat,2)=-NAC(ipom)
                   fy(iat,2)=-NAC(ipom+1)
@@ -246,7 +246,7 @@ subroutine send_terash(x, y, z, vx, vy, vz)
          else if (ist1.eq.ist2)then
             ! DH hack for jirka
             ! this will work only if we compute only S0 and S1 states
-            if(en_restraint.eq.1)then
+            if(en_restraint.ge.1)then
                bufints(i) = 1
             else
                bufints(i) = 0

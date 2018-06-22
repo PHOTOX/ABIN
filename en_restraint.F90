@@ -1,20 +1,24 @@
 module mod_en_restraint
   use mod_const,  only: DP
   use mod_nhc,    only: temp
-  use mod_general,  only: natom, nwalk
+  use mod_general,  only: natom, nwalk, en_restraint
   implicit none
   public
-  real(DP):: restr
+  real(DP):: en_diff, en_kk
   real(DP), allocatable :: fxr(:,:), fyr(:,:), fzr(:,:)
   character(len=200) :: restrain_pot
 
 CONTAINS
 
 ! ENERGY RESTRAINT subroutine
-! Uses method of Lagrange multipliers to fix excitation energy of molecule - adapts forces based on knowledge
+! Fixing the excitation energy of molecule - adapts forces based on knowledge
 ! of ground and excited state gradients
 
-! V1 - using energy gradient as approximation for next step energy change
+! Using:
+! A) Lagrange multipliers (default) - using energy gradient as approximation for next step energy change
+! Paper: On the Importance of Initial Conditions for Excited-State Dynamics, 10.1039/C8FD00088C
+
+! B) Quadratic potential around target value (en_kk must be set)
 
 subroutine en_rest_init(dt)
    use mod_general,  only: natom
@@ -25,7 +29,6 @@ subroutine en_rest_init(dt)
    allocate(fxr(natom,2)) ! two states, not beads.
    allocate(fyr(natom,2))
    allocate(fzr(natom,2))
-
 end subroutine en_rest_init
 
 subroutine energy_restraint(x, y, z, fx, fy, fz, eclas)
@@ -49,16 +52,17 @@ do iw=1,nwalk
    ! DH call the extra forces and potentials here
    if(restrain_pot.eq.'_tera_')then
       call force_terash(x, y, z, fxr, fyr, fzr, eclasground)
-      fxgs(iat) = -fxr(iat,1)
-      fygs(iat) = -fyr(iat,1)
-      fzgs(iat) = -fzr(iat,1)
-      fxes(iat) = -fxr(iat,2)
-      fyes(iat) = -fyr(iat,2)
-      fzes(iat) = -fzr(iat,2)
+      do iat=1,natom
+         fxgs(iat) = fxr(iat,1)
+         fygs(iat) = fyr(iat,1)
+         fzgs(iat) = fzr(iat,1)
+         fxes(iat) = fxr(iat,2)
+         fyes(iat) = fyr(iat,2)
+         fzes(iat) = fzr(iat,2)
+      end do
       eclasground = en_array(1, 1)
       eclasexc = en_array(2, 1)
       ! TODO: need to figure out how to get eclasexc
-
    else
 
       ! Should be done as a separate call eventually..
@@ -77,7 +81,6 @@ do iw=1,nwalk
     read(901,*) eclasground
 
 !----READING gradient of ground state
-!----This 
       do iat=1,natom
          read(901,*,IOSTAT=ios)fxgs(iat), fygs(iat), fzgs(iat)
          if(ios.ne.0)then
@@ -98,9 +101,6 @@ do iw=1,nwalk
        call abinerror('energy_restraint')
     end if
     read(901,*) eclasexc
-    !Saving energy difference
-    Egrad = eclasexc-eclasground
-    write(*,*)'Energy difference ES-GS (',iw,') is',Egrad*2625.5697
 
 !----READING gradient of excited state
       do iat=1,natom
@@ -119,12 +119,14 @@ do iw=1,nwalk
    ! restraint_pot endif
    end if
 
-!---Computing lagrange multiplier lambda
+!Energy difference
+      Egrad = eclasexc-eclasground
+      write(*,*)'Energy difference ES-GS (',iw,') is',Egrad*2625.5697
+      deltaE=(Egrad-en_diff)
 
-!     DH: better use more descriptive variable names..restr does not say much
-      deltaE=(Egrad-restr)
 
-!write(*,*)'fx old',fx
+if(en_restraint.eq.1)then
+    !======== A) Computing lagrange multiplier lambda =========
 
       lsum=0        
       do iat2=1, natom
@@ -132,22 +134,40 @@ do iw=1,nwalk
          lsum = lsum + 1/(am(iat2)) * (fyes(iat2) - fygs(iat2))**2
          lsum = lsum + 1/(am(iat2)) * (fzes(iat2) - fzgs(iat2))**2
       end do
-!      lambda =  deltaE / (lsum * dt0 * dt0)
-! DH: the following line was uncommented, assuming this was just a debug
-!      lambda = 0
-      !---Applying new forces
+
+      lambda =  deltaE / (lsum * dt0 * dt0)
+    !     For debugging or computing excitation energy on the fly uncomment: 
+!         lambda = 0
+    !---Applying new forces
+
       do iat=1,natom
          fx(iat,iw) = fx(iat,iw) + lambda * (fxes(iat) - fxgs(iat))
          fy(iat,iw) = fy(iat,iw) + lambda * (fyes(iat) - fygs(iat))
          fz(iat,iw) = fz(iat,iw) + lambda * (fzes(iat) - fzgs(iat))
       end do
-        
 
-!---
-!write(*,*)'fx new',fx
-!write(*,*)'lsum is',lsum
-write(*,*)'deltaE',deltaE
-write(*,*)'Lambda multiplier:',lambda
+    !---  Printing info
+    write(*,*)'deltaE',deltaE
+    write(*,*)'Lambda multiplier:',lambda
+
+else if(en_restraint.eq.2)then
+   !======= B) Quadratic restraint =============
+    
+
+   !---Applying new forces
+
+      do iat=1,natom
+         fx(iat,iw) = fx(iat,iw) + en_kk * deltaE * (fxes(iat) - fxgs(iat))
+         fy(iat,iw) = fy(iat,iw) + en_kk * deltaE * (fyes(iat) - fygs(iat))
+         fz(iat,iw) = fz(iat,iw) + en_kk * deltaE * (fzes(iat) - fzgs(iat))
+      end do
+
+   !---  Printing info
+   write(*,*)'deltaE',deltaE
+   write(*,*)'Force constant:',en_kk
+
+end if
+
 end do
 write(*,*)'--using 3 state (MD,GS,ES) version--'
 write(*,*)''
