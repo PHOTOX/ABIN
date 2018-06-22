@@ -404,7 +404,7 @@ CONTAINS
 
       ! TODO implement first derivative
       RETURN
-   END
+   END SUBROUTINE SPLINT
 
    SUBROUTINE spline(x,y,n,yp1,ypn,y2)
       INTEGER  :: n, NMAX
