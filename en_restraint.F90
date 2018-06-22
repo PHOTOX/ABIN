@@ -6,7 +6,7 @@ module mod_en_restraint
   public
   real(DP):: en_diff, en_kk
   real(DP), allocatable :: fxr(:,:), fyr(:,:), fzr(:,:)
-  character(len=200) :: restrain_pot
+  character(len=200) :: restrain_pot='none'
 
 CONTAINS
 
