@@ -150,7 +150,7 @@ program abin_dyn
          do itrj=1, ntraj
             if (it.eq.0.and.pot.ne.'_tera_'.and.restrain_pot.ne.'_tera_') call get_nacm(itrj)
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
-            if(pot.eq.'_tera_'.or.restrain_pot.ne.'_tera_') call move_new2old_terash()
+            if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_') call move_new2old_terash()
          end do
       end if
 
