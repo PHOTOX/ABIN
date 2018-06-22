@@ -58,14 +58,15 @@ subroutine init(dt, values1)
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
    LOGICAL :: file_exists
+   logical        :: rem_comvel, rem_comrot
 !  real(DP) :: wnw=5.0d-5
    integer :: ierr
 !$ integer :: nthreads, omp_get_max_threads
 !  wnw "optimal" frequency for langevin (inose=3) 
+#ifdef NAB
    REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
-!  REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
    REAL, POINTER  :: REALPTR => NULL ()
-   logical        :: rem_comvel, rem_comrot
+#endif
 
    namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &

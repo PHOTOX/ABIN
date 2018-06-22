@@ -38,9 +38,11 @@ module mod_density
    do idist=1,ndist
       do iw=1,nwalk
    
-         r = get_distance(x, y, z, dist1(idist), dist2(idist), iw)
-
-         if(dime.eq.1) r = x(1, iw)
+         if(dime.eq.1)then
+            r = x(1, iw)
+         else
+            r = get_distance(x, y, z, dist1(idist), dist2(idist), iw)
+         end if
 
          dbin = (xmax - xmin) / nbin
 

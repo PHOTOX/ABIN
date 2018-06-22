@@ -169,7 +169,7 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
    real(DP) :: Omx, Omy, Omz, Om_tot
    integer  :: iat, iw
 
-   if (dime.eq.1) return
+   if (dime.eq.1.or.natom.eq.1) return
 
 
    ! It would probably be more correct to calculate angular momentum

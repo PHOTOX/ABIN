@@ -37,28 +37,15 @@ module mod_arrays
       integer,intent(in)  :: nwalkalloc
       integer,intent(in)  :: natomalloc
 
-      ! This is to avoid segfault for natom=1 and ndist>0
-      if (natomalloc.eq.1)then
-         allocate( x(natomalloc+1, nwalkalloc) )
-         allocate( y(natomalloc+1, nwalkalloc) )
-         allocate( z(natomalloc+1, nwalkalloc) )
-         allocate( transx(natomalloc+1, nwalkalloc) )
-         allocate( transy(natomalloc+1, nwalkalloc) )
-         allocate( transz(natomalloc+1, nwalkalloc) )
-         allocate( x_old(natomalloc+1, nwalkalloc) )
-         allocate( y_old(natomalloc+1, nwalkalloc) )
-         allocate( z_old(natomalloc+1, nwalkalloc) )
-      else
-         allocate( x(natomalloc, nwalkalloc) )
-         allocate( y(natomalloc, nwalkalloc) )
-         allocate( z(natomalloc, nwalkalloc) )
-         allocate( transx(natomalloc, nwalkalloc) )
-         allocate( transy(natomalloc, nwalkalloc) )
-         allocate( transz(natomalloc, nwalkalloc) )
-         allocate( x_old(natomalloc, nwalkalloc) )
-         allocate( y_old(natomalloc, nwalkalloc) )
-         allocate( z_old(natomalloc, nwalkalloc) )
-      end if
+      allocate( x(natomalloc, nwalkalloc) )
+      allocate( y(natomalloc, nwalkalloc) )
+      allocate( z(natomalloc, nwalkalloc) )
+      allocate( transx(natomalloc, nwalkalloc) )
+      allocate( transy(natomalloc, nwalkalloc) )
+      allocate( transz(natomalloc, nwalkalloc) )
+      allocate( x_old(natomalloc, nwalkalloc) )
+      allocate( y_old(natomalloc, nwalkalloc) )
+      allocate( z_old(natomalloc, nwalkalloc) )
 
       x=0.0d0
       y=x
