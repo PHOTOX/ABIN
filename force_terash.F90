@@ -168,6 +168,10 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
             ! perhaps we can use the iw index for the excited state force e.g.
             ! (this assumes, that the initial state is ground state)
             if (en_restraint.ge.1)then
+               if(ist1.gt.2)then
+                  write(*,*)'ERROR: Energy restraint not implemented for more than 2 states!'
+                  call abinerror('receive_terash')
+               end if
                do iat=1,natom
                   fx(iat,2)=-NAC(ipom)
                   fy(iat,2)=-NAC(ipom+1)
