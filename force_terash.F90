@@ -38,6 +38,9 @@ subroutine force_terash(x, y, z, fx, fy, fz, eclas)
    call send_terash(x, y, z, fx, fy, fz, newcomms(1))
 
    call receive_terash(fx, fy, fz, eclas, newcomms(1))
+#else
+   write(*,*) "FATAL ERROR: ABIN not compiled with MPI, cannot connect to TeraChem"
+   stop 1
 #endif
 
 end subroutine force_terash
