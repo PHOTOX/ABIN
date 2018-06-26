@@ -38,12 +38,15 @@ read -t 2 -a tocalc
 # wavefunction passed between steps via input.wfu
 # if you don't want that, comment out the second line
 # 3rd line is needed, we take forces and NACME from input.pun
+
+cp scratch$ibead/$input.wfu scratch$ibead/$input.wfu.nacm
+
 cat > $input.pom1 << EOF
 ***Abin input
 memory,$memory,m;
-file,2,$input.wfu,unknown
-PUNCH,$input.pun,new
-gprint,orbital,civector
+file,2,$input.wfu.nacm,old
+PUNCH,$input.pun.nacm,new
+!gprint,orbital,civector
 
 Angstrom
 
@@ -142,8 +145,8 @@ $MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.c
 if [[ $? -eq 0 ]];then
    cp $input.com.out $input.com.out.old
 else 
-   cp $input.com.out $input.com.out.error.$timestep
-   # TODO indicate to abin via exit signal whether NACME convergence problems
+   cp $input.com.out $input.com.out.errornacm.$timestep
+   # TODO: indicate different problems with different exit signals
    exit 2
 fi
 
@@ -151,5 +154,5 @@ fi
 
 #-Extracting NonAdiabatic coupling matrix elements(NACME)
 #-Better precision in $input.pun
-grep 'NACME,' $input.pun | awk '{print $5,$6,$7}' > ../nacm.dat
+grep 'NACME,' $input.pun.nacm | awk '{print $5,$6,$7}' > ../nacm.dat
 

@@ -132,6 +132,9 @@ module mod_sh
 
    if(inac.eq.0)then
       ! Calculate NACME using default accuracy
+
+      ! TODO: check that we have non-zero tocalc array!
+
       call calc_nacm(itrj, nac_accu1)
 
       iost = read_nacm(itrj)
@@ -1060,7 +1063,7 @@ enddo
    end function check_CIVector
 
 
-   ! Choose initial state according to oscillator stretgth
+   ! Choose initial state according to oscillator strength
    subroutine choose_initial_state(itrj)
       integer, intent(in)  :: itrj
       real(DP) :: pom, maxosc
