@@ -83,7 +83,7 @@ subroutine init(dt, values1)
                      Nshake,ishake1,ishake2,shake_tol
 
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,decoh_alpha,popthr,ignore_state, &
-                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, ehrenfest
+                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 
@@ -96,7 +96,6 @@ subroutine init(dt, values1)
    dt=-1  
    error=0
    iplumed=0
-   ehrenfest=0
 
    call Get_cmdline(chinput, chcoords, chveloc)
 
@@ -178,6 +177,8 @@ print '(a)','            Path Integral MD                  '
 print '(a)','           Surface Hopping MD                 '
       case (3)
 print '(a)','              Minimization                    '
+      case (4)
+print '(a)','              Ehrenfest MD                    '
    END SELECT
 
   write(*,*)'    using potential: ', LowerToUpper(pot)
@@ -231,9 +232,10 @@ print '(a)','**********************************************'
 
 !  allocate all basic arrays and set them to 0.0d0
    call allocate_arrays( natom, nwalk+1 )
-! Ehrenfest require larger array since gradients for all of the states are need   
-   if(ehrenfest.eq.1)then
-   call allocate_ehrenfest( natom, nstate )
+!  Ehrenfest require larger array since gradients for all of the states are need   
+!  TODO: We should really make this differently..
+   if(ipimd.eq.4)then
+      call allocate_ehrenfest( natom, nstate )
    end if
 
 !-----READING GEOMETRY
@@ -309,7 +311,7 @@ print '(a)','**********************************************'
       read(150,nhcopt)
       rewind(150)
 
-      if(ipimd.eq.2)then
+      if(ipimd.eq.2.or.ipimd.eq.4)then
          read(150, sh)
          rewind(150)
          integ = UpperToLower(integ)
@@ -350,7 +352,7 @@ print '(a)','**********************************************'
 #ifdef MPI
    if(pot.eq.'_tera_')then
       call initialize_terachem()
-      if (ipimd.eq.2) call init_terash(x, y, z)
+      if (ipimd.eq.2.or.ipimd.eq.4) call init_terash(x, y, z)
    end if
 #endif
 
@@ -370,8 +372,8 @@ print '(a)','**********************************************'
                    ! algorithm as well
       endif
 
-!for surface hopping      
-      if(ipimd.eq.2)then
+!for surface hopping and ehrenfest     
+      if(ipimd.eq.2.or.ipimd.eq.4)then
          nwalk = ntraj
          md = 2 ! velocity verlet
          nabin = 1
@@ -536,7 +538,7 @@ print '(a)','**********************************************'
       write(*,*)
       if ( inose.ge.1 ) write(*,nml=nhcopt)
       write(*,*)
-      if ( ipimd.eq.2 ) write(*,nml=sh)
+      if ( ipimd.eq.2.or.ipimd.eq.4 ) write(*,nml=sh)
       write(*,*)
       if (iqmmm.eq.3.or.pot.eq.'mm') write(*,nml=qmmm)
       write(*,*)
@@ -816,7 +818,7 @@ print '(a)','**********************************************'
        write(*,*)chknow
        if(iknow.ne.1) error=1
       endif
-      if(inose.eq.1.and.ipimd.eq.2)then
+      if(inose.eq.1.and.ipimd.eq.2.or.ipimd.eq.4)then
        write(*,*)'Thermostating is not meaningful for surface hopping simulation.'
        write(*,*)chknow
        if(iknow.ne.1) error=1

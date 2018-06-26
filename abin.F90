@@ -62,7 +62,7 @@ program abin_dyn
    end if
 
 !  Surface hopping initialization
-   if(ipimd.eq.2)then
+   if(ipimd.eq.2.or.ipimd.eq.4)then
       call sh_init(x, y, z, vx, vy, vz, dt)
    endif
 
@@ -145,7 +145,7 @@ program abin_dyn
       end if
      
 !     setting initial values for SURFACE HOPPING 
-      if(ipimd.eq.2)then
+      if(ipimd.eq.2.and.ipimd.eq.4)then
          do itrj=1, ntraj
          ! TODO: only DEBUG, change me back!!
             if (irest.ne.1.and.pot.ne.'_tera_') call get_nacm(itrj)
@@ -212,8 +212,8 @@ program abin_dyn
          vz = pz / amt
 
 !        SURFACE HOPPING SECTION
-!        SH is called here, Ehrenfest in MD step
-         if(ipimd.eq.2.and.ehrenfest.eq.0)then
+!        SH is called here, Ehrenfest inside the Verlet MD step
+         if(ipimd.eq.2)then
 
             call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
 
@@ -221,7 +221,7 @@ program abin_dyn
             py = amt * vy
             pz = amt * vz
 
-            ! TODO: probably this should be in surfacehop routine
+            ! TODO: this should probably be in the surfacehop routine
             if(pot.eq.'_tera_') call move_new2old_terash()
 
          endif

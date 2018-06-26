@@ -221,7 +221,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
        call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
 #ifdef MPI
       case ("_tera_")
-         if(ipimd.eq.2)then
+         if(ipimd.eq.2.or.ipimd.eq.4)then
             call force_terash(x, y, z, fx, fy, fz, eclas)
          else
             call force_tera(x, y, z, fx, fy, fz, eclas, walkmax)

@@ -57,8 +57,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       close(unit=MAXUNITS+iw)
 
 !     Surface hopping or Ehrenfest  
-! TO DO - calc forces for all the states or according to WF state coeficients under certain threshold   
-      if(ipimd.eq.2)then
+      if(ipimd.eq.2.or.ipimd.eq.4)then
 
          open(unit=MAXUNITS+iw+2*walkmax,file='state.dat')
          write(MAXUNITS+iw+2*walkmax,'(I2)')nstate
@@ -66,14 +65,11 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 !        Diagonal of tocalc holds info about needed forces 
 !        tocalc(x,x)= 1 -> compute forces for electronic state X
 !        totalc for Ehrenfest muset be set just for required states according to c coef. TO-DO in ehrenfest enrehfest_forces
-!         right now we calc forces for all the states
          do ist1=1,nstate
             write(MAXUNITS+iw+2*walkmax,'(I1,A1)',advance='no')tocalc(ist1,ist1),' '
          end do
          close(MAXUNITS+iw+2*walkmax) 
       endif
-
-
 
 !---  HERE we decide which program we use to obtain gradients and energies
 !     e.g. ./G09/r.g09
@@ -94,7 +90,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       if(iremd.eq.1) write(chsystem,'(A,I2.2)')trim(chsystem)//'.', my_rank
 
 !     for SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)
-      if(ipimd.eq.2)then
+      if(ipimd.eq.2.or.ipimd.eq.4)then
          write(chsystem,'(A60,I3,A12)')chsystem, 7, ' < state.dat'
       endif
      
@@ -141,7 +137,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 !$OMP ATOMIC
       eclas = eclas + temp1
 ! SH             
-      if(ipimd.eq.2)then
+      if(ipimd.eq.2.or.ipimd.eq.4)then
          en_array(1,iw) = temp1
          do ist1=2,nstate
             read(MAXUNITS+iw,*)en_array(ist1,iw)
@@ -151,8 +147,10 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       end if
 
 !     TODO-EH: Read additional forces probably somewhere here, use second index (iw) for different states
+!     Actually, we should make a routine read_engrad() and make it general for both EH and SH
+!     always read energies, read forces based on tocalc
 
-!     reading energy gradients from engrad.dat      
+!     reading energy gradients from engrad.dat
 
       do iat=1,natqm
          read(MAXUNITS+iw,*,IOSTAT=iost)fx(iat,iw), fy(iat,iw), fz(iat,iw)
@@ -163,14 +161,14 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
             //trim(LowerToUpper(chpot))//"/."
             call abinerror('force_abin')
          endif
-!---Conversion to forces        
+!        Convert gradients to forces        
          fx(iat,iw) = -fx(iat,iw)
          fy(iat,iw) = -fy(iat,iw)
          fz(iat,iw) = -fz(iat,iw)
       end do
 
 
-!----READING of HESSIAN     
+!----READING of HESSIAN
       if (ihess.eq.1)then
 
          INQUIRE(FILE=chhess, EXIST=file_exists)

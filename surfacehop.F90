@@ -8,8 +8,12 @@ module mod_sh
    use mod_sh_integ
    implicit none
    private
-   public :: istate_init, substep, deltaE, inac,nohop, decoh_alpha,popthr, nac_accu1, nac_accu2
-   public :: surfacehop, sh_init, istate, ntraj, tocalc, en_array
+   ! TODO: We should make some of these private
+   ! We would need to read sh namelist inside this module
+   ! and we should check input sanity here, not in input.F90
+   public :: istate_init, substep, deltaE, inac, nohop, decoh_alpha, popthr, nac_accu1, nac_accu2
+   public :: surfacehop, sh_init, ehrenfest_forces
+   public :: istate, ntraj, tocalc, en_array
    public :: nacx, nacy, nacz
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
    public :: energydifthr, energydriftthr, adjmom, revmom
@@ -470,11 +474,14 @@ module mod_sh
    !*************************************
    ! This is the main Ehrenfest routine !
    !*************************************
-   subroutine enrehfest_forces(x, y, z, fxc, fxy, fxz, px, py, pz, dt, eclas)
+   subroutine ehrenfest_forces(x, y, z, fxc, fyc, fzc, px, py, pz, dt, eclas)
 !   This subroutine must be called midstep in velocity verlet, after we call force_clas
 !    use mod_arrays, only: vx, vy, vz, vx_old, vy_old, vz_old
-!    real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
-!    real(DP),intent(in)    :: px(:,:),py(:,:),pz(:,:)
+    real(DP),intent(in) :: x(:,:), y(:,:), z(:,:)
+    real(DP),intent(in) :: px(:,:), py(:,:), pz(:,:)
+    real(DP),intent(in) :: fxc(:,:), fyc(:,:), fzc(:,:)
+    real(DP), intent(in) :: dt
+    real(DP), intent(inout) :: eclas
 
 !    vx = px  ! these are momenta from time dt/2 !
 !    vy = py
@@ -508,7 +515,7 @@ module mod_sh
 !   At the end, don't forget to move ehrenfest forces to fxc(:,1) etc.
 !   fxc(:,1) = fx_eh
 
-!   end subroutine ehrenfest
+   end subroutine ehrenfest_forces
 
 
 

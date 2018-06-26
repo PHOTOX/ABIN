@@ -124,9 +124,8 @@ module mod_arrays
    
    !EHRENFEST gradients and midstep approximative forces for all states
    subroutine allocate_ehrenfest( natom, nstate )
-    integer,intent(in)  :: nstate
-    integer,intent(in)  :: natom
-    ! NOT added: avoid segfault for natom=1 and ndist>0 as above
+      integer,intent(in)  :: nstate
+      integer,intent(in)  :: natom
       allocate( fxeh(natom, nstate) )
       allocate( fyeh(natom, nstate) )
       allocate( fzeh(natom, nstate) )
@@ -168,18 +167,20 @@ module mod_arrays
       if (allocated(fxc_diff))then
          deallocate( fxc_diff ); deallocate( fyc_diff ); deallocate( fzc_diff );
       end if
-      if(ehrenfest.eq.1)then
-      allocate( fxeh(natom, nstate) )
-      allocate( fyeh(natom, nstate) )
-      allocate( fzeh(natom, nstate) )
-      allocate( fxeh_old(natom, nstate) )
-      allocate( fyeh_old(natom, nstate) )
-      allocate( fzeh_old(natom, nstate) ) 
-      allocate( fxapp(natom, nstate) )
-      allocate( fyapp(natom, nstate) )
-      allocate( fzapp(natom, nstate) ) 
+
+      ! Ehrenfest variables (hmm, are these really needed??
+      ! Would be better to just use the existing ones...
+      if(allocated(fxeh))then
+         deallocate( fxeh )
+         deallocate( fyeh )
+         deallocate( fzeh )
+         deallocate( fxeh_old )
+         deallocate( fyeh_old )
+         deallocate( fzeh_old ) 
+         deallocate( fxmid )
+         deallocate( fymid )
+         deallocate( fzmid ) 
       end if
-      !to do deallocate ehrenfest variables
    end subroutine deallocate_arrays
        
 

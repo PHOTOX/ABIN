@@ -2,6 +2,7 @@
 module mod_mdstep
    use mod_const,    only: DP
    use mod_kinetic,  only: ekin_p
+   use mod_utils, only: abinerror
    use mod_transform
    implicit none
    private
@@ -82,6 +83,7 @@ module mod_mdstep
    use mod_general, ONLY: pot, ipimd, inormalmodes
    use mod_nhc, ONLY:inose
    use mod_interfaces, only: force_clas, propagate_nm
+   use mod_sh, only: ehrenfest_forces
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fxc(:,:),fyc(:,:),fzc(:,:)
    real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
@@ -89,40 +91,31 @@ module mod_mdstep
    real(DP),intent(in)    :: dt
    real(DP),intent(inout) :: eclas
 
-  !ehrenfest step
-   if(ehrenfest.eq.1)then
-      !v(t+dt) v_old(t)
-         call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
-         call shiftX(x, y, z, px, py, pz, amt, dt)
-         call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot) !TO-DO forces for all states
-         ! force_class vola force_wrepper_ a ten vola force_abin - potrebuju forces pro vsechny stavy!
-         ! now i need NACME, Energies, grads for x(t+dt)
-         vx = px / amt ! vx(t+dt/2)
-         vy = py / amt ! vy(t+dt/2)
-         vz = pz / amt ! vz(t+dt/2)
-         call enrehfest_forces(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt,fxc, fyc, fzc, ) 
-         ! after ehrenfest i gest proper forces (mean field forces) and i can get final  velocities (momentum)
-         call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+
+   if(inose.gt.0) call thermostat(px, py, pz, amt, dt/2)
+   
+   call shiftP (px, py, pz, fxc, fyc, fzc, dt/2)
+   
+   if(inormalmodes.eq.1)then
+    ! Warning, initial hack, passing amt here
+       call propagate_nm(x, y, z, px, py, pz, amt, dt)
    else
-
-         if(inose.gt.0) call thermostat(px, py, pz, amt, dt/2)
-   
-         call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
-   
-         if(inormalmodes.eq.1)then
-          ! Warning, initial hack, passing amt here
-             call propagate_nm(x, y, z, px, py, pz, amt, dt)
-         else
-            call shiftX(x, y, z, px, py, pz, amt, dt)
-         end if
-   
-         call force_clas(fxc,fyc,fzc,x,y,z,eclas,pot) 
-
-         call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
-
-         if(inose.gt.0) call thermostat(px, py, pz, amt, dt/2)
-   
+      call shiftX(x, y, z, px, py, pz, amt, dt)
    end if
+   
+   call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot) 
+
+   if(ipimd.eq.4)then
+      ! This is only a stub for now
+      write(*,*)'ERROR: Ehrenfest MD not implemented yet!!'
+      call abinerror('verletstep')
+      call ehrenfest_forces(x, y, z, fxc, fyc, fzc, px, py, pz, dt, eclas)
+   end if
+
+   call shiftP (px,py,pz,fxc,fyc,fzc,dt/2)
+
+   if(inose.gt.0) call thermostat(px, py, pz, amt, dt/2)
+   
    end subroutine verletstep
 
    
