@@ -145,7 +145,7 @@ program abin_dyn
       end if
      
 !     setting initial values for SURFACE HOPPING 
-      if(ipimd.eq.2.and.ipimd.eq.4)then
+      if(ipimd.eq.2.or.ipimd.eq.4)then
          do itrj=1, ntraj
          ! TODO: only DEBUG, change me back!!
             if (irest.ne.1.and.pot.ne.'_tera_') call get_nacm(itrj)

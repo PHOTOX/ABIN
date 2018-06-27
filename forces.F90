@@ -198,8 +198,9 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    real(DP)               :: eclas
 
    eclas = 0.0d0
-! Here we decide which forces we want.
-! By default we call external program in force_abin routine
+!  Here we decide which forces we want.
+!  By default we call external program in force_abin routine
+!  TODO: All internal potentials should begin by '_'
    SELECT CASE (chpot)
      case ("mm")
        call force_LJCoul(x, y, z, fx, fy, fz, eclas)
@@ -256,7 +257,7 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
    fz = 0.0d0
 
 
-!  TODO: ak parametry se nemuseji pocitat pokazde znova
+!  TODO: we should not calculate ak params each step...
 !  Setting the quantum force constants
 !  ak is defined is m*P/(beta^2*hbar^2)
    do iw=1,nwalk

@@ -3,6 +3,9 @@
 # This script is should be called by ABIN as
 # MOLPRO-SH/r.molpro-sh timestep 001 force-accu < state.dat
 
+# You should't need to modify this file!
+# Specification of CAS wavefunction is in file molpro.setup
+
 cd MOLPRO-SH
 
 timestep=$1
@@ -46,12 +49,12 @@ read -t 2 -a tocalc
 # wavefunction passed between steps via input.wfu
 # if you don't want that, comment out the second line
 # 3rd line is needed, we take forces and NACME from input.pun
-cat > $input.pom1 << EOF
+cat > $input.com << EOF
 ***Abin input
-memory,$memory,m;
-file,2,$input.wfu,unknown
-PUNCH,$input.pun,new
-gprint,orbital,civector
+memory, $memory, m;
+file, 2, $input.wfu, unknown
+PUNCH, $input.pun, new
+gprint, orbital, civector
 
 Angstrom
 
@@ -66,89 +69,140 @@ basis=$basis
 !-cpmscf will not rewrite itself it but ather write into following records
 !-but the subsequent call to forces would read from old records -> wrong numbers
 !-we use file 2 for forces and NACME due to df-casscf
-data,truncate,2,5100
+data,truncate,2,3000
 
 if (lastorb.ne.MCSCF)then
    {hf;wf,$nelectrons,0,$spin}
+   $multi;
+   occ,$nocc;
+   closed,$nclosed;
+   WF,$nelectrons,0,$spin;
+   state,$nstate;
+   maxiter,40;
+   orbital,2101.2
+   save,ci=2501.2
 endif
-EOF
 
+data, copy, 2101.2, 3000.2
 
-# TODO: Make the following much simpler
-
-for ((ist1=1;ist1<=nstate;ist1++)) {
-echo "pop; density,2140.2,state=$ist1.1" >> $input.pom2
+{$multi;
+occ,$nocc;
+closed,$nclosed;
+WF,$nelectrons,0,$spin;
+state,$nstate;
+maxiter,2;
+orbital,2101.2
+ciguess,2501.2
+save,ci=2501.2
+diab,3000.2,save=2101.2,method=-1
 }
 
+if (status.lt.0) then
+   text, MCSCF failed to converge.
+   text, Attempting uncoupled iterations.
+   text, Enlarging PSPACE.
+   {$multi;
+   occ,$nocc;
+   closed,$nclosed;
+   WF,$nelectrons,0,$spin;
+   ! Info about pspace: https://www.molpro.net/info/2015.1/doc/manual/node244.html
+   ! uncomment in case of convergence difficulties...
+   pspace, 2;
+   state,$nstate;
+   maxiter,40;
+   orbital,2101.2
+   ciguess,2501.2
+   save,ci=2501.2
+   diab,3000.2,save=2101.2,method=-1
+   {iterations
+   do,uncouple,1,to,5}
+   }
+   if (status.lt.0) then
+      text, Uncoupled iterations did not help, exiting.
+      STOP
+   endif
 
-cat > $input.pom3 << EOF
+endif
+
+EOF
+
+# Now code for calculating gradients
+
+cat > cas.tmp << EOF
+
+TEXT, Calculating gradients. 
 $multi;
 occ,$nocc;
 closed,$nclosed;
 WF,$nelectrons,0,$spin;
 state,$nstate;
-maxiter,30;
+orbital,2101.2
+ciguess,2501.2
+save,ci=2501.2
+diab,3000.2,save=2101.2,method=-1
+DM;  ! calculate dipole moments
+
 EOF
 
-rec=5101
-pom=0
-for ((ist1=1;ist1<=nstate-1;ist1++)) {
-      if [[ ${tocalc[$pom]} -eq 1 ]];then
-         echo "cpmcscf, grad,$ist1.1,save=$rec.2,accu=1d-$accu;" >> $input.pom3
-         let rec++
-      fi
-      let pom++
-   }
+# In standard MOLPRO install, one cannot have more than
+# 5 CPMSCF cards per one multi command
+# Hence the following weirdness
+# (one might need forces for more states e.g. for Ehrenfest MD)
+MAX_CPMSCF_CARDS=5
+
+# Count the total number of gradient calcs
+NUM_CPMSCF=0
+for ((ist=0;ist<nstate;ist++)) {
+   let NUM_CPMSCF+=${tocalc[$ist]}
 }
+let NUM_MULTI=NUM_CPMSCF/MAX_CPMSCF_CARDS
+if [[ $NUM_MULTI -eq 0 ]];then
+   NUM_MULTI=1
+fi
 
+istate=0
+rec=5100
+for ((n=1;n<=NUM_MULTI;n++))
+do
+   cat cas.tmp >> $input.com
 
-rec=5101
-pom=0
-for ((ist1=1;ist1<=nstate-1;ist1++)) {
-   for ((ist2=ist1+1;ist2<=nstate;ist2++)) {
-      if [[ ${tocalc[$pom]} -eq 1 ]];then
-         echo "forces; samc,$rec.2;" >> $input.pom3
+   pom=0
+   for ((ist=istate; ist<nstate; ist++))
+   do
+      if [[ ${tocalc[$ist]} -eq 1 ]];then
+         # MOLPRO numbering starts from 1
+         let j=ist+1
+         # Store corresponding cpmscf and forces commands
+         cpmscf[$pom]="cpmcscf, grad, $j.1, save=$rec.2, accu=1d-$accu;"
+         echo "${cpmscf[$pom]}" >> $input.com
+         forces[$pom]="forces; samc, $rec.2;"
          let rec++
+         let pom++
       fi
-      let pom++
-   }
+      let istate++
+      if [[ $pom -eq $MAX_CPMSCF_CARDS ]];then
+         break
+      fi
+   done
+   
+   # Print corresponding forces commands
+   for ((i=0; i<pom; i++)); do
+      echo ${forces[$i]} >> $input.com
+   done
+
+done
+
+# Calculate Mullican charges
+for ((ist1=1;ist1<=nstate;ist1++)) {
+   echo "pop; density,2101.2,state=$ist1.1" >> $input.com
 }
-
-awk -F " " 'BEGIN{i=1;k=1;inp=1}{
- if ( $1 == "cpmcscf" ) {
-	 cpm[i]=$0
-	 i++
- }
- else if ( $1 == "forces" ) {
-	 forces[k]=$0
-	 k++
- }
- else { 
-	 input[inp]=$0
-	 inp++
- }
- }END{
- for (i=1;i<k;i=i+5) {
-	print ""
-  	for (j=1;j<inp;j++) print input[j]
-  	for (j=0;j<5;j++) print cpm[i+j]
-	for (j=0;j<5;j++) print forces[i+j]
-	}
-}' $input.pom3 > $input.pom4
-
-#--------------------------------------------------------------------
-#- BUILDING input.com------------------------------------------------
-cat $input.pom1 > $input.com  #basic parameters and commands
-cat $input.pom4 >> $input.com  
-cat $input.pom2 >> $input.com 
-#--END OF MOLPRO INPUT------------------------
 
 #----------MOLPRO JOB-------------------------
 export TMPDIR=$PWD/scratch$ibead
 $MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
 
 # Check whether all is OK.
-#-If it is some other error (e.g. NAC convergence), do nothing. It's up to ABIN to decide what to do.
+# If it is some other error, do nothing. It's up to ABIN to decide what to do.
 if [[ $? -ne 0 ]];then
 
    cp $input.com.out $input.com.out.error.$timestep
@@ -166,14 +220,14 @@ if [[ $? -ne 0 ]];then
 fi
 
 #####################################################################
-#--------------------------------------------------------------------
-#-NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN-------------------------
 
-#- Extracting energy. This should work even for CASPT2 energies.
+# NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN
+
+# Extracting energy. This should work even for CASPT2 energies.
 grep 'Energy          ' $input.com.out | awk -F "Energy" '{print $2}' | tail -n $nstate >> ../engrad.dat.$ibead
 
-#-Extracting GRADIENT
-#-Should work for both CASPT2 and CASSCF gradients
+# Extracting GRADIENT
+# Should work for both CASPT2 and CASSCF gradients
 grep "GRADIENT," $input.pun | awk -F" " '{print $5,$6,$7}'>>../engrad.dat.$ibead
 
 echo "TIMESTEP = $timestep" >> $input.com.out.all
@@ -182,5 +236,5 @@ cat $input.com.out >> $input.com.out.all
 
 
 # TODO: Handle charges inside ABIN
-grep 'Unique atom' $input.com.out -A$natom | awk -F " " '{print $2 "  " $9 $10}'>>../charges.all
+# grep 'Unique atom' $input.com.out -A$natom | awk -F " " '{print $2 "  " $9 $10}'>>../charges.all
 

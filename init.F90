@@ -818,7 +818,7 @@ print '(a)','**********************************************'
        write(*,*)chknow
        if(iknow.ne.1) error=1
       endif
-      if(inose.eq.1.and.ipimd.eq.2.or.ipimd.eq.4)then
+      if(inose.eq.1.and.(ipimd.eq.2.or.ipimd.eq.4))then
        write(*,*)'Thermostating is not meaningful for surface hopping simulation.'
        write(*,*)chknow
        if(iknow.ne.1) error=1

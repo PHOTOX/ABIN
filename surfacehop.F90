@@ -1008,12 +1008,18 @@ enddo
       ekin_old=ekin_v(vx_old, vy_old, vz_old)
 
       entot=(ekin+en_array(istate(itrj), itrj) )*AUtoEV
+
+      ! TODO: But what if we hopped to another state?
+      ! en_array_old(istate(itrj), itrj) would not point to the correct energy,
+      ! right?
       entot_old=(ekin_old+en_array_old(istate(itrj), itrj) )*AUtoEV
 
       if (abs(entot-entot_old).gt.energydifthr)then
          write(*,*)'ERROR:Poor energy conservation. Exiting...'
          write(*,*)'Total energy difference [eV] is:', entot-entot_old
          write(*,*)'The threshold was:',energydifthr
+         write(*,*)'Ekin_old, Ekin, Epot_old, E_pot', &
+            ekin_old, ekin, en_array_old(istate(itrj), itrj), en_array(istate(itrj), itrj)
          call abinerror('check_energy')
       end if
 

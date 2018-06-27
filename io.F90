@@ -29,7 +29,6 @@ module mod_io
    subroutine print_dipoles(dipoles, iw, nstates)
    use mod_files,  only: UDIP
    use mod_general,only: it
-   use mod_const,  only: DP
    integer, intent(in)  :: iw, nstates
    real(KIND=DP),intent(in) :: dipoles(:)
    real(KIND=DP) :: total_dip
@@ -53,8 +52,6 @@ module mod_io
    subroutine print_transdipoles(tdipoles, istate, ntdip)
    use mod_files,  only: UTDIP
    use mod_general,only: nwalk, natom, it
-   use mod_const,  only: DP
-   implicit none
    integer, intent(in)  :: istate, ntdip
    real(KIND=DP),intent(in) :: tdipoles(:)
    real(KIND=DP) :: total_tdip
@@ -75,6 +72,32 @@ module mod_io
    write(UTDIP,*)
 
    end subroutine print_transdipoles
+
+   function read_forces(fx, fy, fz, num_atom, iw, funit) result(iost)
+   real(DP), intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
+   integer, intent(in) :: iw, funit, num_atom
+   integer :: iat, iost
+
+   ! For SH or EH, when we did not calculate forces...
+   ! Needs to be rewritten anyway...
+   if (iw.lt.1)then
+      iost = 0
+      return
+   end if
+
+   ! WARNING: We actually expect gradients in the file !
+   do iat = 1, num_atom
+      read(funit, *, IOSTAT=iost)fx(iat,iw), fy(iat,iw), fz(iat,iw)
+      if(iost.ne.0)then
+         return
+      endif
+!     Convert gradients to forces        
+      fx(iat,iw) = -fx(iat,iw)
+      fy(iat,iw) = -fy(iat,iw)
+      fz(iat,iw) = -fz(iat,iw)
+   end do
+
+   end function read_forces
 
 end module mod_io
 

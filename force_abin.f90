@@ -7,7 +7,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_sh_integ, only: nstate
    use mod_sh,       only: nac_accu1, tocalc, en_array, istate
    use mod_qmmm,     only: natqm
-   use mod_utils,    only: abinerror,lowertoupper
+   use mod_utils,    only: abinerror, lowertoupper
+   use mod_io,       only: read_forces
    use mod_interfaces, only: oniom
    implicit none
    real(DP),intent(in)  :: x(:,:), y(:,:), z(:,:)
@@ -22,6 +23,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    integer :: iat, iw, iat1, iat2, itest !,nthreads=1, ithread
    integer :: ist1, ist2, iost, ISTATUS
    integer :: system
+   integer :: read_forces
 !!$ integer :: omp_get_max_threads,OMP_get_thread_num
 
 !!$ nthreads=omp_get_max_threads()
@@ -90,6 +92,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       if(iremd.eq.1) write(chsystem,'(A,I2.2)')trim(chsystem)//'.', my_rank
 
 !     for SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)
+!     TODO: This should not be hard-coded
       if(ipimd.eq.2.or.ipimd.eq.4)then
          write(chsystem,'(A60,I3,A12)')chsystem, 7, ' < state.dat'
       endif
@@ -137,6 +140,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 !$OMP ATOMIC
       eclas = eclas + temp1
 ! SH             
+      ! TODO: Have each state in different file?
       if(ipimd.eq.2.or.ipimd.eq.4)then
          en_array(1,iw) = temp1
          do ist1=2,nstate
@@ -149,24 +153,21 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 !     TODO-EH: Read additional forces probably somewhere here, use second index (iw) for different states
 !     Actually, we should make a routine read_engrad() and make it general for both EH and SH
 !     always read energies, read forces based on tocalc
-
+      
+      if (ipimd.eq.2.or.ipimd.eq.4)then
+         iost = read_forces(fx, fy, fz, natqm, tocalc(istate(iw), istate(iw)), MAXUNITS+iw)
+      else
 !     reading energy gradients from engrad.dat
-
-      do iat=1,natqm
-         read(MAXUNITS+iw,*,IOSTAT=iost)fx(iat,iw), fy(iat,iw), fz(iat,iw)
-         if(iost.ne.0)then
-            write(*,*)'Fatal problem with reading gradients from file ', chforce
-            write(*,*)'This usually means, that the ab initio program failed.'
-            write(*,*)'See the appropriate output files from external program in folder ' &
-            //trim(LowerToUpper(chpot))//"/."
-            call abinerror('force_abin')
-         endif
-!        Convert gradients to forces        
-         fx(iat,iw) = -fx(iat,iw)
-         fy(iat,iw) = -fy(iat,iw)
-         fz(iat,iw) = -fz(iat,iw)
-      end do
-
+         iost = read_forces(fx, fy, fz, natqm, iw, MAXUNITS+iw)
+      end if
+      if(iost.ne.0)then
+         write(*,*)'Fatal problem with reading gradients from file ', chforce
+         write(*,*)'Fortran ERROR', iost
+         write(*,*)'This usually means, that the ab initio program failed.'
+         write(*,*)'See the appropriate output files from external program in folder ' &
+         //trim(LowerToUpper(chpot))//"/."
+         call abinerror('force_abin')
+      endif
 
 !----READING of HESSIAN
       if (ihess.eq.1)then
@@ -205,8 +206,6 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 !$OMP END PARALLEL  
 
 end
-
-
 
 
 
