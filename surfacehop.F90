@@ -123,9 +123,7 @@ module mod_sh
 
    end do
 
-   ! TODO: we should switch this, but need to fix tests for that
-   ! if(irest.eq.1) call read_nacmrest()
-   if(irest.eq.1.and.it.ne.0) call read_nacmrest()
+   if(irest.eq.1) call read_nacmrest()
 
    end subroutine sh_init
 
@@ -208,6 +206,8 @@ module mod_sh
    integer :: ist1,ist2,iat,itrj
    integer :: iunit1
    iunit1 = 600
+
+   ! TODO: Make this file binary and print whole nacX arrays regardless of tocalc !
    open(iunit1,file='nacmrest.dat',action="write")
 
    do itrj=1, ntraj

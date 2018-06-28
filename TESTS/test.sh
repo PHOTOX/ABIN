@@ -154,8 +154,8 @@ do
       ./test.sh $ABINEXE 2> /dev/null
 
    else
-      if [[ -f "veloc.in.ref" ]];then
-         $ABINEXE -v "veloc.in.ref" > output  
+      if [[ -f "velocities.in" ]];then
+         $ABINEXE -v "velocities.in" > output  
       else
          $ABINEXE > output  
       fi

@@ -8,20 +8,20 @@ imini=0,		! equilibration period (should be at least 2000), or number of steps f
 istage=0,		! staging transformation (1), without staging (0)
 nstep=10,		! number of steps
 dt=20.6697,			! timestep [au]
-irest=1,		! should we restart from restart.xyz? (ignoring mini.dat)
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?
 nrest=1,		! how often we print restart files?
 nwritev=0,		! how often we print velocities?
 natom=6,		!number of atoms
+xyz_units='bohr'
 /
 
 
 &nhcopt
 temp=0.0,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
 inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2
-nchain=4,		! number of nose-hoover chains
 /
 
 &sh
@@ -37,41 +37,3 @@ popthr=0.01
 energydifthr=0.80
 energydriftthr=0.80
 /
-
-----------------------END OF INPUT---------------------------------------------
-!!!!!EVERYTHING BELOW IS IGNORED!!!!
-
-
-
-
-------------------OTHER OPTIONS (if needed, move them to their sections)------- 
-
-GENERAL
-isbc=0,			! spherical boundary conditions
-rb_sbc=27.5d0,          ! radius of the cluster for sbc
-kb_sbc=0.2d0,		! force constant for spherical potential [au]
-END 
-
-SYSTEM
-!---------SHAKE OPTIONS  (see manual for complete description)
-nshake=0,		! Number of bond constraints
-shake_tol=0.0001	! Shake tolerance
-ishake1=2,2		! list of bond constraints
-ishake2=7,8		!
-nmol=1,			! number of "molecules"
-nshakemol=0,            ! number of constraints in molecules
-
-!---ANGLE and Dihedral analysis
-nang=2,			! number of analyzed angles
-ang1=1,		! angle definition: first atoms
-ang2=1,		! angle definition: second atoms
-ang3=1,		! angle definition: third  atoms
-ndih=2,			! number of analyzed dihedrals
-dih1=1,		! dihedral def: first atoms
-dih2=2,		! dihedral def: second atoms
-dih3=3,		! dihedral def: third atoms
-dih4=4,		! dihedral def: fourth atoms
-nbin_ang=700,		! number of bins for angles and dihedrals
-shiftdih=360.0d0 	! 0 for dihs between (-180,180); 360 for (0,360)
-
-END SYSTEM

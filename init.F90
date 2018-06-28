@@ -56,6 +56,7 @@ subroutine init(dt, values1)
    character(len=2)    :: massnames(MAXTYPES), atom
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
+   character(len=20)   :: xyz_units='angstrom'
    LOGICAL :: file_exists
 !  real(DP) :: wnw=5.0d-5
    integer :: ierr
@@ -68,7 +69,7 @@ subroutine init(dt, values1)
 
    namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
-            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive, &
+            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive,xyz_units, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
             pot_ref, nstep_ref, teraport
 
@@ -154,7 +155,7 @@ subroutine init(dt, values1)
 #ifdef PLUM
       call plumed_init(dt)
       write(*,*) 'PLUMED is on'
-      write(*,*) 'PLUMEDfile is ',plumedfile   
+      write(*,*) 'PLUMEDfile is ', trim(plumedfile)
 #else
       write(*,*)'FATAL ERROR: ABIN was not compiled with PLUMED.'
 #endif
@@ -162,8 +163,9 @@ subroutine init(dt, values1)
    endif
    
    if (my_rank.eq.0)then
-      write(*,*)'Reading parameters from input file ',chinput
-      write(*,*)'Reading xyz coordinates from file ',chcoords
+      write(*,*)'Reading parameters from input file ', trim(chinput)
+      write(*,*)'Reading xyz coordinates from file ',trim(chcoords)
+      write(*,*)'XYZ Units = '//trim(xyz_units)
       call PrintLogo(values1)
 
 print '(a)','**********************************************'
@@ -221,7 +223,8 @@ print '(a)','**********************************************'
    ishake2 = 0
 
    ! By default, remove COM translation and rotation
-   if(irest.eq.1)then
+   ! Unless restarting or taking velocities from a file
+   if(irest.eq.1.or.trim(chveloc).ne.'')then
       rem_comrot=.false.
       rem_comvel=.false.
    else
@@ -257,9 +260,15 @@ print '(a)','**********************************************'
      read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
      if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates', iost)
      names(iat) = LowerToUpper(names(iat))
-     x(iat,1) = x(iat,1) * ANG
-     y(iat,1) = y(iat,1) * ANG
-     z(iat,1) = z(iat,1) * ANG
+     if (UpperToLower(trim(xyz_units)).eq."angstrom")then
+         x(iat,1) = x(iat,1) * ANG
+         y(iat,1) = y(iat,1) * ANG
+         z(iat,1) = z(iat,1) * ANG
+     else if (UpperToLower(trim(xyz_units)).eq."bohr")then
+         continue
+     else
+         write(*,*)'ERROR: Wrong XYZ units: ', trim(xyz_units)
+     end if
 
    enddo 
    close(111)
@@ -474,8 +483,7 @@ print '(a)','**********************************************'
 !     Reading velocities from file
       if (chveloc.ne.'')then
          if(iremd.eq.1) write(chveloc,'(A,I2.2)')trim(chveloc)//'.',my_rank
-         write(*,*)'Reading initial velocities in a.u. from external file:'
-         write(*,*)chveloc 
+         write(*,*)'Reading initial velocities in a.u. from external file:'//trim(chveloc) 
          open(500,file=chveloc, status='OLD', action = "READ")
          do iw=1,nwalk
             read(500,*, IOSTAT=iost)natom1
