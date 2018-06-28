@@ -872,13 +872,9 @@ enddo
       write(*,'(A31,2E20.10)')'# deltaE_pot     E_kin-total',en_array(outstate,itrj)-en_array(instate,itrj),ekin
       write(*,'(A,2E20.10)')'# Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
-      allocate(tocalc_temp(nstate, nstate))
-      tocalc_temp = tocalc
-      tocalc = 0
-      write(*,*)'Calculating correct forces for the new state.'
+      call set_tocalc(itrj)
+      write(*,*)'Calculating forces for the new state.'
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
-      tocalc = tocalc_temp
-      deallocate(tocalc_temp)
 
    end subroutine hop
 
@@ -955,13 +951,9 @@ enddo
          write(*,*)'# Adjusting velocities by simple scaling.'
          write(*,'(A,2E20.10)')'#Total_energy_old   Total_energy_new :',ekin+en_array(instate,itrj),ekin_new+en_array(outstate,itrj)
 
-         allocate(tocalc_temp(nstate, nstate))
-         tocalc_temp = tocalc
-         tocalc = 0
-         write(*,*)'Calculating correct forces for the new state.'
+         call set_tocalc(itrj)
+         write(*,*)'Calculating forces for the new state.'
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
-         tocalc = tocalc_temp
-         deallocate(tocalc_temp)
 
       else
 
