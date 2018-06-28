@@ -56,7 +56,6 @@ subroutine init(dt, values1)
    character(len=2)    :: massnames(MAXTYPES), atom
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
-   character(len=20)   :: xyz_units='angstrom'
    LOGICAL :: file_exists
 !  real(DP) :: wnw=5.0d-5
    integer :: ierr
@@ -69,7 +68,7 @@ subroutine init(dt, values1)
 
    namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
-            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive,xyz_units, &
+            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
             pot_ref, nstep_ref, teraport
 
@@ -165,7 +164,6 @@ subroutine init(dt, values1)
    if (my_rank.eq.0)then
       write(*,*)'Reading parameters from input file ',chinput
       write(*,*)'Reading xyz coordinates from file ',chcoords
-      write(*,*)'Units = '//trim(xyz_units)
       call PrintLogo(values1)
 
 print '(a)','**********************************************'
@@ -259,15 +257,9 @@ print '(a)','**********************************************'
      read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
      if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates', iost)
      names(iat) = LowerToUpper(names(iat))
-     if (UpperToLower(trim(xyz_units)).eq."angstrom")then
-         x(iat,1) = x(iat,1) * ANG
-         y(iat,1) = y(iat,1) * ANG
-         z(iat,1) = z(iat,1) * ANG
-     else if (UpperToLower(trim(xyz_units)).eq."bohr")then
-         continue
-     else
-         write(*,*)'ERROR: Wrong XYZ units: ', trim(xyz_units)
-     end if
+     x(iat,1) = x(iat,1) * ANG
+     y(iat,1) = y(iat,1) * ANG
+     z(iat,1) = z(iat,1) * ANG
 
    enddo 
    close(111)
