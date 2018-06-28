@@ -3,10 +3,6 @@ cd MOLPRO
 timestep=$1
 ibead=$2
 
-if [[ $timestep -eq 0 ]];then
-   rm -f ../stateall.dat
-fi
-
 cp nacm.dat.$timestep  ../nacm.dat
 
 echo "Timestep: $timestep" >> ../stateall.dat

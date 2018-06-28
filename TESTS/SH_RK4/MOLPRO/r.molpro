@@ -3,10 +3,6 @@ cd MOLPRO
 timestep=$1
 ibead=$2
 
-if [[ $timestep -eq 0 ]];then
-   rm -f ../stateall_grad.dat
-fi
-
 cp engrad.dat.$timestep  ../engrad.dat.$ibead
 
 echo "Timestep: $timestep" >> ../stateall_grad.dat
