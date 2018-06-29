@@ -55,7 +55,7 @@ module mod_sh
    real(DP)  :: dum_fy(size(y,1),size(y,2))
    real(DP)  :: dum_fz(size(z,1),size(z,2))
    real(DP)  :: dum_eclas
-   integer   :: itrj,ist1
+   integer   :: itrj
 
    deltaE = deltaE / AUtoEV
 
@@ -270,10 +270,7 @@ module mod_sh
    integer  :: iunit1
    logical  :: file_exists
    character(len=200) :: chmsg
-   character(len=20)  :: chit
-   character(len=60)  :: chrestart
    character(len=20)  :: chin
-   character(len=200) :: chsystem
    chin = 'restart_sh.bin'
    iunit1=600
 
@@ -295,7 +292,7 @@ module mod_sh
          if(inac.eq.0)then
    
             do iat=1,natqm
-               read(iunit1,iomsg=chmsg)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+               read(iunit1,iomsg=chmsg, IOSTAT=iost)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                if (iost.ne.0)then
                   write(*,*)'Error reading NACME from restart file '//trim(chin)
                   write(*,*)chmsg
@@ -400,7 +397,7 @@ module mod_sh
    use mod_qmmm,only:natqm
    integer, intent(in)  :: itrj
    real(DP), intent(in) :: dt
-   integer :: ist1, ist2, iat, iunit, ijunk
+   integer :: ist1, ist2, iunit, ijunk
 
    iunit = 600
 
@@ -562,10 +559,9 @@ module mod_sh
    real(DP) :: vect_olap,fr,frd
    real(DP) :: Ekin, dtp
    integer  :: ihop
-   real(DP)  :: pop0, a_re, a_im, prob(NSTMAX), hop_rdnum, stepfs
+   real(DP)  :: pop0, prob(NSTMAX), hop_rdnum, stepfs
    character(len=500)   :: formt
    character(len=20) :: chist,chihop,chit
-   integer :: iost, iunit=600
 
 
 do itrj=1,ntraj
@@ -820,7 +816,6 @@ enddo
       real(DP)  :: a_temp,b_temp,c_temp,g_temp
       real(DP)  :: ekin, ekin_new
       integer   :: iat
-      integer, allocatable :: tocalc_temp(:,:)
 
 !     Checking for frustrated hop
 
@@ -927,7 +922,6 @@ enddo
       integer,intent(in)      :: itrj,instate,outstate
       integer   :: iat
       real(DP)  :: de,ekin,alfa,ekin_new
-      integer, allocatable    :: tocalc_temp(:,:)
 
       ekin=0.0d0
       ekin_new=0.0d0
@@ -1049,7 +1043,7 @@ enddo
    real(DP), allocatable, intent(in) :: CIvecs(:,:), CIvecs_old(:,:)
    integer, intent(in) :: ci_len, nstates
    real(DP)  :: cidotprod(NSTMAX)
-   integer   :: ist1, ist2, i
+   integer   :: ist1, i
    character(len=20) :: formt
 
    do ist1=1, nstates
