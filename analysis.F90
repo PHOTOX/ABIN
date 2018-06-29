@@ -91,7 +91,7 @@ module mod_analysis
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
    integer,intent(in) :: time_step
    integer            :: iat,iw
-   character(len=20)  :: fgeom, chout
+   character(len=20)  :: chout
    logical            :: lopened
 
    INQUIRE(UMOVIE,opened=lopened)
@@ -330,7 +330,7 @@ module mod_analysis
    real(DP),intent(out)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(out)  :: vx(:,:),vy(:,:),vz(:,:)
    integer,intent(out)   :: it
-   integer :: iat,iw,inh,itrj,ist1,is
+   integer :: iat,iw,inh,itrj,is
    character(len=100) :: chtemp
    logical :: prngread
    character(len=20)  :: chin

@@ -409,7 +409,7 @@ endif
    real(DP), intent(inout) :: x(:,:), y(:,:), z(:,:)
    real(DP), intent(out) :: equant
    real(DP) :: equantx, equanty, equantz, omega_n
-   integer  :: iat, iw, k
+   integer  :: iat, iw
 
    omega_n = NWALK * TEMP
    if (inormalmodes.eq.2) then

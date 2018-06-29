@@ -116,8 +116,9 @@ contains
    real(DP), intent(in)  :: dt
    real(DP), allocatable :: gA(:,:), gC(:,:), gr(:)
    real(DP), allocatable :: gA_centroid(:,:), gC_centroid(:,:)
-   integer :: i, j, cns, ios, iw
-   character(len=10)     :: glea, glec, char_my_rank
+   integer :: i, cns, ios, iw
+   character(len=10)     :: glea, glec
+   character(len=2)      :: char_my_rank
 
    if(my_rank.eq.0)then 
       write(6,*) "# Initialization of GLE thermostat.                           "
@@ -353,7 +354,7 @@ contains
    real(DP), intent(inout)  :: py(:,:)
    real(DP), intent(inout)  :: pz(:,:)
    real(DP), intent(in)     :: m(:,:)
-   integer                :: i, j, iat, iw
+   integer :: i, iat, iw
 
 
    do iw=1,nwalk
@@ -409,7 +410,7 @@ contains
 #ifdef USELIBS
    call dgemm('n','t',natom*3,ns+1,ns+1,1.0d0,p,natom*3,T,ns+1,0.0d0,ngp,natom*3)
 #else
-   ngp = transpose(matmul(gT,transpose(p)))
+   ngp = transpose(matmul(T,transpose(p)))
 #endif
 
    ! now, must compute random part. 

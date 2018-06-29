@@ -22,7 +22,7 @@ CONTAINS
    real(DP),intent(inout)   ::  fxc(:,:), fyc(:,:), fzc(:,:)
    real(DP),intent(inout)   ::  eclas
    real(DP) :: eclas_new, prob, probs(MAX_REPLICA), ran(MAX_REPLICA), rn
-   integer :: source, ierr, src, tag_en=10, tag_swap=1
+   integer :: source, ierr, tag_en=10, tag_swap=1
    integer             :: status(MPI_STATUS_SIZE), i
    logical             :: lswap=.false., lswaps(MAX_REPLICA)
 
@@ -107,13 +107,12 @@ CONTAINS
    real(DP),allocatable    ::  px_new(:,:), py_new(:,:), pz_new(:,:)
    real(DP),allocatable    ::  fxc_new(:,:), fyc_new(:,:), fzc_new(:,:)
    real(DP)                ::  scal
-   integer                 ::  reqs(18), stats(18)
    integer                 ::  status(MPI_STATUS_SIZE)
 
    integer :: tag_x=11, tag_y=12, tag_z=13
    integer :: tag_px=114, tag_py=115, tag_pz=116
    integer :: tag_fx=17, tag_fy=18, tag_fz=19
-   integer :: ierr, dest, src, size1, size2, irank
+   integer :: ierr, dest, size1, size2, irank
 
    ! First, rank1 sends data and rank2 receives
    size1 = size(x(:,1))
@@ -186,13 +185,6 @@ CONTAINS
       call MPI_Send(reps(my_rank+1), 1, MPI_INTEGER, dest, tag_fz, MPI_COMM_WORLD, status, ierr )
       reps(my_rank+1) = irank
    end if
-
-!   call MPI_WaitAll(18, reqs, stats, ierr)
-!   if(ierr.ne.0)then
-!      write(*,*)'Unspecified MPI problem during swapping with code and rank', &
-!      ierr, my_rank
-!      call abinerror('swap_replicas')
-!   end if
 
 !   Now all ranks have required data, so they can swap them
    x=x_new; y=y_new; z=z_new

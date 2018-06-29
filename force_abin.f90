@@ -21,7 +21,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    character(len=30)    :: chgeom,chforce,chhess,fgeom
    logical :: file_exists
    integer :: iat, iw, iat1, iat2, itest !,nthreads=1, ithread
-   integer :: ist1, ist2, iost, ISTATUS
+   integer :: ist1, iost, ISTATUS
    integer :: system
 !!$ integer :: omp_get_max_threads,OMP_get_thread_num
 

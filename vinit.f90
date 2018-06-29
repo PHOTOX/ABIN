@@ -31,12 +31,11 @@ module mod_vinit
 ! Adapted (real(DP), no angular velocities, mass)   B. Schmidt, Apr 6, 1995
 !
 !------------------------------------------------------------------------
-SUBROUTINE vinit(TEMP, MASS, vx, vy, vz, rem_comvel, rem_rot)
+SUBROUTINE vinit(TEMP, MASS, vx, vy, vz)
    USE mod_general,  ONLY: natom, pot, nwalk, my_rank
    USE mod_random,   ONLY: gautrg
    real(DP),intent(out)    :: vx(:,:), vy(:,:), vz(:,:)
    real(DP),intent(in)     :: mass(:)
-   logical, intent(in)     :: rem_comvel, rem_rot
    real(DP)    :: rans(3*size(mass))
    real(DP)    :: TEMP,SIGMA
    integer     :: iw,iat,pom

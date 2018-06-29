@@ -68,7 +68,7 @@ module mod_sh_integ
       integer, intent(in) :: itrj, ist ! current state
       real(DP),intent(in) :: pop0, dtp ! population of the current state
       real(DP) :: a_re, a_im
-      integer  :: ist1, ist2
+      integer  :: ist2
 
       t = 0.00d0
 

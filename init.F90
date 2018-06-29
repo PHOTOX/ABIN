@@ -514,9 +514,9 @@ print '(a)','**********************************************'
 !     SETTING initial velocities according to the Maxwell-Boltzmann distribution
       if(irest.eq.0.and.chveloc.eq.'')then
          if (temp0.ge.0)then
-            call vinit(TEMP0, am, vx, vy, vz, rem_comvel, rem_comrot)
+            call vinit(TEMP0, am, vx, vy, vz)
          else
-            call vinit(TEMP, am, vx, vy, vz, rem_comvel, rem_comrot)
+            call vinit(TEMP, am, vx, vy, vz)
          end if
       end if
 

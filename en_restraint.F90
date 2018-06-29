@@ -24,7 +24,6 @@ subroutine en_rest_init(dt)
    use mod_general,  only: natom
    implicit none
    real(DP),intent(in) :: dt
-   integer             :: iat
 
    allocate(fxr(natom,2)) ! two states, not beads.
    allocate(fyr(natom,2))

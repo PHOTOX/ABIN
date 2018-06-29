@@ -42,11 +42,8 @@ program abin_dyn
    implicit none
 #endif
    real(DP)    :: dt=20.0d0, eclas, equant
-   integer     :: iat, iw, itrj
+   integer     :: itrj
    LOGICAL     :: file_exists
-   character(len=20) :: chit
-   character(len=40) :: chrestart
-   character(len=200) :: chsystem
    integer,dimension(8) :: values1, values2
    real(DP) :: TIME
    integer  :: ierr

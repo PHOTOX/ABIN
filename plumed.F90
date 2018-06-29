@@ -65,7 +65,7 @@ subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
    real(DP)    :: xx(size(x,1)), yy(size(y,1)),zz(size(z,1))
    real(DP)    :: fxx(size(fx,1)),fyy(size(fy,1)),fzz(size(fz,1))
    real(DP)    :: amm(natom)
-   real(DP)    :: pbox(3,3),pcharges(natom),plumvirial(3,3),gpp(natom*3)
+   real(DP)    :: pbox(3,3),pcharges(natom),plumvirial(3,3)
    integer     :: iat, iw
 
    ! Apply plumed only to centroid in PIMD

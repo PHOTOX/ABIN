@@ -255,7 +255,7 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
    real(DP), intent(out) :: energy
    real(DP) :: ak(size(x,1),size(x,2))
    real(DP) :: equant
-   integer  :: iat,iw,i,j,kplus,kminus
+   integer  :: i,j,kplus,kminus
 
    fx = 0.0d0
    fy = 0.0d0
@@ -265,9 +265,9 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
 !  TODO: we should not calculate ak params each step...
 !  Setting the quantum force constants
 !  ak is defined is m*P/(beta^2*hbar^2)
-   do iw=1,nwalk
+   do j=1,nwalk
       do i=1,natom
-         ak(i,iw) = nwalk * amg(i,iw) * TEMP**2
+         ak(i,j) = nwalk * amg(i,j) * TEMP**2
       enddo
    enddo
 
