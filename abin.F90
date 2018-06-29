@@ -147,7 +147,7 @@ program abin_dyn
 !     setting initial values for SURFACE HOPPING 
       if(ipimd.eq.2.or.ipimd.eq.4)then
          do itrj=1, ntraj
-            if (irest.ne.1.and.pot.ne.'_tera_'.and.restrain_pot.ne.'_tera_') call get_nacm(itrj)
+            if (irest.ne.1) call get_nacm(itrj)
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
             if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_') call move_new2old_terash()
          end do

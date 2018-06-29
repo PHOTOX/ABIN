@@ -129,13 +129,23 @@ module mod_sh
 
 
    subroutine get_nacm(itrj)
+   use mod_general, only: pot
    integer, intent(in) :: itrj
-   integer :: iost
+   integer :: iost, ipom, ist1, ist2
 
-   if(inac.eq.0)then
+   ! In TeraChem SH interface, we already got NACME
+   if(pot.eq.'_tera_') return
+
+   ! Check whether we even want any NACME
+   ipom = 0
+   do ist1=1,nstate-1
+      do ist2=ist1+1,nstate
+         ipom = ipom + tocalc(ist1,ist2)
+      end do
+   end do
+
+   if(inac.eq.0.and.ipom.gt.0)then
       ! Calculate NACME using default accuracy
-
-      ! TODO: check that we have non-zero tocalc array!
 
       call calc_nacm(itrj, nac_accu1)
 
@@ -587,12 +597,9 @@ do itrj=1,ntraj
          enddo
       enddo
 
-      if(pot.ne.'_tera_')then
+      ! This computes and reads NACME
+      call get_nacm(itrj)
 
-         ! This computes and reads NACME
-         call GET_NACM(itrj)
-
-      end if
 
 !     TODO: move this to a separate routine
 !     Calculating overlap between nacmes
@@ -618,7 +625,7 @@ do itrj=1,ntraj
          enddo
        enddo
 
-!  INAC=1  endif
+!  INAC=0  endif
    endif
 
 !  Reading time-derivative couplings
