@@ -33,6 +33,7 @@ module mod_sh
    real(DP),allocatable :: en_array(:,:), en_array_old(:,:)
    real(DP) :: entot0
    integer, allocatable :: tocalc(:,:)
+   ! TODO: Make this allocatable
    integer  :: istate(NTRAJMAX)
    ! for ethylene 2-state SA3 dynamics
    integer  :: ignore_state = 0
@@ -57,7 +58,6 @@ module mod_sh
    integer   :: itrj,ist1
 
    deltaE = deltaE / AUtoEV
-   dtp = dt / substep
 
    allocate( nacx(natom, NTRAJMAX, nstate, nstate) )
    allocate( nacy(natom, NTRAJMAX, nstate, nstate) )
@@ -550,7 +550,7 @@ module mod_sh
    integer  :: iat,ist1,ist2,itrj,itp  ! iteration counters
    integer  :: ist                     ! =istate(itrj)
    real(DP) :: vect_olap,fr,frd
-   real(DP) :: Ekin
+   real(DP) :: Ekin, dtp
    integer  :: ihop
    real(DP)  :: pop0, a_re, a_im, prob(NSTMAX), hop_rdnum, stepfs
    character(len=500)   :: formt
@@ -622,10 +622,10 @@ do itrj=1,ntraj
    endif
 
 !  Reading time-derivative couplings
-   if (inac.eq.1)then
-      call read_tdc(itrj, dt)
-   endif
+   if (inac.eq.1) call read_tdc(itrj, dt)
 
+   ! smaller time step
+   dtp = dt / substep
 
 !  MAIN LOOP
 !  Smaller time step for electronic population transfer
@@ -661,7 +661,7 @@ do itrj=1,ntraj
       endif
 
       ! Integrate electronic wavefunction for one dtp time step
-      call sh_integrate_wf(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
+      call sh_integrate_wf(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj, dtp)
 
       ! Check whether total population is 1.0
       popsum = check_popsum(itrj)
@@ -669,7 +669,7 @@ do itrj=1,ntraj
       ! Calculate switching probabilities according to Tully's fewest switches
       ! Probabilities are stored in matrix t
       ! (although at this point we calculate only the relevant part of the matrix)
-      call sh_TFS_transmat(dotproduct_int, dotproduct_newint, itrj, istate(itrj), pop0, t)
+      call sh_TFS_transmat(dotproduct_int, dotproduct_newint, itrj, istate(itrj), pop0, t, dtp)
 
       if(idebug.gt.1)then
          ! WARNING: this will not work for adaptive time step
@@ -745,7 +745,7 @@ do itrj=1,ntraj
 
          Ekin = ekin_v(vx_int,vy_int,vz_int)
          if(Ekin.gt.1.0d-4)then ! Decoherence diverges for zero velocities 
-            call sh_decoherence_correction(en_array_int, decoh_alpha, Ekin, istate(itrj), itrj)
+            call sh_decoherence_correction(en_array_int, decoh_alpha, Ekin, istate(itrj), itrj, dtp)
          end if
       
       endif
@@ -998,6 +998,8 @@ enddo
       ! TODO: But what if we hopped to another state?
       ! en_array_old(istate(itrj), itrj) would not point to the correct energy,
       ! right?
+      ! We need istate_old array ... but we should just refactor the whole thing...
+      ! and make traj_data structure or something
       entot_old=(ekin_old+en_array_old(istate(itrj), itrj) )*AUtoEV
 
       if (abs(entot-entot_old).gt.energydifthr)then

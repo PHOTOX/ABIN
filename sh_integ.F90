@@ -12,36 +12,37 @@ module mod_sh_integ
    public :: sh_decoherence_correction, check_popsum, sh_TFS_transmat
    public :: sh_write_wf, sh_read_wf, sh_debug_wf
    public :: integ, phase, el_pop
-   public :: nstate, dtp, popsumthr
+   public :: nstate, popsumthr
 
    real(DP) :: cel_re(NSTMAX, NTRAJMAX), cel_im(NSTMAX, NTRAJMAX)
    real(DP) :: el_pop(NSTMAX, NTRAJMAX)
    real(DP) :: gama(NSTMAX, NSTMAX, NTRAJMAX)
-   real(DP) :: eshift, dtp, popsumthr=0.001d0
+   real(DP) :: eshift, popsumthr=0.001d0
+   ! TODO: phase variable should be named differently
    integer  :: phase = 0, nstate = 1
    character(len=10) :: integ='butcher'
 
    CONTAINS
 
-   ! TODO dtp private and input it via parameter here
-   subroutine sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, itrj)
+   subroutine sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, itrj, dtp)
       real(DP),intent(in) :: en_array_int(NSTMAX,NTRAJMAX)
       real(DP),intent(in) :: en_array_newint(NSTMAX,NTRAJMAX)
       real(DP),intent(in) :: dotproduct_int(NSTMAX,NSTMAX,NTRAJMAX)
       real(DP),intent(in) :: dotproduct_newint(NSTMAX,NSTMAX,NTRAJMAX)
+      real(DP),intent(in) :: dtp ! Time step
       integer, intent(in) :: itrj
 
       if(integ.eq.'butcher')then
 
-         call butcherstep(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
+         call butcherstep(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj,dtp)
 
       else if(integ.eq.'rk4')then
         
-         call rk4step(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
+         call rk4step(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj,dtp)
 
       else if(integ.eq.'euler')then
 
-         call eulerstep(en_array_int, en_array_newint, dotproduct_int, itrj)
+         call eulerstep(en_array_int, en_array_newint, dotproduct_int, itrj,dtp)
 
       end if
 
@@ -59,13 +60,13 @@ module mod_sh_integ
 
 
    ! Calculates transitions matrix according to the Tully's fewest switches algorithm
-   subroutine sh_TFS_transmat(dotproduct_int, dotproduct_newint, itrj, ist, pop0, t)
+   subroutine sh_TFS_transmat(dotproduct_int, dotproduct_newint, itrj, ist, pop0, t, dtp)
       use mod_utils, only: abinerror
       real(DP),intent(in) :: dotproduct_int(NSTMAX,NSTMAX,NTRAJMAX)
       real(DP),intent(in) :: dotproduct_newint(NSTMAX,NSTMAX,NTRAJMAX)
       real(DP),intent(out):: t(NSTMAX,NSTMAX) ! transition matrix
       integer, intent(in) :: itrj, ist ! current state
-      real(DP),intent(in) :: pop0 ! population of the current state
+      real(DP),intent(in) :: pop0, dtp ! population of the current state
       real(DP) :: a_re, a_im
       integer  :: ist1, ist2
 
@@ -97,10 +98,10 @@ module mod_sh_integ
    end subroutine sh_TFS_transmat
 
 
-   subroutine integstep(k_re, k_im, en, y_re, y_im, dotprod, gam)
+   subroutine integstep(k_re, k_im, en, y_re, y_im, dotprod, gam, dtp)
    real(DP),intent(out) :: k_re(NSTMAX),k_im(NSTMAX)
    real(DP),intent(in)  :: dotprod(NSTMAX,NSTMAX), gam(NSTMAX,NSTMAX)
-   real(DP),intent(in)  :: en(NSTMAX),y_im(NSTMAX),y_re(NSTMAX)
+   real(DP),intent(in)  :: en(NSTMAX),y_im(NSTMAX),y_re(NSTMAX), dtp
    real(DP) :: g
    integer  :: ist1,ist2
 
@@ -138,9 +139,9 @@ module mod_sh_integ
    end subroutine integstep
 
 
-   subroutine integ_gama(en_array_int, en_array_newint, itrj)
+   subroutine integ_gama(en_array_int, en_array_newint, itrj, dtp)
    real(DP),intent(in) :: en_array_int(:,:)
-   real(DP),intent(in) :: en_array_newint(:,:)
+   real(DP),intent(in) :: en_array_newint(:,:), dtp
    integer, intent(in) :: itrj
    real(DP) :: g
    integer  :: ist1, ist2
@@ -150,7 +151,7 @@ module mod_sh_integ
          if (ist1.ne.ist2)then
             g = (en_array_int(ist1,itrj)+en_array_newint(ist1,itrj)) / 2
             g = g - (en_array_int(ist2,itrj)+en_array_newint(ist2,itrj)) / 2
-            gama(ist1,ist2,itrj) = gama(ist1,ist2,itrj) + g*dtp
+            gama(ist1,ist2,itrj) = gama(ist1,ist2,itrj) + g * dtp
          end if
       end do
    end do
@@ -158,10 +159,10 @@ module mod_sh_integ
    end subroutine integ_gama
 
 
-   subroutine eulerstep(en_array_int, en_array_newint, dotproduct_int,itrj)
+   subroutine eulerstep(en_array_int, en_array_newint, dotproduct_int,itrj, dtp)
       real(DP),intent(in) :: en_array_int(:,:)
       real(DP),intent(in) :: en_array_newint(:,:)
-      real(DP),intent(in) :: dotproduct_int(:,:,:)
+      real(DP),intent(in) :: dotproduct_int(:,:,:), dtp
       integer,intent(in)  :: itrj
       real(DP) :: dotprod0(NSTMAX,NSTMAX), gam0(NSTMAX, NSTMAX)
       real(DP) :: k1_re(NSTMAX),k1_im(NSTMAX)
@@ -179,22 +180,22 @@ module mod_sh_integ
        enddo
       end do
 
-      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0, gam0)
+      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0, gam0, dtp)
 
       do ist1=1,nstate
        cel_re(ist1,itrj)=cel_re(ist1,itrj)+k1_re(ist1)
        cel_im(ist1,itrj)=cel_im(ist1,itrj)+k1_im(ist1)
       enddo
 
-      call integ_gama(en_array_int, en_array_newint, itrj)
+      call integ_gama(en_array_int, en_array_newint, itrj, dtp)
    end subroutine eulerstep
 
 
-   subroutine rk4step(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
+   subroutine rk4step(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj,dtp)
       real(DP),intent(in) :: en_array_int(NSTMAX,NTRAJMAX)
       real(DP),intent(in) :: en_array_newint(NSTMAX,NTRAJMAX)
       real(DP),intent(in) :: dotproduct_int(NSTMAX,NSTMAX,NTRAJMAX)
-      real(DP),intent(in) :: dotproduct_newint(NSTMAX,NSTMAX,NTRAJMAX)
+      real(DP),intent(in) :: dotproduct_newint(NSTMAX,NSTMAX,NTRAJMAX), dtp
       integer, intent(in) :: itrj
       real(DP) :: dotprod2(NSTMAX,NSTMAX)
       real(DP) :: dotprod0(NSTMAX,NSTMAX),dotprod1(NSTMAX,NSTMAX)
@@ -223,7 +224,7 @@ module mod_sh_integ
       enddo
 
       if (phase.eq.1)then
-         call integ_gama(en_array_int, en_array_newint, itrj)
+         call integ_gama(en_array_int, en_array_newint, itrj, dtp)
          do ist1=1,nstate
             do ist2=1,nstate
                gam1(ist1,ist2)=gama(ist1,ist2,itrj)
@@ -232,25 +233,25 @@ module mod_sh_integ
          end do 
       end if
 
-      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0,gam0)
+      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0,gam0,dtp)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/2
        y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/2
       enddo
-      call integstep(k2_re,k2_im,en2,y_re,y_im,dotprod2,gam2)
+      call integstep(k2_re,k2_im,en2,y_re,y_im,dotprod2,gam2,dtp)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k2_re(ist1)/2
        y_im(ist1)=cel_im(ist1,itrj)+k2_im(ist1)/2
       enddo
-      call integstep(k3_re,k3_im,en2,y_re,y_im,dotprod2,gam2)
+      call integstep(k3_re,k3_im,en2,y_re,y_im,dotprod2,gam2,dtp)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k3_re(ist1)
        y_im(ist1)=cel_im(ist1,itrj)+k3_im(ist1)
       enddo
-      call integstep(k4_re,k4_im,en1,y_re,y_im,dotprod1,gam1)
+      call integstep(k4_re,k4_im,en1,y_re,y_im,dotprod1,gam1,dtp)
 
       do ist1=1,nstate
        cel_re(ist1,itrj)=cel_re(ist1,itrj)+k1_re(ist1)/6+k2_re(ist1)/3+k3_re(ist1)/3+k4_re(ist1)/6
@@ -260,11 +261,11 @@ module mod_sh_integ
    end subroutine rk4step
 
 
-   subroutine butcherstep(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
+   subroutine butcherstep(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj,dtp)
       real(DP),intent(in) :: en_array_int(NSTMAX,NTRAJMAX)
       real(DP),intent(in) :: en_array_newint(NSTMAX,NTRAJMAX)
       real(DP),intent(in) :: dotproduct_int(NSTMAX,NSTMAX,NTRAJMAX)
-      real(DP),intent(in) :: dotproduct_newint(NSTMAX,NSTMAX,NTRAJMAX)
+      real(DP),intent(in) :: dotproduct_newint(NSTMAX,NSTMAX,NTRAJMAX), dtp
       real(DP) :: dotprod2(NSTMAX,NSTMAX),dotprod4(NSTMAX,NSTMAX),dotprod34(NSTMAX,NSTMAX)
       real(DP) :: dotprod0(NSTMAX,NSTMAX),dotprod1(NSTMAX,NSTMAX)
       real(DP) :: k1_re(NSTMAX),k1_im(NSTMAX)
@@ -299,7 +300,7 @@ module mod_sh_integ
       enddo
 
       if (phase.eq.1)then
-         call integ_gama(en_array_int, en_array_newint, itrj)
+         call integ_gama(en_array_int, en_array_newint, itrj,dtp)
          do ist1=1,nstate
             do ist2=1,nstate
                gam1(ist1,ist2)=gama(ist1,ist2,itrj)
@@ -310,31 +311,31 @@ module mod_sh_integ
          end do 
       end if
 
-      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0,gam0)
+      call integstep(k1_re,k1_im,en0,y_re,y_im,dotprod0,gam0,dtp)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/4
        y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/4
       enddo
-      call integstep(k2_re,k2_im,en4,y_re,y_im,dotprod4,gam4)
+      call integstep(k2_re,k2_im,en4,y_re,y_im,dotprod4,gam4,dtp)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+k1_re(ist1)/8+k2_re(ist1)/8
        y_im(ist1)=cel_im(ist1,itrj)+k1_im(ist1)/8+k2_im(ist1)/8
       enddo
-      call integstep(k3_re,k3_im,en4,y_re,y_im,dotprod4,gam4)
+      call integstep(k3_re,k3_im,en4,y_re,y_im,dotprod4,gam4,dtp)
       
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)-k2_re(ist1)/2+k3_re(ist1)
        y_im(ist1)=cel_im(ist1,itrj)-k2_im(ist1)/2+k3_im(ist1)
       enddo
-      call integstep(k4_re,k4_im,en2,y_re,y_im,dotprod2,gam2)
+      call integstep(k4_re,k4_im,en2,y_re,y_im,dotprod2,gam2,dtp)
       
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)+3*k1_re(ist1)/16+9*k4_re(ist1)/16
        y_im(ist1)=cel_im(ist1,itrj)+3*k1_im(ist1)/16+9*k4_im(ist1)/16
       enddo
-      call integstep(k5_re,k5_im,en34,y_re,y_im,dotprod34,gam34)
+      call integstep(k5_re,k5_im,en34,y_re,y_im,dotprod34,gam34,dtp)
 
       do ist1=1,nstate
        y_re(ist1)=cel_re(ist1,itrj)-3*k1_re(ist1)/7+2*k2_re(ist1)/7+12*k3_re(ist1)/7 &
@@ -342,7 +343,7 @@ module mod_sh_integ
        y_im(ist1)=cel_im(ist1,itrj)-3*k1_im(ist1)/7+2*k2_im(ist1)/7+12*k3_im(ist1)/7 &
                   -12*k4_im(ist1)/7+8*k5_im(ist1)/7
       enddo
-      call integstep(k6_re,k6_im,en1,y_re,y_im,dotprod1,gam1)
+      call integstep(k6_re,k6_im,en1,y_re,y_im,dotprod1,gam1,dtp)
 
 
       do ist1=1,nstate
@@ -355,10 +356,10 @@ module mod_sh_integ
    end subroutine butcherstep
 
 
-   subroutine sh_decoherence_correction(en_array_int, alpha, Ekin_mom, istate, itrj)
+   subroutine sh_decoherence_correction(en_array_int, alpha, Ekin_mom, istate, itrj, dtp)
       use mod_utils, only: abinerror
       real(DP),intent(in) :: en_array_int(NSTMAX,NTRAJMAX)
-      real(DP), intent(in)  :: alpha, Ekin_mom
+      real(DP), intent(in)  :: alpha, Ekin_mom, dtp
       integer, intent(in)   :: istate, itrj
       integer  :: ist1
       real(DP) :: apom,edif,tau,fact,sum_norm
