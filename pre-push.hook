@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # A hook script to verify what is about to be pushed.  Called by "git
 # push" after it has checked the remote status, but before anything has been
@@ -17,7 +17,7 @@ url="$2"
 
 # First, do a fresh build, and then run tests before commiting to GitHub
 
-if [ $url = "https://github.com/PHOTOX/ABIN" ];then
+if [[ $url =~ github\.com ]];then
    echo "Pushing to GitHub. Veryfying the build and tests first."
    make clean;make
    if [ $? -ne 0 ];then
