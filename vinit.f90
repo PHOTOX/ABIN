@@ -168,7 +168,12 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
    real(DP) :: Omx, Omy, Omz, Om_tot
    integer  :: iat, iw
 
-   if (dime.eq.1.or.natom.eq.1) return
+   ! Current code cannot handle linear systems...
+   ! We will probably crash in the case of linear n-atoms...
+   if (dime.eq.1.or.natom.lt.3)then
+     write(*,*)'WARNING: Cannot remove rotations from linear systems'
+     return
+   end if
 
 
    ! It would probably be more correct to calculate angular momentum
