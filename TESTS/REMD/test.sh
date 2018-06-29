@@ -7,6 +7,7 @@ fi
 
 ABINEXE=$1
 MPIRUN=$MPI_PATH/bin/mpirun
+MPIRUN=mpirun
 
 $MPIRUN  -np 3 $ABINEXE -i input.in -v vel0.in > output
 $MPIRUN  -np 3 $ABINEXE -i input.in2 >> output
