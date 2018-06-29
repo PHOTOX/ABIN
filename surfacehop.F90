@@ -205,10 +205,17 @@ module mod_sh
    use mod_utils, only: archive_file
    integer :: ist1,ist2,iat,itrj
    integer :: iunit1
+   logical :: file_exists
+   character(len=20) :: chout
+   character(len=200) :: chsystem
    iunit1 = 600
+   chout = 'restart_sh.bin'
 
-   ! TODO: Make this file binary and print whole nacX arrays regardless of tocalc !
-   open(iunit1,file='nacmrest.dat',action="write")
+   INQUIRE(FILE=chout, EXIST=file_exists)
+   chsystem='mv '//trim(chout)//'  '//trim(chout)//'.old'
+   if(file_exists) call system(chsystem)
+
+   open(iunit1,file=chout, action='WRITE',status="NEW",access="Sequential",form="UNFORMATTED")
 
    do itrj=1, ntraj
 
@@ -216,11 +223,10 @@ module mod_sh
 
       do ist2=ist1+1,nstate
    
-         if(tocalc(ist1,ist2).eq.1.and.inac.eq.0)then
+         if(inac.eq.0)then
    
-            write(iunit1,*)'NACME between states',ist1,ist2
-            do iat=1,natqm              ! reading only for QM atoms
-               write(iunit1,*)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+            do iat=1,natqm
+               write(iunit1)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
             enddo
    
          endif
@@ -231,12 +237,9 @@ module mod_sh
    ! Printing total energy at t=0, so that we can safely restart
    ! and we do not break checking for energy drift
    ! For now, energy jump check is not handled well.
-   write(iunit1, *)'Total Energy(t=0) [eV]'
-   write(iunit1, *)entot0
+   write(iunit1)entot0
 
-   if(phase.eq.1)then
-      call write_phaserest(iunit1, itrj)
-   end if
+   if(phase.eq.1) call sh_write_phase_bin(iunit1, itrj)
    
    ! ntraj enddo
    end do
@@ -244,31 +247,34 @@ module mod_sh
    close(iunit1)
 
 
-   if(modulo(it,narchive).eq.0)then
-      call archive_file('nacmrest.dat',it)
-   end if
+   if(modulo(it,narchive).eq.0) call archive_file(chout, it)
 
    end subroutine write_nacmrest
 
-   ! TODO: rename to sh_restart
-   ! save everything SH related to file sh_restart.dat
+
    subroutine read_nacmrest()
    use mod_general, only: it
    use mod_qmmm,  only: natqm
    use mod_utils, only: archive_file
    integer  :: iost,ist1,ist2,iat,itrj
-   integer  :: iunit1, iunit2
-   character(len=200)   :: chmsg
-   character(len=20)    :: chit
-   character(len=60)    :: chrestart
-   iunit1=600; iunit2=601
+   integer  :: iunit1
+   logical  :: file_exists
+   character(len=200) :: chmsg
+   character(len=20)  :: chit
+   character(len=60)  :: chrestart
+   character(len=20)  :: chin
+   character(len=200) :: chsystem
+   chin = 'restart_sh.bin'
+   iunit1=600
 
-   if (inac.eq.0) write(*,*)'Reading NACME from nacmrest.dat'
-   open(iunit1,file='nacmrest.dat',action="read")
-   if (phase.eq.1)then
-      write(*,*)'Reading phase from phaserest.dat'
-      open(iunit2,file='phaserest.dat',action="read")
+   write(*,*)'Reading SH restart data from '//trim(chin)
+   INQUIRE(FILE=chin, EXIST=file_exists)
+   if(.not.file_exists)then
+      write(*,*)'ERROR: Surface Hopping restart file does not exist! '//trim(chin)
+      call abinerror('read_wfn')
    end if
+
+   open(iunit1,file=chin,action="read", status="old", access="sequential", form="unformatted")
 
    do itrj=1, ntraj
 
@@ -276,13 +282,12 @@ module mod_sh
 
       do ist2=ist1+1,nstate
    
-         if(tocalc(ist1,ist2).eq.1.and.inac.eq.0)then
+         if(inac.eq.0)then
    
-            read(iunit1,*, iostat=iost)
-            do iat=1,natqm              ! reading only for QM atoms
-               read(iunit1,*,iomsg=chmsg)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
+            do iat=1,natqm
+               read(iunit1,iomsg=chmsg)nacx(iat,itrj,ist1,ist2),nacy(iat,itrj,ist1,ist2),nacz(iat,itrj,ist1,ist2)
                if (iost.ne.0)then
-                  write(*,*)'Error reading NACME from file nacmrest.'
+                  write(*,*)'Error reading NACME from restart file '//trim(chin)
                   write(*,*)chmsg
                   call abinerror('read_nacmrest')
                end if
@@ -291,7 +296,6 @@ module mod_sh
                nacz(iat,itrj,ist2,ist1)=-nacz(iat,itrj,ist1,ist2)
             enddo
    
-   !--------if tocalc 
          endif
    
       enddo
@@ -300,24 +304,14 @@ module mod_sh
    ! Reading total energy at t=0, so that we can safely restart
    ! and we do not break checking for energy drift
    ! For now, energy jump check is not handled well.
-   read(iunit1, *)
-   read(iunit1, *)entot0
+   read(iunit1)entot0
 
-   if(phase.eq.1)then
-      do ist1=1,nstate
-         read(iunit2,*)(gama(ist1,ist2,itrj),ist2=1,nstate)
-      end do
-   end if
+   if(phase.eq.1) call sh_read_phase_bin(iunit1, itrj)
 
    end do
 
    close(iunit1)
-   call archive_file('nacmrest.dat',it)
-
-   if (phase.eq.1)then
-      close(iunit2)
-      call archive_file('phaserest.dat',it)
-   end if
+   call archive_file(chin, it)
 
    end subroutine read_nacmrest
 

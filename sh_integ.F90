@@ -3,17 +3,16 @@
 ! Currently, the only production method is the Butcher 5th order integrator.
 ! Euler and 4th-order Runge-Kutta methods are only here for debugging purposes.
 ! This module is the parent of mod_sh which contains the driver SH routine.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module mod_sh_integ
    USE mod_const, ONLY: DP
    USE mod_array_size, ONLY: NSTMAX, NTRAJMAX
    implicit none
    private
-   public :: sh_integrate_wf, sh_set_initialwf, write_phaserest
+   public :: sh_integrate_wf, sh_set_initialwf, sh_write_phase_bin, sh_read_phase_bin
    public :: sh_decoherence_correction, check_popsum, sh_TFS_transmat
    public :: sh_write_wf, sh_read_wf, sh_debug_wf
    public :: integ, phase, el_pop
-   public :: nstate, gama, dtp, popsumthr
+   public :: nstate, dtp, popsumthr
 
    real(DP) :: cel_re(NSTMAX, NTRAJMAX), cel_im(NSTMAX, NTRAJMAX)
    real(DP) :: el_pop(NSTMAX, NTRAJMAX)
@@ -21,10 +20,10 @@ module mod_sh_integ
    real(DP) :: eshift, dtp, popsumthr=0.001d0
    integer  :: phase = 0, nstate = 1
    character(len=10) :: integ='butcher'
-   ! TODO make dtp and gama private
 
    CONTAINS
 
+   ! TODO dtp private and input it via parameter here
    subroutine sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, itrj)
       real(DP),intent(in) :: en_array_int(NSTMAX,NTRAJMAX)
       real(DP),intent(in) :: en_array_newint(NSTMAX,NTRAJMAX)
@@ -408,29 +407,21 @@ module mod_sh_integ
    end subroutine sh_decoherence_correction
 
 
-   subroutine write_phaserest(iunit, itrj)
-   use mod_general,  only: narchive, it
-   use mod_utils,    only: archive_file
+   subroutine sh_write_phase_bin(iunit, itrj)
    integer, intent(in) :: iunit, itrj
    integer :: ist1, ist2
-   ! iunit2 here only temporarily, should write to iunit
-   integer :: iunit2
-   iunit2 = 601
-
-   open(iunit2,file='phaserest.dat',action="write")
-
    do ist1=1,nstate
-      write(iunit2,*)(gama(ist1,ist2,itrj),ist2=1,nstate)
+      write(iunit)(gama(ist1,ist2,itrj),ist2=1,nstate)
    end do
+   end subroutine sh_write_phase_bin
 
-   close(iunit2)
-
-   if(modulo(it,narchive).eq.0)then
-      call archive_file('phaserest.dat',it)
-   end if
-
-   end subroutine write_phaserest
-
+   subroutine sh_read_phase_bin(iunit, itrj)
+   integer, intent(in) :: iunit, itrj
+   integer :: ist1, ist2
+   do ist1=1,nstate
+      read(iunit)(gama(ist1,ist2,itrj),ist2=1,nstate)
+   end do
+   end subroutine sh_read_phase_bin
 
    subroutine sh_set_initialwf(initial_state, initial_poten, itrj)
       use mod_general, only: irest
