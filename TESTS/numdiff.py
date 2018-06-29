@@ -38,6 +38,8 @@ def failed(n1, n2):
    print('Delta = ',delta)
    if delta < DELTA:
       return
+#  The following is not really useful, just exit at first error
+   exit(1)
    yn = raw_input('Is this difference ok? [y/n]')
    if yn != "y":
       exit(1)

@@ -34,15 +34,16 @@ do
          while true 
          do
             read cont
-            if [[ $cont = "n" || $cont = "no" ]];then
-               echo "Exiting..."
-               exit 1
-            elif [[ $cont = "y" || $cont = "yes" ]];then
+            #if [[ $cont = "n" || $cont = "no" ]];then
+            #   echo "Exiting..."
+            #   exit 1
+            if [[ $cont = "y" || $cont = "yes" ]];then
                echo "Continuing..."
                cont_no=0
                break
             else 
-               echo "Please enter 'y' or 'n'"
+               exit 1
+            #   echo "Please enter 'y' or 'n'"
             fi
          done
       fi

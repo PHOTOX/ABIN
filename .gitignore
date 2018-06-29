@@ -24,7 +24,7 @@ TESTS/*/restart.xyz.0?
 TESTS/*/restart.xyz.10
 TESTS/*/restart.xyz.0?.old
 TESTS/*/debug.nacm
-TESTS/SH_EULER/ERROR
+TESTS/*/ERROR
 TESTS/SH_BUTCHER/geom.?.?.?
 TESTS/CP2K*/WATER*
 TESTS/PLUMED/*
