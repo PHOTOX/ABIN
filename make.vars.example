@@ -5,6 +5,7 @@ OUT = abin
 # ifort may give different results (2015 version is know to not work for some reason)
 FC = gfortran
 CC = gcc 
+CXX = g++
 FFLAGS :=   -O2 -fopenmp  
 
 #C compiler is used for NAB library, do not change this
@@ -26,13 +27,12 @@ MPI_INC  = -I$(MPI_PATH)/include/
 NAB  = TRUE
 
 # Compile with PLUMED?
-PLUM = TRUE
+PLUM = FALSE
 PLUMLINK = /home/suchanj/programs/plumed2/lib/plumed/src/lib/Plumed.inc
-
 
 # if you have FFTW libraries available, set it to TRUE
 # Needed for Normal mode coordinate transformation in PIMD, which is however not fully implemented
-FFTW = TRUE 
+FFTW = FALSE
 
 # Compile with direct interface to CP2K?
 # This needs working CP2K library

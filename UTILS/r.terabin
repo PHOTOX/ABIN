@@ -8,47 +8,49 @@
 # 4. Remove scratch directory. (if delscratch = true)
 
 #$ -V -cwd
+#$ -l num_gpu=1
 
-# SETUP --------------------------------
+# ABIN SETUP 
 OUTPUT=output
 JOBNAME=ABIN_${JOB_ID}_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
-delscratch=true
 INPUTVELOC=
+
+# TeraChem SETUP
+TC_INPUT=tera.inp
 MPITYPE=0   # 0 - ground state AIMD
-            # 1 - Surface Hopping
+            # 2 - Surface Hopping
+
+delscratch=true
+################
+N_TERA_SERVERS=1     # Use more TC servers for PIMD (Experimental)
 ########################################
 # ABINEXE=/home/hollas/PHOTOX/bin/abin.mpi
-# ABINEXE is determined automatically from SetEnvironment.sh
+# ABINEXE should be determined automatically from SetEnvironment.sh
 
 export LD_LIBRARY_PATH=
 source SetEnvironment.sh TERACHEM
 MPIRUN_TERA="$MPIRUN -np 1 "
-source SetEnvironment.sh ABIN 1.0-mpi
+source SetEnvironment.sh ABIN mpi
 # This needs to be the same as MPIRUN_TERA
 MPIRUN_ABIN="$MPIRUN_TERA"
 
-rm -f port.txt
+rm -f port.txt.*
 
-# First check, that pot='_tera_' 
-# Otherwise, TeraChem would wait forever and the job would never finish
-egrep -q -e ^pot=\'_tera_\' $INPUTPARAM
-if [[ ! $? ]];then
+grep -E -q -e pot.+_tera_ $INPUTPARAM
+if [[ $? -eq 1 ]];then
    echo "Error: It appears that you did not specify pot=_tera_ in $INPUTPARAM."
    echo "Exiting..."
    exit 1 
 fi
 
+# when using reference potential ala O. Marsalek
+pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
+INTERFACE_REF=${pot_ref^^}
+
 SCRDIR=/scratch/$USER/$JOBNAME
 
-echo "Job started at: " >> $OUTPUT
-date >> $OUTPUT
-echo "Running on node:" >> $OUTPUT
-uname -n >> $OUTPUT
-echo "Working directory:" >> $OUTPUT
-echo "$SCRDIR" >> $OUTPUT
-echo " " >> $OUTPUT
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 
@@ -65,6 +67,11 @@ fi
 
 
 cp -p * $SCRDIR/.
+
+if [[ -d $INTERFACE_REF ]];then
+   cp -r $INTERFACE_REF $SCRDIR/
+fi
+
 cd $SCRDIR
 
 host=$(uname -a | awk '{print $2}')
@@ -80,12 +87,45 @@ sed -i "s/teraport=.*/teraport=\"\"/" $INPUTPARAM
 #   hydra_nameserver &
 #fi
 
-$MPIRUN_TERA $TERAEXE --inputfile=tera.inp --UseMPI=$MPITYPE --MPIPort=$port > tera.out 2>&1 &
-# Get PID of the last process
-terapid=$!
+declare -A terapid
+
+numgpus=$(grep gpus $TC_INPUT | awk '{print $2}')
+
+if [[ $numgpus -gt 1 && $N_TERA_SERVERS -gt 1 ]];then
+   echo "ERROR: Number of gpus per TC server should be 1!"
+   echo "Set parameters \"gpus 1\" in $TC_INPUT or"
+   echo "parameter N_TERASERVERS=1 in r.terabin"
+   exit 1
+fi
+
+let numcpus=numgpus*N_TERA_SERVERS
+if [[ $numcpus -ne ${NSLOTS} ]];then
+   echo "ERROR: You did not specify the correct number of CPUs in the qsub command"
+   echo "The correct number of CPUs for your setting should be $numcpus"
+   echo "Ciao!"
+   exit 1
+fi
+
+for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
+   if [[ $N_TERA_SERVERS -gt 1 ]];then
+      let gpuid=itera-1
+      sed -r "s/gpus.+/gpus $numgpus  $gpuid/" $TC_INPUT > $TC_INPUT.$itera
+   else
+      cp $TC_INPUT $TC_INPUT.1
+   fi
+   $MPIRUN_TERA $TERAEXE --inputfile=$TC_INPUT.$itera --UseMPI=$MPITYPE --MPIPort=$port.$itera >> $TC_INPUT.out.$itera 2>&1 &
+#  Get PID of the last process
+   terapid[$itera]=$!
+}
+
 sleep 9
+sync
 # Ugly workaround because MPI_Lookup does not work
-grep port_name: tera.out | awk '{print $6}' > port.txt
+for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
+   grep port_name: $TC_INPUT.out.$itera | awk '{print $6}' | tail -1 > port.txt.$itera
+}
+# Temporary fix for OLDER ABIN version
+cp port.txt.1 port.txt
 
 if [[ -z $INPUTVELOC ]];then
    $MPIRUN_ABIN $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT 2>&1 &
@@ -95,24 +135,45 @@ fi
 abinpid=$!
 
 while true;do
-   sleep 30
-   if ! `ps|grep -q $terapid` && ! `ps|grep -q $abinpid` ;then
-      echo "Both ABIN and TeraChem stopped."
-      break
-   fi
-   if ! `ps|grep -q $terapid` ;then
-      echo "Terachem died. Killing ABIN."
-      kill -9 $abinpid 
-      break
-   fi   
+
+   # If ABIN dies, kill all living TC servers
    if ! `ps|grep -q $abinpid` ;then
-      echo "ABIN died. Killing TeraChem."
-      kill -9 $terapid 
+      for tcpid in ${terapid[@]};do
+         if `ps|grep -q $tcpid` ;then
+            died=true
+            echo "ABIN died. Killing TeraChem."
+            kill -9 $tcpid 
+         fi
+      done
+      if [[ $died != "true" ]];then
+         echo "Both ABIN and TeraChem stopped."
+      fi
       break
+
+   else
+
+      # If any TC server dies, kill all the other and ABIN
+      for tcpid in ${terapid[@]};do
+         if ! `ps|grep -q $tcpid` ;then
+            echo "TeraChem died. Killing ABIN."
+            kill -9 $abinpid 
+            # Kill all remaining TC servers if any
+            for tpid in ${terapid[@]};do
+               if `ps|grep -q $tpid` ;then
+                  kill -9 $tpid 
+               fi
+            done
+         fi
+         break
+      done
+
    fi
+
+   sleep 10
+
 done
 
-cp -pr * $KDE/.
+cp -upr * $KDE/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"

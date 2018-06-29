@@ -6,13 +6,13 @@ module mod_terampi_sh
 ! Original Authors: Basile Curchod, J. Snyder and Ed Hohenstein
 !----------------------------------------------------------------
    use mod_const, only: DP
-   use mod_terampi, only: newcomm, qmcharges, qmcoords, dxyz_all, chsys_sleep
+   use mod_terampi, only: chsys_sleep
    implicit none
    private
 #ifdef MPI
-   public :: force_terash, init_terash, send_terash
+   public :: init_terash, send_terash
 #endif
-   public :: finalize_terash
+   public :: force_terash, finalize_terash
    public :: write_wfn, read_wfn, move_new2old_terash, move_old2new_terash
    real(DP), allocatable :: CIvecs(:,:), MO(:,:), blob(:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:,:), MO_old(:,:), blob_old(:)
@@ -22,24 +22,33 @@ module mod_terampi_sh
 
 CONTAINS
 
-#ifdef MPI
 subroutine force_terash(x, y, z, fx, fy, fz, eclas)
    use mod_const, only: DP
-   include 'mpif.h'
+   use mod_terampi, only: newcomms
    real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)   ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)   ::  eclas
 
-   call send_terash(x, y, z, fx, fy, fz)
+   ! for SH, we use only one TC server...
+   ! might be changes if we ever implement more elaborate SH schemes
+#ifdef MPI
+   call send_terash(x, y, z, fx, fy, fz, newcomms(1))
 
-   call receive_terash(fx, fy, fz, eclas)
+   call receive_terash(fx, fy, fz, eclas, newcomms(1))
+#else
+   write(*,*) "FATAL ERROR: ABIN not compiled with MPI, cannot connect to TeraChem"
+   stop 1
+#endif
 
 end subroutine force_terash
 
-subroutine receive_terash(fx, fy, fz, eclas)
+
+#ifdef MPI
+
+subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_const, only: DP, ANG
    use mod_array_size, only: NSTMAX
-   use mod_general, only: idebug, natom
+   use mod_general, only: idebug, natom, en_restraint
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
    use mod_io, only: print_charges, print_dipoles, print_transdipoles
@@ -48,7 +57,9 @@ subroutine receive_terash(fx, fy, fz, eclas)
    include 'mpif.h'
    real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
    real(DP),intent(inout) :: eclas
+   integer, intent(in)    :: newcomm
    real(DP) :: dip(NSTMAX*3), tdip((NSTMAX-1)*3) ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
+   real(DP) :: qmcharges( size(fx,1) )
    integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iat,iw, ist1, ist2, itrj, ipom, i
    integer  :: bufints(20)
@@ -151,7 +162,23 @@ subroutine receive_terash(fx, fy, fz, eclas)
                ipom = ipom + 3
             end do
          else if (ist1.eq.ist2)then
-            cycle
+            ! DH2Jirka: here we will read excited state forces..
+            ! perhaps we can use the iw index for the excited state force e.g.
+            ! (this assumes, that the initial state is ground state)
+            if (en_restraint.ge.1)then
+               if(ist1.gt.2)then
+                  write(*,*)'ERROR: Energy restraint not implemented for more than 2 states!'
+                  call abinerror('receive_terash')
+               end if
+               do iat=1,natom
+                  fx(iat,2)=-NAC(ipom)
+                  fy(iat,2)=-NAC(ipom+1)
+                  fz(iat,2)=-NAC(ipom+2)
+                  ipom = ipom + 3
+               end do
+            else
+               cycle
+            end if
          else
          ! NACME
             do iat=1,natom
@@ -173,19 +200,21 @@ subroutine receive_terash(fx, fy, fz, eclas)
 end subroutine receive_terash
 
 
-subroutine send_terash(x, y, z, vx, vy, vz)
+subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
    use mod_array_size, only: NSTMAX
    use mod_const, only: DP, ANG, AUTOFS
-   use mod_general, only: natom, idebug, sim_time
+   use mod_general, only: natom, idebug, sim_time, en_restraint
    use mod_system, only: names
    use mod_qmmm,  only: natqm
    use mod_utils, only: abinerror
    use mod_sh_integ, only: nstate
    use mod_sh,    only: istate, tocalc, ignore_state 
    include 'mpif.h'
-   real(DP),intent(in)      ::  x(:,:),y(:,:),z(:,:)
-   real(DP),intent(inout)   ::  vx(:,:),vy(:,:),vz(:,:)
-   real(DP)                 ::  bufdoubles(100), vels(3, 1000) !DH initial hack
+   real(DP),intent(in)     :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(inout)  :: vx(:,:),vy(:,:),vz(:,:)
+   integer, intent(in)     :: newcomm
+   real(DP)                ::  bufdoubles(100)
+   real(DP) :: qmcoords(3, size(x,1)), vels(3,size(vx,1) )
    integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iw, iat, itrj, i, ist1, ist2
    integer  :: bufints(NSTMAX*(NSTMAX-1)/2+NSTMAX)
@@ -197,9 +226,9 @@ subroutine send_terash(x, y, z, vx, vy, vz)
       qmcoords(1,iat) = x(iat,iw)
       qmcoords(2,iat) = y(iat,iw)
       qmcoords(3,iat) = z(iat,iw)
-      vels(1,iat) = vx(iat,iw) 
-      vels(2,iat) = vy(iat,iw) 
-      vels(3,iat) = vz(iat,iw) 
+      vels(1,iat) = vx(iat,iw)
+      vels(2,iat) = vy(iat,iw)
+      vels(3,iat) = vz(iat,iw)
    end do
 
    ! Send ESinit
@@ -232,7 +261,13 @@ subroutine send_terash(x, y, z, vx, vy, vz)
          if(ist1.eq.ist2.and.ist1.eq.istate(itrj))then
             bufints(i) = 1
          else if (ist1.eq.ist2)then
-            bufints(i) = 0
+            ! DH hack for jirka
+            ! this will work only if we compute only S0 and S1 states
+            if(en_restraint.ge.1)then
+               bufints(i) = 1
+            else
+               bufints(i) = 0
+            end if
          else
             bufints(i) = tocalc(ist1, ist2)
          end if
@@ -285,12 +320,17 @@ subroutine init_terash(x, y, z)
    use mod_system, only: names
    use mod_qmmm, only: natqm
    use mod_sh_integ, only: nstate
+   use mod_terampi, only: newcomms, natmm_tera
    include 'mpif.h'
    real(DP),intent(in)  ::  x(:,:), y(:,:), z(:,:)
+   real(DP) :: qmcoords(3, size(x,1))
    integer  :: status(MPI_STATUS_SIZE)
-   integer  :: ierr, iat, iw
+   integer  :: ierr, iat, iw, newcomm
    integer, parameter :: FMSinit = 1
    integer  :: bufints(3)
+
+   ! use only one TC server !
+   newcomm = newcomms(1)
 
    iw = 1
    do iat=1, natqm
@@ -300,8 +340,9 @@ subroutine init_terash(x, y, z)
    end do
 
    bufints(1) = FMSinit
-   bufints(2) = natom
-   call MPI_SSend( bufints, 2, MPI_INTEGER, 0, 2, newcomm, ierr )
+   bufints(2) = natom-natmm_tera
+   bufints(3) = natmm_tera
+   call MPI_SSend( bufints, 3, MPI_INTEGER, 0, 2, newcomm, ierr )
    if (idebug.gt.0) write(*, '(a)') 'Sent initial FMSinit.'
 
 !  Send atom types

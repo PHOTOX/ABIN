@@ -29,6 +29,7 @@ program abin_dyn
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
    use mod_interfaces, only: force_clas, force_quantum
+   use mod_en_restraint
 #ifdef PLUM
    use mod_plumed
 #endif
@@ -51,8 +52,8 @@ program abin_dyn
    integer  :: ierr
 !$ integer  :: nthreads,omp_get_max_threads
 
-!  This cannot be in init because of namelist 'system'
-   if(my_rank.eq.0) call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+   ! This cannot be in init because of namelist 'system'
+   if(my_rank.eq.0) call clean_temp_files()
 
 !  INPUT AND INITIALIZATION SECTION
    call init(dt, values1) 
@@ -66,9 +67,9 @@ program abin_dyn
       call sh_init(x, y, z, vx, vy, vz, dt)
    endif
 
-!$ nthreads=omp_get_max_threads()
+!$ nthreads = omp_get_max_threads()
    if (my_rank.eq.0)then
-!$    write(*,*)'Number of threads used = ',nthreads
+!$    write(*,*)'Number of OpenMP threads used = ', nthreads
       write(*,*)''
    end if
 
@@ -129,15 +130,14 @@ program abin_dyn
 !---------------- PROPAGATION-----------------------------------
 
 #ifdef MPI
-!     Without this Barrier, ranks > 0 do not write geom.dat in force_clas
-!     I don't know why the hell not.
+      ! Without this Barrier, ranks > 0 do not write geom.dat in force_clas
+      ! I don't know why the hell not.
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
-!     getting initial forces and energies
+      ! getting initial forces and energies
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot) 
-
       if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
-      
+
       ! if we use reference potential with RESPA
       if(pot_ref.ne.'none')then
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
@@ -147,11 +147,9 @@ program abin_dyn
 !     setting initial values for SURFACE HOPPING 
       if(ipimd.eq.2.or.ipimd.eq.4)then
          do itrj=1, ntraj
-            ! TODO: we should switch this, no special cases!
-            if (irest.ne.1.and.pot.ne.'_tera_') call get_nacm(itrj)
-            !if (irest.ne.1.and.pot.ne.'_tera_'.or.it.eq.0) call get_nacm(itrj)
+            if (irest.ne.1.and.pot.ne.'_tera_'.and.restrain_pot.ne.'_tera_') call get_nacm(itrj)
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
-            if(pot.eq.'_tera_') call move_new2old_terash()
+            if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_') call move_new2old_terash()
          end do
       end if
 
@@ -228,8 +226,8 @@ program abin_dyn
 
 #ifdef MPI
 !        SWAP REMD REPLICAS
-         if (iremd.eq.1.and.modulo(it,nswap).eq.0.and.it.gt.imini)then
-            call remd_swap(x, y, z, x, y, z, fxc, fyc, fzc, eclas)
+         if (iremd.eq.1.and.modulo(it,nswap).eq.0)then
+            call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
          end if
 #endif
 
@@ -339,7 +337,7 @@ subroutine finish(error_code)
 #endif
 
 #ifdef CP2K
-   use mod_cp2k,   only: cp2k_finalize
+   use mod_cp2k,   only: finalize_cp2k
 #endif
 
 #ifdef PLUM
@@ -417,7 +415,7 @@ end if
 #endif
 #ifdef CP2K
 !  MPI_FINALIZE is called in this routine as well
-   if(pot.eq.'_cp2k_') call cp2k_finalize()
+   if(pot.eq.'_cp2k_') call finalize_cp2k()
 #endif
 
 !   PLUMED closing session
@@ -428,4 +426,12 @@ end if
 #endif
 end subroutine finish
 
+
+subroutine clean_temp_files
+!use mod_system, only: clean_prop_tempfiles
+
+   call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+!   call clean_prop_tempfiles()
+
+end subroutine clean_temp_files
 

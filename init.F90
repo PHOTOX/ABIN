@@ -26,6 +26,7 @@ subroutine init(dt, values1)
    use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
    use mod_guillot,  only: inames_guillot
+   use mod_splined_grid, only: initialize_spline
    use mod_utils
    use mod_vinit
    use mod_density
@@ -34,18 +35,19 @@ subroutine init(dt, values1)
    use mod_analysis, only: restin
    use mod_water,    only: watpot, check_water
    use mod_plumed,   only: iplumed, plumedfile, plumed_init
+   use mod_en_restraint
    use mod_transform, only:init_mass
 #ifdef USEFFTW
    use mod_fftw3,    only: fftw_init
 #endif
-#ifdef CP2K
-   use mod_cp2k,     only: cp2k_init
-#endif
+! #ifdef CP2K
+   use mod_cp2k
+! #endif
 #ifdef MPI
    use mod_remd
-   use mod_terampi
-   use mod_terampi_sh, only: init_terash
 #endif
+   use mod_terampi
+   use mod_terampi_sh
    implicit none
    real(DP),intent(out) :: dt
    integer,dimension(8) :: values1
@@ -58,22 +60,26 @@ subroutine init(dt, values1)
    character(len=200)  :: chiomsg, chout
    character(len=20)   :: xyz_units='angstrom'
    LOGICAL :: file_exists
+   logical        :: rem_comvel, rem_comrot
 !  real(DP) :: wnw=5.0d-5
    integer :: ierr
-!$ integer :: nthreads,omp_get_max_threads
+!$ integer :: nthreads, omp_get_max_threads
 !  wnw "optimal" frequency for langevin (inose=3) 
+#ifdef NAB
    REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
-!  REAL, POINTER, DIMENSION(:,:) :: VECPTR2 => NULL ()
    REAL, POINTER  :: REALPTR => NULL ()
-   logical        :: rem_comvel, rem_comrot
+#endif
 
    namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
-            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpisleep,narchive,xyz_units, &
+            isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive,xyz_units, &
             parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
-            pot_ref, nstep_ref, teraport
+            en_restraint, en_diff, en_kk, restrain_pot, &
+            pot_ref, nstep_ref, teraport, nteraservers, cp2k_mpi_beads
 
+#ifdef MPI
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
+#endif
 
    namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,nrespnose,nyosh,      &
                      scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol,rem_comrot,rem_comvel
@@ -84,7 +90,7 @@ subroutine init(dt, values1)
                      Nshake,ishake1,ishake2,shake_tol
 
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,decoh_alpha,popthr,ignore_state, &
-                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom
+                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, natmm_tera
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 
@@ -105,12 +111,19 @@ subroutine init(dt, values1)
    open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
    read(150,general)
    rewind(150)
-   pot=UpperToLower(pot)
+   pot = UpperToLower(pot)
+
+   if(pot.eq.'splined_grid')then
+      natom = 1
+      dime = 1
+      f = 0
+      call initialize_spline()
+   end if
 
 
    if(pot.eq."_cp2k_".or.pot_ref.eq."_cp2k_")then
 #ifdef CP2K
-      call cp2k_init()
+      call init_cp2k()
 #else
       write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
       write(*,*)''
@@ -134,18 +147,28 @@ subroutine init(dt, values1)
 ! because we want to shut down TeraChem nicely in case something goes wrong.
 #ifdef MPI
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
-   if(pot.eq.'_tera_')then
+   call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
+   if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
       if (nwalk.gt.1)then
          write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
-         write(*,*)'You should have "integrator reset" or "integrator regular" in &
+         write(*,*)'You should have "integrator regular" in &
 & the TeraChem input file'
       end if
-      call connect_terachem()
+      write(*,*)'Number of TeraChem servers = ', nteraservers
+      do ipom=1, nteraservers
+         call connect_terachem(ipom)
+      end do
+      
+      if(nproc.ne.nteraservers)then
+         write(*,*)'WARNING: parameter "nproc" must equal "nteraservers"'
+         write(*,*)'Setting nproc = ', nteraservers
+         nproc = nteraservers
+      end if
    end if
 #else
    if(pot.eq.'_tera_')then
       write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
-      write(*,*)'You cannot use direct interface to TeraChem.'
+      write(*,*)'You cannot use the direct MPI interface to TeraChem.'
       call abinerror('init')
    end if
 #endif
@@ -158,9 +181,23 @@ subroutine init(dt, values1)
       write(*,*) 'PLUMEDfile is ', trim(plumedfile)
 #else
       write(*,*)'FATAL ERROR: ABIN was not compiled with PLUMED.'
+      stop 1
 #endif
 
    endif
+
+   if (en_restraint.ge.1) then
+      call en_rest_init(dt)
+ 
+      if (en_restraint.eq.1)then
+      write(*,*) 'Energy restraint is ON(1): Using method of Lagrange multipliers.'
+      else if (en_restraint.eq.2.and.en_kk.ge.0)then
+      write(*,*) 'Energy restraint is ON(2): Using quadratic potential restarint.'
+      else
+      write(*,*) 'FATAL ERROR: en_restraint must be either 0,1(Lagrange multipliers),2(umbrella, define en_kk)'
+      call abinerror('init')
+      end if
+   end if
    
    if (my_rank.eq.0)then
       write(*,*)'Reading parameters from input file ', trim(chinput)
@@ -288,7 +325,7 @@ print '(a)','**********************************************'
       rewind(150)
       !check, whether we hit End-Of-File or other error
       if(IS_IOSTAT_END(iost))then  !fortran intrinsic for EOF
-         if (my_rank.eq.0) write(*,*)'Namelist "system" not found. Ignoring...'
+         continue
       else if (iost.ne.0)then
          write(*,*)'ERROR when reading namelist "system".'
          write(*,*)chiomsg
@@ -315,6 +352,7 @@ print '(a)','**********************************************'
       allocate ( nshakemol(natom)  )
 #endif
       natmolt   = 0
+      natmolt(1) = natom ! default for global NHC thermostat
       nshakemol = 0
 
       read(150,nhcopt)
@@ -356,10 +394,10 @@ print '(a)','**********************************************'
 !--END OF READING INPUT---------------
 
 !$ call OMP_set_num_threads(nproc)
-!$ nthreads=omp_get_max_threads()
+!$ nthreads = omp_get_max_threads()
 
 #ifdef MPI
-   if(pot.eq.'_tera_')then
+   if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
       call initialize_terachem()
       if (ipimd.eq.2.or.ipimd.eq.4) call init_terash(x, y, z)
    end if
@@ -441,8 +479,14 @@ print '(a)','**********************************************'
 
       if (pot.eq.'mmwater'.or.pot_ref.eq.'mmwater') call check_water(natom, names)
 
-!-----THERMOSTAT INITIALIZATION------------------ 
+!----THERMOSTAT INITIALIZATION------------------ 
 !----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
+     if (my_rank .ne. 0) then
+        call srand(irandom)
+        do ipom=0,my_rank
+        irandom = irand()
+        end do
+     end if
 !    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
      if (inose.eq.1) call nhc_init()
@@ -454,13 +498,9 @@ print '(a)','**********************************************'
      if(irest.eq.1)then
         call restin(x,y,z,vx,vy,vz,it)
      end if
+!----END OF INPUT SECTION------
 
-
-!----END OF INPUT SECTION---------------------
-
-
-
-!-----INITIALIZATION-----------------------
+!-----INITIALIZATION-----------
 
 
       if(pot.eq.'2dho')then
@@ -471,7 +511,7 @@ print '(a)','**********************************************'
          ! what about massive therm?
       endif
 
-!-----SETTING initial velocities according to the Maxwell-Boltzmann distribution
+!     SETTING initial velocities according to the Maxwell-Boltzmann distribution
       if(irest.eq.0.and.chveloc.eq.'')then
          if (temp0.ge.0)then
             call vinit(TEMP0, am, vx, vy, vz, rem_comvel, rem_comrot)
@@ -481,7 +521,8 @@ print '(a)','**********************************************'
       end if
 
 !     Reading velocities from file
-      if (chveloc.ne.'')then
+      if (chveloc.ne.''.and.irest.eq.0)then
+         ! TODO: move the following to a separate function
          if(iremd.eq.1) write(chveloc,'(A,I2.2)')trim(chveloc)//'.',my_rank
          write(*,*)'Reading initial velocities in a.u. from external file:'//trim(chveloc) 
          open(500,file=chveloc, status='OLD', action = "READ")
@@ -521,7 +562,7 @@ print '(a)','**********************************************'
       call ScaleVelocities(vx, vy, vz)
 
        
-!----some stuff for spherical boundary onditions
+!-----some stuff for spherical boundary onditions
       if(isbc.eq.1) call sbc_init(x,y,z)
 
 !-----inames initialization for guillot rm MM part. 
@@ -556,7 +597,7 @@ print '(a)','**********************************************'
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
    pid=GetPID()
-   write(*,*)'Pid of the current proccess is:',pid
+   if(my_rank.eq.0) write(*,*)'Pid of the current proccess is:',pid
 
 
 #ifdef NAB
@@ -601,6 +642,7 @@ print '(a)','**********************************************'
 
    !  We should exclude all non-abinitio options, but whatever....
 !$    if(nthreads.gt.1.and.(ipimd.ne.1.and.pot.ne.'_cp2k_'))then
+!$     write(*,*)'Number of threads is ', nthreads
 !$     write(*,*)'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
 !$     call abinerror('init')
 !$    endif
@@ -627,23 +669,25 @@ print '(a)','**********************************************'
       end if
 #endif
       if(irest.eq.1.and.chveloc.ne.'')then
-         write(*,*)'ERROR: Input velocities are not compatible with irest=1.'
-         write(*,*)chknow
-         if(iknow.ne.1) error=1
+      !   write(*,*)'ERROR: Input velocities are not compatible with irest=1.'
+         write(*,*)'WARNING: Input velocities from file'//trim(chveloc) //' will be ignored!'
+         write(*,*)'Velocities will be taken from restart file because irest=1.'
+      !   write(*,*)chknow
+      !   if(iknow.ne.1) error=1
       end if
 
-      !-----Check,whether input variables don't exceeds array limits
+      !-----Check, whether input variables don't exceeds array limits
       if(ntraj.gt.ntrajmax)then
-       write(*,*)'Maximum number of trajectories is:'
-       write(*,*)ntrajmax
-       write(*,*)'Adjust variable ntrajmax in modules.f90'
-       error=1
+         write(*,*)'Maximum number of trajectories is:'
+         write(*,*)ntrajmax
+         write(*,*)'Adjust variable ntrajmax in modules.f90'
+         error=1
       endif
       if(nstate.gt.nstmax)then
-       write(*,*)'Maximum number of states is:'
-       write(*,*)nstmax
-       write(*,*)'Adjust variable nstmax in modules.f90'
-       error=1
+         write(*,*)'Maximum number of states is:'
+         write(*,*)nstmax
+         write(*,*)'Adjust variable nstmax in modules.f90'
+         error=1
       endif
       if(nchain.gt.maxchain)then
        write(*,*)'Maximum number of Nose-Hoover chains is:'
@@ -826,7 +870,7 @@ print '(a)','**********************************************'
        write(*,*)chknow
        if(iknow.ne.1) error=1
       endif
-      if(inose.eq.1.and.(ipimd.eq.2.or.ipimd.eq.4))then
+      if(inose.eq.1.and.(ipimd.eq.2.or.ipimd.eq.4).and.en_restraint.eq.0)then
        write(*,*)'Thermostating is not meaningful for surface hopping simulation.'
        write(*,*)chknow
        if(iknow.ne.1) error=1
@@ -986,10 +1030,10 @@ print '(a)','**********************************************'
       INQUIRE(FILE=chout, EXIST=file_exists)
       if(file_exists)then
        if(irest.eq.0)then
-        write(*,*)'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
+        if (my_rank.eq.0) write(*,*)'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
         error=1
        else
-        write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
+         if (my_rank.eq.0) write(*,*)'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
        endif
       endif
 
@@ -1045,12 +1089,16 @@ print '(a)','  /_/        \_\   |_____/    |_|   |_|    \_|'
 print '(a)',' '
 
 print '(a)','     version 1.0'
-print '(a)',' D. Hollas, O.Svoboda, M. Oncak, P. Slavicek 2011-2015'
+print '(a)',' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek 2011-2015'
 print '(a)',' '
 
 call print_compile_info()
-
-write(*,*)'Job started at:'
+write(*,*)
+write(*,'(A17)',advance='no')"Running on node: "
+call system('uname -n')
+write(*,'(A19)',advance='no')'Working directory: '
+call system('pwd')
+write(*,'(A16)',advance='no')'Job started at: '
 write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
         values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
         values1(1)
@@ -1143,6 +1191,7 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
    end subroutine Get_cmdline
 
    subroutine print_compile_info()
+   character(len=1024)   :: cmdline
    !   include 'date.inc'
 
    print *,'Compiled at  ', DATE
@@ -1168,6 +1217,15 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
              compiler_version(), ' using the options: '
    print *,     compiler_options()
 #endif
+
+print '(a)',''
+print '(a)','#################### RUNTIME INFO ####################'
+call get_command(cmdline)
+write(*,*)trim(cmdline)
+call flush(6)
+call get_command_argument(0, cmdline)
+call system('ldd '//cmdline)
+print '(a)','######################################################'
 
    end subroutine print_compile_info
 

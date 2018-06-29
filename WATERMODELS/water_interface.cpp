@@ -55,12 +55,6 @@ void force_water_(const double *x,const double  *y,const double *z, double *fx,d
          crd[3*iat+1]=y[iw*(*natom)+iat]/ANG;
          crd[3*iat+2]=z[iw*(*natom)+iat]/ANG;
       }
-/*      
-      std::cout <<  "Coordinates" << std::endl;
-      for (int iat=0; iat < *natom;iat++) {
-         std::cout << crd[iat*3] <<"\t"<< crd[iat*3+1] <<"\t"<< crd[iat*3+2] << std::endl;
-      }
-*/
 
       switch ( *watpot) {
       case 1:
@@ -81,15 +75,8 @@ void force_water_(const double *x,const double  *y,const double *z, double *fx,d
          //return 1;
         break;
       }
-//      std::cout << "Energy is:" << E << std::endl;
       *eclas += E;
 
-/*      
-      std::cout <<  "Gradients" << std::endl;
-      for (int iat=0; iat < *natom;iat++) {
-         std::cout << grd[iat*3]*FAC <<"\t"<< grd[iat*3+1]*FAC <<"\t"<< grd[iat*3+2]*FAC << std::endl;
-      }
-*/    
 
       for (int iat=0; iat < *natom;iat++) {
          fx[iw*(*natom)+iat]=-grd[3*iat]*FAC;

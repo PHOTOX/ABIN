@@ -11,7 +11,7 @@
 ! *********************************************************
 
 ! The original code was modified to allow for PI+GLE and PIGLET simulation
-! in ABIN by Daniel Hollas
+! in ABIN by Daniel Hollas, danekhollas at gmail dot com
 
 module mod_gle
    use mod_const, only: DP
@@ -109,7 +109,7 @@ contains
   
    subroutine gle_init(dt)
    use mod_const, only: AUtoEV
-   use mod_general,only: natom, nwalk, inormalmodes
+   use mod_general,only: natom, nwalk, inormalmodes, my_rank, iremd
    use mod_utils, only: abinerror
    use mod_nhc,only: temp,inose
    implicit none
@@ -117,29 +117,41 @@ contains
    real(DP), allocatable :: gA(:,:), gC(:,:), gr(:)
    real(DP), allocatable :: gA_centroid(:,:), gC_centroid(:,:)
    integer :: i, j, cns, ios, iw
-   
+   character(len=10)     :: glea, glec, char_my_rank
 
-   write(6,*) "# Initialization of GLE thermostat.                           "
-   write(6,*) "# Please cite the relevant works among:                       "
-   write(6,*) "#                                                             "
-   write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-   write(6,*) "# Phy. Rev. Lett. 102, 020601 (2009)                          "
-   write(6,*) "#                                                             "
-   write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-   write(6,*) "# Phy. Rev. Lett. 103, 030603 (2009)                          "
-   write(6,*) "#                                                             "
+   if(my_rank.eq.0)then 
+      write(6,*) "# Initialization of GLE thermostat.                           "
+      write(6,*) "# Please cite the relevant works among:                       "
+      write(6,*) "#                                                             "
+      write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
+      write(6,*) "# Phy. Rev. Lett. 102, 020601 (2009)                          "
+      write(6,*) "#                                                             "
+      write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
+      write(6,*) "# Phy. Rev. Lett. 103, 030603 (2009)                          "
+      write(6,*) "#                                                             "
+   end if
 
    ! reads in matrices
    ! reads A (in a.u. units)
-   open(121,file='GLE-A',status='OLD',iostat=ios,action='read')
+   if(iremd.eq.1)then
+      if(my_rank.eq.0) write(*,*) "iremd=1 - Expecting matrices in form GLE-A.id_of_replica, GLE-C.id_of_replica (ie ./GLE-A.00)"
+      write(char_my_rank,'(I0.2)') my_rank
+      glea = 'GLE-A.'//char_my_rank
+      glec = 'GLE-C.'//char_my_rank
+   else
+      glea = 'GLE-A'
+      glec = 'GLE-C'
+   end if
+
+   open(121,file=glea,status='OLD',iostat=ios,action='read')
    if (ios.ne.0)then
       write(0,*) "Error: could not read GLE-A file!"
       write(0,*) "Exiting..."
       call abinerror('gle_init')
-   end if
+   end if 
 
    ! try to open GLE-C file
-   open(122,file='GLE-C',status='OLD',action='read',iostat=ios)
+   open(122,file=glec,status='OLD',action='read',iostat=ios)
    if (ios.ne.0.and.inose.eq.2)then
       write(0,*) "Error: could not read GLE-C file!"
       call abinerror("gle_init")
@@ -151,7 +163,7 @@ contains
       allocate(gC_centroid(ns+1,ns+1))
       allocate(gS_centroid(ns+1,ns+1))
       allocate(gT_centroid(ns+1,ns+1))
-      write(6,*)'# Reading A-matrix for centroid. Expecting a.u. units!!!!'
+      if(my_rank.eq.0) write(6,*)'# Reading A-matrix for centroid. Expecting a.u. units!!!!'
       do i=1,ns+1
          read(121,*) gA_centroid(i,:)
       end do
@@ -163,7 +175,7 @@ contains
          write(*,*)'ERROR: Inconsistent size of A and C matrices for centroid.'
          call abinerror("gle_init")
       end if
-      write(6,*)'# Reading C-matrix for centroid. Expecting eV units!!!!'
+      if(my_rank.eq.0) write(6,*)'# Reading C-matrix for centroid. Expecting eV units!!!!'
       do i=1, ns+1
          read(122,*) gC_centroid(i,:)
          gC_centroid(i,:) = gC_centroid(i,:) / AUtoEV
@@ -201,7 +213,7 @@ contains
    allocate(ps(natom*3, ns, nwalk)) !each bead has to have its additional momenta
 
    
-   write(6,*)'# Reading A-matrix. Expecting a.u. units!!!!'
+   if (my_rank.eq.0) write(6,*)'# Reading A-matrix. Expecting a.u. units!!!!'
    do i=1,ns+1
       read(121,*) gA(i,:)
    enddo
@@ -211,14 +223,16 @@ contains
 
    ! reads C (in eV!), or init to kT
    if(inose.eq.4)then
-      write(6,*) "# Using canonical-sampling, Cp=kT"
+      if (my_rank.eq.0) write(6,*) "# Using canonical-sampling, Cp=kT"
       gC=0.0d0
       do i=1,ns+1
-         gC(i,i)=temp
+         gC(i,i) = temp
       enddo
    else    
-      write(6,*)"# Reading specialized Cp matrix."
-      write(6,*)'# Expecting eV units!!!'
+      if (my_rank.eq.0) then
+         write(6,*)"# Reading specialized Cp matrix."
+         write(6,*)'# Expecting eV units!!!'
+      end if
       read(122,*) cns
       if (cns.ne.ns)then
           write(0,*) " Error: size mismatch matrices in GLE-A and GLE-C!"
@@ -499,49 +513,5 @@ contains
     end do
     S=matmul(L,D)
 end subroutine cholesky
-
-real*8 function ran2(idum)  !we don't use this anymore
-  implicit none
-  real *8 x
-  integer, intent(inout) :: idum
-  integer iseed,i
-  integer, allocatable :: seed(:)
-    
-  if(idum.le.0) then 
-     idum=-idum
-     call random_seed(size=iseed) 
-     allocate(seed(iseed))
-     do i=1,iseed  !ugly. once again, this is just a stub. you should use a GOOD prng!
-       seed(i)=idum+i
-     end do
-     call random_seed(put=seed)
-  endif
-  call random_number(harvest=x)
-  ran2=x
-  return
-end function ran2
-
-real*8 function rang(idum) !we don't use this anymore
-  implicit none
-  integer, intent(inout) :: idum
-  integer iset
-  real(8) gset,v1,v2,fac,rsq
-  save iset,gset
-  data iset/0/
-  if (iset.eq.0) then
-1    v1=2.d0*ran2(idum)-1.d0
-     v2=2.d0*ran2(idum)-1.d0
-     rsq=v1**2+v2**2  
-     if(rsq.ge.1.d0.or.rsq.eq.0.d0)goto 1 
-     fac=sqrt(-2.d0*log(rsq)/rsq) 
-     gset=v1 * fac
-     rang=v2 * fac
-     iset=1
-  else 
-     rang=gset
-     iset=0 
-  endif
-  return
-end function rang
 
 end module mod_gle

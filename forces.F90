@@ -4,7 +4,7 @@
 subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_const,    only: DP
    use mod_general,  only: natom, nwalk, istage, inormalmodes, iqmmm, it, &
-                           pot, pot_ref, imini, idebug
+                           pot, pot_ref, idebug, en_restraint
    use mod_qmmm,     only: force_LJCoul
    use mod_nab,      only: ipbc,wrap,nsnb,force_nab
    use mod_sbc,      only: force_sbc, isbc !,ibag
@@ -13,6 +13,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_transform
    use mod_interfaces, only: force_wrapper
    use mod_plumed,   only: iplumed, plumedfile, force_plumed
+   use mod_en_restraint
    implicit none
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
@@ -75,11 +76,12 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    if(iqmmm.eq.2) call force_nab(transx, transy, transz, fxab, fyab, fzab, eclas, nwalk)
    if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
 
-!--------PLUMED SECTION---------------
-   ! not sure there should be imini, might produce weird results in US
-   if(iplumed.eq.1.and.it.gt.imini) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
-!------------------------------------
+!  PLUMED SECTION
+   if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
+!------- ER(energy restraint) SECTION ---
+if(en_restraint.ge.1) call energy_restraint(x, y, z, fxab,fyab,fzab,eclas)
+!----------------------------------------
 
 !  For reference potential and ring-polymer contraction
    if(pot_ref.ne.'none'.and.chpot.eq.pot)then
@@ -94,7 +96,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
       if(isbc.eq.1)  call force_sbc(transx,transy,transz,fxab,fyab,fzab)
       if(iqmmm.eq.2) call force_nab(transx, transy, transz, fxab, fyab, fzab, eclas, nwalk)
       if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
-      if(iplumed.eq.1.and.it.gt.imini) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
+      if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
       fxab = fx - fxab
       fyab = fy - fyab
@@ -183,12 +185,11 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    use mod_qmmm,     only: force_LJCoul
    use mod_nab,      only: force_nab
    use mod_harmon,   only: force_harmon,force_2dho,force_morse,force_doublewell
+   use mod_splined_grid
    use mod_guillot,  only: force_guillot
    use mod_cp2k,     only: force_cp2k
-#ifdef MPI
    use mod_terampi,     only: force_tera
    use mod_terampi_sh,  only: force_terash
-#endif
    implicit none
    real(DP),intent(in)    ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) ::  fx(:,:),fy(:,:),fz(:,:)
@@ -202,35 +203,39 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
 !  By default we call external program in force_abin routine
 !  TODO: All internal potentials should begin by '_'
    SELECT CASE (chpot)
-     case ("mm")
-       call force_LJCoul(x, y, z, fx, fy, fz, eclas)
-     case ("mmwater")
-       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
-     case ("harm")
-       call force_harmon(x, y, z, fx, fy, fz, eclas)
-     case ("2dho")
-       call force_2dho(x, y, z, fx, fy, fz, eclas)
-     case ("morse")
-       call force_morse(x, y, z, fx, fy, fz, eclas)
-     case ("guillot")
-       call force_guillot(x, y, z, fx, fy, fz, eclas)
-     case ("doublewell")
-       call force_doublewell(x, y, z, fx, fy, fz, eclas)
-     case ("nab")
-       call force_nab(x, y, z, fx, fy, fz, eclas, walkmax)
-     case ("_cp2k_")
-       call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
-#ifdef MPI
+      case ("mm")
+         call force_LJCoul(x, y, z, fx, fy, fz, eclas)
+#ifndef CP2K
+! With CP2K interface there is a problem with underscoring, so we don't support NAB and
+! water force fields
+      case ("mmwater")
+         call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
+#endif
+      case ("splined_grid")
+         call force_splined_grid(x, y, z, fx, fy, fz, eclas)
+      case ("harm")
+         call force_harmon(x, y, z, fx, fy, fz, eclas)
+      case ("2dho")
+         call force_2dho(x, y, z, fx, fy, fz, eclas)
+      case ("morse")
+         call force_morse(x, y, z, fx, fy, fz, eclas)
+      case ("guillot")
+         call force_guillot(x, y, z, fx, fy, fz, eclas)
+      case ("doublewell")
+         call force_doublewell(x, y, z, fx, fy, fz, eclas)
+      case ("nab")
+         call force_nab(x, y, z, fx, fy, fz, eclas, walkmax)
+      case ("_cp2k_")
+         call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
       case ("_tera_")
          if(ipimd.eq.2.or.ipimd.eq.4)then
             call force_terash(x, y, z, fx, fy, fz, eclas)
          else
             call force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
          end if
-#endif
       case DEFAULT
-        call force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
-        eclas = eclas / walkmax
+         call force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
+         eclas = eclas / walkmax
    END SELECT
 
    e_pot = eclas

@@ -25,17 +25,10 @@ INPUTVELOC=
 NPROC=${NSLOTS}  # determined from qsub -pe shm x
 
 #$ -V -cwd
-source SetEnvironment.sh ABIN 1.0-mpi
+source SetEnvironment.sh ABIN cp2k
 
 SCRDIR=/scratch/$USER/$JOBNAME
 
-echo "Job started at: " >> $OUTPUT
-date >> $OUTPUT
-echo "Running on node:" >> $OUTPUT
-uname -n >> $OUTPUT
-echo "Working directory:" >> $OUTPUT
-echo "$SCRDIR" >> $OUTPUT
-echo " " >> $OUTPUT
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 
@@ -60,7 +53,7 @@ else
    $MPIRUN -np $NPROC $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
-cp -pr * $KDE/.
+cp -upr * $KDE/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"

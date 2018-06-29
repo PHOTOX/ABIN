@@ -112,6 +112,7 @@
       real(DP) ::  mme,mme2,en_ewald,mme_qmmm
       integer  :: iter  !jak casto delame non-bonded list update?musi byt totozne s hodnotou v souboru sff_my.c
 
+#ifdef NAB
       en_ewald=0.0d0
 
 
@@ -157,9 +158,7 @@
       else    !only forces
 
 !!$OMP CRITICAL (neco)
-#ifdef NAB
        energy = mme( xyz, grad, iter ); ! set iter=-1 for detailed energy info
-#endif
 !!$OMP END CRITICAL (neco)
 
       endif
@@ -196,9 +195,7 @@
         else  
                 iter=-5  ! we don't update nblist for QM part!!!!
         endif
-#ifdef NAB              
         energy=energy-mme_qmmm( xyz, grad, iter) !grad se nemusi nulovat
-#endif
 
 !       if(ihess.eq.1)then
 !        energy=energy-mme2(xyz,grad,h,dummy1,dummy2,idum1,idum2,idum3,idum4,idum5,idum6,idum7,idum8,iter,dummy3)
@@ -242,6 +239,7 @@
 !  close(100)
 
       eclas = eclas / walkmax
+#endif
    end subroutine force_nab
 
 end module

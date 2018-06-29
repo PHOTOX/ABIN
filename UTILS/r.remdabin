@@ -1,10 +1,8 @@
 #!/bin/bash
-# This is a sample script for launching ABIN simulations in cluster environments
-# using internal CP2K interface.
-# The input for CP2K must be in file cp2k.inp
+# This is a sample script for launching REMD ABIN simulations in cluster environments
 
 # 1. Copy all data from CWD to the node's scratch.
-# 2. Launch ABIN.
+# 2. Launch MPI version of ABIN.
 # 3. Copy data back (only newer files are copied!).
 # 4. Remove scratch directory. (if delscratch = true)
 
@@ -22,7 +20,7 @@ INPUTVELOC=
 #$ -V -cwd
 
 NPROC=${NSLOTS} # determined for queuing system: -pe mpi x
-source SetEnvironment.sh ABIN 1.0-mpi
+source SetEnvironment.sh ABIN mpi
 
 SCRDIR=/scratch/$USER/$JOBNAME
 
@@ -34,13 +32,6 @@ INTERFACE=${pot^^}
 pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 INTERFACE_REF=${pot_ref^^}
 
-echo "Job started at: " >> $OUTPUT
-date >> $OUTPUT
-echo "Running on node:" >> $OUTPUT
-uname -n >> $OUTPUT
-echo "Working directory:" >> $OUTPUT
-echo "$SCRDIR" >> $OUTPUT
-echo " " >> $OUTPUT
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 
@@ -54,6 +45,10 @@ if [[ -d $SCRDIR ]];then
 else
    mkdir $SCRDIR
 fi
+
+# Always copy up-to-date SetEnvironment
+where=$(which SetEnvironment.sh)
+cp $where .
 
 cp -p * $SCRDIR/.
 if [[ -d $INTERFACE ]];then
@@ -74,7 +69,7 @@ else
    $MPIRUN -np $NPROC $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
-cp -pr * $KDE/.
+cp -upr * $KDE/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"

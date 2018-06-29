@@ -22,7 +22,7 @@ SCRDIR=/scratch/$USER/$JOBNAME
 
 # ABINEXE determined via SetEnvironment.sh script
 # ABINEXE=/home/hollas/PHOTOX/bin/abin
-source SetEnvironment.sh ABIN 1.0
+source SetEnvironment.sh ABIN
 
 pot=$(awk -F"[! ,=\"']+" '{if($1=="pot")print $2}' $INPUTPARAM)
 # Upper case, this is the folder with file interface
@@ -34,14 +34,7 @@ pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 INTERFACE_REF=${pot_ref^^}
 
 
-
-echo "Job started at: " >> $OUTPUT
-date >> $OUTPUT
-echo "Running on node:" >> $OUTPUT
-uname -n >> $OUTPUT
-echo "Working directory:" >> $OUTPUT
-echo "$SCRDIR" >> $OUTPUT
-echo " " >> $OUTPUT
+# TODO: Check that the MD run in existing job.log is not running anymore
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 
@@ -56,10 +49,13 @@ else
    mkdir $SCRDIR
 fi
 
-if [[ ! -f SetEnvironment.sh ]];then
-   where=$(which SetEnvironment.sh)
-   cp $where .
-fi
+# The local SetEnvironment script is sourced in file-based ab initio interfaces so that they are system-agnostic.
+# We need to use local copy because when global copy was updated ABIN simulations were crashing.
+# We always copy new version to local folder, since outdated versions can lead to bugs.
+# The downside is that when you restart simulation you are not quite guaranteed 
+# that you will use the same version of the ab initio program (e.g. when new version is installed on your cluster)
+OURSETENV=$(which SetEnvironment.sh)
+cp $OURSETENV .
 
 cp -p * $SCRDIR/.
 if [[ -d $INTERFACE ]];then
@@ -80,7 +76,7 @@ else
    $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
-cp -pr * $KDE/.
+cp -upr * $KDE/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"

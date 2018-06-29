@@ -24,16 +24,17 @@ ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
-F_OBJS :=  arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o plumed.o \
-force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o sh_integ.o surfacehop.o force_tera.o  force_terash.o force_abin.o analyze_ext_template.o density.o analysis.o  \
-minimizer.o mdstep.o forces.o abin.o
 
-C_OBJS := EWALD/ewaldf.o
+F_OBJS := arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o plumed.o \
+          force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o sh_integ.o surfacehop.o \
+          force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o density.o analysis.o \
+          minimizer.o mdstep.o forces.o abin.o
+
 
 LIBS += WATERMODELS/libttm.a
 
 ifeq ($(strip $(NAB)),TRUE)
-  C_OBJS += nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o # NAB/binpos.o
+  C_OBJS = EWALD/ewaldf.o nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o # NAB/binpos.o
   # The following libraries were compiled with gfortran
   LIBS   += NAB/libnab.a # NAB/arpack.a  # NAB/blas.a
   CFLAGS +=  -INAB/include  
@@ -49,10 +50,22 @@ ifeq ($(strip $(FFTW)),TRUE)
 endif
 
 ifeq ($(strip $(CP2K)),TRUE)
+  DFLAGS += -DCP2K 
+  FFLAGS += -fno-underscoring 
+  # OpenMP does not work with -fno-underscoring
+  FFLAGS += -fno-openmp
   # The following variables should be the same that were used to compile CP2K.
   # Also, be carefull with FFTW clashes
-  DFLAGS += -DCP2K 
   LIBS += -L${CP2KPATH} -lcp2k ${CP2K_LIBS} 
+ifeq ($(strip $(NAB)),TRUE)
+   $(error "Cannot combine CP2K interface with NAB")
+endif
+ifeq ($(strip $(FFTW)),TRUE)
+   $(info "!!!!!-------------WARNING---------------!!!!!!!")
+   $(info "Using FFTW flag with CP2K may lead to troubles!")
+   $(info "!!!!!-------------WARNING---------------!!!!!!!")
+   $(info "")
+endif
 endif
 
 ifeq ($(strip $(PLUM)),TRUE)
@@ -76,23 +89,26 @@ LDLIBS = -lm -lstdc++ ${LIBS}
 # This hack is needed for force_tera.o and fftw_interface.o
 F_OBJS := modules.o utils.o interfaces.o io.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
 
+ifeq ($(strip $(CP2K)),TRUE)
 ALLDEPENDS = ${C_OBJS} ${F_OBJS}
+else
+ALLDEPENDS = ${C_OBJS} ${F_OBJS} WATERMODELS/water_interface.o
+endif
 
 
 # This is the default target
 ${OUT} : init.o
 	cd WATERMODELS && make all 
-	${FC} ${FFLAGS} WATERMODELS/water_interface.o ${ALLDEPENDS} $< ${LDLIBS} -o $@
+	${FC} ${FFLAGS} ${ALLDEPENDS} $< ${LDLIBS} -o $@
 
 # Always recompile init.F90 to get current date and commit
-init.o : init.F90 ${ALLDEPENDS} WATERMODELS/water_interface.cpp
+init.o : init.F90 ${ALLDEPENDS}
 #	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
 #	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DDATE="'${DATE}'" -DCOMMIT="'${COMMIT}'" -c init.F90
 
 clean :
 	/bin/rm -f *.o *.mod $(OUT)
-	cd WATERMODELS && make clean
 
 # Remove NAB objects as well
 distclean :

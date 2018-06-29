@@ -32,7 +32,6 @@ module mod_vinit
 !
 !------------------------------------------------------------------------
 SUBROUTINE vinit(TEMP, MASS, vx, vy, vz, rem_comvel, rem_rot)
-   USE mod_arrays,   ONLY: x, y, z
    USE mod_general,  ONLY: natom, pot, nwalk, my_rank
    USE mod_random,   ONLY: gautrg
    real(DP),intent(out)    :: vx(:,:), vy(:,:), vz(:,:)
@@ -123,7 +122,6 @@ subroutine remove_comvel(vx, vy, vz, mass, lremove)
    real(DP)                :: vcmx, vcmy, vcmz, tm
    integer                 :: iat, iw
 
-   if(my_rank.eq.0.and.lremove) write(*,*)'Removing center of mass velocity.'
 
    do iw=1,nwalk
 
@@ -144,6 +142,7 @@ subroutine remove_comvel(vx, vy, vz, mass, lremove)
 
 !     Shift velocities such that momentum of center of mass is zero
       if(lremove)then
+         if(my_rank.eq.0) write(*,*)'Removing center of mass velocity.'
          do iat=1,natom
             vx(iat,iw) = vx(iat,iw) - vcmx
             vy(iat,iw) = vy(iat,iw) - vcmy
@@ -157,6 +156,7 @@ END SUBROUTINE remove_comvel
 
 
 subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
+   use mod_system,      only: dime
    use mod_general,     only: natom, nwalk, my_rank, pot
    real(DP),intent(in)     :: x(:,:), y(:,:), z(:,:)
    real(DP),intent(inout)  :: vx(:,:), vy(:,:), vz(:,:)
@@ -169,9 +169,8 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
    real(DP) :: Omx, Omy, Omz, Om_tot
    integer  :: iat, iw
 
-   if (pot.eq.'2dho') return
+   if (dime.eq.1.or.natom.eq.1) return
 
-   if(my_rank.eq.0.and.lremove) write(*,*)'Removing angular momentum.'
 
    ! It would probably be more correct to calculate angular momentum
    ! for the whole bead necklace, same with COM velocity
@@ -233,9 +232,14 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
       Omz = Iinv(6)*Lx + Iinv(7)*Ly + Iinv(8)*Lz
       Om_tot = dsqrt(Omx**2+Omy**2+Omz**2)
  
-      write(*,*)"com rotation velocity:", Omx, Omy, Omz, Om_tot
+      ! We probably need to diagonalize I to get kinetic energy...
+      !write(*,*)"Angular velocity:", Omx, Omy, Omz, Om_tot
+      !Ekin = 0.5 * (Omx**2
+      !write(*,*)"Angular kinetic energy:", 0.5 * Om* Om_tot**2
+      !write(*,*)"Angular kinetic energy:", 0.5 * * Om_tot**2
  
       if(lremove)then
+         if(my_rank.eq.0) write(*,*)'Removing angular momentum.'
          do iat =1, natom
             vx(iat,iw) = vx(iat,iw) - Omy*z(iat,iw) + Omz*y(iat,iw)
             vy(iat,iw) = vy(iat,iw) - Omz*x(iat,iw) + Omx*z(iat,iw)
@@ -277,99 +281,5 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
 
 END SUBROUTINE REMOVE_ROTATIONS
 
-
-
-
-!Following are legacy functions, which are not in use at this point
-!--------------------------------------------------------------------
-!                                                                
-!  RANDOM VARIATE FROM THE STANDARD NORMAL DISTRIBUTION.         
-!                                                                
-!  THE DISTRIBUTION IS GAUSSIAN WITH ZERO MEAN AND UNIT VARIANCE.
-!                                                                
-!  REFERENCE:                                                    
-!                                                                
-!  KNUTH D, THE ART OF COMPUTER PROGRAMMING, (2ND EDITION        
-!     ADDISON-WESLEY), 1978                                      
-!                                                                
-!--------------------------------------------------------------------
- !  FUNCTION GAUSSabin ( IDUM )
- !     INTEGER,intent(in)  ::   IDUM
- !     REAL(DP) :: gaussabin
- !     REAL(DP),parameter :: A1 = 3.949846138d0, A3 = 0.252408784d0 
- !     real(DP),parameter :: A5 = 0.076542912d0, A7 = 0.008355968d0 
- !     real(DP),PARAMETER :: A9 = 0.029899776
- !     REAL(DP) :: SUM, R, R2
- !     REAL(DP) :: RAN1
- !     INTEGER     I
-!!    *******************************************************************
- !     SUM = 0.0d0
- !
- !     DO I = 1, 12
- !        SUM = SUM + RAN1 ( IDUM )
- !     END DO
- !
- !     R  = ( SUM - 6.0d0 ) / 4.0d0
- !     R2 = R * R
- !
- !     GAUSSabin = (((( A9 * R2 + A7 ) * R2 + A5 ) * R2 + A3 ) * R2 +A1 ) * R
- !
- !     RETURN
- !  end function gaussabin
- !
-!!-------------------------------------------------------------------
-!!     
-! (PSEUDO) RANDOM NUMBER GENERATOR     
-! ================================
-!                            
-! RETURNS A UNIFORM RANDOM DEVIATE BETWEEN 0.0 AND 1.0. 
-! SET IDUM TO ANY NEGATIVE INTEGER VALUE TO INITIALIZE 
-! OR REINITIALIZE THE SEQUENCE.
-!                                                                      
-! FROM "NUMERICAL RECIPES"                                            
-!
-! SAVE statement for IFF, R, IXn      B. Schmidt, May  31, 1992
-! RAN1 returned as REAL(DP)             B. Schmidt, May  31, 1992
-!
-!-------------------------------------------------------------------
- !     REAL(DP) FUNCTION RAN1(IDUM)    
- !
- !     real(DP) r(97)
- !     integer ix1,ix2,ix3
- !     integer idum,j,iff
- !
- !     real(DP), parameter  :: RM1=3.8580247D-6, RM2=7.4373773D-6 
- !     integer, parameter :: M1=259200,IA1=7141,IC1=54773
- !     integer, parameter :: M2=134456,IA2=8121,IC2=28411
- !     integer, parameter :: M3=243000,IA3=4561,IC3=51349                    
- !
- !     SAVE IFF, R, IX1,IX2,IX3    !?????????
- !     DATA IFF /0/                                               
-!
-!      IF (IDUM.LT.0.OR.IFF.EQ.0) THEN                           
-!         IFF=1                                      
-!         IX1=MOD(IC1-IDUM,M1)                      
-!         IX1=MOD(IA1*IX1+IC1,M1)
-!         IX2=MOD(IX1,M2)
-!         IX1=MOD(IA1*IX1+IC1,M1)                
-!         IX3=MOD(IX1,M3)                       
-!         DO 11 J=1,97                         
-!            IX1=MOD(IA1*IX1+IC1,M1)           
-!            IX2=MOD(IA2*IX2+IC2,M2)          
-!            R(J)=(dble(IX1)+dble(IX2)*RM2)*RM1
-! 11      CONTINUE                              
- !        IDUM=1                               
- !     ENDIF                                 
- !     IX1=MOD(IA1*IX1+IC1,M1)              
- !     IX2=MOD(IA2*IX2+IC2,M2)             
- !     IX3=MOD(IA3*IX3+IC3,M3)            
- !     J=1+(97*IX3)/M3                   
- !     IF(J.GT.97.OR.J.LT.1)STOP      
- !     RAN1=  R(J) 
- !     R(J)=(dble(IX1)+dble(IX2)*RM2)*RM1
- !
- !
- !     RETURN                             
- !     END function ran1
 
 end module mod_vinit

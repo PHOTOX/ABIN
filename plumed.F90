@@ -10,12 +10,13 @@ module mod_plumed
 CONTAINS
 
 subroutine plumed_init(dt)
-   use mod_general, only: natom,nwalk
-   use mod_const,   only: ANG,AUTOFS
+   use mod_general, only: natom, nwalk, irest
+   use mod_const,   only: ANG, AUTOFS
    implicit none
    real, parameter :: kB=8.3144621d-3
    real(DP) :: dt, plumed_kbt, plumed_energyUnits, plumed_lengthUnits, plumed_timeUnits
    character(256) :: plumedoutfile
+   integer  :: api_version
 
    !variables computation
    plumed_kbt = temp * 8.3144598d0     ! in kJ/mol
@@ -37,6 +38,16 @@ subroutine plumed_init(dt)
    call plumed_f_gcmd("setTimestep"//char(0),dt)
    call plumed_f_gcmd("setKbT"//char(0),plumed_kbt)
    call plumed_f_gcmd("setLogFile"//char(0),trim(adjustl(plumedoutfile))//char(0)) 
+
+    ! TODO: 
+     
+    ! Require at least version 2
+    ! plumed_f_gcmd("getApiVersion"//char(0),api_version);   ! Pass the api version that plumed is using
+
+    ! This is valid only if API VERSION > 2
+    ! plumed_cmd(plumedmain,"setRestart",&res);                      // Pointer to
+    ! an integer saying if we are restarting (zero means no, one means yes)
+
  
    call plumed_f_gcmd("init"//char(0),0);
 #endif
@@ -44,7 +55,7 @@ end subroutine plumed_init
 
 
 subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
-   use mod_general,  only: natom, it
+   use mod_general,  only: natom, it, nwrite
    use mod_const,    only: AMU
    use mod_system,   only: am
    implicit none
@@ -93,8 +104,11 @@ subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
    call plumed_f_gcmd("setForcesY"//char(0),fyy)
    call plumed_f_gcmd("setForcesZ"//char(0),fzz)
    call plumed_f_gcmd("calc"//char(0),0); 
+! http://plumed.github.io/doc-v2.0/developer-doc/html/class_p_l_m_d_1_1_plumed_main.html#a4da81a378216f0739fe50bf620d72655
+   ! TODO: call plumed_cmd(plumedmain,"fflush"//char(0)); every nwrite
 
 #endif
+
 
    do iat=1,natom
       fx(iat,iw) = fxx(iat)

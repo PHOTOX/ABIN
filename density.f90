@@ -25,7 +25,7 @@ module mod_density
    end subroutine dist_init
 
    subroutine density(x,y,z)
-   use mod_general,  only: it, nwalk, nwrite, pot
+   use mod_general,  only: it, nwalk, nwrite, pot,natom
    use mod_system,   only: dime
    use mod_utils,    only: get_distance, abinerror
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
@@ -38,11 +38,13 @@ module mod_density
    do idist=1,ndist
       do iw=1,nwalk
    
-         r=get_distance(x, y, z, dist1(idist), dist2(idist), iw)
+         if(dime.eq.1)then
+            r = x(1, iw)
+         else
+            r = get_distance(x, y, z, dist1(idist), dist2(idist), iw)
+         end if
 
-         if(dime.eq.1.and.pot.eq.'2dho') r=x(1,iw)
-
-         dbin=(xmax-xmin)/nbin
+         dbin = (xmax - xmin) / nbin
 
          ipom=ceiling(( (r/ang)-xmin )/dbin)
          if(ipom.gt.nbin.or.ipom.le.0)then
@@ -50,11 +52,12 @@ module mod_density
             write(*,*)'This may mean that your system is falling apart.'
             write(*,*)'Or maybe you should set xmin and xmax differently.'
             if(disterror.eq.1) call abinerror('density')
-            write(*,*)'Ignoring and setting ipom=1'
-            ipom=1
+         else
+               
+            dist(ipom,idist) = dist(ipom,idist) + 1.0d0
+
          endif
 
-         dist(ipom,idist)=dist(ipom,idist)+1.0d0
       enddo
    enddo
    

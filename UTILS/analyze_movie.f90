@@ -1,7 +1,10 @@
-! Simple program for analysis of bonds, angles and dihedrals from xyz
-! trajectories.
+! Simple program for analysis of bonds, angles and dihedrals
+! from xyz trajectories.
 ! We pull out time evolution as well as histograms.
-!-Daniel Hollas     2014
+
+! Daniel Hollas     2014
+
+! 2016, RDF funcionality added
 
 module mod_analyze
 implicit none
@@ -11,15 +14,23 @@ save
 
 CONTAINS
 
+! The following function should respect the PBC conditions
 real*8 function get_distance( at1, at2, boxx, boxy, boxz)
    implicit none
    integer,intent(in) :: at1, at2
    real*8, intent(in) :: boxx, boxy, boxz
    real*8  :: dx, dy, dz, temp
 
-   dx = x(at1) - x(at2)
-   dy = y(at1) - y(at2)
-   dz = z(at1) - z(at2)
+   if (at1.eq.at2)then
+      dx = x(at1)
+      dy = y(at1)
+      dz = z(at1)
+   else
+      dx = x(at1) - x(at2)
+      dy = y(at1) - y(at2)
+      dz = z(at1) - z(at2)
+
+   end if
    if (boxx.gt.0)then
       dx = dx - boxx * nint(dx/boxx)
       dy = dy - boxy * nint(dy/boxy)
@@ -272,7 +283,6 @@ if (imod.eq.1)then
    end if
 end if
 
-dx=(distmax-distmin)/nbin_dist
 
 if (lecho) write(*,*)'Proccessing file ',chmovie
 it=0
@@ -292,6 +302,7 @@ it=it+1
 
 ! RDF part
 if (imod.eq.1)then
+   dx = (distmax-distmin)/nbin_dist
    rdfpairs=0
    rdfparts1=0
    rdfparts2=0
@@ -343,28 +354,32 @@ if (imod.eq.1)then
 end if
 
 if (imod.eq.0)then
+
+   dx = (distmax-distmin)/nbin_dist
+
    do idist = 1, ndist
    
-    r(idist) = get_distance(dists(1,idist), dists(2,idist), boxx, boxy, boxz)
+      r(idist) = get_distance(dists(1,idist), dists(2,idist), boxx, boxy, boxz)
    
-    ipom = ceiling( ( (r(idist)) - distmin )/dx )
-    if(ipom.gt.nbin_dist.or.ipom.le.0)then
-     write(*,*)'Problems with bond distribution function'
-     write(*,*)'For distance between atoms:',dists(1,idist), dists(2,idist)
-     write(*,*)'Distance=',r(idist),'Geometry number=',it
-     write(*,*)'Boxx, boxy, boxz:',boxx, boxy, boxz
-     stop 1
-    endif
+      ipom = ceiling( ( (r(idist)) - distmin )/dx )
+      if(ipom.gt.nbin_dist.or.ipom.le.0)then
+         write(*,*)'Problems with bond distribution function'
+         write(*,*)'For distance between atoms:',dists(1,idist), dists(2,idist)
+         write(*,*)'Distance=',r(idist),'Geometry number=',it
+         write(*,*)'Boxx, boxy, boxz:',boxx, boxy, boxz
+         stop 1
+      endif
  
-    bins_dist(ipom,idist)=bins_dist(ipom,idist)+1.0d0
-   enddo
+      bins_dist(ipom,idist)=bins_dist(ipom,idist)+1.0d0
+   end do
+
    if (ndist.gt.0) write(101,*)it,(r(idist),idist=1,ndist)
    
 end if ! imod end if, the rest will be skipped anyway
 
 
 do idist = 1, nang
-   dx = (angmax-angmin)/nbin_ang
+   dx = (angmax-angmin) / nbin_ang
 
    alfa(idist) = get_angle(angles(1,idist), angles(2,idist), angles(3,idist), &
                         boxx, boxy, boxz)
@@ -377,7 +392,8 @@ do idist = 1, nang
       stop 1
    endif
 
-   bins_ang(ipom,idist)=bins_ang(ipom,idist)+1.0d0
+   bins_ang(ipom,idist) = bins_ang(ipom,idist) + 1.0d0
+
 enddo
 
 if ( nang.gt.0) write(102,*)it,(alfa(idist),idist=1,nang)
@@ -402,6 +418,7 @@ if( ndih.gt.0) write(103,*)it,(delta(idist),idist=1,ndih)
 
 enddo
 
+! Closing the trajectory file
 close(100)
 if (ndist.gt.0 ) close(101)
 if (nang.gt.0 )  close(102)
@@ -452,7 +469,7 @@ if (ndist.gt.0 )then
   close(128)
 endif
 
-if (nang.gt.0 )then
+if (nang.gt.0)then
    open(10,file='ang_hist.dat')
    dx=(angmax-angmin)/nbin_ang
 
