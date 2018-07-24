@@ -25,7 +25,8 @@ module mod_mdstep
 
    subroutine shiftP (px, py, pz, fx, fy, fz, dt)
    use mod_general, only: nwalk, natom
-   use mod_system,  only: conatom, constrainP
+   use mod_system,  only: conatom
+   use mod_vinit,   only: constrainP
    real(DP),intent(inout)  :: px(:,:), py(:,:), pz(:,:)
    real(DP),intent(in)     :: fx(:,:), fy(:,:), fz(:,:)
    real(DP),intent(in)     :: dt
@@ -34,7 +35,7 @@ module mod_mdstep
    PY = PY + dt * FY
    PZ = PZ + dt * FZ
 
-   if(conatom.gt.0) call constrainP (px, py, pz)
+   if(conatom.gt.0) call constrainP (px, py, pz, conatom)
 
    end subroutine shiftP
 

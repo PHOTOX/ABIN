@@ -4,8 +4,6 @@
 ! for passing global variables to different subroutines.
 !------------------------------------------------------------------------------------
 
-
-
 ! Exact values for ANG,AUTOKCAL and AUTODEBYE,me,AUTOM,AUTOFS,AMU: 
 ! Mohr, Taylor, Newell, Rev. Mod. Phys. 80 (2008) 633-730
 ! and using the thermochemical calorie (1 cal = 4.184 J):'
@@ -18,9 +16,10 @@ module mod_const
    real(DP), parameter :: ANG=1.889726132873d0     ! nagstroms to bohrs
    real(DP), parameter :: AUTOFS=0.02418884326505d0 !atomic units to femtosecs
    real(DP), parameter :: PI=3.14159265358979323846d0
-   real(DP), parameter :: AUTOK=3.1577464d5,ME=9.10938215d-31 !electron mass
+   real(DP), parameter :: AUTOK=3.1577464d5 ! temperature in a.u. to Kelvins
+   real(DP), parameter :: ME=9.10938215d-31 ! electron mass
    real(DP), parameter :: AUTOM=5.2917720859d-11 ! atomic length
-   real(DP), parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to  MACSIMUS in init
+   real(DP), parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to MACSIMUS in init
    real(DP), parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0
    real(DP), parameter :: AUTODEBYE =  2.54174623d0
    ! Boltzmann constant in a.u., assumed to be 1.0d0 in the program
@@ -28,8 +27,8 @@ module mod_const
    save
 end module mod_const
 
-! mod_array_size contains various array limits. Modify here if you need larger arrays.
-! Most of the arrays are allocated dynamically
+!  mod_array_size contains various array limits. Modify here if you need larger arrays.
+!  Most of the arrays are allocated dynamically
 module mod_array_size
    use mod_const, only: DP 
    implicit none
@@ -39,32 +38,65 @@ module mod_array_size
    save
 end module  mod_array_size
 
-
-
-!--General simulation parameters      
+! General simulation parameters      
 module mod_general
    use mod_const, only: DP
    implicit none
-   integer :: it=0, md=1, ihess
-   integer :: ipimd=0, istage=0, nwalk=1, inormalmodes=0
-   character(len=15) :: pot='none', pot_ref='none'
-   integer :: imini=0, nstep=1, nabin=50, nstep_ref=1
-   integer :: nwrite=1,nwritex=1,ncalc=1,nwritev=0,nwritef=0
-   integer :: narchive=10000, nrest=1
-   integer :: icv=0,irest=0,anal_ext=0,idebug=0
-   integer :: irandom=156873,natom=0,pid
-   integer :: iqmmm=0
-   integer :: parrespa=0 
-   integer :: my_rank=0, mpi_world_size=1, iremd=0
-   integer :: iknow=0
-   real(DP) :: dt0, sim_time=0.0d0
-   integer  :: en_restraint=0
+   ! Current time step
+   integer :: it = 0
+   ! Denotes integrator for equations of motion, see init.F90
+   integer :: md = 1
+   ! The main switch for the type of dynamics (Clasical MD, PIMD, SH...)
+   integer :: ipimd=0
+   ! PIMD parameters, staging transformation, number of beads, NM transform
+   integer :: istage=0, nwalk=1, inormalmodes=0
+   ! Ab-initio potential
+   character(len=15) :: pot='none'
+   ! Ab initio potential for a reference in Multile time step propagator
+   character(len=15) :: pot_ref='none'
+   ! imini keyword is mostly deprecated
+   integer :: imini = 0
+   ! number of time steps (length of simulation)
+   integer :: nstep = 1
+   ! denotes number of internal steps in RESPA algorithm, see mdstep.f90
+   integer :: nabin = 50, nstep_ref = 1
+   ! output controls (write the propery every nwriteX step):
+   ! general output
+   integer :: nwrite = 1
+   ! output for XYZ coordinates, velocities and forces (Molden format)
+   integer :: nwritex = 1, nwritev = 0, nwritef = 0
+   integer :: ncalc = 1
+   ! How often do we print restart file and how often do we archive it
+   integer :: nrest = 1, narchive = 10000
+   ! Restart switch
+   integer :: irest = 0
+   integer :: icv = 0, anal_ext = 0, idebug = 0
+   integer :: ihess
+   ! Random number seed
+   ! TODO: Default should be set from urandom see:
+   ! https://linux.die.net/man/4/urandom
+   integer :: irandom = 156873
+   ! Number of atoms, must be set manually in input
+   integer :: natom = 0
+   ! Switch for internal QM/MM, experimental!!
+   integer :: iqmmm = 0
+   ! Switch for Replica Exchange MD
+   integer :: iremd = 0
+   ! Internal MPI variables
+   integer :: my_rank = 0, mpi_world_size = 1
+   ! If you want to set use some exotic settings that we do not normally allow,
+   ! set iknow = 1
+   integer :: iknow = 0
+   ! Linux Process ID, populated automatically for the current ABIN process
+   integer :: pid
+   ! Future variables for adaptive timestep in SH
+   real(DP) :: dt0, sim_time = 0.0d0
+   ! Energy restrain MD by Jiri Suchan
+   integer  :: en_restraint = 0
    save
 end module
       
-!------------------------------------------------------
-
-!-----Some information about simulated system, especially for distributions and shake
+! Some information about simulated system, especially for distributions and shake
 module mod_system
    use mod_const, only: DP
    ! cannot use this
@@ -390,20 +422,6 @@ module mod_system
 
    end subroutine mass_init
 
-   !TODO: Why the hell is this here?
-   subroutine constrainP (px,py,pz)
-      use mod_general, only: nwalk, my_rank
-      real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
-      integer                 :: iw,iat
-!      if (my_rank.eq.0) write(*,*)'Removing momentum of constrained atoms.'
-      do iw=1,nwalk
-         do iat=1,conatom
-            px(iat,iw) = 0.0d0
-            py(iat,iw) = 0.0d0
-            pz(iat,iw) = 0.0d0
-         enddo
-      enddo
-   end subroutine constrainP
 
 end module mod_system
 
@@ -474,7 +492,7 @@ module mod_files
    chfiles(UTDIP)='trans_dipoles.dat'
    chfiles(UDOTPRODCI)='dotprodci.dat'
 
-   !--Here we ensure, that previous files are deleted----
+   ! Here we ensure, that previous files are deleted
    if(irest.eq.0)then
       chaccess='SEQUENTIAL'
    else
@@ -582,6 +600,4 @@ module mod_chars
     &set iknow=1 (namelist general) to proceed.'
 
 end module mod_chars
-!------------------------------------------------------
-!------------------------------------------------------
-!------------------------------------------------------
+

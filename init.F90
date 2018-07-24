@@ -73,7 +73,7 @@ subroutine init(dt, values1)
    namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive,xyz_units, &
-            parrespa,dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
+            dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
             en_restraint, en_diff, en_kk, restrain_pot, &
             pot_ref, nstep_ref, teraport, nteraservers, cp2k_mpi_beads
 
@@ -555,7 +555,7 @@ print '(a)','**********************************************'
       if(rem_comvel) call remove_comvel(vx, vy, vz, am, rem_comvel)
       if(rem_comrot) call remove_rotations(x, y, z, vx, vy, vz, am, rem_comrot)
 
-      if(conatom.gt.0) call constrainP(vx,vy,vz)
+      if(conatom.gt.0) call constrainP(vx, vy, vz, conatom)
 
       ! If scaleveloc=1, scale initial velocitites to match the temperature
       ! Otherwise, just print the temperature.
@@ -1192,10 +1192,9 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
 
    subroutine print_compile_info()
    character(len=1024)   :: cmdline
-   !   include 'date.inc'
 
-   print *,'Compiled at  ', DATE
-   print *,COMMIT
+   print *, 'Compiled at  ', DATE
+   print *, COMMIT
 !$ print *,'Compiled with parallel OpenMP support for PIMD.'
 #ifdef USEFFTW
    write(*,*)'Compiled with FFTW support.'

@@ -2,7 +2,7 @@ module mod_vinit
    use mod_const, only: DP
    implicit none
    private
-   public :: vinit, scalevelocities, remove_rotations, remove_comvel
+   public :: vinit, scalevelocities, remove_rotations, remove_comvel, constrainP
    contains
 !------------------------------------------------------------------------
 !    
@@ -283,7 +283,23 @@ subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
       ainv(8) =  minor_det(8) / det
    END SUBROUTINE mat_inv_3x3
 
+
 END SUBROUTINE REMOVE_ROTATIONS
+
+   subroutine constrainP (px, py, pz, constrained_atoms)
+      use mod_general, only: nwalk, my_rank
+      real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
+      integer, intent(in) :: constrained_atoms
+      integer :: iw,iat
+!     if (my_rank.eq.0) write(*,*)'Removing momentum of constrained atoms.'
+      do iw = 1, nwalk
+         do iat = 1, constrained_atoms
+            px(iat,iw) = 0.0d0
+            py(iat,iw) = 0.0d0
+            pz(iat,iw) = 0.0d0
+         enddo
+      enddo
+   end subroutine constrainP
 
 
 end module mod_vinit

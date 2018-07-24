@@ -1,20 +1,18 @@
 # Super simple Makefile for ABIN		Daniel Hollas,2014
-#
-# The user defined variables are included from file make.vars,
+
+# The user defined variables are included from file "make.vars',
 # which is not under version control
-#
+# No user modification to this Makefile file should be necessary.
+
 # Simply type "make" and you should get the binary named $OUT
 # Before recompiling, it is wise to clean up by "make clean"
-#
-# The machine-dependent variables are included from make.vars
-# No user modification to this file should be necessary.
 
 # WARNING: dependecies on *.mod files are hidden!
 # If you change modules, you should recompile the whole thing i.e. make clean;make
-#
+
 # For compilation with static system libraries, see:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46539
-#
+
 TEST=all
 include make.vars
 
@@ -103,8 +101,6 @@ ${OUT} : init.o
 
 # Always recompile init.F90 to get current date and commit
 init.o : init.F90 ${ALLDEPENDS}
-#	echo "CHARACTER (LEN=*), PARAMETER :: date ='${DATE}'" > date.inc
-#	echo "CHARACTER (LEN=*), PARAMETER :: commit='${COMMIT}'" >> date.inc
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DDATE="'${DATE}'" -DCOMMIT="'${COMMIT}'" -c init.F90
 
 clean :
