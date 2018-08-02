@@ -33,6 +33,8 @@ INTERFACE=${pot^^}
 pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 INTERFACE_REF=${pot_ref^^}
 
+# TODO: Add file and folder existence check, see r.terabin
+
 
 # TODO: Check that the MD run in existing job.log is not running anymore
 uname -n > job.log

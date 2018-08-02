@@ -89,7 +89,7 @@ end subroutine force_tera
 
 subroutine send_tera(x, y, z, iw, newcomm)
    use mod_const, only: DP, ANG
-   use mod_general, only: idebug, iqmmm
+   use mod_general, only: idebug, iqmmm, iremd, my_rank
    use mod_system,only: names
    use mod_qmmm, only: natqm
    use mod_utils, only: printf, abinerror
@@ -132,6 +132,7 @@ subroutine send_tera(x, y, z, iw, newcomm)
    end if
    ! DH WARNING: this will not work for iw>199
    ! not really tested for iw>99
+   ! TODO: refactor this mess
    write(names_qm(natqm+1),'(A2)')'++'
    write(names_qm(natqm+2),'(A2)')'sc'
    if(iw.gt.99)then
@@ -141,8 +142,16 @@ subroutine send_tera(x, y, z, iw, newcomm)
       write(names_qm(natqm+3),'(A1,I1)')'r',0
       write(names_qm(natqm+4),'(I2.2)')iw
    end if
-   write(names_qm(natqm+5),'(A2)')'++'
-   call MPI_Send( names_qm, 2*natqm+10, MPI_CHARACTER, 0, 2, newcomm, ierr )
+
+   ! REMD HACK
+   if (iremd.eq.1)then
+      write(names_qm(natqm+5),'(I2.2)')my_rank
+      write(names_qm(natqm+6),'(A2)')'++'
+   else
+      write(names_qm(natqm+5),'(A2)')'++'
+   end if
+
+   call MPI_Send( names_qm, 2*natqm+12, MPI_CHARACTER, 0, 2, newcomm, ierr )
 
    ! Send QM coordinate array
    if ( idebug > 1 ) then
@@ -302,6 +311,7 @@ end subroutine receive_tera
 
 subroutine connect_terachem( itera )
    use mod_utils, only: abinerror
+   use mod_general, only: iremd, my_rank
    include 'mpif.h'
    integer, intent(in)  :: itera
    character(255)  :: port_name
@@ -322,6 +332,10 @@ subroutine connect_terachem( itera )
    !call MPI_Comm_set_errhandler(ierr);
 
    write(chtera,'(I1)')itera
+
+   !TODO: THIS IS A HACK FOR REMD
+   ! if (iremd.eq.1) write(portfile, '(A,I2.2)')trim(portfile)//'.', my_rank
+   if (iremd.eq.1) write(chtera,'(I1)')my_rank+1
    if (teraport.ne.'')then 
       server_name = trim(teraport)//'.'//trim(chtera)
       write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)

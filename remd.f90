@@ -235,7 +235,8 @@ CONTAINS
       call abinerror('remd_init')
    end if
    
-   if(pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
+   if(pot.eq.'_cp2k_')then
+      write(*,*)"ERROR: REMD with internal CP2K interface not supported!"
       call abinerror('remd_init')
    end if
 

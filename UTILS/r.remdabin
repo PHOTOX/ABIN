@@ -19,6 +19,8 @@ INPUTVELOC=
 # for SGE queing sytem
 #$ -V -cwd
 
+# TODO: Merge this into r.abin, take clues from r.terabin
+
 NPROC=${NSLOTS} # determined for queuing system: -pe mpi x
 source SetEnvironment.sh ABIN mpi
 

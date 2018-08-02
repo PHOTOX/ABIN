@@ -165,6 +165,9 @@ subroutine init(dt, values1)
          nproc = nteraservers
       end if
    end if
+
+   call MPI_Barrier(MPI_COMM_WORLD, ierr)
+
 #else
    if(pot.eq.'_tera_')then
       write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
