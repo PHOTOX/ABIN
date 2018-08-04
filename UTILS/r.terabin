@@ -8,11 +8,9 @@
 # 4. Remove scratch directory. (if delscratch = true)
 
 # Sample SGE Params on PHOTOX clusters
-
 #$ -V -cwd
 #$ -l num_gpu=1
-#$ -pe shm 3
-#$ -q aq-gpu-gtx690
+##$ -pe shm 1 -q nq-gpu
 
 # ABIN SETUP 
 OUTPUT=output
@@ -29,9 +27,24 @@ MPITYPE=0   # 0 - ground state AIMD
 delscratch=true
 N_TERA_SERVERS=1     # Use more TC servers for PIMD or REMD (Experimental)
 ################
-# ABINEXE=/home/hollas/PHOTOX/bin/abin.mpi
-# ABINEXE should be determined automatically from SetEnvironment.sh
 
+function files_exist {
+   for file in $* ;
+   do
+      if [[ ! -f $file ]];then
+         echo "ERROR: Cannot find file $file"
+         error=1
+      fi
+   done
+   if [[ ! -z $error ]];then
+      exit 1
+   fi
+}
+
+files_exist $TC_INPUT $INPUTPARAM $INPUTGEOM
+if [[ ! -z $INPUTVELOC ]];then
+   files_exist $INPUTVELOC
+fi
 
 # REMD SETTINGS, automatic from ABIN input
 N_REPLICAS=1
@@ -46,12 +59,11 @@ export LD_LIBRARY_PATH=
 source SetEnvironment.sh TERACHEM
 MPIRUN_TERA="$MPIRUN -np 1 "
 source SetEnvironment.sh ABIN mpi
-# DH HACK
-ABINEXE=/home/hollas/ABIN-DEV/abin.dev.mpi
 # This needs to be the same as MPIRUN_TERA
 MPIRUN_ABIN="$MPIRUN -np $N_REPLICAS"
 
 rm -f port.txt.*
+
 
 grep -E -q -e ^[^!]*pot[[:space:]]*=[[:space:]]*[\'"]_tera_["\'] $INPUTPARAM
 if [[ $? -eq 1 ]];then
@@ -59,8 +71,8 @@ if [[ $? -eq 1 ]];then
    exit 1 
 fi
 
-# when using reference potential ala O. Marsalek
-# TODO: This is extremely brittle
+# when using reference potential in multiple time-step MD
+# TODO: This is very brittle
 pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 INTERFACE_REF=${pot_ref^^}
 
@@ -77,36 +89,6 @@ if [[ -d $SCRDIR ]];then
    exit 1
 else
    mkdir $SCRDIR
-fi
-
-function files_exist {
-   for file in $* ;
-   do
-      if [[ ! -f $file ]];then
-         echo "ERROR: Cannot find file $1"
-         error=1
-      fi
-   done
-   if [[ ! -z $error ]];then
-      exit 1
-   fi
-}
-
-function dirs_exist {
-   for dir in $* ;do
-      if [[ ! -d $dir ]];then
-         echo "ERROR: Cannot find folder $1"
-         error=1
-      fi
-   done
-   if [[ ! -z $error ]];then
-      exit 1
-   fi
-}
-
-file_exists $TC_INPUT $INPUTPARAM
-if [[ ! -z $INTERFACE_REF ]];then
-   dir_exists $INTERFACE_REF
 fi
 
 cp -p * $SCRDIR/.

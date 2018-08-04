@@ -1,46 +1,81 @@
 #!/bin/bash
 
+# Example SGE params for PHOTOX clusters
 #$ -V -cwd
+##$ -q aq -pe shm 3
 
 # This is a sample script for launching ABIN simulations in cluster environments.
-# 1. Copy all data from CWD to the node's scratch. 
-#    (not copying folders except the interface folder, e.g G09)
+# 1. Copy all data from $PWD to the node's scratch. 
+#    (not copying folders except for the BASH-interface folder)
 # 2. Launch ABIN.
 # 3. Copy data back (only newer files are copied!).
 # 4. Remove scratch directory. (if delscratch = true)
 
-# SETUP --------------------------------
+# SETUP # 
 OUTPUT=output
 JOBNAME=ABIN_${JOB_ID}_$$
 INPUTPARAM=input.in
 INPUTGEOM=mini.dat
 delscratch=true
 INPUTVELOC=
-########################################
+# SETUP END # 
 
 SCRDIR=/scratch/$USER/$JOBNAME
 
-# ABINEXE determined via SetEnvironment.sh script
-# ABINEXE=/home/hollas/PHOTOX/bin/abin
-source SetEnvironment.sh ABIN
+function files_exist {
+   for file in $* ;
+   do
+      if [ ! -f $file ];then
+         echo "ERROR: Cannot find file $file"
+         error=1
+      fi
+   done
+   if [[ ! -z $error ]];then
+      exit 1
+   fi
+}
 
+files_exist $INPUTPARAM
+if [[ ! -z $INPUTVELOC ]];then
+   files_exist $INPUTVELOC
+fi
+
+# REMD SETTINGS, automatic from ABIN input (EXPERIMENTAL!)
+N_REPLICAS=1
+grep -E -q -e ^[^!]*iremd[[:space:]]*=[[:space:]]*1\\b $INPUTPARAM
+if [[ $? -eq 0 ]];then
+   N_REPLICAS=$(grep -E -o -e ^[^!]*nreplica[[:space:]]*=[[:space:]]*[0-9]+ $INPUTPARAM | grep -E -o -e [0-9]+)
+   REMD=true
+   echo "REMD detected. Number of replicas = $N_REPLICAS"
+fi
+
+# $ABINEXE exported via SetEnvironment.sh
+if [[ $REMD == "true" ]];then
+   # TODO: We currently allow only <100 replicas
+   files_exist $INPUTGEOM.[0-9][0-9]
+   source SetEnvironment.sh ABIN mpi
+   ABINEXE="$MPIRUN -np $N_REPLICAS $ABINEXE"
+else
+   files_exist $INPUTGEOM
+   source SetEnvironment.sh ABIN
+fi
+
+
+# TODO: This is rather brittle, need better regex
 pot=$(awk -F"[! ,=\"']+" '{if($1=="pot")print $2}' $INPUTPARAM)
 # Upper case, this is the folder with file interface
 INTERFACE=${pot^^}
 
-
-# when using reference potential ala O. Marsalek
+# when using reference potential for multiple timestepping
 pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
 INTERFACE_REF=${pot_ref^^}
-
-# TODO: Add file and folder existence check, see r.terabin
 
 
 # TODO: Check that the MD run in existing job.log is not running anymore
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 
-KDE=`pwd`
+LAUNCH_DIR=$PWD
 
 if [[ -d $SCRDIR ]];then
    echo "Job direcory $SCRDIR already exist!"
@@ -78,7 +113,7 @@ else
    $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
-cp -upr * $KDE/.
+cp -upr * $LAUNCH_DIR/
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"
