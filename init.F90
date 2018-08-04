@@ -53,7 +53,7 @@ subroutine init(dt, values1)
    integer,dimension(8) :: values1
    real(DP) :: masses(MAXTYPES)
    real(DP)  :: rans(10)
-   integer :: iw,iat,natom1,imol,shiftdihed=1, iost
+   integer :: iw, iat, natom_xyz, imol, shiftdihed = 1, iost
    integer :: error, getpid, nproc=1, ipom, ipom2=0
    character(len=2)    :: massnames(MAXTYPES), atom
    character(len=200)  :: chinput, chcoords, chveloc
@@ -106,9 +106,9 @@ subroutine init(dt, values1)
 
    call Get_cmdline(chinput, chcoords, chveloc)
 
-   !-READING INPUT----------------------------------------- 
+   ! READING INPUT
 
-   open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ") !here ifort has some troubles
+   open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ")
    read(150,general)
    rewind(150)
    pot = UpperToLower(pot)
@@ -138,10 +138,6 @@ subroutine init(dt, values1)
       end if
 #endif
    end if
-
-   if(iqmmm.eq.0.and.pot.ne.'mm')then
-      natqm=natom
-   endif
 
 ! We need to connect to TeraChem as soon as possible,
 ! because we want to shut down TeraChem nicely in case something goes wrong.
@@ -189,16 +185,17 @@ subroutine init(dt, values1)
 
    endif
 
+
    if (en_restraint.ge.1) then
       call en_rest_init(dt)
  
       if (en_restraint.eq.1)then
-      write(*,*) 'Energy restraint is ON(1): Using method of Lagrange multipliers.'
+         write(*,*) 'Energy restraint is ON(1): Using method of Lagrange multipliers.'
       else if (en_restraint.eq.2.and.en_kk.ge.0)then
-      write(*,*) 'Energy restraint is ON(2): Using quadratic potential restarint.'
+         write(*,*) 'Energy restraint is ON(2): Using quadratic potential restraint.'
       else
-      write(*,*) 'FATAL ERROR: en_restraint must be either 0,1(Lagrange multipliers),2(umbrella, define en_kk)'
-      call abinerror('init')
+         write(*,*) 'FATAL ERROR: en_restraint must be either 0 or 1(Lagrange multipliers),2(umbrella, define en_kk)'
+         call abinerror('init')
       end if
    end if
    
@@ -229,6 +226,32 @@ print '(a)','**********************************************'
 
    end if
 
+   ! Get number of atoms from XYZ coordinates NOW so that we can allocate arrays
+   if(iremd.eq.1) write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank
+
+   open(111, file = chcoords, status = "old", action = "read")
+   read(111, '(I50)', iostat = iost)natom_xyz
+   !TODO following line does not work
+   if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.", iost)
+   if(natom_xyz.ne.natom.and.natom.gt.0)then
+     write(*,'(A,A)')'WARNING: Number of atoms specified in ', trim(chinput)
+     write(*,'(A,A)')'does not match with the XYZ geometry in ', trim(chcoords)
+     write(*,*)'Going forward anyway...'
+   endif
+
+   natom = natom_xyz
+
+   if (natom.lt.1)then 
+      write(*,'(A,A)')'ERROR: Wrong number of atoms on the first line of the XYZ &
+      & file ',trim(chcoords)
+      write(*,*)natom
+      call abinerror('init')
+   end if
+
+   ! This line is super important,
+   ! cause we actually use natqm in many parts of the code
+   if(iqmmm.eq.0.and.pot.ne.'mm') natqm = natom
+
    if(irest.eq.1)then
     readnhc=1   !readnhc has precedence before initNHC
     readQT=1
@@ -249,7 +272,7 @@ print '(a)','**********************************************'
    dt0 = dt
 
    ! We have to initialize here, because we read them from input
-   allocate( names( natom )     )
+   allocate(names(natom))
    names     = ''
    attypes   = ''
    massnames = ''
@@ -274,28 +297,16 @@ print '(a)','**********************************************'
 
 
 !  allocate all basic arrays and set them to 0.0d0
-   call allocate_arrays( natom, nwalk+1 )
+   call allocate_arrays(natom, nwalk+1)
 !  Ehrenfest require larger array since gradients for all of the states are need   
 !  TODO: We should really make this differently..
    if(ipimd.eq.4)then
-      call allocate_ehrenfest( natom, nstate )
+      call allocate_ehrenfest(natom, nstate)
    end if
 
-!-----READING GEOMETRY
-   if(iremd.eq.1) write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank
-
-   open(111,file=chcoords,status = "old", action = "read", iostat=iost) 
-   read(111,*, iostat=iost)natom1
-   !TODO following line does not work
-   if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.", iost)
-   if(natom1.ne.natom)then
-     write(*,'(A,A)')'No. of atoms in ',chinput
-     write(*,'(A,A)')'and in ',chcoords
-     write(*,*)'do not match.'
-     call abinerror('init')
-   endif
-   read(111,*)
-   do iat=1,natom
+!  READING GEOMETRY
+   read(111, *)
+   do iat = 1, natom
 
      read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
      if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates', iost)
@@ -530,12 +541,11 @@ print '(a)','**********************************************'
          write(*,*)'Reading initial velocities in a.u. from external file:'//trim(chveloc) 
          open(500,file=chveloc, status='OLD', action = "READ")
          do iw=1,nwalk
-            read(500,*, IOSTAT=iost)natom1
+            read(500,*, IOSTAT=iost)natom_xyz
             if (iost.ne.0) call err_read(chveloc,"Could not read velocities on line 1.", iost)
-            if(natom1.ne.natom)then
-               write(*,'(A,A)')'No. of atoms in ',chinput
-               write(*,'(A,A)')'and in ',chcoords
-               write(*,*)'do not match.'
+            if(natom_xyz.ne.natom)then
+               write(*,'(A,A)')'Nunmber of atoms in velocity input ', trim(chveloc)
+               write(*,'(A,A)')'does not match with XYZ coordinates in ', trim(chcoords)
                call abinerror('init')
             endif
             read(500,*, IOSTAT=iost)

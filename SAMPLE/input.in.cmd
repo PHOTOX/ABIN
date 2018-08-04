@@ -2,7 +2,6 @@ This is a sample input file for ABIN for Classical MD simulation
 
 &general
 pot='g09'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,qchem 
-natom=27,		! number of atoms
 ipimd=0,		! classical simulation=0, Path Integral MD=1, surface-hopping MD=2
 nstep=50000,		! number of steps
 dt=20.,			! timestep [au]

@@ -41,7 +41,6 @@ kb_sbc=0.1d0,		! force constant for spherical potential,in A
 icv=0,			! do we compute heat capacities? meaningfull only with hessian
 ihess=0,		! do we have hessian?
 anal_ext=0,		! do we call user-defined function analyze_ext?
-natom=3,		!number of atoms
 /
 
 

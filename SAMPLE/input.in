@@ -4,7 +4,6 @@ It shows also how to use some more obscure settings.
 
 &general
 pot='orca'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho 
-natom=27,		! number of atoms
 conatom=0,		! number of constrained atoms
 irest=0,		! Should we restart from restart.xyz? (ignoring mini.dat)
 

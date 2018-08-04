@@ -76,7 +76,7 @@ module mod_general
    ! TODO: Default should be set from urandom see:
    ! https://linux.die.net/man/4/urandom
    integer :: irandom = 156873
-   ! Number of atoms, must be set manually in input
+   ! Number of atoms, taken from XYZ geometry
    integer :: natom = 0
    ! Switch for internal QM/MM, experimental!!
    integer :: iqmmm = 0
@@ -104,6 +104,7 @@ module mod_system
    implicit none
    ! TODO: move more stuff into Properties derived type
    ! https://kiwi.atmos.colostate.edu/fortran/docs/fortran2012.key-8.pdf
+   ! TODO: We should probably move this outside of the modules.f90
 
    ! Extra electronic properties (not mandatory)
    type Bead_Extra_Properties

@@ -3,7 +3,6 @@ This is a sample input file for ABIN for PI+GLE simulation
 
 &general
 pot='g09'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,qchem 
-natom=27,		! number of atoms
 ipimd=1,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
 nwalk=4,                ! 4 is usually sufficient for PIGLE simulations
 istage=0,               ! for PIGLE, istage must be 0

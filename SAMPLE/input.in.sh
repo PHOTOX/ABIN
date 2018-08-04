@@ -2,7 +2,6 @@ This is a sample input file for Surface-Hopping simulation in ABIN
 
 &general
 pot='molpro-sh'		! where do we obtain forces?
-natom=8,		! number of atoms
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
 
 ipimd=2,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 

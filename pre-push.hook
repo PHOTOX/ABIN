@@ -21,7 +21,7 @@ if [[ $url =~ github\.com ]];then
    echo "Pushing to GitHub. Veryfying the build and tests first."
    make clean;make
    if [ $? -ne 0 ];then
-      echo "ERROR during ABIN compilationg. Rejecting push."
+      echo "ERROR during ABIN compilation. Rejecting push."
       exit 1
    fi
    make test

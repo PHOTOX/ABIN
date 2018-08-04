@@ -1,6 +1,3 @@
-This is a sample input file for ABIN 
-NOTE: order of input sections matters!!
-
 &general
 nstep=10,
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
@@ -28,7 +25,7 @@ kb_sbc=0.1d0,		! force constant for spherical potential,in A
 icv=0,			! do we compute heat capacities? meaningfull only with hessian
 ihess=0,		! do we have hessian?
 anal_ext=0,		! do we call user-defined function analyze_ext?
-natom=3,		!number of atoms
+natom=6,		! number of atoms does not match with mini.dat, but it should not matter
 /
 
 &nhcopt
