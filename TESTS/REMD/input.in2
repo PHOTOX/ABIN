@@ -31,6 +31,6 @@ nrespnose=8
 &remd
 nswap=2
 nreplica=3
-temps=100.,200.,300,
+temp_list=100.,200.,300,
 /
 

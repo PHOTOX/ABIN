@@ -68,7 +68,7 @@ end module compile_info
 ! At this moment, coordinate and velocity transformations are NOT performed here
 ! Surface hopping is NOT initialized here.
 
-subroutine init(dt, values1)
+subroutine init(dt, time_data)
    use mod_const
    use mod_files
    use mod_arrays
@@ -111,7 +111,7 @@ subroutine init(dt, values1)
    use compile_info
    implicit none
    real(DP),intent(out) :: dt
-   integer,dimension(8) :: values1
+   integer,dimension(8), intent(out) :: time_data
    real(DP) :: masses(MAXTYPES)
    real(DP)  :: rans(10)
    integer :: iw, iat, natom_xyz, imol, shiftdihed = 1, iost
@@ -268,9 +268,8 @@ subroutine init(dt, values1)
       write(*,*)'Reading parameters from input file ', trim(chinput)
       write(*,*)'Reading xyz coordinates from file ',trim(chcoords)
       write(*,*)'XYZ Units = '//trim(xyz_units)
-      call PrintLogo(values1)
+      call PrintLogo(time_data)
 
-print '(a)','**********************************************'
 print '(a)','                                              '
    SELECT CASE (ipimd)
       case (0)
