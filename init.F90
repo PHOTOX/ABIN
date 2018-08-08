@@ -1,10 +1,11 @@
 module compile_info
 
    CONTAINS
-   subroutine print_compile_info()
+   subroutine print_compile_info(time_data)
 #if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
    use iso_fortran_env, only: compiler_version, compiler_options
 #endif
+   integer,dimension(8),intent(in) :: time_data
    character(len=1024) :: cmdline
 
    print *, 'Compiled at  ', DATE
@@ -33,7 +34,11 @@ module compile_info
 
    print '(a)',''
    print '(a)','#################### RUNTIME INFO ####################'
-   write(*,*)
+   print '(a)',' '
+   write(*,'(A16)',advance='no')'Job started at: '
+   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")time_data(5),':', &
+        time_data(6),':',time_data(7),'  ',time_data(3),'.',time_data(2),'.',&
+        time_data(1)
    write(*,'(A17)')"Running on node: "
    call system('uname -n')
    write(*,'(A19)')'Working directory: '
@@ -45,6 +50,7 @@ module compile_info
    call get_command_argument(0, cmdline)
    write(*,*)
    call system('ldd '//cmdline)
+   print '(a)',' '
    print '(a)','######################################################'
 
    end subroutine print_compile_info
@@ -134,7 +140,7 @@ subroutine init(dt, values1)
             pot_ref, nstep_ref, teraport, nteraservers, cp2k_mpi_beads
 
 #ifdef MPI
-   namelist /remd/   nswap, nreplica, deltaT, Tmax, temps
+   namelist /remd/   nswap, nreplica, deltaT, Tmax, temp_list
 #endif
 
    namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,nrespnose,nyosh,      &
@@ -181,7 +187,7 @@ subroutine init(dt, values1)
 #ifdef CP2K
       call init_cp2k()
 #else
-      write(*,*)'FATAL ERROR: ABIN was not compiled with CP2K interface.'
+      write(*,*)'ERROR: ABIN was not compiled with CP2K interface.'
       write(*,*)''
       call abinerror('init')
 #endif
@@ -200,6 +206,9 @@ subroutine init(dt, values1)
 #ifdef MPI
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
    call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
+   if (my_rank.eq.0.and.mpi_world_size.gt.1)then
+      write(*,'(A,I3)')'Number of MPI processes = ', mpi_world_size
+   end if
    if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
       if (nwalk.gt.1)then
          write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
@@ -283,6 +292,9 @@ print '(a)','**********************************************'
    end if
 
    ! Get number of atoms from XYZ coordinates NOW so that we can allocate arrays
+
+   ! TODO: Allow reading from a single geom in REMD runs
+   ! Probably just one rank would read and then broadcast
    if(iremd.eq.1) write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank
 
    open(111, file = chcoords, status = "old", action = "read")
@@ -1143,9 +1155,9 @@ print '(a)','**********************************************'
       call abinerror('init')
    end subroutine err_read
 
-   subroutine PrintLogo(values1)
-   integer,dimension(8),intent(out) :: values1
-   call date_and_time(VALUES=values1)
+   subroutine PrintLogo(time_data)
+   integer,dimension(8),intent(out) :: time_data
+   call date_and_time(VALUES=time_data)
 
 print '(a)','                    _____      _     _      _ '
 print '(a)','        /\         |  _  \    | |   |  \   | |'
@@ -1161,20 +1173,18 @@ print '(a)',' version 1.1'
 print '(a)',' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek'
 print '(a)',' '
 
-call print_compile_info()
-write(*,'(A16)',advance='no')'Job started at: '
-write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
-        values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
-        values1(1)
+call print_compile_info(time_data)
 
    end subroutine PrintLogo
 
    subroutine PrintHelp()
    implicit none
+   integer,dimension(8) :: time_data
+   call date_and_time(VALUES=time_data)
     print '(a)', ''
     print '(a)', 'ABIN: Multipurpose ab initio MD program.'
     print '(a)', ''
-    call print_compile_info()
+    call print_compile_info(time_data)
     print '(a)', ''
     print '(a)', 'cmdline options:'
     print '(a)', ''

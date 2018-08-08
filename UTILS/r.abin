@@ -125,6 +125,6 @@ fi
 cd ..
 
 if [[ $delscratch -eq "true" ]];then
-   rm -r $JOBNAME
+   rm -r $SCRDIR
 fi
 

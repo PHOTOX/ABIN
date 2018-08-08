@@ -9,7 +9,7 @@ module mod_remd
   integer, parameter :: MAX_REPLICA=50
   integer :: nreplica, nswap=-1, reps(MAX_REPLICA)=-1
   real(DP) :: deltaT=-1, Tmax=-1
-  real(DP) :: temps(MAX_REPLICA)=-1, ratios_cumul(MAX_REPLICA)=0.0d0
+  real(DP) :: temp_list(MAX_REPLICA)=-1, ratios_cumul(MAX_REPLICA)=0.0d0
 
 CONTAINS
    !TODO: make general subroutine MPI_ERROR in utils.f90 and check every ierr
@@ -51,7 +51,7 @@ CONTAINS
          ! Replica with the higher temperature is the master here
          call MPI_Send(eclas, 1, MPI_REAL8, source-1, tag_en, MPI_COMM_WORLD, ierr)
          call MPI_Recv(eclas_new, 1, MPI_DOUBLE_PRECISION, source-1, tag_en, MPI_COMM_WORLD, status, ierr)
-         prob = (eclas-eclas_new)*(1/temps(my_rank+1)-1/temps(my_rank))
+         prob = (eclas-eclas_new)*(1/temp_list(my_rank+1)-1/temp_list(my_rank))
          if(prob.gt.0.0d0)then
             prob = 1.0d0
          else
@@ -132,9 +132,9 @@ CONTAINS
    ! Momenta are scaled according to the new temperature
    ! p_new = p_old * sqrt(T_new/T_old)
    if (my_rank.eq.rank1)then
-      scal = dsqrt( temps(my_rank+1)/temps(my_rank+2) )
+      scal = dsqrt( temp_list(my_rank+1)/temp_list(my_rank+2) )
    else if (my_rank.eq.rank2)then
-      scal = dsqrt( temps(my_rank+1)/temps(my_rank) )
+      scal = dsqrt( temp_list(my_rank+1)/temp_list(my_rank) )
    end if
 
 !   write(*,*)'pz ', pz, my_rank
@@ -221,17 +221,17 @@ CONTAINS
       call abinerror('remd_init')
    end if
 
-   if(deltaT.lt.0.and.Tmax.lt.0.and.temps(1).lt.0)then
-      write(*,*)'ERROR: You did not specify deltaT, Tmax, or temps for REMD.'
+   if(deltaT.lt.0.and.Tmax.lt.0.and.temp_list(1).lt.0)then
+      write(*,*)'ERROR: You did not specify deltaT, Tmax, or temp_list for REMD.'
       call abinerror('remd_init')
    else if(deltaT.gt.0.and.Tmax.gt.0)then
       write(*,*)'ERROR: You can not specify both deltaT and  Tmax for REMD!'
       call abinerror('remd_init')
-   else if(deltaT.gt.0.and.temps(1).gt.0)then
-      write(*,*)'ERROR: You can not specify both deltaT and  temps() for REMD!'
+   else if(deltaT.gt.0.and.temp_list(1).gt.0)then
+      write(*,*)'ERROR: You can not specify both deltaT and  temp_list() for REMD!'
       call abinerror('remd_init')
-   else if(Tmax.gt.0.and.temps(1).gt.0)then
-      write(*,*)'ERROR: You can not specify both Tmax and temps() for REMD!'
+   else if(Tmax.gt.0.and.temp_list(1).gt.0)then
+      write(*,*)'ERROR: You can not specify both Tmax and temp_list() for REMD!'
       call abinerror('remd_init')
    end if
    
@@ -253,7 +253,7 @@ CONTAINS
    ! determine number of MPI processess and check with user input
    call MPI_Comm_size(MPI_COMM_WORLD, i, ierr)
    if(i.ne.nreplica)then
-      write(*,*)'FATAL ERROR: Number of MPI processes does not match number of replicas.'
+      write(*,*)'ERROR: Number of MPI processes does not match number of replicas.'
       write(*,*)'Number of processors used must equal "nreplica" parameter in input file.'
       call abinerror('remd_init')
    end if
@@ -270,27 +270,27 @@ CONTAINS
        temp = temp * koef**my_rank
        if (temp0.gt.0) temp0 = temp0 * koef**my_rank
    end if
-   if(temps(1).gt.0)then
-     temp = temps(my_rank+1)
-     if (temp0.gt.0) temp0 = temps(my_rank+1)
+   if(temp_list(1).gt.0)then
+     temp = temp_list(my_rank+1)
+     if (temp0.gt.0) temp0 = temp_list(my_rank+1)
    else
-     temps(my_rank+1) = temp
+     temp_list(my_rank+1) = temp
    end if
 
-   if(temps(my_rank+1).le.0)then
+   if(temp_list(my_rank+1).le.0)then
       write(*,'(A,I2,A)')'ERROR: Temperature of replica ',my_rank,' was not set or is negative.'
    end if
 
    ! not sure about this
    deltaT = deltaT / AUTOK
 
-   call MPI_AllGather(temp, 1, MPI_DOUBLE_PRECISION, temps,1, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, ierr )
+   call MPI_AllGather(temp, 1, MPI_DOUBLE_PRECISION, temp_list,1, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, ierr )
    if (my_rank.eq.0)then
       do i=1,nreplica
-         write(20,'(A,I2,A,F8.2)')'Temperature of replica ', i-1, ' is ', temps(i)
+         write(20,'(A,I2,A,F8.2)')'Temperature of replica ', i-1, ' is ', temp_list(i)
       end do
    end if
-   temps = temps / AUTOK
+   temp_list = temp_list / AUTOK
 
    reps(my_rank+1) = my_rank
 
