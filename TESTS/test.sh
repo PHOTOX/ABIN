@@ -25,7 +25,7 @@ do
    if [[ -e $file.ref ]];then  # this should now be always true
       diff $file $file.ref > $file.diff
       if [[ $? -ge 1 ]];then
-         diff -y -W 320  $file $file.ref | egrep -e '|' -e '<' -e '>' > $file.diff
+         diff -y -W 500  $file $file.ref | egrep -e '|' -e '<' -e '>' > $file.diff
          ../numdiff.py $file.diff 2> /dev/null
       fi
       if [[ $? -ge 1 && $cont_no -eq 1 ]];then

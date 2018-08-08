@@ -21,7 +21,6 @@ module mod_analysis
    use mod_estimators , only: estimators
    use mod_general,     only: it, ipimd, icv,nwrite, nwritef, nwritev, &
                               nrest, nwritex, nstep, anal_ext, idebug
-   use mod_system
    use mod_density
    use mod_io 
    use mod_vinit,    only: remove_rotations
@@ -197,7 +196,7 @@ module mod_analysis
    integer,intent(in) :: time_step
    integer :: iat,iw,inh,itrj,is
    LOGICAL :: file_exists
-   character(len=200)    :: chout, chsystem
+   character(len=200)    :: chout, chsystem, chformat
 
    if(pot.eq.'_tera_'.and.ipimd.eq.2) call write_wfn()
 
@@ -273,13 +272,14 @@ module mod_analysis
    endif
 
    if(inose.eq.2)then
-      write(102,*)chQT
-      do iw=1,nwalk
-         do iat=1,natom*3
-            write(102,*)(ps(iat,is,iw),is=1,ns)
+      write(102, *)chQT
+      write(chformat, '(A1,I1,A7)')'(',ns,'E25.16)'
+      do iw = 1, nwalk
+         do iat = 1, natom * 3
+            write(102, fmt=chformat)(ps(iat ,is, iw), is = 1, ns)
          enddo
       enddo
-      write(102,*)langham
+      write(102, *)langham
    endif
    if(inose.eq.3)then
       write(102,*)chLT
@@ -292,8 +292,8 @@ module mod_analysis
    write(102,*)entot_cumul
 
    if(icv.eq.1)then
-      write(102,*)est_prim2_cumul,est_prim_vir,est_vir2_cumul
-      write(102,*)cv_prim_cumul,cv_vir_cumul
+      write(102,'(3E25.16)')est_prim2_cumul,est_prim_vir,est_vir2_cumul
+      write(102,'(2E25.16)')cv_prim_cumul,cv_vir_cumul
       if(ihess.eq.1)then 
          write(102,*)cv_dcv_cumul
          do iw=1,nwalk
@@ -332,6 +332,7 @@ module mod_analysis
    integer,intent(out)   :: it
    integer :: iat,iw,inh,itrj,is
    character(len=100) :: chtemp
+   character(len=200) :: chformat
    logical :: prngread
    character(len=20)  :: chin
 
@@ -348,6 +349,7 @@ module mod_analysis
       write(*,*)'irest=1, Reading geometry, velocities and other information from restart.xyz.'
    end if
 
+!   open(111, file=chin, status = "OLD", action = "READ", recl=1500)
    open(111,file=chin,status = "OLD", action = "READ")
    read(111,*)it, sim_time
    read(111,'(A)')chtemp
@@ -382,7 +384,7 @@ module mod_analysis
          do inh=1,nchain
             do iw=1,nwalk
                do iat=1,natom
-                  read(111,*)pnhx(iat,iw,inh),pnhy(iat,iw,inh),pnhz(iat,iw,inh)
+                  read(111, *)pnhx(iat,iw,inh),pnhy(iat,iw,inh),pnhz(iat,iw,inh)
                enddo
             enddo
          enddo
@@ -404,9 +406,14 @@ module mod_analysis
    if(inose.eq.2.and.readQT.eq.1)then
       read(111,'(A)')chtemp
       call checkchar(chtemp, chqt)
+      write(chformat, '(A1,I1,A7)')'(',ns,'E25.16)'
       do iw=1,nwalk
          do iat=1,natom*3
-            read(111,*)(ps(iat, is, iw),is=1, ns)
+            do is = 1, ns-1
+            !read(111, fmt=chformat)(ps(iat, is, iw), is = 1, ns)
+               read(111, '(1E25.16)', advance = "no")ps(iat, is, iw)
+            end do
+            read(111, '(1E25.16)')ps(iat, ns, iw)
          enddo
       enddo
       read(111,*)langham
@@ -418,7 +425,7 @@ module mod_analysis
       read(111,*)langham
    endif
 
-!- reading cumulative averages of various estimators
+   ! reading cumulative averages of various estimators
    read(111,'(A)')chtemp
    call checkchar(chtemp, chavg)
    read(111,*)est_temp_cumul
@@ -436,10 +443,10 @@ module mod_analysis
       endif
    endif
 
-!- Trying to restart PRNG
-!- prngread is optional argument determining, whether we write or read
-!- currently,prngread is not used, since vranf is initialize BEFORE restart
-!  and is possibly rewritten here
+   ! Trying to restart PRNG
+   ! prngread is optional argument determining, whether we write or read
+   ! currently,prngread is not used, since vranf is initialize BEFORE restart
+   ! and is possibly rewritten here
    call rsavef(111,prngread) 
     
    close(111)

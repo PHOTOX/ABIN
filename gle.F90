@@ -119,6 +119,10 @@ contains
    integer :: i, cns, ios, iw
    character(len=10)     :: glea, glec
    character(len=2)      :: char_my_rank
+#if __GNUC__ == 0
+   write(*,*)'ERROR: GLE thermostat not supported with IFORT compiler. Sorry:-('
+   call abinerror('gle_init')
+#endif
 
    if(my_rank.eq.0)then 
       write(6,*) "# Initialization of GLE thermostat.                           "

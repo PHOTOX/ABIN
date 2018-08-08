@@ -33,11 +33,17 @@ print("Comparing numerical differences in file "+inpfile)
 
 def failed(n1, n2):
    delta = float(n1) - float(n2)
+#  print('I may have found a significant numerical difference in file '+inpfile)
+#  print('Differing numbers: '+n1+"  "+n2)
+#  print('Delta = ',delta)
+   # Let's just not report small differences at all,
+   # It just creates a noise
+   if delta < DELTA:
+      return
+   print('>>>>')
    print('I may have found a significant numerical difference in file '+inpfile)
    print('Differing numbers: '+n1+"  "+n2)
    print('Delta = ',delta)
-   if delta < DELTA:
-      return
 #  The following is not really useful, just exit at first error
    exit(1)
    yn = raw_input('Is this difference ok? [y/n]')
@@ -64,7 +70,6 @@ def compare(numbers1, numbers2):
           sign1, digits1, exp1 = dec1.as_tuple() 
           sign2, digits2, exp2 = dec2.as_tuple() 
           if sign1 != sign2 or exp1 != exp2:
-             print('>>>>')
              failed(numbers1[i], numbers2[i])
              continue
 
@@ -79,8 +84,8 @@ def compare(numbers1, numbers2):
           ints2=int(ints2)
           # This allows to get rid off insignificant rounding errors
           if abs(ints1-ints2) != 1:
-             print(">>>>")
-             print(len(numbers1), i)
+             #print(">>>>")
+             #print(len(numbers1), i)
              failed(numbers1[i], numbers2[i])
 
 

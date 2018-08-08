@@ -1,3 +1,57 @@
+module compile_info
+
+   CONTAINS
+   subroutine print_compile_info()
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+   use iso_fortran_env, only: compiler_version, compiler_options
+#endif
+   character(len=1024) :: cmdline
+
+   print *, 'Compiled at  ', DATE
+   print *, COMMIT
+!$ print *,'Compiled with parallel OpenMP support for PIMD.'
+#ifdef USEFFTW
+   write(*,*)'Compiled with FFTW support.'
+#endif
+#ifdef CP2K
+   write(*,*)'Compiled with in-built CP2K interface.'
+#endif
+#ifdef PLUM
+   write(*,*)'Compiled with PLUMED (static lib).'
+#endif
+#ifdef MPI
+   write(*,*)'Compiled with MPI support.'
+   write(*,*)'(used for REMD and direct CP2K and TeraChem interfaces.)'
+#endif
+   print *,' '
+
+#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+   print *, 'This program was compiled by ',  &
+             compiler_version(), ' using the options: '
+   print *,     compiler_options()
+#endif
+
+   print '(a)',''
+   print '(a)','#################### RUNTIME INFO ####################'
+   write(*,*)
+   write(*,'(A17)')"Running on node: "
+   call system('uname -n')
+   write(*,'(A19)')'Working directory: '
+   call system('pwd')
+   write(*,*)
+   call get_command(cmdline)
+   write(*,*)trim(cmdline)
+   call flush(6)
+   call get_command_argument(0, cmdline)
+   write(*,*)
+   call system('ldd '//cmdline)
+   print '(a)','######################################################'
+
+   end subroutine print_compile_info
+
+end module compile_info
+
+
 ! This messy function performs many things, among others:
 ! 1. Reading input
 ! 2. Input sanity check
@@ -48,6 +102,7 @@ subroutine init(dt, values1)
 #endif
    use mod_terampi
    use mod_terampi_sh
+   use compile_info
    implicit none
    real(DP),intent(out) :: dt
    integer,dimension(8) :: values1
@@ -63,6 +118,7 @@ subroutine init(dt, values1)
    logical        :: rem_comvel, rem_comrot
 !  real(DP) :: wnw=5.0d-5
    integer :: ierr
+   integer :: irand
 !$ integer :: nthreads, omp_get_max_threads
 !  wnw "optimal" frequency for langevin (inose=3) 
 #ifdef NAB
@@ -468,7 +524,7 @@ print '(a)','**********************************************'
          if (inose.ne.0) write(*,*)'Target temperature in Kelvins =', temp
       end if
 
-!-----conversion of temperature from K to au
+      ! conversion of temperature from K to au
       temp = temp / AUtoK
       temp0 = temp0 / AUtoK
 
@@ -1101,16 +1157,11 @@ print '(a)','   / /      \ \    | |_|  |   | |   | |   \  |'
 print '(a)','  /_/        \_\   |_____/    |_|   |_|    \_|'
 print '(a)',' '
 
-print '(a)','     version 1.0'
-print '(a)',' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek 2011-2015'
+print '(a)',' version 1.1'
+print '(a)',' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek'
 print '(a)',' '
 
 call print_compile_info()
-write(*,*)
-write(*,'(A17)',advance='no')"Running on node: "
-call system('uname -n')
-write(*,'(A19)',advance='no')'Working directory: '
-call system('pwd')
 write(*,'(A16)',advance='no')'Job started at: '
 write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
         values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
@@ -1203,44 +1254,5 @@ write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
 
    end subroutine Get_cmdline
 
-   subroutine print_compile_info()
-   character(len=1024)   :: cmdline
-
-   print *, 'Compiled at  ', DATE
-   print *, COMMIT
-!$ print *,'Compiled with parallel OpenMP support for PIMD.'
-#ifdef USEFFTW
-   write(*,*)'Compiled with FFTW support.'
-#endif
-#ifdef CP2K
-   write(*,*)'Compiled with in-built CP2K interface.'
-#endif
-#ifdef PLUM
-   write(*,*)'Compiled with PLUMED (static lib).'
-#endif
-#ifdef MPI
-   write(*,*)'Compiled with MPI support.'
-   write(*,*)'(used for REMD and direct CP2K and TeraChem interfaces.)'
-#endif
-   print *,' '
-
-#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
-   print *, 'This program was compiled by ',  &
-             compiler_version(), ' using the options: '
-   print *,     compiler_options()
-#endif
-
-print '(a)',''
-print '(a)','#################### RUNTIME INFO ####################'
-call get_command(cmdline)
-write(*,*)trim(cmdline)
-call flush(6)
-call get_command_argument(0, cmdline)
-call system('ldd '//cmdline)
-print '(a)','######################################################'
-
-   end subroutine print_compile_info
-
 end subroutine init
-
 
