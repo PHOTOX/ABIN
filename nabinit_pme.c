@@ -48,10 +48,6 @@ if(*iqmmm == 2) {
 	mme_init( qm, NULL, "::Z", dummy, NULL );
 }
 
-//debugDEBUG
-/*FILE_T *file1;
-file1 = fopen( "grad237.dat", "w" );
-fclose(file1);*/
 }
 
 void nab_getbox_(REAL_T *x,REAL_T *y,REAL_T *z) {

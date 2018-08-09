@@ -28,10 +28,10 @@ CONTAINS
 
 
    ! Broadcast array of random numbers from rank 0 
-   if (my_rank.eq.0)then
-      call vranf(ran, nreplica-1, 0, 6)
-!      write(*,*)'rans', (ran(i),i=1,nreplica)
-   end if
+   if (my_rank.eq.0) call vranf(ran, nreplica-1, 0, 6)
+
+   ! TODO: This is probably no longer needed, each mpi rank has now
+   ! "independent" prngs...
    call MPI_Bcast(ran, MAX_REPLICA, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
    if (my_rank.ne.0) rn = ran(my_rank)
 

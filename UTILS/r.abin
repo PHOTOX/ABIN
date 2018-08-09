@@ -54,7 +54,7 @@ if [[ $REMD == "true" ]];then
    # TODO: We currently allow only <100 replicas
    files_exist $INPUTGEOM.[0-9][0-9]
    source SetEnvironment.sh ABIN mpi
-   ABINEXE="$MPIRUN -np $N_REPLICAS $ABINEXE"
+   ABINEXE="$MPIRUN -n $N_REPLICAS $ABINEXE"
 else
    files_exist $INPUTGEOM
    source SetEnvironment.sh ABIN

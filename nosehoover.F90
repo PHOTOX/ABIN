@@ -135,7 +135,7 @@ module mod_nhc
    end if
 
 
-   if(nmolt.le.50)then
+   if(nmolt.le.50.and.my_rank.eq.0)then
       write(*,*)'Thermostat masses'
       if(imasst.eq.1) write(*,*)(Qm(iw),iw=1,nwalk)
       if(imasst.eq.0)then 
@@ -145,9 +145,8 @@ module mod_nhc
       endif
    endif
 
-!---NOW INITIALIZE thermostat POSITION AND MOMENTA---
+   ! Initialize thermostat momenta
    if(initNHC.eq.1.and.imasst.eq.1)then
-      write(*,*)'Initializing NHC momenta.'
       do inh=1,nchain
          do iw=1,nwalk
             call gautrg(ran,natom*3,0,6)
@@ -163,7 +162,6 @@ module mod_nhc
 
    else if (initNHC.eq.1.and.imasst.eq.0)then
 
-      write(*,*)'Initializing NHC momenta.'
       do inh=1,nchain
          do iw=1,nwalk
             ! +1 if nmolt=1, gautrg needs array at least of length=2
@@ -176,12 +174,11 @@ module mod_nhc
 
    endif
 
-!-----NOW SET SUZUKI-YOSHIDA WEIGHTS
+   ! SET SUZUKI-YOSHIDA WEIGHTS
    if(nyosh.eq.3)then
       w(1) = 1.0d0 / ( 2.0d0-2**(1.0d0/3.0d0) )
       w(3) = w(1)
       w(2) = 1 - w(1) - w(3)
-!     write(*,*)w(1),w(2),w(3)
    else if(nyosh.eq.1)then
       w(1) = 1
    else if(nyosh.eq.7)then
@@ -230,9 +227,7 @@ module mod_nhc
    close(100)
    end subroutine
       
-!------------------------------------------------------
 
-!TODO: pro pouziti na male systemy bude treba odstranit rotace
       SUBROUTINE shiftNHC_yosh (px,py,pz,amt,dt)
       use mod_array_size
       use mod_general

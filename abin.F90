@@ -427,6 +427,8 @@ end subroutine finish
 subroutine clean_temp_files
 !use mod_system, only: clean_prop_tempfiles
 
+   ! TODO: Implement "clean" bash function in abin interfaces
+   ! that should be called here (and only if irest=0)
    call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
 !   call clean_prop_tempfiles()
 

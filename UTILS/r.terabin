@@ -57,10 +57,10 @@ fi
 
 export LD_LIBRARY_PATH=
 source SetEnvironment.sh TERACHEM
-MPIRUN_TERA="$MPIRUN -np 1 "
+MPIRUN_TERA="$MPIRUN -n 1 "
 source SetEnvironment.sh ABIN mpi
 # This needs to be the same as MPIRUN_TERA
-MPIRUN_ABIN="$MPIRUN -np $N_REPLICAS"
+MPIRUN_ABIN="$MPIRUN -n $N_REPLICAS"
 
 rm -f port.txt.*
 

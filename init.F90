@@ -286,7 +286,6 @@ print '(a)','              Ehrenfest MD                    '
 
   write(*,*)'    using potential: ', LowerToUpper(pot)
 print '(a)','                                              '
-print '(a)','**********************************************'
 
    end if
 
@@ -367,9 +366,8 @@ print '(a)','**********************************************'
    call allocate_arrays(natom, nwalk+1)
 !  Ehrenfest require larger array since gradients for all of the states are need   
 !  TODO: We should really make this differently..
-   if(ipimd.eq.4)then
-      call allocate_ehrenfest(natom, nstate)
-   end if
+   if(ipimd.eq.4) call allocate_ehrenfest(natom, nstate)
+
 
 !  READING GEOMETRY
    read(111, *)
@@ -398,7 +396,6 @@ print '(a)','**********************************************'
          z(iat,iw) = z(iat,1)
       enddo
    enddo
-!-----END OF READING GEOMETRY      
 
 
       ! the namelist system does not need to be present
@@ -560,28 +557,25 @@ print '(a)','**********************************************'
 
       if (pot.eq.'mmwater'.or.pot_ref.eq.'mmwater') call check_water(natom, names)
 
-!----THERMOSTAT INITIALIZATION------------------ 
-!----MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
+!    MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
      if (my_rank .ne. 0) then
         call srand(irandom)
-        do ipom=0,my_rank
-        irandom = irand()
+        do ipom = 0, my_rank
+           irandom = irand()
         end do
      end if
+
 !    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
-     call gautrg(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
+     call gautrg(rans, 0, IRandom, 6)  !initialize prng,maybe rewritten during restart
+
+!    THERMOSTAT INITIALIZATION
      if (inose.eq.1) call nhc_init()
      if (inose.eq.2) call gle_init(dt*0.5/nabin/nstep_ref) !nabin is set to 1 unless ipimd=1
      if (inose.eq.3) call pile_init(dt*0.5,tau0)
 
 
-!----performing RESTART from restart.xyz
-     if(irest.eq.1)then
-        call restin(x,y,z,vx,vy,vz,it)
-     end if
-!----END OF INPUT SECTION------
-
-!-----INITIALIZATION-----------
+!    performing RESTART from restart.xyz
+     if(irest.eq.1) call restin(x, y, z, vx, vy, vz, it)
 
 
       if(pot.eq.'2dho')then

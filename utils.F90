@@ -1,6 +1,5 @@
 ! Various helper functions and subroutines that may be used throughout the program.
 module mod_utils
-   use iso_fortran_env
    use mod_const, only: DP
    implicit none
    public
@@ -114,5 +113,16 @@ module mod_utils
       call system(chsystem)
    end if
    end subroutine archive_file
+
+   subroutine debug_output(msg)
+   ! See SO about fortran std units
+   ! https://stackoverflow.com/questions/8508590/standard-input-and-output-units-in-fortran-90#8508757
+   use iso_fortran_env, only: error_unit
+   character(len=*), intent(in) :: msg
+
+   write(error_unit, '(A)') msg
+   call flush(error_unit)
+
+   end subroutine debug_output
 
 end module mod_utils
