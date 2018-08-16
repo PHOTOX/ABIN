@@ -1,15 +1,20 @@
 #!/bin/bash
 
-# Example SGE params for PHOTOX clusters
-#$ -V -cwd
-##$ -q aq -pe shm 3
-
 # This is a sample script for launching ABIN simulations in cluster environments.
 # 1. Copy all data from $PWD to the node's scratch. 
 #    (not copying folders except for the BASH-interface folder)
 # 2. Launch ABIN.
 # 3. Copy data back (only newer files are copied!).
 # 4. Remove scratch directory. (if delscratch = true)
+
+# Example SGE params for PHOTOX clusters
+#$ -V -cwd
+##$ -q aq -pe shm 3
+
+# Example SLURM parameters
+#SBATCH --mem=1000
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
 
 # SETUP # 
 OUTPUT=output
@@ -21,6 +26,11 @@ INPUTVELOC=
 # SETUP END # 
 
 SCRDIR=/scratch/$USER/$JOBNAME
+
+# In SLURM, we might already have a dedicated directory
+if [[ ! -z $SLURM_TMPDIR ]];then
+   SCRDIR=$SLURM_TMPDIR
+fi
 
 function files_exist {
    for file in $* ;
@@ -78,10 +88,11 @@ echo "$SCRDIR" >> job.log
 LAUNCH_DIR=$PWD
 
 if [[ -d $SCRDIR ]];then
-   echo "Job direcory $SCRDIR already exist!"
-   echo "Perhaps it's a leftover from some old job, you could probably delete it."
-   echo "Exiting..."
-   exit 1
+   if [[ -z $SLURM_TMPDIR ]];then
+      echo "Job direcory $SCRDIR already exist!"
+      echo "Perhaps it's a leftover from some old job, you could probably delete it."
+      exit 1
+   fi
 else
    mkdir $SCRDIR
 fi
@@ -121,10 +132,10 @@ if [[ $? -ne "0" ]];then
    exit 1
 fi
 
-
 cd ..
 
 if [[ $delscratch -eq "true" ]];then
-   rm -r $SCRDIR
+   rm -r $SCRDIR 
+   rm $LAUNCH_DIR/job.log
 fi
 

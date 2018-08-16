@@ -12,6 +12,13 @@
 #$ -l num_gpu=1
 ##$ -pe shm 1 -q nq-gpu
 
+# Example SLURM parameters
+#SBATCH --mem=10000
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --gres=gpu:1
+
 # ABIN SETUP 
 OUTPUT=output
 JOBNAME=ABIN_${JOB_ID}_$$
@@ -210,6 +217,7 @@ cd ..
 
 if [[ $delscratch -eq "true" ]];then
    rm -r $SCRDIR
+   rm $LAUNCH_DIR/job.log
 fi
 
 
