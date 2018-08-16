@@ -88,7 +88,7 @@ SCRDIR=/scratch/$USER/$JOBNAME
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 
-KDE=`pwd`
+LAUNCH_DIR=$PWD
 
 if [[ -d $SCRDIR ]];then
    echo "ERROR: Job directory $SCRDIR already exist!"
@@ -205,7 +205,7 @@ while true;do
 
 done
 
-cp -upr * $KDE/.
+cp -upr * $LAUNCH_DIR/.
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
    echo "I will keep the directory $SCRDIR on node:"

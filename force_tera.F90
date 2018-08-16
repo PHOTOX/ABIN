@@ -315,9 +315,10 @@ subroutine connect_terachem( itera )
    include 'mpif.h'
    integer, intent(in)  :: itera
    character(255)  :: port_name
-   integer         :: ierr, newcomm
+   integer         :: ierr, newcomm, iost
    real*8          :: timer
    logical         :: done=.false.
+   ! TODO: Move portfile to init.F90
    character(len=50) :: server_name, portfile
    character(len=1)  :: chtera
 
@@ -361,10 +362,20 @@ subroutine connect_terachem( itera )
    else
 
       portfile='port.txt.'//chtera
-      write(6,'(A)') 'Reading TeraChem port name from file '//portfile
-      call system('sync')    ! flush HDD buffer
-      open(500, file=portfile, action="read")
-      read(500, *)port_name
+      write(6,'(A)') 'Reading TeraChem port name from file '//trim(portfile)
+      call system('sync')    ! flush HDD buffer, not sure how portable this is
+      open(500, file=portfile, action="read", status="old", iostat=iost)
+      if (iost.ne.0)then
+         write(*,*)'WARNING: Cannot open file '//trim(portfile)
+         write(*,*)'Will wait for 10s and try again...'
+         call system('sleep 10')
+         open(500, file=portfile, action="read", status="old")
+      end if
+      read(500, '(A)', iostat=iost)port_name
+      if (iost.ne.0)then
+          write(*,*)'ERROR when reading file '//trim(portfile)
+          stop 1
+      end if
       close(500)
 
    end if

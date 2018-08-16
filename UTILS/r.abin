@@ -105,6 +105,7 @@ fi
 OURSETENV=$(which SetEnvironment.sh)
 cp $OURSETENV .
 
+# TODO: Use rsync here
 cp -p * $SCRDIR/.
 if [[ -d $INTERFACE ]];then
    cp -r $INTERFACE $SCRDIR/
@@ -118,12 +119,15 @@ fi
 
 cd $SCRDIR
 
+# TODO Trap signals from SGE and SLURM
+
 if [[ -z $INPUTVELOC ]];then
    $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 else
    $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT
 fi
 
+# TODO: Use rsync here
 cp -upr * $LAUNCH_DIR/
 if [[ $? -ne "0" ]];then
    echo "Error when copying the data from scratch back to the server."
