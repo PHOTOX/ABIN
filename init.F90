@@ -167,7 +167,7 @@ subroutine init(dt, time_data)
    error=0
    iplumed=0
 
-   chdividider = "############################################################"
+   chdivider = "############################################################"
 
    call Get_cmdline(chinput, chcoords, chveloc)
 
