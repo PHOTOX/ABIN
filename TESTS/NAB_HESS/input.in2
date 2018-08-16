@@ -1,6 +1,6 @@
 
 &general
-nstep=5,
+nstep=2,
 irest=1,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
 idebug=0
 iknow=0

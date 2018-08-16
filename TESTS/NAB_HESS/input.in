@@ -5,7 +5,7 @@
 # TESTING nyosh = 5
 
 &general
-nstep=3,
+nstep=1,
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
 idebug=0
 iknow=0
