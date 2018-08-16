@@ -180,10 +180,6 @@ module mod_system
    ! Original citation: Wieser, M. E., et al., Pure Appl. Chem. 85, 1047, 2013
    allocate( am(natom) )
    am=-1.0d0
-   if (my_rank.eq.0)then
-      print *,''
-      print *,'-----------------ATOMIC MASSES----------------------------'
-   end if
    do i=1,natom
       if(names(i).eq.'H')then
        am(i)=1.008d0
@@ -374,14 +370,15 @@ module mod_system
    end do
 
    if (natom.le.100.and.my_rank.eq.0)then
-      print *,'These are the atom names I found:'
+      print *,''
+      print *,'-------------------ATOMIC MASSES----------------------------'
       do i=1,natom
          write(*,'(A2, A1)',advance='no')names(i),' '
       end do
       write(*,*)
       print *,'The corresponding relative atomic masses are:'
       write(*,*)(am(i),i=1,natom)
-      print *,'----------------------------------------------------------'
+      print *,'------------------------------------------------------------'
    end if
 
    ! Finally, convert masses to atomic units

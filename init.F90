@@ -120,6 +120,7 @@ subroutine init(dt, time_data)
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
    character(len=20)   :: xyz_units='angstrom'
+   character(len=60)   :: chdivider
    LOGICAL :: file_exists
    logical        :: rem_comvel, rem_comrot
 !  real(DP) :: wnw=5.0d-5
@@ -165,6 +166,8 @@ subroutine init(dt, time_data)
    dt=-1  
    error=0
    iplumed=0
+
+   chdividider = "############################################################"
 
    call Get_cmdline(chinput, chcoords, chveloc)
 
@@ -270,23 +273,24 @@ subroutine init(dt, time_data)
       write(*,*)'XYZ Units = '//trim(xyz_units)
       call PrintLogo(time_data)
 
-print '(a)','                                              '
-   SELECT CASE (ipimd)
-      case (0)
-print '(a)','              Classical MD                    '
-      case (1)
-print '(a)','            Path Integral MD                  '
-      case (2)
-print '(a)','           Surface Hopping MD                 '
-      case (3)
-print '(a)','              Minimization                    '
-      case (4)
-print '(a)','              Ehrenfest MD                    '
-   END SELECT
 
-  write(*,*)'    using potential: ', LowerToUpper(pot)
-print '(a)','                                              '
+      print '(a)','                                              '
+      SELECT CASE (ipimd)
+         case (0)
+            print '(a)','              Classical MD                    '
+         case (1)
+            print '(a)','            Path Integral MD                  '
+         case (2)
+            print '(a)','           Surface Hopping MD                 '
+         case (3)
+            print '(a)','              Minimization                    '
+         case (4)
+            print '(a)','              Ehrenfest MD                    '
+      END SELECT
 
+            write(*,*)'    using potential: ', LowerToUpper(pot)
+               print '(a)','                                              '
+            print '(a)', chdivider
    end if
 
    ! Get number of atoms from XYZ coordinates NOW so that we can allocate arrays
@@ -516,6 +520,11 @@ print '(a)','                                              '
 
       if(pot_ref.ne.'none')then
          md = 4
+         write(*, '(A)')'Using Multiple Time-Step RESPA integrator!'
+         write(*, '(A)')"Reference (cheap potential) = "//trim(pot_ref)
+         write(*, '(A, F6.2)')"with timestep [fs] ", dt / nstep_ref * AUtoFS
+         write(*, '(A)')"Full potential = "//trim(pot)
+         write(*, '(A, F6.2)')"with timestep [fs] ", dt * AUtoFS
       end if
 
 #ifdef USEFFTW
