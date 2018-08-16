@@ -1,5 +1,5 @@
 #!/bin/bash
-cd DFTB
+cd $(dirname $0)
 source ../SetEnvironment.sh DFTB
 
 timestep=$1

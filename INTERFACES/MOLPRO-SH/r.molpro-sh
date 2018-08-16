@@ -6,7 +6,7 @@
 # You should't need to modify this file!
 # Specification of CAS wavefunction is in file molpro.setup
 
-cd MOLPRO-SH
+cd $(dirname $0)
 
 timestep=$1
 ibead=$2

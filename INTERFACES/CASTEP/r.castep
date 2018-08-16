@@ -1,5 +1,5 @@
 #!/bin/bash
-cd CASTEP
+cd $(dirname $0)
 
 # These to files needs to be prepared for CASTEP
 CELL_FILE=template.cell

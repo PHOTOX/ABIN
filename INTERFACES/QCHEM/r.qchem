@@ -1,5 +1,5 @@
 #!/bin/bash
-cd QCHEM
+cd $(dirname $0)
 
 source ../SetEnvironment.sh QCHEM
 

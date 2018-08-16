@@ -2,7 +2,7 @@
 
 # This script must reside in folder 'MM'!
 
-cd MM
+cd $(dirname $0)
 source ../SetEnvironment.sh OPENMM
 
 timestep=$1

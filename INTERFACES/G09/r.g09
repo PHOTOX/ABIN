@@ -1,5 +1,5 @@
 #!/bin/bash
-cd G09
+cd $(dirname $0)
 
 source ../SetEnvironment.sh GAUSSIAN
 

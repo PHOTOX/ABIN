@@ -1,6 +1,5 @@
 #!/bin/bash
-cd ORCA
-
+cd $(dirname $0)
 source ../SetEnvironment.sh ORCA
 
 timestep=$1

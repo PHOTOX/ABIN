@@ -1,5 +1,7 @@
 #!/bin/bash
-#
+
+# This is a deprecated script, which might not really work...
+
 # DHWARNING: This script requires nwritex=1 in the input.in!
 
 # ABIN interface for Time-derivative coupling code for GAMESS.
@@ -9,7 +11,7 @@
 POT=FOMO
 #POT=CASSCF
 
-cd GAMESS-TDC
+cd $(dirname $0)
 timestep=$1
 ibead=$2
 input=input$ibead

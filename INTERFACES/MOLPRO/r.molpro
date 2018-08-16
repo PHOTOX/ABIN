@@ -1,5 +1,5 @@
 #!/bin/bash
-cd MOLPRO
+cd $(dirname $0)
 timestep=$1
 ibead=$2
 input=input$ibead
