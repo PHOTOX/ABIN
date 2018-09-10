@@ -50,7 +50,7 @@ Short descriptions of key source files.
 
 | Path     | Description |
 |----------|-------------|
-| SAMPLE/        |  Contains sample input files. |
+| SAMPLE/        | Contains sample input files. |
 | INTERFACES/    | Contains bash interfaces to common ab initio codes. |
 | UTIL/          | Contains some handy scripts that might be useful in conjuction with the MD code. |
 | NAB/           | Contains force field routines taken from AmberTools package. |
@@ -64,7 +64,7 @@ Short descriptions of key source files.
 | surfacehop.f90 | Surface Hopping dynamics |
 | sh_integ.f90   | Propagation of electronic wavefunction in SH dynamics | 
 | gle.F90        | Generalized Langevin Equation thermostat |
-| shake.f90      | Contraints using SHAKE algorithm. |
+| shake.f90      | Constraints using SHAKE algorithm. |
 | analysis.f90   | Driver routine for printing output. |
 | arrays.f90     | Module containing all dynamically allocated arrays.| 
 | random.f90     | Random number generator. |

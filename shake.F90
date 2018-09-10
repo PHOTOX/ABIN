@@ -7,6 +7,7 @@ module mod_shake
    public   :: shake_init, shake_tol, nshake, shake, ishake1, ishake2
    real(DP), allocatable :: dshake(:)
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || ( __GNUC__ > 4 )
+   ! TODO: merge ishake1 and ishake2
    integer, allocatable  :: ishake1(:),ishake2(:)
 #else
    integer, parameter    :: MAXSHAKE=6000
@@ -17,10 +18,90 @@ module mod_shake
    save
    contains
 
+   subroutine find_hbonds(x, y, z, num_shake)
+      use mod_const, only: ANG
+      use mod_general, only: natom
+      use mod_system, only: names
+      use mod_utils, only: get_distance
+      real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
+      integer, intent(out) :: num_shake
+      real(DP) :: r, hbond_len_thr
+      integer :: iat1, iat2, iw, ish
+
+      ! DH fixed threshold for now, we should make it a parameter
+      ! Or determine bonds in a better way
+      hbond_len_thr = 2.0 * ANG
+      ! Here we assume that each H atom has a single bond
+      num_shake = count_atoms('H')
+      ! TODO: Not sure about this, but shake does not 
+      ! work with PIMD anyway at this point
+      iw = 1
+
+      ish = 0
+      do iat1 = 1, natom 
+
+         if (trim(names(iat1)).ne.'H') cycle
+
+         do iat2 = 1, natom
+
+            ! TODO: Is there a nicer way to do it? 
+            if (iat1.eq.iat2) cycle
+
+            r = get_distance(x, y, z, iat1, iat2, iw)
+            if (r.le.hbond_len_thr)then
+               ish = ish + 1
+               ishake1(ish) = iat1
+               ishake2(ish) = iat2
+               ! TODO: Maybe we should continue and check
+               ! whether we find more than one bond?
+               exit
+            end if
+
+            ! We expect each H to be bonded!
+            if(iat2.eq.natom)then
+               write(*,*)'ERROR: Could not find bond for hydrogen atom! index = ', iat1
+               call abinerror('find_bonds')
+            end if
+         end do
+
+      end do
+
+      if (ish.ne.nshake)then
+         write(*,*)'ERROR: Whoops, something wrong when determining H bonds!'
+         call abinerror('find_hbonds')
+      end if
+
+      write(*,*)'Found the following bonds to H atoms'
+      do iat1 = 1, num_shake
+         write(*,'(A2, A2, 2I6)')names(ishake1(iat1)), names(ishake1(iat1)), ishake1(iat1), ishake2(iat1)
+      end do
+
+   end subroutine find_hbonds
+
+   real(DP) function count_atoms(atom_name)
+      use mod_general, only: natom
+      use mod_system, only: names
+      character(len=*), intent(in) :: atom_name
+      integer :: nat, iat
+      nat = 0
+      do iat = 1, natom
+        if (names(iat).eq.atom_name) nat = nat +1
+      end do
+      count_atoms = nat
+      return
+   end function count_atoms
+
+
    subroutine shake_init(x,y,z)
-   real(DP) x(:,:),y(:,:),z(:,:)
-   real(DP) xi,yi,zi,xj,yj,zj
-   integer :: ixshake,i,j
+   real(DP) x(:,:), y(:,:), z(:,:)
+   real(DP) xi, yi, zi, xj, yj, zj
+   integer :: ixshake, i, j
+   
+   ! TODO: This is a temporary swith for SHAKEing H atoms
+   if (nshake.eq.-1)then
+      call find_hbonds(x, y, z, nshake)
+   end if
+
    allocate ( dshake(nshake) )
    Do ixshake=1,nshake
       i=ishake1(ixshake)

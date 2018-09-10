@@ -514,7 +514,7 @@ subroutine init(dt, time_data)
       end if
 
       ! we should include shake into the verlet routine
-      if(nshake.gt.0)then
+      if(nshake.ne.0)then
          md = 3
       end if
 
@@ -556,9 +556,11 @@ subroutine init(dt, time_data)
          endif
       endif
 
-!----SHAKE initialization,determining the constrained bond lenghts
-      if(nshake.ge.1)then
-         if (my_rank.eq.0) write(*,*)'Setting distances for SHAKE from mini.dat'
+!     SHAKE initialization, determining the constrained bond lenghts
+      if(nshake.ne.0)then
+         if (my_rank.eq.0)then 
+            write(*,*)'Setting distances for SHAKE from XYZ coordinates'
+         end if
          call shake_init(x,y,z)
       endif
 
@@ -1039,13 +1041,11 @@ subroutine init(dt, time_data)
       write(*,*)'ERROR:irest has to be 1 or 0'
        error=1
       endif
-      if(nshake.gt.0.and.ipimd.eq.1)then
-       write(*,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
-       write(*,*)'PIMD with SHAKE cannot use massive thermostating!Exiting... !'
+      if(nshake.ne.0.and.ipimd.eq.1)then
+       write(*,*)'PIMD with SHAKE cannot use massive thermostating!'
        error=1
       endif
-      if(nshake.gt.0.and.imasst.eq.1)then
-       write(*,*)'!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '
+      if(nshake.ne.0.and.imasst.eq.1.and.inose.gt.0)then
        write(*,*)'SHAKE cannot use massive thermostating!'
        write(*,*)'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
        error=1
