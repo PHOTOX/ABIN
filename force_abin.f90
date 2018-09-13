@@ -131,7 +131,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 !-----READING ENERGY from engrad.dat
       read(MAXUNITS+iw,*,IOSTAT=iost)temp1
       if(iost.ne.0)then
-         write(*,*)'Fatal problem with reading energy from file ', chforce
+         write(*,*)'ERROR: Could not read energy from file ', chforce
+         write(*,*)'Fortran ERROR = ', iost
          write(*,*)'This usually means, that the ab initio program failed to converge.'
          write(*,*)'See the appropriate output files from the external program in folder '//trim(LowerToUpper(chpot))//"/."
          call abinerror('force_abin')
@@ -160,8 +161,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          iost = read_forces(fx, fy, fz, natqm, iw, MAXUNITS+iw)
       end if
       if(iost.ne.0)then
-         write(*,*)'Fatal problem with reading gradients from file ', chforce
-         write(*,*)'Fortran ERROR', iost
+         write(*,*)'ERROR: Could not read gradients from file ', chforce
+         write(*,*)'Fortran ERROR = ', iost
          write(*,*)'This usually means, that the ab initio program failed.'
          write(*,*)'See the appropriate output files from external program in folder ' &
          //trim(LowerToUpper(chpot))//"/."
