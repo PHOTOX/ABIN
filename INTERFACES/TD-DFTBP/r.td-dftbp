@@ -1,0 +1,90 @@
+#!/bin/bash
+cd $(dirname $0)
+source ../SetEnvironment.sh DFTB
+
+# This is a small modification of DFTB+ interface to enable 
+# adiabatic MD on S1 surface
+
+# This assumes you actually use the Surface Hopping driver in ABIN,
+# but disable hopping and calculation of NACM, cause they are not implemented in DFTB+
+# i.e. nohop=1, inac=1
+
+# You need to set the same number of states in ABIN input and DFTB+ in dftb_in.hsd
+
+# TODO: need to test scaling with number of CPUs
+export OMP_NUM_THREADS=1
+
+timestep=$1
+ibead=$2
+input=input$ibead
+geom=../geom.dat.$ibead
+
+# reading from state.dat
+# Number of states,state we are on and which NACM to compute
+read -t 2 -a nstate
+#read -t 2 -a tocalc   # This is not used here
+
+natom=`cat $geom | wc -l`
+WRKDIR=OUT$ibead
+mkdir -p $WRKDIR ; cd $WRKDIR
+
+# You have to specify, which elements are present in your system
+# i.e. define array id[x]="element"
+# No extra elements are allowed.
+awk -v natom="$natom" 'BEGIN{
+   id[1]="C"
+   id[2]="H"
+   nid=2    # number of different elements
+
+# END OF USER INPUT
+   print natom,"C"
+   for (i=1;i<=nid;i++) {
+      printf"%s ",id[i]
+   }
+   print ""
+   print ""
+}
+#conversion of xyz input to dftb geom
+{
+   for (i=1;i<=nid;i++) {
+      if ( $1 == id[i] ) {
+         print NR, i, $2, $3, $4
+      }
+   }
+}'  ../$geom > geom_in.gen
+
+#Reading initial charge distribution
+if [ -e charges.bin ];then
+   sed 's/#ReadInitialCharges/ReadInitialCharges/' ../dftb_in.hsd > dftb_in.hsd
+else
+   cp ../dftb_in.hsd .
+fi
+
+rm -f detailed.out
+
+$DFTBEXE  &> $input.out
+################################
+cp $input.out $input.out.old
+
+### EXTRACTING ENERGY
+EN_GS=$(grep 'Total energy:' detailed.out | awk '{print $3}') 
+EN_EXC_DELTA=$(grep 'Excitation Energy:' detailed.out | awk '{print $3}')
+EN_EXC_TARGET=$(echo "$EN_GS + $EN_EXC_DELTA" | bc)
+echo $EN_GS > ../../engrad.dat.$ibead
+echo $EN_EXC_TARGET >> ../../engrad.dat.$ibead
+
+# Add other excited states (non-interacting, we're running adiabatic MD!)
+let nstate2=nstate-2
+tail -$nstate2 EXC.DAT | awk -v "en0=$EN_GS" '{print $1/27.2114 + en0}' >> ../../engrad.dat.$ibead
+
+# FORCES
+awk -v natom=$natom '{if ($2=="Forces"){for (i=1;i<=natom;i++){getline;printf"%3.15e %3.15e %3.15e \n",-$1,-$2,-$3}}}' \
+ detailed.out >> ../../engrad.dat.$ibead
+
+echo "ABIN Timestep: $timestep" >> ../detailed.out.all
+echo "ABIN Timestep: $timestep" >> ../EXC.dat.all
+echo "ABIN Timestep: $timestep" >> ../TDP.dat.all
+cat detailed.out >> ../detailed.out.all
+cat EXC.DAT >> ../EXC.dat.all
+cat TDP.DAT >> ../TDP.dat.all
+

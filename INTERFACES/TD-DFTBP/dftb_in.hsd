@@ -1,0 +1,41 @@
+Geometry = GenFormat {
+ <<< "geom_in.gen"
+}
+
+Hamiltonian = DFTB {
+  #ReadInitialCharges = yes
+  SCC = Yes
+  charge = 0.0
+   SlaterKosterFiles = Type2FileNames {
+   Prefix = "/home/hollas/programs/dftbplus/slater_koster/3ob-3-1/"
+   Separator = "-"
+   Suffix = ".skf"
+  }
+  MaxAngularMomentum {
+    C = "p"
+    H = "s"
+  }
+#  Filling = Fermi {
+#    Temperature [K] = 0
+#  }
+}
+
+Analysis {
+  CalculateForces = Yes
+}
+
+ParserOptions {
+  ParserVersion = 5
+}
+
+ExcitedState {
+  Casida {
+    NrOfExcitations = 6
+    StateOfInterest = 1
+    Symmetry = Singlet
+    WriteMulliken = Yes
+    WriteTransitionDipole = yes
+    WriteStatusArnoldi = Yes
+    TestArnoldi = Yes
+  }
+}
