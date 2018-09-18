@@ -69,17 +69,27 @@ module mod_utils
    end function LowerToUpper
 
    subroutine abinerror(chcaller)
-   character(len=*),intent(in)   :: chcaller
-   open(unit=500, file='ERROR', action='write', access='sequential')
-   write(500,*)'FATAL ERROR encountered in subroutine: ',chcaller
-   write(500,*)'Check standard output for further information. Exiting now...'
-   close(unit=500)
-   call flush(6)
-   call finish(1)
-   stop 1
+      use mod_general,  only: my_rank
+      character(len=*),intent(in)   :: chcaller
+      integer,dimension(8) :: time_end
+      open(unit=500, file='ERROR', action='write', access='sequential')
+      write(500,*)'FATAL ERROR encountered in subroutine: ',chcaller
+      write(500,*)'Check standard output for further information. Exiting now...'
+      close(unit=500)
+      if (my_rank.eq.0)then
+         call date_and_time(VALUES=time_end)
+         write(*,*)''
+         write(*,*)'Ended with ERROR at:'
+         write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")time_end(5),':',&
+           time_end(6),':',time_end(7),'  ',time_end(3),'.',time_end(2),'.',&
+           time_end(1)
+      end if
+      call flush(6)
+      call finish(1)
+      stop 1
    end subroutine abinerror
 
-   subroutine printf(fx,fy,fz)
+   subroutine print_xyz_arrays(fx,fy,fz)
    use mod_general, only: nwalk,natom
    use mod_const, only: DP
    implicit none
@@ -92,7 +102,7 @@ module mod_utils
       enddo
    enddo
 
-   end subroutine printf
+   end subroutine print_xyz_arrays
 
    subroutine archive_file(chfile, time_step)
    use mod_general,  ONLY: iremd, my_rank

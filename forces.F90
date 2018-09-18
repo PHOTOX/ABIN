@@ -247,7 +247,6 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
    use mod_array_size
    use mod_general, only: nwalk, inormalmodes, istage, natom, idebug
    use mod_nhc,   only: temp, inose
-   use mod_utils, only: printf
    implicit none
    real(DP), intent(in) :: x(:,:),y(:,:),z(:,:)
    real(DP), intent(in) :: amg(:,:)

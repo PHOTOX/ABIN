@@ -22,7 +22,7 @@ program abin_dyn
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_kinetic, ONLY: temperature
-   use mod_utils, only: abinerror, printf, archive_file
+   use mod_utils, only: abinerror, archive_file
    use mod_shake, only: nshake
    use mod_transform
    use mod_mdstep
@@ -44,7 +44,7 @@ program abin_dyn
    real(DP)    :: dt=20.0d0, eclas, equant
    integer     :: itrj
    LOGICAL     :: file_exists
-   integer,dimension(8) :: values1, values2
+   integer,dimension(8) :: time_start, time_end
    real(DP) :: TIME
    integer  :: ierr
 !$ integer  :: nthreads,omp_get_max_threads
@@ -53,7 +53,7 @@ program abin_dyn
    if(my_rank.eq.0) call clean_temp_files()
 
 !  INPUT AND INITIALIZATION SECTION
-   call init(dt, values1) 
+   call init(dt, time_start) 
 
    if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then
       call archive_file('restart.xyz',it)
@@ -84,10 +84,6 @@ program abin_dyn
       vz = transzv
 !  NORMAL MODE TRANSFORMATION
    else if(inormalmodes.gt.0)then
-      if(idebug.gt.1)then
-         write(*,*)'Positions before transform'
-         call printf(x,y,z)
-      endif
       call XtoU(x,y,z,transx,transy,transz)
       x = transx
       y = transy
@@ -96,13 +92,6 @@ program abin_dyn
       vx = transxv
       vy = transyv
       vz = transzv
-      if(idebug.gt.1)then
-         write(*,*)'Positions after transform'
-         call printf(x,y,z)
-         call Utox(x,y,z,transx,transy,transz)
-         write(*,*)'Positions after back transform'
-         call printf(transx,transy,transz)
-      endif
    endif
 
 !  End of transformations
@@ -304,15 +293,15 @@ program abin_dyn
       write(*,*)' Total cpu time [hours] (does not include ab initio calculations)'
       write(*,*)TIME/3600.
  
-      call date_and_time(VALUES=values2)
+      call date_and_time(VALUES=time_end)
       write(*,*)'Job started at:'
-      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values1(5),':', &
-           values1(6),':',values1(7),'  ',values1(3),'.',values1(2),'.',&
-           values1(1)
+      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")time_start(5),':', &
+           time_start(6),':',time_start(7),'  ',time_start(3),'.',time_start(2),'.',&
+           time_start(1)
       write(*,*)'Job finished at:'
-      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")values2(5),':',&
-           values2(6),':',values2(7),'  ',values2(3),'.',values2(2),'.',&
-           values2(1)
+      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")time_end(5),':',&
+           time_end(6),':',time_end(7),'  ',time_end(3),'.',time_end(2),'.',&
+           time_end(1)
    end if
 
 end 
@@ -369,9 +358,6 @@ subroutine finish(error_code)
       write(*,*)''
       if (error_code.eq.0)then
          write(*,*)'Job finished!'
-      else
-         write(*,*)'Error encountered. Exiting...'
-         write(*,*)''
       end if
    end if
 

@@ -306,8 +306,6 @@ module mod_transform
 
    call equant_cart(transx, transy, transz, equant)
 
-!  write(*,*)'normal modes back to cartesian'
-!  call printf(transx/ang,transy/ang,transz/ang)
 #else
    write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
    write(*,*)'Normal mode transformations cannot be performed.'
@@ -388,9 +386,9 @@ endif
 !   call equant_nm(transx, transy, transz, equant)
 
 !  write(*,*)'original cartesian to normal modes'
-!  call printf(x/ang,y/ang,z/ang)
+!  call print_xyz_arrays(x/ang,y/ang,z/ang)
 !  write(*,*)'transformed coordinates to normal modes'
-!  call printf(transx/ang,transy/ang,transz/ang)
+!  call print_xyz_arrays(transx/ang,transy/ang,transz/ang)
 
 #else
    write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
@@ -405,7 +403,7 @@ endif
    use mod_general , only: nwalk, natom, idebug, inormalmodes
    use mod_system, only: am
    use mod_nhc,    only: temp
-   use mod_utils, only: printf
+   use mod_utils, only: print_xyz_arrays
    real(DP), intent(inout) :: x(:,:), y(:,:), z(:,:)
    real(DP), intent(out) :: equant
    real(DP) :: equantx, equanty, equantz, omega_n
@@ -441,7 +439,7 @@ endif
       write(*,*)"Quantum energy in cartesian coordinates"
       write(*,*)equantx, equanty, equantz, equant
       write(*,*)"Cartesian coordinates"
-      call printf(x,y,z)
+      call print_xyz_arrays(x,y,z)
    end if
 
    end subroutine equant_cart
@@ -451,7 +449,7 @@ endif
    use mod_general , only: nwalk, natom, idebug, inormalmodes
    use mod_system,   only: am
    use mod_nhc,    only: temp
-   use mod_utils, only: printf
+   use mod_utils, only: print_xyz_arrays
    use mod_arrays, only: amg
    real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
    real(DP), intent(out) :: equant
@@ -495,7 +493,7 @@ endif
       write(*,*)"Quantum energy in normal modes coordinates"
       write(*,*)equantx, equanty, equantz, equant
       write(*,*)"Normal mode coordinates"
-      call printf(x, y, z)
+      call print_xyz_arrays(x, y, z)
    end if
 
    end subroutine equant_nm

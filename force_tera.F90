@@ -92,7 +92,7 @@ subroutine send_tera(x, y, z, iw, newcomm)
    use mod_general, only: idebug, iqmmm, iremd, my_rank
    use mod_system,only: names
    use mod_qmmm, only: natqm
-   use mod_utils, only: printf, abinerror
+   use mod_utils, only: abinerror
    use mod_interfaces, only: oniom
    include 'mpif.h'
    real(DP),intent(in)     ::  x(:,:),y(:,:),z(:,:)
@@ -198,7 +198,7 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    use mod_const, only: DP, ANG
    use mod_general, only: idebug
    use mod_qmmm, only: natqm
-   use mod_utils, only: printf, abinerror
+   use mod_utils, only: abinerror
    include 'mpif.h'
    real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)  ::  eclas
