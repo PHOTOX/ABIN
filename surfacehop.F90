@@ -16,7 +16,7 @@ module mod_sh
    public :: istate, ntraj, tocalc, en_array
    public :: nacx, nacy, nacz
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
-   public :: energydifthr, energydriftthr, adjmom, revmom
+   public :: energydifthr, energydriftthr, dE_S0S1_thr, adjmom, revmom
    public :: check_CIVector
    public :: ignore_state
 
@@ -27,6 +27,8 @@ module mod_sh
    real(DP)  :: decoh_alpha=0.1d0
    real(DP)  :: deltae=5.0d0, popthr=0.001d0
    real(DP)  :: energydifthr=1.0d0, energydriftthr=1.0d0 !eV
+   ! Special case for adiabatic TDDFT, terminate when close to S1-S0 crossing
+   real(DP)  :: dE_S0S1_thr = 0.0d0 !eV
    real(DP),allocatable :: nacx(:,:,:,:), nacy(:,:,:,:), nacz(:,:,:,:)
    real(DP),allocatable :: nacx_old(:,:,:,:), nacy_old(:,:,:,:), nacz_old(:,:,:,:)
    real(DP),allocatable :: dotproduct(:,:,:), dotproduct_old(:,:,:) !for inac=1
@@ -989,19 +991,34 @@ enddo
       real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
       real(DP),intent(in) :: vx_old(:,:),vy_old(:,:),vz_old(:,:)
       integer, intent(in) :: itrj
-      real(DP)            :: ekin, ekin_old, entot, entot_old
+      real(DP)            :: ekin, ekin_old, entot, entot_old, dE_S0S1
 
-      ekin=ekin_v(vx, vy, vz)
-      ekin_old=ekin_v(vx_old, vy_old, vz_old)
+      ! Special case for running MD with TDDFT:
+      ! End the simulation when S1-S0 energy difference drops below certain
+      ! small threshold.
+      if (nstate.ge.2)then
+         dE_S0S1 = en_array(2, itrj) - en_array(1, itrj)
+         dE_S0S1 = dE_S0S1 * AUtoEV
+         if (dE_S0S1.lt.dE_S0S1_thr)then
+            write(*,*)'S1 - S0 gap dropped below threshold!'
+            write(*,*)dE_S0S1, ' < ', dE_S0S1_thr
+            !call abinerror('S1S0 gap')
+            call finish(0)
+            stop 0
+         end if 
+      end if
 
-      entot=(ekin+en_array(istate(itrj), itrj) )*AUtoEV
+      ekin = ekin_v(vx, vy, vz)
+      ekin_old = ekin_v(vx_old, vy_old, vz_old)
+
+      entot = (ekin + en_array(istate(itrj), itrj) ) * AUtoEV
 
       ! TODO: But what if we hopped to another state?
       ! en_array_old(istate(itrj), itrj) would not point to the correct energy,
       ! right?
       ! We need istate_old array ... but we should just refactor the whole thing...
       ! and make traj_data structure or something
-      entot_old=(ekin_old+en_array_old(istate(itrj), itrj) )*AUtoEV
+      entot_old = (ekin_old + en_array_old(istate(itrj), itrj) ) * AUtoEV
 
       if (abs(entot-entot_old).gt.energydifthr)then
          write(*,*)'ERROR:Poor energy conservation. Exiting...'
@@ -1018,13 +1035,13 @@ enddo
    subroutine check_energydrift(vx, vy, vz, itrj)
       use mod_const, only: AUtoEV
       use mod_kinetic, only: ekin_v
-      real(DP),intent(in) :: vx(:,:),vy(:,:),vz(:,:)
+      real(DP),intent(in) :: vx(:,:), vy(:,:), vz(:,:)
       integer, intent(in) :: itrj
       real(DP)            :: ekin, entot
 
-      ekin=ekin_v(vx, vy, vz)
+      ekin = ekin_v(vx, vy, vz)
 
-      entot=(ekin+en_array(istate(itrj), itrj) )*AUtoEV
+      entot = (ekin + en_array(istate(itrj), itrj) ) * AUtoEV
 
       if (abs(entot-entot0).gt.energydriftthr)then
          write(*,*)'ERROR: Energy drift exceeded threshold value. Exiting...'

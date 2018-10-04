@@ -1,5 +1,4 @@
-This is a sample input file for ABIN 
-NOTE: order of input sections matters!!
+This is a sample input file MD with SHAKE constraints
 
 &general
 pot='nab'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
@@ -21,23 +20,8 @@ kb_sbc=0.01d0,		! force constant for spherical potential,in A
 /
 
 &system
-nbin=2000,		! number of bins for densities
-ndist=6,		! of bonds for which we calculate density
-dist1=1,1,4,4,7,7       ! first atoms for binning
-dist2=2,3,5,6,8,9	   ! second atoms for binning (i.e. bond between natfirst[1] and natsecond[1])
-nang=1
-ang1=1
-ang2=2
-ang3=3
-ndih=1
-dih1=1
-dih2=2
-dih3=3
-dih4=4
-xmin=0.5,		 
-xmax=2.5,		
 nshake=8,		! Number of bond constrains
-shake_tol=0.0001	! Shake tolerance
+shake_tol=0.00001	! Shake tolerance
 ishake1=1,1,4,4,8,8,11,11,  ! list of bond constraints
 ishake2=2,3,5,6,9,10,12,13,
 /

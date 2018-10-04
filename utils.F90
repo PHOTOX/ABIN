@@ -74,7 +74,7 @@ module mod_utils
       integer,dimension(8) :: time_end
       open(unit=500, file='ERROR', action='write', access='sequential')
       write(500,*)'FATAL ERROR encountered in subroutine: ',chcaller
-      write(500,*)'Check standard output for further information. Exiting now...'
+      write(500,*)'Check standard output for further information.'
       close(unit=500)
       if (my_rank.eq.0)then
          call date_and_time(VALUES=time_end)

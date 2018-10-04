@@ -153,7 +153,8 @@ subroutine init(dt, time_data)
                      Nshake,ishake1,ishake2,shake_tol
 
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,decoh_alpha,popthr,ignore_state, &
-                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, natmm_tera
+                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, natmm_tera, &
+                     dE_S0S1_thr
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 
@@ -626,7 +627,12 @@ subroutine init(dt, time_data)
             do iat=1,natom
                read(500,*, IOSTAT=iost)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
                if (iost.ne.0) call err_read(chveloc,"Could not read velocities.", iost)
-               if (atom.ne.names(iat)) call err_read(chveloc,"Inconsistent atom types in input velocities.", iost)
+               atom = LowerToUpper(atom)
+               if (atom.ne.names(iat))then
+                  write(*,*)'Offending line:'
+                  write(*,*)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
+                  call err_read(chveloc,"Inconsistent atom types in input velocities.", iost)
+               end if
             end do
          end do
 
