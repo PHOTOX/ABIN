@@ -80,7 +80,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
 !------- ER(energy restraint) SECTION ---
-if(en_restraint.ge.1) call energy_restraint(x, y, z, fxab,fyab,fzab,eclas)
+!if(en_restraint.ge.1) call energy_restraint(x, y, z, fxab,fyab,fzab,eclas)
 !----------------------------------------
 
 !  For reference potential and ring-polymer contraction

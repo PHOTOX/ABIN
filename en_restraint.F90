@@ -30,7 +30,7 @@ subroutine en_rest_init(dt)
    allocate(fzr(natom,2))
 end subroutine en_rest_init
 
-subroutine energy_restraint(x, y, z, fx, fy, fz, eclas)
+subroutine energy_restraint(x, y, z, px, py, pz, eclas)
    use mod_general,  only: natom, it, dt0 ! dt0 is the time step
    use mod_utils,    only: abinerror
    use mod_const,    only: AMU
@@ -39,10 +39,10 @@ subroutine energy_restraint(x, y, z, fx, fy, fz, eclas)
    use mod_terampi_sh, only: force_terash
    implicit none
    real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:),eclas
-   real(DP),intent(inout)  :: fx(:,:),fy(:,:),fz(:,:)
+   real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
    ! DH: I am surprised this works, since natom is not a constant
    real(DP),dimension(natom):: fxgs,fygs,fzgs,fxes,fyes,fzes
-   real(DP)                :: eclasexc, eclasground, Egrad, deltaE, lambda, lsum
+   real(DP)                :: eclasexc, eclasground, Egrad, deltaE, lambda, lsum, deltaEnext, convercrit, deltaD
    integer                 :: ios,iat,iat2,iw
    character(len=30)       :: chforce_ground, chforce_exc
 
@@ -127,6 +127,21 @@ do iw=1,nwalk
 if(en_restraint.eq.1)then
     !======== A) Computing lagrange multiplier lambda =========
 
+    !Iterative procedure
+    convercrit = 100
+    do while (convercrit > 0.00001)
+    !deltaE(t+dt) prediction - improves the accuracy
+      deltaEnext = 0
+      do iat=1,natom
+        deltaD = px(iat,iw) * dt0 / am(iat) 
+        deltaEnext = deltaEnext - px(iat,iw) * dt0 / am(iat) * (fxes(iat) - fxgs(iat)) 
+        deltaEnext = deltaEnext - py(iat,iw) * dt0 / am(iat) * (fyes(iat) - fygs(iat))
+        deltaEnext = deltaEnext - pz(iat,iw) * dt0 / am(iat) * (fzes(iat) - fzgs(iat))
+      end do
+    !write(*,*)'deltaEnext',deltaEnext*2625.5697
+
+    !lambda computation
+
       lsum=0        
       do iat2=1, natom
          lsum = lsum + 1/(am(iat2)) * (fxes(iat2) - fxgs(iat2))**2
@@ -134,17 +149,23 @@ if(en_restraint.eq.1)then
          lsum = lsum + 1/(am(iat2)) * (fzes(iat2) - fzgs(iat2))**2
       end do
 
-      lambda =  deltaE / (lsum * dt0 * dt0)
+      deltaEnext = deltaE + deltaEnext
+      lambda =  deltaEnext / (lsum * dt0 * dt0)
     !     For debugging or computing excitation energy on the fly uncomment: 
-!         lambda = 0
+    !     lambda = 0
     !---Applying new forces
+    !     p = p0 + f * dt
 
       do iat=1,natom
-         fx(iat,iw) = fx(iat,iw) + lambda * (fxes(iat) - fxgs(iat))
-         fy(iat,iw) = fy(iat,iw) + lambda * (fyes(iat) - fygs(iat))
-         fz(iat,iw) = fz(iat,iw) + lambda * (fzes(iat) - fzgs(iat))
+         px(iat,iw) = px(iat,iw) + dt0 * lambda * (fxes(iat) - fxgs(iat))
+         py(iat,iw) = py(iat,iw) + dt0 * lambda * (fyes(iat) - fygs(iat))
+         pz(iat,iw) = pz(iat,iw) + dt0 * lambda * (fzes(iat) - fzgs(iat))
       end do
+    
+      convercrit =  deltaEnext
+      write(*,*)'deltaEnext',deltaEnext
 
+    end do
     !---  Printing info
     write(*,*)'deltaE',deltaE
     write(*,*)'Lambda multiplier:',lambda
@@ -156,9 +177,9 @@ else if(en_restraint.eq.2)then
    !---Applying new forces
 
       do iat=1,natom
-         fx(iat,iw) = fx(iat,iw) + en_kk * deltaE * (fxes(iat) - fxgs(iat))
-         fy(iat,iw) = fy(iat,iw) + en_kk * deltaE * (fyes(iat) - fygs(iat))
-         fz(iat,iw) = fz(iat,iw) + en_kk * deltaE * (fzes(iat) - fzgs(iat))
+         px(iat,iw) = px(iat,iw) + dt0 * en_kk * deltaE * (fxes(iat) - fxgs(iat))
+         py(iat,iw) = py(iat,iw) + dt0 * en_kk * deltaE * (fyes(iat) - fygs(iat))
+         pz(iat,iw) = pz(iat,iw) + dt0 * en_kk * deltaE * (fzes(iat) - fzgs(iat))
       end do
 
    !---  Printing info

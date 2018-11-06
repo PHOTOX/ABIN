@@ -81,10 +81,11 @@ module mod_mdstep
 !  Contains propagation of normal modes according to:
 !  eq 23 from J. Chem. Phys. 133, 124104 2010
    subroutine verletstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
-   use mod_general, ONLY: pot, ipimd, inormalmodes
+   use mod_general, ONLY: pot, ipimd, inormalmodes, en_restraint
    use mod_nhc, ONLY:inose
    use mod_interfaces, only: force_clas, propagate_nm
    use mod_sh, only: ehrenfest_forces
+   use mod_en_restraint
    real(DP),intent(inout) :: x(:,:), y(:,:), z(:,:)
    real(DP),intent(inout) :: fxc(:,:), fyc(:,:), fzc(:,:)
    real(DP),intent(inout) :: px(:,:), py(:,:), pz(:,:)
@@ -96,7 +97,8 @@ module mod_mdstep
    if(inose.gt.0) call thermostat(px, py, pz, amt, dt/2)
    
    call shiftP (px, py, pz, fxc, fyc, fzc, dt/2)
-   
+   if(en_restraint.ge.1) call energy_restraint(x, y, z, px, py, pz, eclas)
+ 
    if(inormalmodes.eq.1)then
     ! Warning, initial hack, passing amt here
        call propagate_nm(x, y, z, px, py, pz, amt, dt)
