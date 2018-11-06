@@ -241,19 +241,6 @@ subroutine init(dt, time_data)
    end if
 #endif
 
-   if(iplumed.eq.1) then
-
-#ifdef PLUM
-      call plumed_init(dt)
-      write(*,*) 'PLUMED is on'
-      write(*,*) 'PLUMEDfile is ', trim(plumedfile)
-#else
-      write(*,*)'FATAL ERROR: ABIN was not compiled with PLUMED.'
-      stop 1
-#endif
-
-   endif
-
 
    if (en_restraint.ge.1) then
       call en_rest_init(dt)
@@ -372,6 +359,19 @@ subroutine init(dt, time_data)
 !  Ehrenfest require larger array since gradients for all of the states are need   
 !  TODO: We should really make this differently..
    if(ipimd.eq.4) call allocate_ehrenfest(natom, nstate)
+
+   if(iplumed.eq.1) then
+
+#ifdef PLUM
+      call plumed_init(dt)
+      write(*,*) 'PLUMED is on'
+      write(*,*) 'PLUMEDfile is ', trim(plumedfile)
+#else
+      write(*,*)'FATAL ERROR: ABIN was not compiled with PLUMED.'
+      stop 1
+#endif
+
+   endif
 
 
 !  READING GEOMETRY

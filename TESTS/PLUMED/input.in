@@ -15,8 +15,6 @@ nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?
 nrest=50,		! how often we print restart files?
 
-natom=2,		!number of atoms
-
 iplumed=1,		! turn on PLUMED (metadynamics)
 plumedfile='plumed.in', ! plumed input file
 /
