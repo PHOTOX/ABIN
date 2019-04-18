@@ -699,8 +699,14 @@ do itrj=1,ntraj
 
 !        Auxiliary calculations of probabilities on a number line
          prob = 0.0d0
-         if(ist.ne.1)  prob(1) = t(ist,1)
-         if(ist.eq.1)  prob(1) = 0.0d0
+         if(ist.eq.1)then
+            ! If we are in the ground state, we cannot jump into the ground state :-)
+            prob(1) = 0.0d0
+         else
+            ! Probability of jumping from the current state to the ground state
+            prob(1) = t(ist,1)     
+         end if
+
          do ist1 = 2, nstate
             if(ist1.ne.ist)  prob(ist1) = prob(ist1-1)+t(ist,ist1)
             if(ist1.eq.ist)  prob(ist1) = prob(ist1-1)
