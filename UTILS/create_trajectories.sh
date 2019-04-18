@@ -112,6 +112,7 @@ fi
 
 j=1
 i=$isample
+w=0 #current number of simulations in current j-th job
 
 #--------------------generation of random numbers--------------------------------
 echo "Generating $nsample random integers."
@@ -200,9 +201,11 @@ EOF
    else
       let ncalc=injob+1 
    fi
-   if [[ `expr \( $i - $first + 1 \) % $ncalc` -eq 0 ]] && [[ $j -lt $jobs ]]; then
+   let w++
+   if [[ $w -eq $ncalc ]] && [[ $j -lt $jobs ]]; then
       let j++
       let remainder--
+      let w=0
    fi
 #---------------------------------------------------------------------------
 
