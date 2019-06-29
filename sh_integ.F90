@@ -14,12 +14,16 @@ module mod_sh_integ
    public :: integ, phase, el_pop
    public :: nstate, popsumthr
 
+   ! Electronic State coefficients
    real(DP) :: cel_re(NSTMAX, NTRAJMAX), cel_im(NSTMAX, NTRAJMAX)
    real(DP) :: el_pop(NSTMAX, NTRAJMAX)
    real(DP) :: gama(NSTMAX, NSTMAX, NTRAJMAX)
    real(DP) :: eshift, popsumthr=0.001d0
    ! TODO: phase variable should be named differently
-   integer  :: phase = 0, nstate = 1
+   integer :: phase = 0
+   ! Number of electronic states
+   integer :: nstate = 1
+   ! Numerical integrator (defualt is Butcher 5-th order)
    character(len=10) :: integ='butcher'
 
    CONTAINS
@@ -379,7 +383,7 @@ module mod_sh_integ
          endif
       enddo
 
-!     RENORMALIZATION OF THE CURRENT STATE     
+      ! Renormalization of the current state
       sum_norm=1.0d0
       do ist1=1,nstate
          if(ist1.ne.istate) then
@@ -389,7 +393,7 @@ module mod_sh_integ
 
       fact = sum_norm / (cel_re(istate,itrj)**2 + cel_im(istate,itrj)**2+1.0d-7)
 
-      !Following should never happen as we check for popsumthr later in this subroutine
+      ! Following should never happen as we check for popsumthr later in this subroutine
       if(fact.lt.0.0d0)then
          write(*,*)'Fatal error in surfacehop during decoherence renormalization.'
          write(*,*)'fact=',fact,'but should be > 0'

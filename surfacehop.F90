@@ -1,4 +1,4 @@
-! Driver routines for Surface hopping dynamics
+! Driver routines for Surface Hopping dynamics
 ! D. Hollas, O. Svoboda, P. Slavíček, M. Ončák
 
 module mod_sh
@@ -20,20 +20,40 @@ module mod_sh
    public :: check_CIVector
    public :: ignore_state
 
-   integer,parameter :: ntraj = NTRAJMAX
-   integer   :: istate_init=1, substep=100
-   integer   :: inac=0, nohop=0, adjmom=0, revmom=0
-   integer   :: nac_accu1=7, nac_accu2=5 !7 is MOLPRO default
-   real(DP)  :: decoh_alpha=0.1d0
-   real(DP)  :: deltae=5.0d0, popthr=0.001d0
+   integer,parameter :: ntraj = NTRAJMAX  ! Currently not in use, set to 1
+   ! Initial electronic state
+   integer :: istate_init = 1
+   ! Number of substeps for integrating electronic Schrodinger eq.
+   integer :: substep = 100
+   ! Controls calculations of Non-adiabatic Couplings (NAC)
+   ! 0 - Analytical NAC
+   ! 1 - Numerical Hammers-Schffer-Tully model (currently deprecated)
+   ! 2 - Do not compute coupling
+   integer :: inac = 0
+   ! 1 - Turn OFF hopping
+   integer :: nohop = 0
+   ! 
+   integer :: adjmom = 0
+   ! 1 - Reverse momentum direction after frustrated hop
+   integer :: revmom = 0
+   ! Numerical accuracy of MOLPRO NAC 
+   integer :: nac_accu1=7
+   integer :: nac_accu2=5 !7 is MOLPRO default
+   ! Decoherence correction parameter (a.u.)
+   real(DP) :: decoh_alpha = 0.1d0
+   real(DP) :: deltae = 5.0d0, popthr = 0.001d0
    real(DP)  :: energydifthr=1.0d0, energydriftthr=1.0d0 !eV
    ! Special case for adiabatic TDDFT, terminate when close to S1-S0 crossing
    real(DP)  :: dE_S0S1_thr = 0.0d0 !eV
+   ! NA Couplings
    real(DP),allocatable :: nacx(:,:,:,:), nacy(:,:,:,:), nacz(:,:,:,:)
+   ! *old variables holds data from the previous step
    real(DP),allocatable :: nacx_old(:,:,:,:), nacy_old(:,:,:,:), nacz_old(:,:,:,:)
    real(DP),allocatable :: dotproduct(:,:,:), dotproduct_old(:,:,:) !for inac=1
    real(DP),allocatable :: en_array(:,:), en_array_old(:,:)
+   ! Initial absolute electronic energy, needed for monitoring energy drift
    real(DP) :: entot0
+   ! nstatexnstate matrix, off-diagonal elements determine NAC, diagonal elements = electronic gradients
    integer, allocatable :: tocalc(:,:)
    ! TODO: Make this allocatable
    integer  :: istate(NTRAJMAX)
