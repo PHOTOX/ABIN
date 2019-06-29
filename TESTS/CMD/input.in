@@ -21,7 +21,7 @@ idebug=1
 iknow=0
 
 pot='mmwater'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
-ipimd=0,		!classical simulation 0, quantum simulation 1
+mdtype='MD',		! classical MD
 nwalk=1,		!number of random walkers 
 imini=10000,		!equilibration period,!not properly implemented yet
 istage=0,		!staging transformation (1), without staging (0)

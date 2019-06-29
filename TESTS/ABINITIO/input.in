@@ -1,9 +1,11 @@
-This is a sample input file for ABIN 
-NOTE: order of input sections matters!!
 
 &general
 pot='Dyn'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
-ipimd=1,		!classical simulation 0, quantum simulation 1
+mdtype='PIMD'
+! ipimd is an obsolete keyword which is ignored if mdtype is present
+! we test that here by setting it to a faulty value
+ipimd=3,	
+
 nwalk=2,		!number of random walkers 
 imini=10,		!equilibration period,!not properly implemented yet
 istage=1,		!staging transformation (1), without staging (0)

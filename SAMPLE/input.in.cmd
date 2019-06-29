@@ -2,7 +2,7 @@ This is a sample input file for ABIN for Classical MD simulation
 
 &general
 pot='g09'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,qchem 
-ipimd=0,		! classical simulation=0, Path Integral MD=1, surface-hopping MD=2
+mdtype='md',		! md = classical MD
 nstep=50000,		! number of steps
 dt=20.,			! timestep [au]
 irandom=1651563,  	! random seed
@@ -24,6 +24,3 @@ nrespnose=3,		! number of inner respa steps for NH thermostat
 nyosh=7,		! number of steps in suzuki-yoshida scheme,can be 1,3 or 7
 /
 
-
-----------------------END OF INPUT---------------------------------------------
-!!!!!EVERYTHING BELOW IS IGNORED!!!!

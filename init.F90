@@ -121,6 +121,7 @@ subroutine init(dt, time_data)
    character(len=200)  :: chiomsg, chout
    character(len=20)   :: xyz_units='angstrom'
    character(len=60)   :: chdivider
+   character(len=60)   :: mdtype
    LOGICAL :: file_exists
    logical        :: rem_comvel, rem_comrot
 !  real(DP) :: wnw=5.0d-5
@@ -133,7 +134,7 @@ subroutine init(dt, time_data)
    REAL, POINTER  :: REALPTR => NULL ()
 #endif
 
-   namelist /general/natom, pot, ipimd, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
+   namelist /general/natom, pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive,xyz_units, &
             dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
@@ -161,12 +162,13 @@ subroutine init(dt, time_data)
    namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol,nmol
 
 
-   chcoords='mini.dat'
-   chinput='input.in'
-   chveloc=''
-   dt=-1  
-   error=0
-   iplumed=0
+   chcoords = 'mini.dat'
+   chinput = 'input.in'
+   chveloc = ''
+   mdtype = ''
+   dt = -1  
+   error = 0
+   iplumed = 0
 
    chdivider = "############################################################"
 
@@ -254,6 +256,23 @@ subroutine init(dt, time_data)
          call abinerror('init')
       end if
    end if
+
+   if (mdtype.ne.'')then
+      mdtype = UpperToLower(mdtype)
+      SELECT CASE (mdtype)
+         case ('md')
+            ipimd = 0
+         case ('pimd')
+            ipimd = 1
+         case ('sh')
+            ipimd = 2
+         case ('minimization')
+            ipimd = 3
+         case ('ehrenfest')
+            ipimd = 4
+      END SELECT
+   end if
+
    
    if (my_rank.eq.0)then
       write(*,*)'Reading parameters from input file ', trim(chinput)

@@ -7,7 +7,7 @@ pot='orca'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,
 conatom=0,		! number of constrained atoms
 irest=0,		! Should we restart from restart.xyz? (ignoring mini.dat)
 
-ipimd=0,		! classical simulation 0, quantum simulation 1, surface-hopping 2
+mdtype='md',		! 'md' = classical MD
 nwalk=1,		! number of random walkers 
 istage=0,		! staging transformation (1), without staging (0)
 nstep=5000,		! number of steps

@@ -4,7 +4,7 @@ This is a sample input file for Surface-Hopping simulation in ABIN
 pot='molpro-sh'		! where do we obtain forces?
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
 
-ipimd=2,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
+mdtype='sh',		! sh = surface-hopping MD
 nstep=1000,		! number of steps
 dt=20.,			! timestep [au]
 irandom=85631316,  	! random seed
