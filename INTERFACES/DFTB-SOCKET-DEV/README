@@ -1,0 +1,3 @@
+For now, this is not implemented in ABIN.
+These are just files from DFTB+ that uses socket interface to i-Py
+If we ever wanted to have super-fast DFTB+, we could implement it as well
