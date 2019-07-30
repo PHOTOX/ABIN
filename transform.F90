@@ -86,8 +86,8 @@ module mod_transform
    use mod_general, only: istage, inormalmodes, idebug
    use mod_system, ONLY: am
    real(DP),intent(out) :: amg(:,:), amt(:,:)
-   real(DP)  :: lambda(size(amg,2)+1)
-   integer :: iat, iw, k
+   real(DP)  :: lambda(size(amg,2)+1) !amg(natom,nwalk) - why +1?
+   integer :: iat, iw, k, nmodes, odd
 
 !  NOTE: am was multiplied by amu earlier in the init.F90
 
@@ -114,23 +114,23 @@ module mod_transform
       enddo
    endif
 
-!--SETTING MASSES FOR NORMAL MODES-----------  
+!--SETTING MASSES FOR NORMAL MODES----------- 
+!--Mass rescaling for CMD, not tested yet--!
    if(inormalmodes.eq.2)then ! this one apparently does not work
       do iat=1,natom
          lambda(1)=0
-         do iw=2, nwalk
-            k = iw -1
-            lambda(iw) = 2 * sin(k * PI / nwalk)
-            lambda(iw) = lambda(iw)**2 * nwalk
+         do iw=2,nwalk/2
+            lambda(2*iw-1) = 2 * nwalk * (1-cos(2*PI*(iw-1)/nwalk))
+            lambda(2*iw-2) = lambda(2*iw-1)
          enddo
-!         do iw=2,nwalk
-!            lambda(iw) = 2 * nwalk * (1-cos(PI*iw/nwalk))
-!            lambda(iw+1)=lambda(iw)
-!             lambda = 2 * nwalk * sin(PI*(iw-1)/nwalk)
-!         enddo
+         nmodes = nwalk / 2
+         odd = nwalk - 2 * nmodes ! 0 if even, 1 if odd
+         if(odd.eq.0)then
+            lambda(nwalk) = 4 * nwalk
+         endif
          do iw=2,nwalk
-            amg(iat,iw) = am(iat)*lambda(iw)
-            amt(iat,iw) = am(iat)*lambda(iw)
+            amg(iat,iw) = am(iat)*lambda(iw)   !potential
+            amt(iat,iw) = am(iat)*lambda(iw)   !kinetic 
          enddo
          amg(iat,1)=0.0d0
          amt(iat,1)=am(iat)
@@ -143,7 +143,8 @@ module mod_transform
       enddo
 
    else if (inormalmodes.eq.1)then
-      do iw=1,nwalk
+   !Masses are the same as physical ones: RPMD (default)
+   do iw=1,nwalk
          do iat=1,natom
             amt(iat,iw) = am(iat)
             amg(iat,iw) = am(iat)
@@ -256,10 +257,6 @@ module mod_transform
    if(inormalmodes.eq.1)then
       dnwalk = dsqrt(1.0d0 * nwalk)
       fac = dsqrt(2.0d0)
-   else
-      dnwalk = dsqrt(1.0d0 * nwalk)
-     ! dnwalk = 1.0d0
-      fac = 1.0d0
    end if
 
    nmodes = nwalk / 2
@@ -284,14 +281,6 @@ module mod_transform
          cz(nmodes+1) = complex(z(iat,nmodes+1),0)
       end if
 
-!      cx((nwalk+2)/2) = complex(x(iat,nwalk), 0)
-!      cy((nwalk+2)/2) = complex(y(iat,nwalk), 0)
-!      cz((nwalk+2)/2) = complex(z(iat,nwalk), 0)
-!      do iw = 2, nwalk / 2
-!         cx(iw) = complex(x(iat,2*iw-2), x(iat,2*iw-1)) / fac
-!         cy(iw) = complex(y(iat,2*iw-2), y(iat,2*iw-1)) / fac
-!         cz(iw) = complex(z(iat,2*iw-2), z(iat,2*iw-1)) / fac
-!      enddo
       call fftw_execute_dft_c2r(plan_utox, cx, x_in)
       call fftw_execute_dft_c2r(plan_utox, cy, y_in)
       call fftw_execute_dft_c2r(plan_utox, cz, z_in)
@@ -331,10 +320,6 @@ module mod_transform
    if(inormalmodes.eq.1)then
       dnwalk = dsqrt(1.0d0 * nwalk)
       fac = dsqrt(2.0d0)
-   else
-      !dnwalk = nwalk
-      dnwalk = dsqrt(1.0d0 * nwalk)
-      fac = 1.0d0
    end if
 
    nmodes = nwalk / 2

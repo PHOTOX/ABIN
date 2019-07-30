@@ -55,7 +55,7 @@ end subroutine plumed_init
 
 
 subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
-   use mod_general,  only: natom, it, nwrite
+   use mod_general,  only: natom, it, nwrite, nwalk
    use mod_const,    only: AMU
    use mod_system,   only: am
    implicit none
@@ -68,21 +68,21 @@ subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
    real(DP)    :: pbox(3,3),pcharges(natom),plumvirial(3,3)
    integer     :: iat, iw
 
-   ! Apply plumed only to centroid in PIMD
-   ! Normal modes needed
+   ! Apply PLUMED only to centroid/single bead in PIMD ("post-quantization restraint" )
+   ! (https://aip.scitation.org/doi/abs/10.1063/1.4986915)   
    iw = 1
 
    do iat = 1, natom
-      amm(iat) = am(iat) / AMU
+      amm(iat) = am(iat) / AMU !amg or amt
    enddo
 
    do iat=1,natom
       xx(iat) = x(iat,iw)
       yy(iat) = y(iat,iw)
       zz(iat) = z(iat,iw)
-      fxx(iat) = fx(iat,iw)
-      fyy(iat) = fy(iat,iw)
-      fzz(iat) = fz(iat,iw)
+      fxx(iat) = 0.0d0    !fx(iat,iw) Passing zero (no info about current forces acting on the system, might influence some CV usage)
+      fyy(iat) = 0.0d0    !fy(iat,iw)
+      fzz(iat) = 0.0d0    !fz(iat,iw)
       pcharges(iat) = 0
    enddo
 
@@ -111,9 +111,9 @@ subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
 
 
    do iat=1,natom
-      fx(iat,iw) = fxx(iat)
-      fy(iat,iw) = fyy(iat)
-      fz(iat,iw) = fzz(iat)
+      fx(iat,iw) = fx(iat,iw) + fxx(iat) * nwalk  !Adding PLUMED forces to current ones, nwalk scaling for PIMD
+      fy(iat,iw) = fy(iat,iw) + fyy(iat) * nwalk
+      fz(iat,iw) = fz(iat,iw) + fzz(iat) * nwalk
    enddo
 
 end subroutine force_plumed
