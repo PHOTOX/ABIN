@@ -539,6 +539,11 @@ module mod_files
    open(UTEMPER,file=chfiles(UTEMPER), access=chaccess, action='write')
    write(UTEMPER,*)'#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
 
+   if(ipimd.eq.5)then
+      open(UPES,file=chfiles(UPES),access=chaccess,action='write')
+      write(UPES,*)'#    Time[fs] Potential energies'
+   endif
+
    if(ipimd.eq.2)then
       open(UPOP,file=chfiles(UPOP),access=chaccess,action='write')
       write(UPOP,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'

@@ -80,6 +80,7 @@ subroutine init(dt, time_data)
    use mod_harmon
    use mod_sh_integ, only: nstate, integ, phase, popsumthr
    use mod_sh
+   use mod_lz, only: initstate_lz, nstate_lz, deltaE_lz
    use mod_qmmm
    use mod_gle
    use mod_nab
@@ -156,6 +157,8 @@ subroutine init(dt, time_data)
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,decoh_alpha,popthr,ignore_state, &
                      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, natmm_tera, &
                      dE_S0S1_thr
+             
+   namelist /lz/     initstate_lz, nstate_lz, deltaE_lz 
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 
@@ -272,6 +275,8 @@ subroutine init(dt, time_data)
             ipimd = 3
          case ('ehrenfest')
             ipimd = 4
+         case ('landau_zener')
+            ipimd = 5
       END SELECT
    end if
 
@@ -309,6 +314,8 @@ subroutine init(dt, time_data)
             print '(a)','              Minimization                    '
          case (4)
             print '(a)','              Ehrenfest MD                    '
+         case (5)
+            print '(a)','             Landau Zener MD                  '
       END SELECT
 
             write(*,*)'    using potential: ', LowerToUpper(pot)
@@ -479,6 +486,11 @@ subroutine init(dt, time_data)
          integ = UpperToLower(integ)
       end if
 
+      if(ipimd.eq.5)then
+         read(150, lz)
+         rewind(150)
+      end if
+
    if(iremd.eq.1)then
 #ifdef MPI
       read(150, remd)
@@ -534,8 +546,8 @@ subroutine init(dt, time_data)
       endif
 
 !for surface hopping and ehrenfest     
-      if(ipimd.eq.2.or.ipimd.eq.4)then
-         nwalk = ntraj
+      if(ipimd.eq.2.or.ipimd.eq.4.or.ipimd.eq.5)then
+         nwalk = ntraj !currently 1
          md = 2 ! velocity verlet
          nabin = 1
       else if(ipimd.eq.1.and.inormalmodes.ne.1)then
@@ -718,6 +730,8 @@ subroutine init(dt, time_data)
       if ( inose.ge.1 ) write(*,nml=nhcopt)
       write(*,*)
       if ( ipimd.eq.2.or.ipimd.eq.4 ) write(*,nml=sh)
+      write(*,*)
+      if ( ipimd.eq.5 ) write(*,nml=lz)
       write(*,*)
       if (iqmmm.eq.3.or.pot.eq.'mm') write(*,nml=qmmm)
       write(*,*)
@@ -962,8 +976,10 @@ subroutine init(dt, time_data)
        if(iknow.ne.1) error=1
       endif
       if(ipimd.lt.0.or.ipimd.gt.3)then
-       write(*,*)'ipimd has to be 0,1,2 or 3.'
-       error=1
+       if(ipimd.ne.5)then
+          write(*,*)'ipimd has to be 0,1,2 or 3.'
+          error=1
+       endif
       endif
       if(istage.ne.1.and.istage.ne.0)then
          write(*,*)'ERROR: istage has to be 0 or 1'
@@ -1005,8 +1021,18 @@ subroutine init(dt, time_data)
        write(*,*)chknow
        if(iknow.ne.1) error=1
       endif
+      if(inose.eq.1.and.(ipimd.eq.5).and.en_restraint.eq.0)then
+       write(*,*)'Thermostating is not meaningful for Landau-Zener MD.'
+       write(*,*)chknow
+       if(iknow.ne.1) error=1
+      endif
       if(istate_init.gt.nstate)then
        write(*,*)'Error:Initial state > number of computed states. Exiting...'
+       error=1
+      endif
+      if(ipimd.eq.5.and.initstate_lz.gt.nstate_lz)then
+       write(*,*) initstate_lz, nstate_lz
+       write(*,*)'Error(LZ):Initial state > number of computed states. Exiting...'
        error=1
       endif
       if(nac_accu1.le.0.or.nac_accu2.lt.0)then
