@@ -128,6 +128,11 @@ cp iseed0 "$abin_input" $folder
 
 let offset=natom2*isample-natom2
 
+if [[ "$rewrite" -eq "1" ]];then
+    rm -f $folder/$molname.$isample.*.sh
+fi
+
+
 while [[ $i -le "$nsample" ]];do
 
    let offset=offset+natom2     
@@ -136,7 +141,6 @@ while [[ $i -le "$nsample" ]];do
       if [[ "$rewrite" -eq "1" ]];then
 
          rm -r $folder/TRAJ.$i ; mkdir $folder/TRAJ.$i
-         rm -f $folder/$molname.$isample.$j.sh
 
       else
 
