@@ -217,7 +217,7 @@ program abin_dyn
 
 !        LANDAU ZENER HOPPING
          if(ipimd.eq.5)then
-            call lz_hop(x, y, z, vx, vy, vz, dt, eclas)
+            call lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas)
             px = amt * vx
             py = amt * vy
             pz = amt * vz
@@ -330,6 +330,7 @@ subroutine finish(error_code)
    use mod_gle,    only: finalize_gle
    use mod_estimators, only: h
    use mod_harmon, only: hess
+   use mod_lz,     only: lz_finalize
 
 #ifdef USEFFTW
    use mod_fftw3,  only: fftw_end
@@ -420,6 +421,9 @@ end if
       call plumed_f_gfinalize()
     end if
 #endif
+
+if(ipimd.eq.5) call lz_finalize()
+
 end subroutine finish
 
 

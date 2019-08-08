@@ -14,7 +14,7 @@ module mod_lz
    use mod_array_size, only: NSTMAX, NTRAJMAX
    implicit none
    !private 
-   public :: lz_init, lz_hop !Routines
+   public :: lz_init, lz_hop, lz_finalize !Routines
    public :: initstate_lz, nstate_lz, deltaE_lz !User defined variables
    public :: en_array_lz, tocalc_lz, istate_lz !Routine variables
 
@@ -27,12 +27,14 @@ module mod_lz
    !Module variables
    integer  :: istate_lz
    real(DP),allocatable :: en_array_lz(:,:)
+   real(DP),allocatable :: fx_old(:), fy_old(:), fz_old(:)
    save
 
    CONTAINS
 
    !Initialization
    subroutine lz_init(x, y, z, vx, vy, vz, dt)
+   use mod_general,  ONLY: natom
    real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
    real(DP),intent(in)    :: dt
@@ -52,20 +54,24 @@ module mod_lz
 
    !Allocate energy arrays
    allocate(en_array_lz(nstate_lz, 3)) !last 3 energies (1: current, 2: n-1, 3: n-3)
+   allocate(fx_old(natom),fy_old(natom),fz_old(natom))
    en_array_lz=0.0d0
 
    end subroutine lz_init
 
 
    !LZ singlets hop
-   subroutine lz_hop(x, y, z, vx, vy, vz, dt, eclas)
+   subroutine lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas)
    use mod_const,    ONLY: ANG, AUTOFS, PI, AUTOEV
    use mod_files,    ONLY: UPOP,UPROB,UPES
    use mod_general,  ONLY: natom, pot, nwrite, idebug, it, sim_time
    use mod_random,   ONLY: vranf
    use mod_kinetic,  ONLY: ekin_v
-   real(DP),intent(in)    :: x(:,:),y(:,:),z(:,:)
+   use mod_interfaces,ONLY: force_clas
+   real(DP),intent(inout)    :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: vx(:,:),vy(:,:),vz(:,:)
+   real(DP),intent(inout) :: fxc(:,:), fyc(:,:), fzc(:,:)
+   real(DP),intent(in)    :: amt(:,:)
    real(DP),intent(inout) :: eclas
    real(DP),intent(in)    :: dt
 
@@ -126,15 +132,28 @@ module mod_lz
         !HOP
         write(*,*)"Hop! (",istate_lz,"->",ihop ,")dE/a.u.", en_diff(2), "Probability:", prob(ihop), "Random n:",hop_rdnum
         istate_lz = ihop
-
-        !Scaling velocities
-        vel_rescale = sqrt(1-(Epot/Ekin))
-
+        !Get new forces
         do iat=1, natom
-            vx(iat,1) = vx(iat,1) * vel_rescale
-            vy(iat,1) = vy(iat,1) * vel_rescale
-            vz(iat,1) = vz(iat,1) * vel_rescale
-        end do
+            fx_old(iat) = fxc(iat,1)
+            fy_old(iat) = fyc(iat,1)
+            fz_old(iat) = fzc(iat,1)
+        end do                     
+        call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+        !Adjust velocities from previous step to new forces
+        do iat=1, natom
+           vx(iat,1) = vx(iat,1) + (dt/2.0d0) * (-fx_old(iat)+fxc(iat,1)) / amt(iat,1)
+           vy(iat,1) = vy(iat,1) + (dt/2.0d0) * (-fy_old(iat)+fyc(iat,1)) / amt(iat,1)
+           vz(iat,1) = vz(iat,1) + (dt/2.0d0) * (-fz_old(iat)+fzc(iat,1)) / amt(iat,1)
+        end do 
+
+        !Simple scaling velocities
+        !vel_rescale = sqrt(1-(Epot/Ekin))
+
+        !do iat=1, natom
+        !    vx(iat,1) = vx(iat,1) * vel_rescale
+        !    vy(iat,1) = vy(iat,1) * vel_rescale
+        !    vz(iat,1) = vz(iat,1) * vel_rescale
+        !end do
 
         !Gradient to compute
          do ist1=1, nstate_lz
@@ -148,7 +167,7 @@ module mod_lz
         write(*,*)"NO Hop (",istate_lz,"->",ihop ,")dE/a.u.", en_diff(2), "Probability:", prob(ihop), "Random n:",hop_rdnum
      end if
 
-   end if                   
+   end if                  
 
    !Write
    if(modulo(it,nwrite).eq.0)then
@@ -160,8 +179,9 @@ module mod_lz
 
    end subroutine lz_hop
 
-   !subroutine lz_finalize()
+   subroutine lz_finalize()
    ! Deallocate arrays
-   !end subroutine lz_finalize
+       deallocate(en_array_lz, fx_old, fy_old, fz_old)
+   end subroutine lz_finalize
 
 end module mod_lz

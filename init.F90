@@ -981,6 +981,10 @@ subroutine init(dt, time_data)
           error=1
        endif
       endif
+      if(ipimd.eq.5.and.pot.eq.'_tera_')then
+         write(*,*)'ERROR: LZ not implemented with TeraChem over MPI'
+         error=1
+      endif
       if(istage.ne.1.and.istage.ne.0)then
          write(*,*)'ERROR: istage has to be 0 or 1'
          error=1 
