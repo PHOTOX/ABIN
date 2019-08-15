@@ -1,0 +1,88 @@
+#! /bin/bash
+cd MNDO
+source ../SetEnvironment.sh MNDO
+
+timestep=$1
+ibead=$2
+input=input$ibead
+geom=../geom.dat.$ibead
+natom=$(cat $geom | wc -l )
+
+#----------------USER SETUP-----------------------
+method=OM3    # semiempirical methods, usually OMx
+charge=0      # molecular charge
+multi=0       # multiplicity
+              # 0 Closed-shell singlet
+              # 1 Open-shell singlet with two singly occupied orbitals, this usually corresponds to an excited singlet state
+              # 2 Doublet
+              # 3 Triplet
+disper=-1     # Option for dispersion function corrections, only for AM1, PM3, OM2, OM3, ODM2, and ODM3.
+              # -1 not included
+              # 0  =-3 for ODM2,ODM3 and =-1 for others
+              # for  AM1 and PM3:  
+              # 1  include dispersion corrections (PCCP 9, 2362 (2007)).
+              # for OM2 and OM3:
+              # 1  Like immdp=2 with with Elstner's damping function alias D1, (see JCP 114, 5149 (2001)
+              # 2  Include the D2 dispersion correction from Grimme
+              # for OM2, OM3, ODM2, and ODM3:
+              # 3  Include the D3 dispersion correction from Grimme. 
+              # =-3  Like immdp=3, but with three-body terms included.
+#---------------END OF USER SETUP-----------------------------
+
+komentar1="timestep $timestep"	#optional comment
+komentar2=""	#optional comment
+jop="-2" 	#type of the calcuation
+igeom=1		#0-internal coordinates, 1-cartesian coordinates
+iform=1 	#type of input format
+nsav15=3	#Compulsory: prints desired output file
+ipubo=1		#Compulsory: Saves vawefunction
+ktrial=11	#Compulsory: Loads vawefunction
+
+cat > $input << EOF
+$method jop=$jop igeom=$igeom iform=$iform nsav15=$nsav15 kharge=$charge imult=$multi +
+ipubo=$ipubo ktrial=$ktrial immdp=$disper
+$komentar1
+$komentar2
+EOF
+
+awk 'BEGIN{
+   elems["H"]=1
+   elems["He"]=2
+   elems["Li"]=3
+   elems["Be"]=4
+   elems["B"]=5
+   elems["C"]=6
+   elems["N"]=7
+   elems["O"]=8
+   elems["F"]=9
+   elems["Ne"]=10
+   elems["Na"]=11
+   elems["Mg"]=12
+   elems["Al"]=13
+   elems["Si"]=14
+   elems["P"]=15
+   elems["S"]=16
+   elems["Cl"]=17
+   elems["Ar"]=18
+   CONVFMT="%.6f"
+}
+ { printf "%.1g %.12g %.1g %.12g %.1g %.12g %.1g\n", elems[$1], $2, 1,  $3, 1,  $4, 1 }' $geom >> $input      
+
+#conversion of xyz input to MNDO geom
+
+$MNDOEXE < $input &> $input.out
+
+#---------------ERROR CHECK-----------------------------
+
+if [[ $? -ne 0 ]] || ! $( grep -q "COMPUTATION TIME" $input.out ) || ! $( grep -q "SCF TOTAL ENERGY" $input.out ) ;then
+   echo "WARNING from r.mndo: MNDO calculation probably failed."
+   echo "See $input.out.error"
+   cp $input.out $input.out.error
+fi
+
+#---------------EXTRACT-----------------------------
+
+grep -A1 'ENERGY' fort.15 |tail -1 |  awk '{print $1/27.211396}' > ../engrad.dat.$ibead
+
+grep -A$(($natom*3))  'INTERNAL COORDINATES AND GRADIENTS'  fort.15 | tail -n +2 | awk 'BEGIN{toAU=0.00079680132} NR%3==1{gradx=$4*toAU} NR%3==2{grady=$4*toAU} NR%3==0{gradz=$4*toAU; print gradx,grady,gradz}' >> ../engrad.dat.$ibead
+

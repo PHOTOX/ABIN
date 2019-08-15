@@ -1,0 +1,46 @@
+#! /bin/bash
+cd MOPAC
+source ../SetEnvironment.sh MOPAC
+
+timestep=$1
+ibead=$2
+input=input$ibead
+geom=../geom.dat.$ibead
+natom=$(cat $geom | wc -l )
+
+
+oldens=""
+if [[ $timestep -ne 0 ]];then
+   oldens="OLDENS"
+fi
+#----------------------USER SETUP------------------- 
+# details can be found on MOPAC websites, compulsory keywords: GRADIENT, NOSYM and 1SCF
+# DENOUT and OLDENS serve to hand over the density matrix from one step to the next one
+cat > $input << EOF
+am1 CHARGE=0 1SCF NOSYM GRADIENTS DENOUT $oldens
+EOF
+
+#------------------end of USER SETUP-------------------
+
+cat >> $input << EOF
+
+timestep $timestep
+EOF
+cat $geom >> $input
+
+$MOPACEXE $input
+
+
+#-----------------ERROR CONTROL-----------------------------
+if [[ $? -ne 0 ]] || ! $( tail -n 1 $input.out | grep -q "== MOPAC DONE ==" );then
+   echo "WARNING from r.mopac: MOPAC calculation probably failed."
+   echo "See $input.out.error"
+   cp $input.out $input.out.error
+fi
+
+#-----------------EXTRACT-----------------------------
+grep 'TOTAL ENERGY' $input.out | awk '{print $4/27.211396}' > ../engrad.dat.$ibead
+
+grep -A$(($natom*3+2))  'FINAL  POINT  AND  DERIVATIVES'  $input.out | tail -n +4 | awk 'BEGIN{toAU=0.00079680132} NR%3==1{gradx=$7*toAU} NR%3==2{grady=$7*toAU} NR%3==0{gradz=$7*toAU; print gradx,grady,gradz}' >> ../engrad.dat.$ibead
+
+
