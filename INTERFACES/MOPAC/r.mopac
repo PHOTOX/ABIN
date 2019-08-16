@@ -39,8 +39,12 @@ if [[ $? -ne 0 ]] || ! $( tail -n 1 $input.out | grep -q "== MOPAC DONE ==" );th
 fi
 
 #-----------------EXTRACT-----------------------------
-grep 'TOTAL ENERGY' $input.out | awk '{print $4/27.211396}' > ../engrad.dat.$ibead
+grep 'TOTAL ENERGY' $input.out | awk '{printf "%.12f\n",$4/27.211396}' > ../engrad.dat.$ibead
 
-grep -A$(($natom*3+2))  'FINAL  POINT  AND  DERIVATIVES'  $input.out | tail -n +4 | awk 'BEGIN{toAU=0.00079680132} NR%3==1{gradx=$7*toAU} NR%3==2{grady=$7*toAU} NR%3==0{gradz=$7*toAU; print gradx,grady,gradz}' >> ../engrad.dat.$ibead
-
+grep -A$(($natom*3+2))  'FINAL  POINT  AND  DERIVATIVES'  $input.out | tail -n +4 | awk '
+BEGIN{toAU=0.00079680132}
+NR%3==1{gradx=$7*toAU}
+NR%3==2{grady=$7*toAU}
+NR%3==0{gradz=$7*toAU; printf"%.12f %.12f %.12f\n",gradx,grady,gradz}
+' >> ../engrad.dat.$ibead
 
