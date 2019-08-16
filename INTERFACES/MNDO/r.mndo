@@ -9,7 +9,7 @@ geom=../geom.dat.$ibead
 natom=$(cat $geom | wc -l )
 
 #----------------USER SETUP-----------------------
-method=OM3    # semiempirical methods, usually OMx
+method=OM2    # semiempirical methods, usually OMx
 charge=0      # molecular charge
 multi=0       # multiplicity
               # 0 Closed-shell singlet
@@ -45,30 +45,19 @@ $komentar1
 $komentar2
 EOF
 
-awk 'BEGIN{
-   elems["H"]=1
-   elems["He"]=2
-   elems["Li"]=3
-   elems["Be"]=4
-   elems["B"]=5
-   elems["C"]=6
-   elems["N"]=7
-   elems["O"]=8
-   elems["F"]=9
-   elems["Ne"]=10
-   elems["Na"]=11
-   elems["Mg"]=12
-   elems["Al"]=13
-   elems["Si"]=14
-   elems["P"]=15
-   elems["S"]=16
-   elems["Cl"]=17
-   elems["Ar"]=18
-   CONVFMT="%.6f"
+# Conversion of xyz input to MNDO geom
+# it uses dummy attoms for small molecules otherwise it switches automatically from xyz to zmat format
+awk '
+BEGIN{
 }
- { printf "%.1g %.12g %.1g %.12g %.1g %.12g %.1g\n", elems[$1], $2, 1,  $3, 1,  $4, 1 }' $geom >> $input      
-
-#conversion of xyz input to MNDO geom
+{
+   printf "%s %.12g %i %.12g %i %.12g %i\n", $1, $2, 1,  $3, 1,  $4, 1
+}
+END {
+   for (i = 1; i <= 4 - NR; i++)
+        print 99, 0, 0, 0, 0, 0, 0
+}
+' $geom >> $input
 
 $MNDOEXE < $input &> $input.out
 
@@ -82,7 +71,12 @@ fi
 
 #---------------EXTRACT-----------------------------
 
-grep -A1 'ENERGY' fort.15 |tail -1 |  awk '{print $1/27.211396}' > ../engrad.dat.$ibead
+grep -A1 'ENERGY' fort.15 | tail -1 |  awk '{printf "%.12f\n",$1/27.211396}' > ../engrad.dat.$ibead
 
-grep -A$(($natom*3))  'INTERNAL COORDINATES AND GRADIENTS'  fort.15 | tail -n +2 | awk 'BEGIN{toAU=0.00079680132} NR%3==1{gradx=$4*toAU} NR%3==2{grady=$4*toAU} NR%3==0{gradz=$4*toAU; print gradx,grady,gradz}' >> ../engrad.dat.$ibead
+grep -A$(($natom*3))  'INTERNAL COORDINATES AND GRADIENTS'  fort.15 | tail -n +2 | awk '
+BEGIN{toAU=0.00079680132}
+NR%3==1{gradx=$4*toAU}
+NR%3==2{grady=$4*toAU}
+NR%3==0{gradz=$4*toAU; printf"%.12f %.12f %.12f\n",gradx,grady,gradz}
+' >> ../engrad.dat.$ibead
 
