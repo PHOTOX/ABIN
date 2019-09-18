@@ -21,7 +21,7 @@ program abin_dyn
    use mod_arrays
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
-   use mod_lz, only: lz_hop, lz_init
+   use mod_lz, only: lz_hop
    use mod_kinetic, ONLY: temperature
    use mod_utils, only: abinerror, archive_file
    use mod_shake, only: nshake
@@ -63,10 +63,6 @@ program abin_dyn
 !  Surface hopping initialization
    if(ipimd.eq.2.or.ipimd.eq.4)then
       call sh_init(x, y, z, vx, vy, vz, dt)
-   endif
-!  Landau-Zener initialization
-   if(ipimd.eq.5)then
-      call lz_init(x, y, z, vx, vy, vz, dt)
    endif
 
 !$ nthreads = omp_get_max_threads()
@@ -217,7 +213,7 @@ program abin_dyn
 
 !        LANDAU ZENER HOPPING
          if(ipimd.eq.5)then
-            call lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas)
+            call lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, pot)
             px = amt * vx
             py = amt * vy
             pz = amt * vz

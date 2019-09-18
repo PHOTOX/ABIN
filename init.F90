@@ -80,7 +80,7 @@ subroutine init(dt, time_data)
    use mod_harmon
    use mod_sh_integ, only: nstate, integ, phase, popsumthr
    use mod_sh
-   use mod_lz, only: initstate_lz, nstate_lz, deltaE_lz
+   use mod_lz,       only: lz_init, initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz
    use mod_qmmm
    use mod_gle
    use mod_nab
@@ -158,7 +158,7 @@ subroutine init(dt, time_data)
                      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, natmm_tera, &
                      dE_S0S1_thr
              
-   namelist /lz/     initstate_lz, nstate_lz, deltaE_lz 
+   namelist /lz/     initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz 
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 
@@ -489,6 +489,7 @@ subroutine init(dt, time_data)
       if(ipimd.eq.5)then
          read(150, lz)
          rewind(150)
+         call lz_init() !Init arrays for possible restart
       end if
 
    if(iremd.eq.1)then
@@ -1034,10 +1035,23 @@ subroutine init(dt, time_data)
        write(*,*)'Error:Initial state > number of computed states. Exiting...'
        error=1
       endif
-      if(ipimd.eq.5.and.initstate_lz.gt.nstate_lz)then
-       write(*,*) initstate_lz, nstate_lz
-       write(*,*)'Error(LZ):Initial state > number of computed states. Exiting...'
-       error=1
+      if(ipimd.eq.5)then
+          if(initstate_lz.gt.nstate_lz)then
+             write(*,*) initstate_lz, nstate_lz
+             write(*,*)'Error(LZ):Initial state > number of computed states. Exiting...'
+             error=1
+          endif
+          if(nstate_lz.le.0)then
+             write(*,*)'Error(LZ):No states to compute (nstate_lz<=0). Exiting...'
+             error=1
+          endif
+          if(nsinglet_lz.eq.0.and.ntriplet_lz.eq.0.and.nstate_lz.gt.0)then
+             nsinglet_lz = nstate_lz                !Assume singlet states
+          endif
+          if((nsinglet_lz+ntriplet_lz).ne.nstate_lz)then
+             write(*,*)'Error(LZ): Sum of singlet and triplet states must give total number of states. Exiting...'
+             error=1
+          endif
       endif
       if(nac_accu1.le.0.or.nac_accu2.lt.0)then
        write(*,*)'Input error:NACME precision must be a positive integer.'

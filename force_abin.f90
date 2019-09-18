@@ -6,7 +6,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_harmon,   only: hess
    use mod_sh_integ, only: nstate
    use mod_sh,       only: nac_accu1, tocalc, en_array, istate
-   use mod_lz,       only: nstate_lz, tocalc_lz, en_array_lz, istate_lz
+   use mod_lz,       only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
    use mod_qmmm,     only: natqm
    use mod_utils,    only: abinerror, lowertoupper
    use mod_io,       only: read_forces
@@ -82,9 +82,12 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          !do ist1=1,nstate_lz
          !   write(MAXUNITS+iw+2*walkmax,'(I1,A1)',advance='no')tocalc_lz(ist1),' '
          !end do
+         !First we have singlets, then triplets
          do ist1=1,nstate_lz
-           if(tocalc_lz(ist1).eq.1) write(MAXUNITS+iw+2*walkmax,'(I1,A1)',advance='no')ist1, ' ' !Number of gradient state
+           if(tocalc_lz(ist1).eq.1) write(MAXUNITS+iw+2*walkmax,'(I1,A1)')ist1, ' ' !Number of gradient state
          end do
+         write(MAXUNITS+iw+2*walkmax,'(I1,A1)')nsinglet_lz, ' ' !Number of singlets
+         write(MAXUNITS+iw+2*walkmax,'(I1,A1)')ntriplet_lz, ' ' !Number of triplets
          close(MAXUNITS+iw+2*walkmax)
       endif
 
