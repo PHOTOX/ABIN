@@ -218,7 +218,7 @@ module mod_lz
            en_diff(ihist) =  (en_array_lz(ist, ihist) - en_array_lz(ist1, ihist))
         end do
         ! Crossing of Zjk - the enerrgy differrence changes sign
-        if (((en_diff(1).gt.0).and.(en_diff(2).lt.0)).or.((en_diff(1).lt.0).and.(en_diff(2).gt.0)))then
+        if ((((en_diff(1).gt.0).and.(en_diff(2).lt.0)).or.((en_diff(1).lt.0).and.(en_diff(2).gt.0))).and.it.gt.1)then
            !We need SOC and gradient of the other state 
            call lz_getsoc(soc_matrix, chpot)
            !Which model to use?
