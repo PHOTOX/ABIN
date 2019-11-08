@@ -394,9 +394,9 @@ module mod_lz
    !predicting dE change
    grad_diff = 0.0d0
    do iat=1,natom
-      grad_diff = grad_diff - vx(iat,1) * dt0 * (fx_old(iat,1) - fxc(iat,1))
-      grad_diff = grad_diff - vy(iat,1) * dt0 * (fy_old(iat,1) - fyc(iat,1))
-      grad_diff = grad_diff - vz(iat,1) * dt0 * (fz_old(iat,1) - fzc(iat,1))
+      grad_diff = grad_diff - vx(iat,1)  * (fx_old(iat,1) - fxc(iat,1))
+      grad_diff = grad_diff - vy(iat,1)  * (fy_old(iat,1) - fyc(iat,1))
+      grad_diff = grad_diff - vz(iat,1)  * (fz_old(iat,1) - fzc(iat,1))
    end do
    grad_diff = abs(grad_diff)
 
