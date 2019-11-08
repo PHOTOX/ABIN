@@ -1,0 +1,249 @@
+#!/bin/bash
+#Landau-Zener MOLPRO script for singlet or singlet/triplet dynamics. Number of states in ../input.in. 
+
+cd MOLPRO-LZ
+timestep=$1
+ibead=$2
+input=input$ibead
+
+if [[ -z $3 ]];then
+   nacaccu=7
+else
+   nacaccu=$3
+fi
+
+source SetEnvironment.sh MOLPRO
+
+#----USER INPUT--------------------------
+basis="6-31g*" # for Pople basis sets and df-casscf, fitting DF basis must be specified manually
+               # don't use Dunning basis sets, you won't get NACME
+nelectrons=58  # total number of electrons
+singletspin=0         # 0 for singlet, 1 for dublet etc.
+tripletspin=2
+nocc=32        # occupied orbitals
+nclosed=23      # closed orbitals
+memory=1200      # molpro memory in MegaWords (1MW = 8 Mb)
+multi="multi"  # or  "df-casscf" for density fitting version
+delscratch=1   # If job fails, try to delete scratch and start over without initial wavefunction
+numerforce=1   # How do we calculate forces?
+# 0 = Analytically
+# 1 = Numerically in case analytical calculation do not converge 
+# 2 = Always numerically # FOR NUMERICAL FORCES,you may want to try -mppx parallelization, see MX_12 script
+
+#-END OF USER INPUT, FOR SIMPLE CASSCF, NO OTHER MODIFICATION NEEDED
+####################################################################
+
+#-COMMENTS ON DF-CASSCF---------------------------------------------
+#-For new density fitting CASSCF code, seek more info here: http://www.molpro.net/info/2012.1/doc/update/node6.html
+#-http://www.molpro.net/info/2012.1/doc/manual/node114.html - about basis sets
+#-about Density Fitting: http://www.molpro.net/info/2012.1/doc/manual/node133.html
+#-Easiest way to do DF-CASSCF is to use turbomole (Ahlrichs) Def2 basis sets (SVP,TZVP etc.)
+#-For Dunnging basis sets, DF bases are available, but you won't calculate NAC
+#-For Pople basis sets, you need to specify DF basis manually, probably some of the DF Ahlrichs basis sets.
+
+rm -f ../engrad.dat.$ibead 
+
+#-How many atoms?
+natom=$(cat ../geom.dat.$ibead | wc -l )
+let natom1=natom+1 
+let natom2=natom+2 
+
+# reading from state.dat
+# Number of states,state we are on and how many singlets/triplets to compute 
+read -t 2 -a nstate
+read -t 2 -a tocalc
+read -t 1 -a nsinglet
+read -t 1 -a ntriplet
+
+# MOLPRO-CASSCF
+# wavefunction passed between steps via input.wfu
+# if you don't want that, comment out the second line
+
+cat > $input.pom1 << EOF
+***Abin input
+memory,$memory,m;
+file,2,$input.wfu,unknown
+PUNCH,$input.pun,new
+gprint,orbital,civector
+symmetry, nosym
+
+Angstrom
+
+geometry=../geom.dat.$ibead
+
+basis=$basis
+
+!-for simple CASSCF, you don't need to modify anything below this
+
+!-we need to get rid of the SAMC records in file 2 (input.wfu,restart file)
+!-otherwise, the forces and NACME are wrong for the following reason
+!-cpmscf will not rewrite itself it but ather write into following records
+!-but the subsequent call to forces would read from old records -> wrong numbers
+!-we use file 2 for forces and NACME due to df-casscf
+
+data,truncate,2,5100
+
+if (lastorb.ne.MCSCF)then
+   {hf;wf,$nelectrons,0,$singletspin}
+endif
+
+dkho=2;
+
+$multi;
+occ,$nocc;
+closed,$nclosed;
+maxiter,40;
+NOEXTRA;
+WF,$nelectrons,0,$singletspin;
+state,$nsinglet;
+WF,$nelectrons,0,$tripletspin;
+state,$ntriplet;
+
+EOF
+
+#Prepare template SOC input
+if [[ $timestep -eq "0" ]]; then
+  cp $input.pom1 $input.soc
+  sed -i "s/file,2,.*/file,2,copy.$input.wfu,unknown/g" $input.soc #previous WF
+  sed -i 's/PUNCH,.*/   /g' $input.soc
+  #sed -i "s/geometry.*/geometry=.\/prevstep.geom.dat.$ibead/g" $input.soc #previous geometry
+  echo " "  >> $input.soc
+  echo "{ci;wf,$nelectrons,0,$singletspin;save,3010.1;state,$nsinglet;noexc}" >> $input.soc
+  echo "{ci;wf,$nelectrons,0,$tripletspin;save,3040.1;state,$ntriplet;noexc}" >> $input.soc
+  
+  echo "lsint" >> $input.soc
+
+  echo "{ci;hlsmat,ls,3010.1,3040.1;print,hls=2}" >> $input.soc
+fi
+
+#Do we compute gradients for singlet?
+if [ "$tocalc" -le "$nsinglet" ]; then
+  if [[ $numerforce -eq 0 || $numerforce -eq 1 ]];then
+     # we are using file 2, because of df-casscf
+  cat >> $input.pom1 << EOF 
+    cpmcscf ,grad,$tocalc.1,ms2=$singletspin,save=5100.2,ACCU=1d-$nacaccu; 
+    forces;samc,5100.2;
+
+EOF
+  fi
+  if [[ $numerforce -eq 2 ]];then
+  cat >> $input.pom1 << EOF
+    SAVE,GRAD=-1
+    force,numerical,forward,variable=energy($tocalc); !central
+
+EOF
+  fi
+fi
+
+#Do we compute gradients for triplet?
+if [ "$tocalc" -gt "$nsinglet" ]; then
+  if [[ $numerforce -eq 0 || $numerforce -eq 1 ]];then
+     # we are using file 2, because of df-casscf
+  cat >> $input.pom1 << EOF 
+    cpmcscf ,grad,$((tocalc-nsinglet)).1,ms2=$tripletspin,save=5100.2,ACCU=1d-$nacaccu; 
+    forces;samc,5100.2;
+
+EOF
+  fi
+  if [[ $numerforce -eq 2 ]];then
+  cat >> $input.pom1 << EOF
+    SAVE,GRAD=-1
+    force,numerical,forward,variable=energy($((tocalc-nsinglet))); !central
+
+EOF
+  fi
+fi
+
+
+###############################################################
+#---------END OF USER INPUT--------!
+######  DO NOT MODIFY BELOW, unless you have problems reading forces or energies #####
+
+#for ((ist1=1;ist1<=nstate;ist1++)) {
+#echo "pop; density,2140.2,state=$ist1.1" >> $input.pom2
+#}
+
+
+#--------------------------------------------------------------------
+#- BUILDING input.com------------------------------------------------
+cat $input.pom1 > $input.com  #basic parameters and commands, forces
+#--END OF MOLPRO INPUT------------------------
+
+#----------MOLPRO JOB-------------------------
+export TMPDIR=$PWD/scratch$ibead
+$MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
+
+# Check whether all is OK.
+#-If we do not have forces because of poor convergence and numerforce=1, try numerical forces.
+# If there is some other error, try deleting scratch and start over if delscratch=1.
+#-If it is some other error (e.g. NAC convergence), do nothing. It's up to ABIN to decide what to do.
+if [[ $? -eq 0 ]];then
+   cp $input.com.out $input.com.out.old
+else 
+   cp $input.com.out $input.com.out.error.$timestep
+   if $( grep -q 'NO CONVER' $input.com.out ) ;then 
+
+      if [[ $numerforce -eq "1" ]]; then
+         echo "WARNING: Analytical forces failed us. Numerical forces will I try..."
+     	 echo "step: $timestep, Computing numerical gradient.">>../errors.dat
+	 # compute numerical forces
+	 cat $input.pom1 > $input.com  #basic parameters and commands
+         echo "SAVE,GRAD=-1" >> $input.com
+         echo "force,numerical,central,variable=energy($istate);" >> $input.com
+         $MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
+         numerforce=2 #for grepping gradient
+         cp $input.com.out $input.com.out.numer.$timestep
+      fi
+
+   elif [[ $delscratch -eq 1 ]]; then
+
+      gradlines=$(grep "GRADIENT," $input.pun )
+      # If we do have gradient, do nothing, it's up to ABIN to get NAC with lower accuracy
+
+      if [[ $gradlines -ne $natom ]];then
+         #delete scratch and start over
+         echo "WARNING: Molpro job failed. I will delete the scratch directory and try again."
+         echo "step: $timestep, deleting scratch and starting over.">>../errors.dat
+         rm -r scratch$ibead ; $MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
+      fi
+
+   fi
+fi
+
+#####################################################################
+#--------------------------------------------------------------------
+#-NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN-------------------------
+
+#- Extracting energy. This should work even for CASPT2 energies.
+grep 'Energy          ' $input.com.out | awk -F "Energy" '{print $2}' | tail -n $nstate >> ../engrad.dat.$ibead
+
+#-Extracting GRADIENT, depends whether analytical or numerical
+#-Should work for both CASPT2 and CASSCF gradients
+if [[ $numerforce -eq "2" ]];then
+   grep "Total Energy" $input.com.out -A$natom2|tail -n$natom|awk '{print $2,$3,$4}' >> ../engrad.dat.$ibead
+else
+   grep "GRADIENT," $input.pun | awk -F" " '{print $5,$6,$7}'>>../engrad.dat.$ibead
+fi
+
+#BACKUP WFU and geometry for SOC calculation
+cp ./scratch$ibead/$input.wfu ./scratch$ibead/copy.$input.wfu
+
+
+if [[ $timestep -eq "0" ]]; then
+   #echo '#      Mulliken charges for the state we are on:'> ../charge.actual
+   #echo '#      Mulliken charges for all calculated electronic states.'> ../charges.all
+   rm -f ../stateall.dat
+fi
+
+#-For future reference and analysis
+echo "timestep: $timestep" >> ../stateall.dat
+cat ../state.dat | head -2 >> ../stateall.dat
+#cat $input.com.out >> $input.com.out.all
+
+#####Mulliken charges#########
+#echo "timestep:  $timestep">>../charges.all
+#echo "timestep:  $timestep    state:$istate ">>../charge.actual
+#grep 'Unique atom' $input.com.out -A$natom | awk -F " " '{print $2 "  " $9 $10}'>>../charges.all
+#grep "Type=MCSCF/CHARGE (state $istate.1" $input.com.out -A10 | awk -F " " '{print $2 "  " $9 $10}'|tail -$natom1>>../charge.actual
+
+

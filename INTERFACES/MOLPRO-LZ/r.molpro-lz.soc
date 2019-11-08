@@ -1,0 +1,58 @@
+#!/bin/bash
+cd MOLPRO-LZ
+#Landau-Zener MOLPRO script for singlet or singlet/triplet dynamics. Number of states in ../input.in. 
+# Run as ./r.molpro-lz.soc 001 < ../state.dat 
+
+ibead=$1
+input=input$ibead
+nacaccu=7
+
+source SetEnvironment.sh MOLPRO
+
+$MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead/ >& $input.soc.out <$input.soc
+
+
+
+read -t 2 -a nstate
+read -t 2 -a tocalc   
+read -t 1 -a nsinglet #needed 
+read -t 1 -a ntriplet #needed
+
+
+#####################################################################
+#--------------------------------------------------------------------
+#-NOW IT'S TIME TO COLLECT SOC DATA FOR ABIN-------------------------
+
+#First convert the SOC matrix to simpler form (Singlet-Triplet couplings H^2) > SOC.dat
+#     t1   t2
+#s1  ...  ...
+#s2  ...  ...
+#
+if [ -f "./SOC.dat" ]; then
+   rm ./SOC.dat
+fi
+
+for i in $( seq 1 $nsinglet )
+do
+   for j in $( seq 1 $ntriplet )
+   do
+     temp=$(grep -A100000 "Spin-Orbit Matrix (CM-1)" $input.soc.out  | grep -A2 "^  $i" | head -2) #Line for ith singlet state
+     let col1=4+$nsinglet+$j
+     let col2=4+$nsinglet+$ntriplet+$j
+     let col3=4+$nsinglet+$ntriplet*2+$j
+     let col4=$col1+$nsinglet+$ntriplet*3
+     let col5=$col2+$nsinglet+$ntriplet*3
+     let col6=$col3+$nsinglet+$ntriplet*3
+     #echo $temp
+     #echo $col1 $col2 $col3 $col4 $col5 $col6
+     soc=$(echo $temp | awk -v col1="$col1" -v col2="$col2" -v col3="$col3" -v col4="$col4" -v col5="$col5" -v col6="$col6" \
+	     '{print (($col1)^2+($col2)^2+($col3)^2+($col4)^2+($col5)^2+($col6)^2)}')
+     echo -e "$soc   \c" >> ./SOC.dat
+   done
+   echo " " >> ./SOC.dat
+done
+
+cp ./SOC.dat ../SOC.dat
+
+exit 
+
