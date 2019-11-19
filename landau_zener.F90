@@ -223,19 +223,20 @@ module mod_lz
            call lz_getsoc(soc_matrix, chpot)
            !Which model to use?
            !1 - lets compute it from gradients
-           call lz_getgraddiff(grad_diff, ist, ist1, x, y, z, vx, vy, vz, fxc, fyc, fzc)
-           molveloc = 1.0d0
+           !call lz_getgraddiff(grad_diff, ist, ist1, x, y, z, vx, vy, vz, fxc, fyc, fzc)
+           !molveloc = 1.0d0
            !2 - predict it from last 2 energy differences
-           !grad_diff = abs((abs(en_diff(1))-abs(en_diff(2)))/dt)  !grad diff will contain d(wT-wS)
+           grad_diff = abs((en_diff(1)-en_diff(2))/dt)  !grad diff will contain d(wT-wS)
            write (fmt_in,'(I2.2)') ist
            write (fmt_out,'(I2.2)') ist1
            if(S_to_T.eq.1) then
              write(*,*)"S/T CROSS (",trim(fmt_in),"->",trim(fmt_out),") SOC^2: ",soc_matrix(ist,ist1-nsinglet_lz)
              prob(ist1) = 1-exp(-2*PI*( (soc_matrix(ist,ist1-nsinglet_lz) / (AUTOCM**2)) / ( grad_diff * molveloc) ))
-             !prob(ist1) = 1.0d0
-          else if(S_to_T.eq.0) then
+             write(*,*)"Hop probability: ",prob(ist1)
+           else if(S_to_T.eq.0) then
              write(*,*)"T/S CROSS (",trim(fmt_in),"->",trim(fmt_out),") SOC^2: ",soc_matrix(ist1,ist-nsinglet_lz)
              prob(ist1) = 1-exp(-2*PI*( (soc_matrix(ist1,ist-nsinglet_lz) / (AUTOCM**2)) / ( grad_diff * molveloc) ))
+             write(*,*)"Hop probability: ",prob(ist1)
            endif
         endif
       end do
