@@ -2,15 +2,17 @@
 !- Daniel Hollas                        2013
 !------------------------------------------------------
 
-! TODO: This module should be probably split into to
+! TODO: This module should be probably split into two.
 ! We need some master module for QMMM models
+
+! Currently, this module does not really support QMMM,
+! Instead we can only do pure MM with LJ and Coulomb potential
 module mod_qmmm
    use mod_const, only: DP
    use mod_array_size, only: MAXTYPES
    use mod_utils, only: abinerror
    implicit none
-   integer, parameter   :: maxtype=10  ! TODO: for now, we dont sanitize input for this
-   integer              :: natqm,natmm
+   integer              :: natqm, natmm
    character(len=2)     :: attypes( MAXTYPES )
    character(len=10),parameter :: LJcomb='LB' !no other option for now
    character(len=10)    :: qmmmtype='NA'

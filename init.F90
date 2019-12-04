@@ -432,11 +432,11 @@ subroutine init(dt, time_data)
          write(*,*)'ERROR when reading namelist "system".'
          write(*,*)chiomsg
          call abinerror('init')
-      else
-         do iat=1,MAXTYPE
-            massnames(iat)=LowerToUpper(massnames(iat))
-         end do
       end if
+
+      do iat = 1, MAXTYPES
+         massnames(iat) = LowerToUpper(massnames(iat))
+      end do
 
      ! Determine atomic masses from periodic table
      call mass_init(masses, massnames)
@@ -681,8 +681,9 @@ subroutine init(dt, time_data)
       if(pot.eq.'guillot') call inames_guillot()
 
       if(iqmmm.eq.3.or.pot.eq.'mm')then 
-         do iat=1, natom
-            attypes(iat)=LowerToUpper(attypes(iat))
+         do iat = 1, MAXTYPES
+            if(attypes(iat).eq.'') exit
+            attypes(iat) = LowerToUpper(attypes(iat))
          end do
          call inames_init()
          call ABr_init()
