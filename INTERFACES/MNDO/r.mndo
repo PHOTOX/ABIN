@@ -71,10 +71,10 @@ fi
 
 #---------------EXTRACT-----------------------------
 
-grep -A1 'ENERGY' fort.15 | tail -1 |  awk '{printf "%.12f\n",$1/27.211396}' > ../engrad.dat.$ibead
+grep 'TOTAL ENERGY' $input.out | awk '{printf "%.8f\n", $4/27.211396}' > ../engrad.dat.$ibead
 
 grep -A$(($natom*3))  'INTERNAL COORDINATES AND GRADIENTS'  fort.15 | tail -n +2 | awk '
-BEGIN{toAU=0.00079680132}
+BEGIN{toAU=0.000843297}
 NR%3==1{gradx=$4*toAU}
 NR%3==2{grady=$4*toAU}
 NR%3==0{gradz=$4*toAU; printf"%.12f %.12f %.12f\n",gradx,grady,gradz}
