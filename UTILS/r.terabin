@@ -2,35 +2,29 @@
 # This is a sample script for launching ABIN simulations in cluster environments
 # using MPI TeraChem interface.
 
-# 1. Copy all data from CWD to the node's scratch.
-# 2. Launch ABIN.
-# 3. Copy data back (only newer files are copied!).
-# 4. Remove scratch directory. (if delscratch = true)
-
 # Sample SGE Params on PHOTOX clusters
 #$ -V -cwd
 #$ -l num_gpu=1
-##$ -pe shm 1 -q nq-gpu
+#$ -pe shm 1 -q nq-gpu
 
-# Example SLURM parameters
+# Sample SLURM parameters
 #SBATCH --mem=10000
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
 #SBATCH --gres=gpu:1
 
+JOBNAME=TERABIN_${JOB_ID}_$$
 # ABIN SETUP 
-OUTPUT=output
-JOBNAME=ABIN_${JOB_ID}_$$
-INPUTPARAM=input.in
-INPUTGEOM=mini.dat
+ABIN_OUT=abin.out
+ABIN_IN=input.in
+INPUTGEOM=water.xyz
 INPUTVELOC=
 
 # TeraChem SETUP
 TC_INPUT=tera.inp
 MPITYPE=0   # 0 - ground state AIMD
             # 2 - Surface Hopping
-
 delscratch=true
 N_TERA_SERVERS=1     # Use more TC servers for PIMD or REMD (Experimental)
 ################
@@ -48,39 +42,38 @@ function files_exist {
    fi
 }
 
-files_exist $TC_INPUT $INPUTPARAM $INPUTGEOM
+files_exist $TC_INPUT $ABIN_IN $INPUTGEOM
 if [[ ! -z $INPUTVELOC ]];then
    files_exist $INPUTVELOC
 fi
 
+# Check pot=_tera_ in ABIN input
+grep -E -q -e ^[^!]*pot[[:space:]]*=[[:space:]]*[\'"]_tera_["\'] $ABIN_IN
+if [[ $? -eq 1 ]];then
+   echo "ERROR: It appears that you did not specify pot=\'_tera_\' in $ABIN_IN."
+   exit 1 
+fi
+
 # REMD SETTINGS, automatic from ABIN input
 N_REPLICAS=1
-grep -E -q -e ^[^!]*iremd[[:space:]]*=[[:space:]]*1\\b $INPUTPARAM
+grep -E -q -e ^[^!]*iremd[[:space:]]*=[[:space:]]*1\\b $ABIN_IN
 if [[ $? -eq 0 ]];then
    echo "REMD detected. Assuming one TC server per replica!"
-   N_REPLICAS=$(grep -E -o -e ^[^!]*nreplica[[:space:]]*=[[:space:]]*[0-9]+ $INPUTPARAM | grep -E -o -e [0-9]+)
+   N_REPLICAS=$(grep -E -o -e ^[^!]*nreplica[[:space:]]*=[[:space:]]*[0-9]+ $ABIN_IN | grep -E -o -e [0-9]+)
    N_TERA_SERVERS=$N_REPLICAS
 fi
 
 export LD_LIBRARY_PATH=
-source SetEnvironment.sh TERACHEM
-MPIRUN_TERA="$MPIRUN -n 1 "
+source SetEnvironment.sh TERACHEM trunk
 source SetEnvironment.sh ABIN mpi
-# This needs to be the same as MPIRUN_TERA
-MPIRUN_ABIN="$MPIRUN -n $N_REPLICAS"
-
-rm -f port.txt.*
-
-
-grep -E -q -e ^[^!]*pot[[:space:]]*=[[:space:]]*[\'"]_tera_["\'] $INPUTPARAM
-if [[ $? -eq 1 ]];then
-   echo "ERROR: It appears that you did not specify pot=\'_tera_\' in $INPUTPARAM."
-   exit 1 
-fi
+#hostname="403-as67-01"
+hostname=$HOSTNAME
+MPIRUN_TERA="$MPIRUN -n 1 -nameserver $hostname"
+MPIRUN_ABIN="$MPIRUN -n $N_REPLICAS -nameserver $hostname"
 
 # when using reference potential in multiple time-step MD
 # TODO: This is very brittle
-pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $INPUTPARAM)
+pot_ref=$(awk -F"[! ,=\"']+" '{if($1=="pot_ref")print $2}' $ABIN_IN)
 INTERFACE_REF=${pot_ref^^}
 
 SCRDIR=/scratch/$USER/$JOBNAME
@@ -106,103 +99,52 @@ fi
 
 cd $SCRDIR
 
-host=$(uname -a | awk '{print $2}')
-port=teraport$$
-
-# Direct connection via teraport currently not in use
-sed -i "s/teraport=.*/teraport=\"\"/" $INPUTPARAM
-#sed -i "s/teraport=.*/teraport=\"$port\"/" $INPUTPARAM
-
+TC_PORT=$JOBNAME.$$
 # Make sure hydra_nameserver is running
-#hdra=$(ps -e | grep hydra_nameser)
-#if [[ -z $hdra ]];then
-#   hydra_nameserver &
-#fi
-
-declare -A terapid
-
-numgpus=$(grep gpus $TC_INPUT | awk '{print $2}')
-
-if [[ $numgpus -gt 1 && $N_TERA_SERVERS -gt 1 ]];then
-   echo "ERROR: Number of gpus per TC server should be 1!"
-   echo "Set parameters \"gpus 1\" in $TC_INPUT or"
-   echo "parameter N_TERASERVERS=1 in r.terabin"
-   exit 1
-fi
-
-let numcpus=numgpus*N_TERA_SERVERS
-if [[ $numcpus -ne ${NSLOTS} ]];then
-   echo "ERROR: You did not specify the correct number of CPUs in the qsub command"
-   echo "The correct number of CPUs for your setting should be $numcpus"
-   echo "Ciao!"
-   exit 1
-fi
-
-for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
-   if [[ $N_TERA_SERVERS -gt 1 ]];then
-      let gpuid=itera-1
-      sed -r "s/gpus.+/gpus $numgpus  $gpuid/" $TC_INPUT > $TC_INPUT.$itera
+hydra=$(ps -e | grep hydra_nameser)
+if [[ -z $hydra ]];then
+   MPIPATH=$(dirname $MPIRUN)
+   echo "Launching hydra nameserver for MPI_Lookup"
+   if [[ -f $MPIPATH/hydra_nameserver ]];then
+      $MPIPATH/hydra_nameserver &
    else
-      cp $TC_INPUT $TC_INPUT.1
+      echo "ERROR: Could not find hydra_nameserver executable"
+      exit 1
    fi
-   $MPIRUN_TERA $TERAEXE --inputfile=$TC_INPUT.$itera --UseMPI=$MPITYPE --MPIPort=$port.$itera >> $TC_INPUT.out.$itera 2>&1 &
-#  Get PID of the last process
-   terapid[$itera]=$!
-}
+fi
 
-sleep 9
-sync
-# Ugly workaround because MPI_Lookup does not work
+let NUM_JOBS=N_TERA_SERVERS+1
+declare -A job_pids
+
+# LAUNCH TERACHEM
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
-   grep port_name: $TC_INPUT.out.$itera | awk '{print $6}' | tail -1 > port.txt.$itera
+   let gpuid=itera-1
+   $MPIRUN_TERA $TERAEXE -g$gpuid --inputfile=$TC_INPUT --UseMPI=$MPITYPE --MPIPort=$TC_PORT.$itera > $TC_INPUT.out.$itera 2>&1 &
+   job_pids[$itera]=$!
 }
-# Temporary fix for OLDER ABIN version
-cp port.txt.1 port.txt
 
+# LAUNCH ABIN
+ABIN_CMD="$ABINEXE -i $ABIN_IN -x $INPUTGEOM -M $TC_PORT"
 if [[ -z $INPUTVELOC ]];then
-   $MPIRUN_ABIN $ABINEXE -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT 2>&1 &
-else
-   $MPIRUN_ABIN $ABINEXE -v $INPUTVELOC -i $INPUTPARAM -x $INPUTGEOM >> $OUTPUT 2>&1 &
+   ABIN_CMD=$ABIN_CMD" -v $INPUTVELOC"
 fi
-abinpid=$!
+$MPIRUN_ABIN $ABIN_CMD > $ABIN_OUT 2>&1 &
+job_pids[$NUM_JOBS]=$!
 
+# CHECK WHETHER ABIN AND TC ARE RUNNING
+function join_by { local IFS="$1"; shift; echo "$*"; }
+regex=`join_by \| ${job_pids[@]}`
 while true;do
-
-   # If ABIN dies, kill all living TC servers
-   if ! `ps|grep -q $abinpid` ;then
-      for tcpid in ${terapid[@]};do
-         if `ps|grep -q $tcpid` ;then
-            died=true
-            echo "ABIN died. Killing TeraChem."
-            kill -9 $tcpid 
-         fi
-      done
-      if [[ $died != "true" ]];then
-         echo "Both ABIN and TeraChem stopped."
-      fi
+   njobs=$(ps -eo pid|grep -E "$regex"|wc -l)
+   if [[ $njobs -eq 0 ]];then
+      echo "Both ABIN and TeraChem stopped"
       break
-
-   else
-
-      # If any TC server dies, kill all the other and ABIN
-      for tcpid in ${terapid[@]};do
-         if ! `ps|grep -q $tcpid` ;then
-            echo "TeraChem died. Killing ABIN."
-            kill -9 $abinpid 
-            # Kill all remaining TC servers if any
-            for tpid in ${terapid[@]};do
-               if `ps|grep -q $tpid` ;then
-                  kill -9 $tpid 
-               fi
-            done
-         fi
-         break
-      done
-
+   elif [[ $njobs -lt $NUM_JOBS ]];then
+      echo "One of the TC servers or ABIN died. Killing the rest."
+      kill -9 ${job_pids[@]} 
+      break
    fi
-
    sleep 10
-
 done
 
 cp -upr * $LAUNCH_DIR/.
@@ -219,5 +161,3 @@ if [[ $delscratch -eq "true" ]];then
    rm -r $SCRDIR
    rm $LAUNCH_DIR/job.log
 fi
-
-

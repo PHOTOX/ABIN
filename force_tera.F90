@@ -20,7 +20,7 @@ module mod_terampi
    private
    integer, parameter   :: MAXTERASERVERS=4
    ! By default, take port name from a file
-   character*50  ::  teraport = '', chsys_sleep
+   character*50  :: teraport = '', chsys_sleep
    integer     ::  newcomms(MAXTERASERVERS) ! Communicator, initialized in mpi_init subroutine
 !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
    integer  ::  natmm_tera=0
@@ -317,8 +317,6 @@ subroutine connect_terachem( itera )
    character(255)  :: port_name
    integer         :: ierr, newcomm, iost
    real*8          :: timer
-   logical         :: done=.false.
-   ! TODO: Move portfile to init.F90
    character(len=50) :: server_name, portfile
    character(len=1)  :: chtera
 
@@ -327,37 +325,38 @@ subroutine connect_terachem( itera )
    ! After 60 seconds, exit if not found
    ! -----------------------------------
 
-!  timer = MPI_WTIME(ierr)
-   done = .false.
+   timer = MPI_WTIME(ierr)
 
-   !call MPI_Comm_set_errhandler(ierr);
+   ! This allows us to retry failed MPI_LOOKUP_NAME() call
+   call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr);
 
    write(chtera,'(I1)')itera
 
-   !TODO: THIS IS A HACK FOR REMD
-   ! if (iremd.eq.1) write(portfile, '(A,I2.2)')trim(portfile)//'.', my_rank
-   if (iremd.eq.1) write(chtera,'(I1)')my_rank+1
+   if (iremd.eq.1) write(chtera,'(I1)')my_rank + 1
    if (teraport.ne.'')then 
       server_name = trim(teraport)//'.'//trim(chtera)
       write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
       call flush(6)
 
-      call MPI_LOOKUP_NAME(server_name, MPI_INFO_NULL, port_name, ierr)
-      if (ierr == MPI_SUCCESS) then
-         write(6,'(2a)') 'Found port: ', trim(port_name)
-         call flush(6)
-         done=.true.
+      do
 
-      else
+         call MPI_LOOKUP_NAME(server_name, MPI_INFO_NULL, port_name, ierr)
+         if (ierr == MPI_SUCCESS) then
+            write(6,'(2a)') 'Found port: ', trim(port_name)
+            call flush(6)
+            exit
+         else
+            ! Let's wait a bit
+            ! Too many calls to MPI_LOOKUP_NAME can crash the hydra_nameserver process
+            call system('sleep 1')
+         end if
+       
+         if ( (MPI_WTIME(ierr)-timer) > 60 ) then ! Time out after 60 seconds
+            write(*,*)'Port "'//trim(server_name)//'" not found. Timed out after 60 seconds.'
+            call abinerror("connect_to_terachem")
+         end if
 
-         write(*,*)'Error in MPI_LOOKUP_NAME. Error code:', ierr
-
-      end if
-
-    !  if ( (MPI_WTIME(ierr)-timer) > 60 ) then ! Time out after 60 seconds
-    !     write(*,*)'Port"'//trim(server_name)//'" not found. Timed out after 60 seconds.'
-    !     call abinerror("connect_to_terachem")
-    !  end if
+      end do
 
    else
 
@@ -380,17 +379,21 @@ subroutine connect_terachem( itera )
 
    end if
 
-   write(6,'(2a)') 'Looking up TeraChem port under name:', trim(port_name)
+   ! Setting the default back, die at each MPI error
+   ! TODO: We should rather try to sanitize each MPI call
+   ! so that we can disconnect from TC gracefully
+   call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL, ierr);
+
+   write(6,'(2a)') 'Establishing connection to TeraChem port: ', trim(port_name)
    ! ----------------------------------------
    ! Establish new communicator via port name
    ! ----------------------------------------
-   write(*,*)'Establishing connection...'
    call flush(6)
    call MPI_COMM_CONNECT(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
    write(6,'(a,i0)') 'Established new communicator:', newcomm
 
    if(itera.gt.MAXTERASERVERS)then
-      write(*,*)'ERROR: We currently support only ',MAXTERASERVERS, 'TC servers!'
+      write(*,*)'ERROR: We currently support only ', MAXTERASERVERS, 'TC servers!'
       write(*,*)'Shutting down...'
       write(*,*)'Running TC servers might not be shutdown properly!'
       call abinerror('force_tera')
@@ -422,11 +425,11 @@ subroutine connect_terachem( itera )
    end do
 
    if(mpi_sleep.le.0)then
-      write(*,*)'Fatal: parameter "mpi_sleep" must be positive!'
-      call abinerror('initialize_terachem')
-   else
-      write(chsys_sleep,'(A6,F10.4)')'sleep ',mpi_sleep
+      write(*,*)'WARNING: Parameter "mpi_sleep" must be positive!'
+      write(*,*)'Setting it back to default value'
+      mpi_sleep = 0.05
    end if
+   write(chsys_sleep,'(A6,F10.4)')'sleep ',mpi_sleep
 
   end subroutine initialize_terachem
 
@@ -451,7 +454,7 @@ subroutine connect_terachem( itera )
       ! for some reason, non-blocking ISend does not work :(
       end if
       if (ierr.ne.0)then
-         write(*,*)'I got a MPI Error when I tried to shutdown TeraChem server id=',itera
+         write(*,*)'I got a MPI Error when I tried to shutdown TeraChem server id =', itera
          write(*,*)'Please, verify manually that the TeraChem server was terminated.'
          write(*,*)'The error code was:', ierr
       end if

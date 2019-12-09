@@ -33,7 +33,8 @@ module compile_info
 #endif
 
    print '(a)',''
-   print '(a)','#################### RUNTIME INFO ####################'
+!   print '(a)','#################### RUNTIME INFO ####################'
+   print '(a)','          RUNTIME INFO'
    print '(a)',' '
    write(*,'(A16)',advance='no')'Job started at: '
    write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")time_data(5),':', &
@@ -51,7 +52,6 @@ module compile_info
    write(*,*)
    call system('ldd '//cmdline)
    print '(a)',' '
-   print '(a)','######################################################'
 
    end subroutine print_compile_info
 
@@ -139,7 +139,7 @@ subroutine init(dt, time_data)
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive,xyz_units, &
             dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
             en_restraint, en_diff, en_kk, restrain_pot, &
-            pot_ref, nstep_ref, teraport, nteraservers, cp2k_mpi_beads
+            pot_ref, nstep_ref, nteraservers, cp2k_mpi_beads
 
 #ifdef MPI
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temp_list
@@ -166,18 +166,18 @@ subroutine init(dt, time_data)
    chinput = 'input.in'
    chveloc = ''
    mdtype = ''
-   dt = -1  
+   dt = -1
    error = 0
    iplumed = 0
 
-   chdivider = "############################################################"
+   chdivider = "######################################################"
 
-   call Get_cmdline(chinput, chcoords, chveloc)
+   call Get_cmdline(chinput, chcoords, chveloc, teraport)
 
    ! READING INPUT
 
    open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ")
-   read(150,general)
+   read(150, general)
    rewind(150)
    pot = UpperToLower(pot)
 
@@ -210,6 +210,8 @@ subroutine init(dt, time_data)
 ! We need to connect to TeraChem as soon as possible,
 ! because we want to shut down TeraChem nicely in case something goes wrong.
 #ifdef MPI
+   ! TODO: Shouldn't these by called only when we actually need MPI?
+   ! Like REMD or pot=_tera_?
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
    call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
    if (my_rank.eq.0.and.mpi_world_size.gt.1)then
@@ -278,9 +280,9 @@ subroutine init(dt, time_data)
       write(*,*)'Reading parameters from input file ', trim(chinput)
       write(*,*)'Reading xyz coordinates from file ',trim(chcoords)
       write(*,*)'XYZ Units = '//trim(xyz_units)
+      print '(a)', chdivider
       call PrintLogo(time_data)
-
-
+      print '(a)', chdivider
       print '(a)','                                              '
       SELECT CASE (ipimd)
          case (0)
@@ -1187,14 +1189,14 @@ subroutine init(dt, time_data)
    integer,dimension(8),intent(out) :: time_data
    call date_and_time(VALUES=time_data)
 
-print '(a)','                    _____      _     _      _ '
-print '(a)','        /\         |  _  \    | |   |  \   | |'
-print '(a)','       /  \        | |_|  |   | |   | | \  | |'
-print '(a)','      / /\ \       |     /    | |   | |\ \ | |'
-print '(a)','     / /__\ \      |=====|    | |   | | \ \| |'
-print '(a)','    / /____\ \     |  _   \   | |   | |  \ | |'
-print '(a)','   / /      \ \    | |_|  |   | |   | |   \  |'
-print '(a)','  /_/        \_\   |_____/    |_|   |_|    \_|'
+print '(a)','                  _____     _    _      _ '
+print '(a)','        /\       |  _  \   | |  |  \   | |'
+print '(a)','       /  \      | |_|  |  | |  | | \  | |'
+print '(a)','      / /\ \     |     /   | |  | |\ \ | |'
+print '(a)','     / /__\ \    |=====|   | |  | | \ \| |'
+print '(a)','    / /____\ \   |  _   \  | |  | |  \ | |'
+print '(a)','   / /      \ \  | |_|  |  | |  | |   \  |'
+print '(a)','  /_/        \_\ |_____/   |_|  |_|    \_|'
 print '(a)',' '
 
 print '(a)',' version 1.1'
@@ -1223,72 +1225,69 @@ call print_compile_info(time_data)
     print '(a)', ''
    end subroutine PrintHelp
 
-   subroutine Get_cmdline(chinput, chcoords, chveloc )
-   character(len=*),intent(inout)   :: chinput, chcoords, chveloc
-   character(len=len(chinput))   :: arg
-   integer            :: i
-   logical            :: lexist
+   subroutine Get_cmdline(chinput, chcoords, chveloc, tc_port)
+   character(len=*),intent(inout) :: chinput, chcoords, chveloc, tc_port
+   character(len=len(chinput)) :: arg
+   integer :: i
+   logical :: lexist
    
    i=0
    do while (i < command_argument_count())
 
-     i=i+1
+     i = i + 1
      call get_command_argument(i, arg)
    
       select case (arg)
       case ('-h', '--help')
          call PrintHelp()
          stop 0
-
       case ('-i')
-         i=i+1
+         i = i + 1
          call get_command_argument(i, arg)
          !-format specifier is needed here in case of slashes
          read(arg,'(A)')chinput
          chinput=trim(chinput)
-
       case ('-x')
-         i=i+1
+         i = i + 1
          call get_command_argument(i, arg)
          read(arg,'(A)')chcoords
          chcoords=trim(chcoords)
       case ('-v')
-         i=i+1
+         i = i + 1
          call get_command_argument(i, arg)
          read(arg,'(A)')chveloc
          chveloc=trim(chveloc)
+      case ('-M')
+         i = i + 1
+         call get_command_argument(i, arg)
+         read(arg,'(A)')tc_port
+         tc_port=trim(tc_port)
       case default
-         write(*,*)'Invalid command line argument!'
+         write(*,'(A)')'Invalid command line argument '//arg
          call abinerror('Get_cmdline')
       end select
 
    end do
-   !check for existence of input files
 
-
+   ! TODO: Make a common function in utils to check input files
    inquire(file=chinput,exist=lexist)
    if (.not.lexist)then
-      write(*,*)'FATAL: The following input file does not exists!'
-      write(*,*)chinput
+      write(*,'(2A)')'ERROR: Could not find The input file '//chinput
       call abinerror('Get_Cmdline')
    end if
 
-#ifndef MPI
    inquire(file=chcoords,exist=lexist)
    if (.not.lexist)then
-      write(*,*)'FATAL: Input file does not exists!'
-      write(*,*)chcoords
+      write(*,'(2A)')'ERROR: Could not find The input file '//chcoords
       call abinerror('Get_Cmdline')
    end if
    if (chveloc.ne.'')then
       inquire(file=chveloc,exist=lexist)
       if (.not.lexist)then
-         write(*,*)'FATAL: The following input file does not exists!'
-         write(*,*)chveloc
+         write(*,'(2A)')'ERROR: Could not find The input file '//chveloc
          call abinerror('Get_Cmdline')
       end if
    end if
-#endif
 
    end subroutine Get_cmdline
 
