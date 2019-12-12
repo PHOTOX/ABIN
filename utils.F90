@@ -129,10 +129,18 @@ module mod_utils
    ! https://stackoverflow.com/questions/8508590/standard-input-and-output-units-in-fortran-90#8508757
    use iso_fortran_env, only: error_unit
    character(len=*), intent(in) :: msg
-
    write(error_unit, '(A)') msg
    call flush(error_unit)
-
    end subroutine debug_output
+
+   subroutine file_exists_or_exit(fname)
+   character(len=*), intent(in) :: fname
+   logical :: exists
+   inquire(file=trim(fname), exist = exists)
+   if (.not.exists)then
+      write(*,'(2A)')'ERROR: Could not find file '//trim(fname)
+      call abinerror('file_exists_or_exit')
+   end if
+   end subroutine file_exists_or_exit
 
 end module mod_utils

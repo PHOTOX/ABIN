@@ -275,11 +275,25 @@ subroutine init(dt, time_data)
       END SELECT
    end if
 
+   if(iremd.eq.1)then
+      write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank
+      if(chveloc.ne.'')then
+         write(chveloc,'(A,I2.2)')trim(chveloc)//'.',my_rank
+      end if
+   end if
+
+   call file_exists_or_exit(chcoords)
+   if (chveloc.ne.'')then
+      call file_exists_or_exit(chveloc)
+   end if
    
    if (my_rank.eq.0)then
-      write(*,*)'Reading parameters from input file ', trim(chinput)
+      write(*,*)'Reading MD parameters from input file ', trim(chinput)
       write(*,*)'Reading xyz coordinates from file ',trim(chcoords)
       write(*,*)'XYZ Units = '//trim(xyz_units)
+      if(chveloc.ne.'')then
+         write(*,*)'Reading initial velocities [a.u.] from file', trim(chveloc)
+      end if
       print '(a)', chdivider
       call PrintLogo(time_data)
       print '(a)', chdivider
@@ -304,9 +318,6 @@ subroutine init(dt, time_data)
 
    ! Get number of atoms from XYZ coordinates NOW so that we can allocate arrays
 
-   ! TODO: Allow reading from a single geom in REMD runs
-   ! Probably just one rank would read and then broadcast
-   if(iremd.eq.1) write(chcoords,'(A,I2.2)')trim(chcoords)//'.',my_rank
 
    open(111, file = chcoords, status = "old", action = "read")
    read(111, '(I50)', iostat = iost)natom_xyz
@@ -631,8 +642,6 @@ subroutine init(dt, time_data)
 !     Reading velocities from file
       if (chveloc.ne.''.and.irest.eq.0)then
          ! TODO: move the following to a separate function
-         if(iremd.eq.1) write(chveloc,'(A,I2.2)')trim(chveloc)//'.',my_rank
-         write(*,*)'Reading initial velocities in a.u. from external file:'//trim(chveloc) 
          open(500,file=chveloc, status='OLD', action = "READ")
          do iw=1,nwalk
             read(500,*, IOSTAT=iost)natom_xyz
@@ -1269,26 +1278,8 @@ call print_compile_info(time_data)
 
    end do
 
-   ! TODO: Make a common function in utils to check input files
-   inquire(file=chinput,exist=lexist)
-   if (.not.lexist)then
-      write(*,'(2A)')'ERROR: Could not find The input file '//chinput
-      call abinerror('Get_Cmdline')
-   end if
-
-   inquire(file=chcoords,exist=lexist)
-   if (.not.lexist)then
-      write(*,'(2A)')'ERROR: Could not find The input file '//chcoords
-      call abinerror('Get_Cmdline')
-   end if
-   if (chveloc.ne.'')then
-      inquire(file=chveloc,exist=lexist)
-      if (.not.lexist)then
-         write(*,'(2A)')'ERROR: Could not find The input file '//chveloc
-         call abinerror('Get_Cmdline')
-      end if
-   end if
-
+   call file_exists_or_exit(chinput)
+   ! Input velocities and coordinates are checked elsewhere
    end subroutine Get_cmdline
 
 end subroutine init
