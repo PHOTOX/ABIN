@@ -6,7 +6,6 @@ module mod_terampi_sh
 ! Original Authors: Basile Curchod, J. Snyder and Ed Hohenstein
 !----------------------------------------------------------------
    use mod_const, only: DP
-   use mod_terampi, only: chsys_sleep
    implicit none
    private
 #ifdef MPI
@@ -49,6 +48,7 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_const, only: DP, ANG
    use mod_array_size, only: NSTMAX
    use mod_general, only: idebug, natom, en_restraint
+   use mod_terampi, only: mpi_sleep, handle_mpi_error
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
    use mod_io, only: print_charges, print_dipoles, print_transdipoles
@@ -64,6 +64,7 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    integer  :: ierr, iat,iw, ist1, ist2, itrj, ipom, i
    integer  :: bufints(20)
    logical  :: ltest
+   character*50 :: chsys_sleep
 
    itrj = 1
    iw = 1
@@ -77,6 +78,7 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
 
    ltest = .false.
+   write(chsys_sleep,'(A6, F10.4)')'sleep ', mpi_sleep
    do while(.not.ltest)
       call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG,newcomm,ltest, status, ierr)
       call system(chsys_sleep)
@@ -85,12 +87,14 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
 !  DH WARNING this will only work if itrj = 1
    call MPI_Recv( en_array, nstate, MPI_DOUBLE_PRECISION, &
            MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+   call handle_mpi_error(ierr)
 
    eclas = en_array(istate(itrj), itrj)
 
    if (idebug>0) write(*, '(a)') 'Receiving transition dipoles from TC.'
    call MPI_Recv( TDip, (nstate-1)*3,  &
         MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+   call handle_mpi_error(ierr)
 !   do i=1, nstate-1
 !      T_FMS%ElecStruc%TransDipole(i+1,:)=TDip(3*(i-1)+1:3*(i-1)+3)
 !   end do
@@ -104,6 +108,7 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    if (idebug>0) write(*, '(a)') 'Receiving dipole moments from TC.'
    call MPI_Recv( Dip,nstate*3, &
           MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+   call handle_mpi_error(ierr)
 !  do i=1, nstate
 !     T_FMS%ElecStruc%Dipole(i,1:3)=Dip(3*(i-1)+1:3*(i-1)+3)
 !  end do
@@ -112,6 +117,7 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
 !  Receive partial charges from TC
    if (idebug>0) write(*, '(a)') 'Receiving atomic charges from TC.'
    call MPI_Recv( qmcharges, natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+   call handle_mpi_error(ierr)
 
    call print_charges(qmcharges, istate(itrj) )
 
@@ -119,15 +125,18 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    if (idebug>0) write(*, '(a)') 'Receiving MOs from TC.'
    call MPI_Recv( MO, nbf*nbf, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
      MPI_ANY_TAG, newcomm, status, ierr)
+   call handle_mpi_error(ierr)
 
 !   T_FMS%ElecStruc%OldOrbitals=MO
 
    if (idebug>0) write(*, '(a)') 'Receiving CI vectors from TC.'
    call MPI_Recv( CIvecs, nstate*civec,  &
            MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+   call handle_mpi_error(ierr)
         
    if (idebug>0) write(*,*) "Receiving wavefunction overlap via MPI."
    call MPI_Recv(SMatrix, nstate*nstate, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr);
+   call handle_mpi_error(ierr)
 
    ! Should change the following according to what is done in TeraChem
    i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
@@ -137,6 +146,7 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    if (idebug>0) write(*, '(a)') 'Receiving blob from TC.'
    call MPI_Recv( blob, blobsize,  &
            MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+   call handle_mpi_error(ierr)
 
    if (idebug>0) write(*, '(a)') 'Receiving gradients and NACME from TC.'
    do ist1=1, nstate
@@ -148,9 +158,9 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
 
          call MPI_Recv( NAC, 3*natom, MPI_DOUBLE_PRECISION, &
               MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+         call handle_mpi_error(ierr)
 
          if (idebug>0) write(*, *)(NAC(i),i=1,3*natom)
-
 
          ipom = 1
          if (ist1.eq.ist2.and.istate(itrj).eq.ist1)then
@@ -203,6 +213,7 @@ end subroutine receive_terash
 subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
    use mod_array_size, only: NSTMAX
    use mod_const, only: DP, ANG, AUTOFS
+   use mod_terampi, only: handle_mpi_error
    use mod_general, only: natom, idebug, sim_time, en_restraint
    use mod_system, only: names
    use mod_qmmm,  only: natqm
@@ -246,6 +257,7 @@ subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
    bufints(12)=0 ! FMSRestart, not used
 
    call MPI_Send(bufints, 12, MPI_INTEGER, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
 
    ! The following bit is not in FMS code
    ! let ABIN decide which derivatives should TC compute
@@ -280,33 +292,41 @@ subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
       write(*,*)(bufints(i),i=1,nstate*(nstate-1)/2+nstate)
    end if
    call MPI_SSend(bufints, nstate*(nstate-1)/2+nstate, MPI_INTEGER, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
 
    ! temporary hack
    bufdoubles(1) = sim_time ! * AUtoFS !* dt
    ! Send Time 
    call MPI_Send(bufdoubles, 1, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
 
 !  Send coordinates
    call MPI_Send(qmcoords, 3*natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
    if(idebug.gt.0) write(*, '(a)') 'Sent coordinates to TeraChem.'
 
 !  Send previous diabatic MOs
    if(idebug.gt.0) write(*,*)'Sending previous orbitals.', nbf*nbf
    call MPI_Send(MO, nbf*nbf, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+   call handle_mpi_error(ierr)
 
 !  Send previous CI vecs
    if(idebug.gt.0) write(*,*)'Sending CI vector of size ', civec*nstate
    call MPI_Send(CIvecs, civec*nstate, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+   call handle_mpi_error(ierr)
 
    if(idebug.gt.0) write(*,*)'Sending blob.'
    call MPI_Send(blob, blobsize, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+   call handle_mpi_error(ierr)
 
    if(idebug.gt.0) write(*,*)'Sending velocities'
 !  Only needed for numerical NACME, so send 0 instead for now
    vels = 0.0d0
    call MPI_Send(vels, 3*natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
 !  Imaginary velocities for FMS, not needed here, sending zeros...
    call MPI_SSend(vels , 3*natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
 
 
    if(idebug.gt.0) write(*,*)'Succesfully sent all data to TeraChem-FMS'
@@ -320,7 +340,7 @@ subroutine init_terash(x, y, z)
    use mod_system, only: names
    use mod_qmmm, only: natqm
    use mod_sh_integ, only: nstate
-   use mod_terampi, only: newcomms, natmm_tera
+   use mod_terampi, only: newcomms, natmm_tera, handle_mpi_error
    include 'mpif.h'
    real(DP),intent(in)  ::  x(:,:), y(:,:), z(:,:)
    real(DP) :: qmcoords(3, size(x,1))
@@ -343,14 +363,17 @@ subroutine init_terash(x, y, z)
    bufints(2) = natom-natmm_tera
    bufints(3) = natmm_tera
    call MPI_SSend( bufints, 3, MPI_INTEGER, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
    if (idebug.gt.0) write(*, '(a)') 'Sent initial FMSinit.'
 
 !  Send atom types
    call MPI_Send( names, 2*natqm, MPI_CHARACTER, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
    if (idebug.gt.0) write(*, '(a)') 'Sent initial atom types.'
 
 !  Send coordinates
    call MPI_Send( qmcoords, 3*natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
    if (idebug.gt.0) write(*, '(a)') 'Sent initial coordinates to TeraChem.'
 
 !-- START RECEIVING INFO FROM TeraChem ------!
@@ -358,6 +381,7 @@ subroutine init_terash(x, y, z)
 !  Receive nbf,CI length and blob size
    call MPI_Recv( bufints, 3, MPI_INTEGER, MPI_ANY_SOURCE, &
      MPI_ANY_TAG, newcomm, status, ierr)
+   call handle_mpi_error(ierr)
 
    civec = bufints(1)
    nbf = bufints(2)

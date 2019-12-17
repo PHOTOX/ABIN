@@ -19,16 +19,18 @@ module mod_terampi
    implicit none
    private
    integer, parameter   :: MAXTERASERVERS=4
+   integer, parameter :: MPI_TAG_ERROR = 13, MPI_TAG_EXIT = 0
    ! By default, take port name from a file
-   character*50  :: teraport = '', chsys_sleep
+   character*100  :: teraport = ''
    integer     ::  newcomms(MAXTERASERVERS) ! Communicator, initialized in mpi_init subroutine
 !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
    integer  ::  natmm_tera=0
    integer  :: nteraservers = 1
    real(DP), allocatable :: mmcharges(:)
    real(DP)  :: mpi_sleep = 0.05
-   public :: teraport, newcomms, mpi_sleep, nteraservers, chsys_sleep
+   public :: teraport, newcomms, mpi_sleep, nteraservers
    public :: force_tera, natmm_tera
+   public :: handle_mpi_error
 #ifdef MPI
    public :: finalize_terachem, initialize_terachem, connect_terachem
 #endif
@@ -99,7 +101,6 @@ subroutine send_tera(x, y, z, iw, newcomm)
    integer,intent(in)      ::  iw, newcomm
    real(DP) :: coords(3, size(x,1) )
    character(len=2) :: names_qm(size(x,1)+5)
-   integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iat
    logical  :: ltest
 
@@ -121,6 +122,7 @@ subroutine send_tera(x, y, z, iw, newcomm)
       call flush(6)
    end if
    call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
 
    do iat=1,natqm
       names_qm(iat) = names(iat)
@@ -152,6 +154,7 @@ subroutine send_tera(x, y, z, iw, newcomm)
    end if
 
    call MPI_Send( names_qm, 2*natqm+12, MPI_CHARACTER, 0, 2, newcomm, ierr )
+   call handle_mpi_error(ierr)
 
    ! Send QM coordinate array
    if ( idebug > 1 ) then
@@ -162,6 +165,7 @@ subroutine send_tera(x, y, z, iw, newcomm)
       end do 
    end if
    call MPI_Send( coords, natqm*3, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call handle_mpi_error(ierr)
 
 if(natmm_tera.gt.0)then
 
@@ -177,11 +181,13 @@ if(natmm_tera.gt.0)then
       call flush(6)
    end if
    call MPI_Send( natmm_tera, 1, MPI_INTEGER, 0, 2, newcomm, ierr ) 
+   call handle_mpi_error(ierr)
 
    if ( idebug > 1 ) then
       write(6,'(a)') 'Sending charges: '
    end if
    call MPI_Send( mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call handle_mpi_error(ierr)
 
    ! Send MM point charge coordinate array
    if ( idebug > 1 ) then
@@ -189,6 +195,7 @@ if(natmm_tera.gt.0)then
    end if
 
    call MPI_Send( coords, 3*natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call handle_mpi_error(ierr)
 end if
 
 end subroutine send_tera
@@ -211,6 +218,7 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iat
    logical  :: ltest
+   character*50 :: chsys_sleep
    ! -----------------------------------
    ! Begin receiving data from terachem
    ! -----------------------------------
@@ -225,8 +233,10 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
 
    ltest = .false.
+   write(chsys_sleep,'(A6, F10.4)')'sleep ', mpi_sleep
    do while(.not.ltest)
       call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, ltest, status, ierr)
+      call handle_mpi_error(ierr)
       call system(chsys_sleep)
    end do
 
@@ -236,6 +246,7 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
       call flush(6)
    end if
    call MPI_Recv( escf, 1, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
+   call handle_mpi_error(ierr)
    ! Checking for TAG=1, which means that SCF did not converge
    if (status(MPI_TAG).eq.1)then
       write(*,*)'GOT TAG 1 from TeraChem: SCF probably did not converge.'
@@ -251,6 +262,7 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
       write(6,'(a)') 'Waiting to receive charges...'
    end if
    call MPI_Recv( qmcharges(:), natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
+   call handle_mpi_error(ierr)
    if ( idebug > 2 ) then
       write(6,'(a)') 'Received the following charges from server:'
       do iat=1, natqm
@@ -265,6 +277,7 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    end if
    ! QM dipole moment
    call MPI_Recv( dipmom(:,1), 4, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
+   call handle_mpi_error(ierr)
    if ( idebug > 1 ) then
       write(6,'(a,4es15.6)') 'Received QM  dipole moment from server:', dipmom(:,1)
       call flush(6)
@@ -288,6 +301,7 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    end if
    call MPI_Recv( dxyz_all, 3*(natqm+natmm_tera), MPI_DOUBLE_PRECISION, &
         MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
+   call handle_mpi_error(ierr)
    if ( idebug > 1 ) then
       write(6,'(a)') 'Received the following gradients from server:'
       do iat=1, natqm+natmm_tera
@@ -328,7 +342,8 @@ subroutine connect_terachem( itera )
    timer = MPI_WTIME(ierr)
 
    ! This allows us to retry failed MPI_LOOKUP_NAME() call
-   call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr);
+   call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
+   call handle_mpi_error(ierr)
 
    write(chtera,'(I1)')itera
 
@@ -379,17 +394,13 @@ subroutine connect_terachem( itera )
 
    end if
 
-   ! Setting the default back, die at each MPI error
-   ! TODO: We should rather try to sanitize each MPI call
-   ! so that we can disconnect from TC gracefully
-   call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL, ierr);
-
    write(6,'(2a)') 'Establishing connection to TeraChem port: ', trim(port_name)
    ! ----------------------------------------
    ! Establish new communicator via port name
    ! ----------------------------------------
    call flush(6)
    call MPI_COMM_CONNECT(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
+   call handle_mpi_error(ierr)
    write(6,'(a,i0)') 'Established new communicator:', newcomm
 
    if(itera.gt.MAXTERASERVERS)then
@@ -417,11 +428,13 @@ subroutine connect_terachem( itera )
    do itera=1, nteraservers
       write(*,*)'Sending initial number of QM atoms to TeraChem.'
       call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, newcomms(itera), ierr )
+      call handle_mpi_error(ierr)
    end do
 
    do itera=1, nteraservers
       write(*,*)'Sending initial QM atom names to TeraChem.'
       call MPI_Send(names, 2*natqm, MPI_CHARACTER, 0, 2, newcomms(itera), ierr )
+      call handle_mpi_error(ierr)
    end do
 
    if(mpi_sleep.le.0)then
@@ -429,12 +442,11 @@ subroutine connect_terachem( itera )
       write(*,*)'Setting it back to default value'
       mpi_sleep = 0.05
    end if
-   write(chsys_sleep,'(A6,F10.4)')'sleep ',mpi_sleep
 
   end subroutine initialize_terachem
 
 
-  subroutine finalize_terachem(error_code)
+   subroutine finalize_terachem(error_code)
    include 'mpif.h'
    integer, intent(in) :: error_code
    integer :: request
@@ -445,13 +457,9 @@ subroutine connect_terachem( itera )
 
       write(*,*)'Shutting down TeraChem server; id=',itera
       if (error_code.eq.0)then
-         call MPI_Send( empty, 1, MPI_INTEGER, 0, 0, newcomms(itera), ierr )
+         call MPI_Send( empty, 1, MPI_INTEGER, 0, MPI_TAG_EXIT, newcomms(itera), ierr )
       else
-      ! Not sure whether this can lead to deadlock when terachem sends and not
-      ! receive. Maybe we should avoid this.
-      call MPI_Send( empty, 1, MPI_INTEGER, 0, 13, newcomms(itera), ierr )
-      !call MPI_ISend( empty, 1, MPI_INTEGER, 0, 13, newcomm, request, ierr )
-      ! for some reason, non-blocking ISend does not work :(
+         call MPI_Send( empty, 1, MPI_INTEGER, 0, MPI_TAG_ERROR, newcomms(itera), ierr )
       end if
       if (ierr.ne.0)then
          write(*,*)'I got a MPI Error when I tried to shutdown TeraChem server id =', itera
@@ -460,8 +468,36 @@ subroutine connect_terachem( itera )
       end if
 
    end do
-  end subroutine finalize_terachem
+   end subroutine finalize_terachem
 
+   ! TODO: call this after each MPI call
+   subroutine handle_mpi_error(mpi_err, mpi_status, mpi_datatype, expected_count)
+   use mod_utils,    only: abinerror
+   include 'mpif.h'
+   integer, intent(in) :: mpi_err
+   integer, intent(in), optional :: mpi_status(MPI_STATUS_SIZE)
+   integer, intent(in), optional :: mpi_datatype, expected_count
+   integer :: received_count, ierr
+
+   if (present(mpi_status).and.mpi_status(MPI_TAG).eq.MPI_TAG_ERROR)then
+      write(*, *)'TeraChem sent an ERROR TAG. Exiting...'
+      call abinerror('TeraChem ERROR')
+   end if
+
+   if (present(expected_count))then
+      ! Compare the length of received message and what we expected
+      call MPI_GET_COUNT(mpi_status, mpi_datatype, received_count, ierr)
+      if(received_count.ne.expected_count)then
+         write(*,*)'Received message of unexpected size'
+         call abinerror('MPI ERROR')
+      end if
+   end if
+
+   if(mpi_err.ne.0)then
+      write(*,*)'Unspecified MPI Error, code:', ierr
+      call abinerror('MPI ERROR')
+   end if
+   end subroutine handle_mpi_error
 #endif
 
 end module mod_terampi
