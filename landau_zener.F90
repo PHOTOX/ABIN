@@ -84,7 +84,7 @@ module mod_lz
    integer  :: ihop, icross, ihist, ist1, ist2, iat, ibeg, iend!, istatus
    integer  :: row, col, S_to_T !itest, iost
    integer  :: ist                     ! =istate_lz
-   real(DP) :: Ekin, Epot, Epot2, hop_rdnum, vel_rescale, stepfs, molveloc, grad_diff
+   real(DP) :: Ekin, Epot, Epot2, dE, hop_rdnum, vel_rescale, stepfs, molveloc, grad_diff
    real(DP) :: one=1.0d0
    character(len=100) :: formt, fmt_in, fmt_out!, chSOC='SOC.dat'
 
@@ -143,6 +143,7 @@ module mod_lz
 
    if(ihop.ne.0)then
     Ekin = ekin_v(vx,vy,vz)
+    dE = (en_array_lz(ihop, 2) - en_array_lz(ist, 2))
     Epot = abs(en_array_lz(ist, 1) - en_array_lz(ihop, 1))
     Epot2 = abs(en_array_lz(ist, 2) - en_array_lz(ihop, 2))
     write (fmt_in,'(I2.2)') istate_lz
@@ -175,13 +176,13 @@ module mod_lz
            vz(iat,1) = vz(iat,1) + (dt/2.0d0) * (-fz_old(iat,1)+fzc(iat,1)) / amt(iat,1)
         end do 
 
-        !Simple velocity scaling 
-        !vel_rescale = sqrt(1-(Epot/Ekin))
-        !do iat=1, natom
-        !    vx(iat,1) = vx(iat,1) * vel_rescale
-        !    vy(iat,1) = vy(iat,1) * vel_rescale
-        !    vz(iat,1) = vz(iat,1) * vel_rescale
-        !end do
+        !Simple velocity rescaling (https://doi.org/10.1063/1.4882073) 
+        vel_rescale = sqrt(1-(dE/Ekin))
+        do iat=1, natom
+            vx(iat,1) = vx(iat,1) * vel_rescale
+            vy(iat,1) = vy(iat,1) * vel_rescale
+            vz(iat,1) = vz(iat,1) * vel_rescale
+        end do
 
      else
         write(*,*)"NO adiabatic HOP (",trim(fmt_in),"->",trim(fmt_out) ,")dE/a.u.", Epot2, &
