@@ -16,8 +16,6 @@ natom=$(cat $geom | wc -l )
 # otherwise it yields bad gradients
 # Comments on energy and gradient readings are below 
 
-natom=`head -1 ../mini.dat`
-
 echo '
 $molecule
 0 1'> $input
