@@ -18,7 +18,7 @@ module mod_terampi
    use mod_const, only: DP
    implicit none
    private
-   integer, parameter   :: MAXTERASERVERS=4
+   integer, parameter   :: MAXTERASERVERS=9
    integer, parameter :: MPI_TAG_ERROR = 13, MPI_TAG_EXIT = 0
    ! By default, take port name from a file
    character*100  :: teraport = ''
@@ -327,17 +327,24 @@ subroutine connect_terachem( itera )
    use mod_utils, only: abinerror
    use mod_general, only: iremd, my_rank
    include 'mpif.h'
-   integer, intent(in)  :: itera
-   character(255)  :: port_name
-   integer         :: ierr, newcomm, iost
-   real*8          :: timer
+   integer, intent(in) :: itera
+   character(len=MPI_MAX_PORT_NAME) :: port_name
+   integer :: ierr, newcomm, iost
+   real(DP) :: timer
    character(len=50) :: server_name, portfile
-   character(len=1)  :: chtera
+   character(len=1) :: chtera
 
    ! -----------------------------------
    ! Look for server_name, get port name
    ! After 60 seconds, exit if not found
    ! -----------------------------------
+
+   if(itera.gt.MAXTERASERVERS)then
+      write(*,*)'ERROR: We currently support only ',MAXTERASERVERS, 'TC servers!'
+      write(*,*)'Shutting down...'
+      write(*,*)'Running TC servers might not be shutdown properly!'
+      call abinerror('force_tera')
+   end if
 
    timer = MPI_WTIME(ierr)
 
@@ -355,7 +362,7 @@ subroutine connect_terachem( itera )
 
       do
 
-         call MPI_LOOKUP_NAME(server_name, MPI_INFO_NULL, port_name, ierr)
+         call MPI_LOOKUP_NAME(trim(server_name), MPI_INFO_NULL, port_name, ierr)
          if (ierr == MPI_SUCCESS) then
             write(6,'(2a)') 'Found port: ', trim(port_name)
             call flush(6)
@@ -402,13 +409,6 @@ subroutine connect_terachem( itera )
    call MPI_COMM_CONNECT(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
    call handle_mpi_error(ierr)
    write(6,'(a,i0)') 'Established new communicator:', newcomm
-
-   if(itera.gt.MAXTERASERVERS)then
-      write(*,*)'ERROR: We currently support only ', MAXTERASERVERS, 'TC servers!'
-      write(*,*)'Shutting down...'
-      write(*,*)'Running TC servers might not be shutdown properly!'
-      call abinerror('force_tera')
-   end if
 
    newcomms(itera) = newcomm
 
