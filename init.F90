@@ -524,12 +524,11 @@ subroutine init(dt, time_data)
 !     resetting number of walkers to 1 in case of classical simulation      
       if(ipimd.eq.0)then
          if(my_rank.eq.0)then
-            write(*,*)'ipimd=0,Resetting number of walkers to 1.'
-            write(*,*)'ipimd=0,Using velocity Verlet integrator'
+            write(*,*)'Using velocity Verlet integrator'
          end if
          md = 2
          nwalk = 1
-         nabin = 1   ! TODO:safety for respashake code
+         nabin = 1 ! TODO:safety for respashake code
                    ! We should probably copy shake to velocity verlet
                    ! algorithm as well
       endif
@@ -554,9 +553,9 @@ subroutine init(dt, time_data)
       if(pot_ref.ne.'none')then
          md = 4
          write(*, '(A)')'Using Multiple Time-Step RESPA integrator!'
-         write(*, '(A)')"Reference (cheap potential) = "//trim(pot_ref)
+         write(*, '(A)')"Reference (cheap) potential is "//trim(pot_ref)
          write(*, '(A, F6.2)')"with timestep [fs] ", dt / nstep_ref * AUtoFS
-         write(*, '(A)')"Full potential = "//trim(pot)
+         write(*, '(A)')"Full potential is "//trim(pot)
          write(*, '(A, F6.2)')"with timestep [fs] ", dt * AUtoFS
       end if
 
@@ -610,12 +609,21 @@ subroutine init(dt, time_data)
      end if
 
 !    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
-     call gautrg(rans, 0, IRandom, 6)  !initialize prng,maybe rewritten during restart
+     call gautrg(rans, 0, IRandom, 6)  !initialize prng, maybe rewritten during restart
 
 !    THERMOSTAT INITIALIZATION
-     if (inose.eq.1) call nhc_init()
-     if (inose.eq.2) call gle_init(dt*0.5/nabin/nstep_ref) !nabin is set to 1 unless ipimd=1
-     if (inose.eq.3) call pile_init(dt*0.5,tau0)
+     if (inose.eq.1)then
+        call nhc_init()
+     else if (inose.eq.2)then
+        call gle_init(dt*0.5/nabin/nstep_ref) !nabin is set to 1 unless ipimd=1
+     else if (inose.eq.3)then
+        call pile_init(dt * 0.5, tau0)
+     else if (inose.eq.0)then
+        write(*, '(A)')'No thermostat. NVE ensemble.'
+     else
+        write(*,'(A)')'ERROR: Invalid "inose" value!'
+        call abinerror('init')
+     end if
 
 
 !    performing RESTART from restart.xyz

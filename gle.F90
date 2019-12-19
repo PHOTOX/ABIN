@@ -109,7 +109,7 @@ contains
   
    subroutine gle_init(dt)
    use mod_const, only: AUtoEV
-   use mod_general,only: natom, nwalk, inormalmodes, my_rank, iremd
+   use mod_general,only: natom, nwalk, inormalmodes, my_rank, iremd, irest
    use mod_utils, only: abinerror
    use mod_nhc,only: temp,inose
    implicit none
@@ -119,21 +119,15 @@ contains
    integer :: i, cns, ios, iw
    character(len=10)     :: glea, glec
    character(len=2)      :: char_my_rank
-#if __GNUC__ == 0
-   write(*,*)'ERROR: GLE thermostat not supported with IFORT compiler. Sorry:-('
-   call abinerror('gle_init')
-#endif
-
    if(my_rank.eq.0)then 
-      write(6,*) "# Initialization of GLE thermostat.                           "
-      write(6,*) "# Please cite the relevant works among:                       "
-      write(6,*) "#                                                             "
-      write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-      write(6,*) "# Phy. Rev. Lett. 102, 020601 (2009)                          "
-      write(6,*) "#                                                             "
-      write(6,*) "# M. Ceriotti, G. Bussi and M. Parrinello                     "
-      write(6,*) "# Phy. Rev. Lett. 103, 030603 (2009)                          "
-      write(6,*) "#                                                             "
+      write(*,*) "# Initialization of GLE thermostat.        "
+      write(*,*) "# Please cite the relevant works among:    "
+      write(*,*) "#                                          "
+      write(*,*) "# M. Ceriotti, G. Bussi and M. Parrinello  "
+      write(*,*) "# Phy. Rev. Lett. 102, 020601 (2009)       "
+      write(*,*) "#                                          "
+      write(*,*) "# M. Ceriotti, G. Bussi and M. Parrinello  "
+      write(*,*) "# Phy. Rev. Lett. 103, 030603 (2009)       "
    end if
 
    ! reads in matrices
@@ -197,7 +191,7 @@ contains
 
    if(inormalmodes.eq.1.and.ns.ne.ns_centroid)then
       write(*,*)'ERROR: Size of A matrix for centroid and other normal modes does not match!'
-      write(*,*)'Double check file GLE-A!!'
+      write(*,*)'Please, double check file GLE-A!'
       call abinerror('gle_init')
    end if
 
@@ -282,6 +276,14 @@ contains
       deallocate(gA_centroid)
       deallocate(gC_centroid)
    end if
+#if __GNUC__ == 0
+   if (irest.ne.0.and.ns.gt.6)then
+      write(*,*)'ERROR: Restarting GLE thermostat with ns>6 &
+       &  is not supported with IFORT compiler. Sorry :-('
+      call abinerror('gle_init')
+   end if
+#endif
+
    end subroutine gle_init
 
    subroutine initialize_momenta(C, iw)
