@@ -106,8 +106,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       ! http://coding.derkeiler.com/Archive/Fortran/comp.lang.fortran/MAXUNITS07-01/msg00085.html
       ! If the bash script wants to notify ABIN, it can use e.g. exit 2
       if(ISTATUS.ne.0.and.ISTATUS.ne.256)then
-         write(*,*)'ERROR: Something went wrong during the execution of the ab initio external program.' 
-         write(*,*)'See the approprite output files in& 
+         write(*,'(A)')'ERROR during the execution of the ab initio external program.'
+         write(*,'(A)')'Please inspect the output files in&
          & folder '//trim(LowerToUpper(chpot))//"/" 
          call abinerror('force_abin')
       end if
