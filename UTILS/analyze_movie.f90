@@ -260,8 +260,8 @@ allocate( z(natom) )
 allocate( names(natom) )
 
 
-dihmin=dihmin+shiftdih
-dihmax=dihmax+shiftdih
+dihmin = dihmin + shiftdih/2
+dihmax = dihmax + shiftdih/2
 
 if (ndist.gt.0.and.imod.ne.1 ) open(101,file="dist_time.dat")
 if (nang.gt.0 )  open(102,file="ang_time.dat")
