@@ -62,7 +62,7 @@ subroutine init(dt)
    character(len=60)   :: chdivider
    character(len=60)   :: mdtype
    LOGICAL :: file_exists
-   logical        :: rem_comvel, rem_comrot
+   logical :: rem_comvel, rem_comrot
 !  real(DP) :: wnw=5.0d-5
    ! Used for MPI calls
    integer :: ierr
@@ -505,11 +505,11 @@ subroutine init(dt)
 
       if (my_rank.eq.0)then
          if (temp0.gt.0)then
-            write(*,*)'Initial temperature in Kelvins =', temp0
+            write(*,*)'Initial temperature [K] =', temp0
          else
-            write(*,*)'Initial temperature in Kelvins =', temp
+            write(*,*)'Initial temperature [K] =', temp
          end if
-         if (inose.ne.0) write(*,*)'Target temperature in Kelvins =', temp
+         if (inose.ne.0) write(*,*)'Target temperature [K] =', temp
       end if
 
       ! conversion of temperature from K to au
@@ -574,10 +574,11 @@ subroutine init(dt)
 
 !     SETTING initial velocities according to the Maxwell-Boltzmann distribution
       if(irest.eq.0.and.chveloc.eq.'')then
+         ! TODO: GLE thermostat, initialize momenta in gle_init
          if (temp0.ge.0)then
-            call vinit(TEMP0, am, vx, vy, vz)
+            call vinit(temp0, am, vx, vy, vz)
          else
-            call vinit(TEMP, am, vx, vy, vz)
+            call vinit(temp, am, vx, vy, vz)
          end if
       end if
 
@@ -624,12 +625,11 @@ subroutine init(dt)
       ! Otherwise, just print the temperature.
       call ScaleVelocities(vx, vy, vz)
 
-       
-!-----some stuff for spherical boundary onditions
+      ! Initialize spherical boundary onditions
       if(isbc.eq.1) call sbc_init(x,y,z)
 
-!-----inames initialization for the MM part. 
-!-----We do this also because string comparison is very costly
+      ! inames initialization for the MM part. 
+      ! We do this also because string comparison is very costly
       if(iqmmm.eq.3.or.pot.eq.'mm') allocate( inames(natom) )
 
       if(iqmmm.eq.3.or.pot.eq.'mm')then 
