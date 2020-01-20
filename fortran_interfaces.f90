@@ -2,12 +2,17 @@
 ! for functions outside of modules
 module mod_interfaces
    use mod_const, only: DP
+   public
    INTERFACE
 
    subroutine init(dt)
    IMPORT :: DP
    real(DP),intent(out) :: dt
    end subroutine init
+
+   subroutine finish(error_code)
+      integer, intent(in) :: error_code
+   end subroutine finish
 
    subroutine print_compile_info()
 

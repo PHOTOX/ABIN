@@ -22,7 +22,7 @@ module mod_analysis
    use mod_estimators , only: estimators
    use mod_general,     only: it, ipimd, icv,nwrite, nwritef, nwritev, &
                               nrest, nwritex, nstep, anal_ext, idebug
-   use mod_density
+   use mod_analyze_geometry
    use mod_io 
    use mod_vinit,    only: remove_rotations
    use mod_system,   only: am
@@ -62,16 +62,16 @@ module mod_analysis
       endif
    endif
 
-   if(ndist.ge.1)then
-      call density(x, y, z)
+   if(ndist.ge.1.and.modulo(it,nwrite).eq.0)then
+      call print_distances(x, y, z)
    endif
 
-   if(nang.ge.1)then
-      call density_ang(x, y, z)
+   if(nang.ge.1.and.modulo(it,nwrite).eq.0)then
+      call print_angles(x, y, z)
    endif
 
-   if(ndih.ge.1)then
-      call density_dih(x, y, z)
+   if(ndih.ge.1.and.modulo(it,nwrite).eq.0)then
+      call print_dihedrals(x, y, z)
    endif
 
    if((modulo(it,nrest).eq.0).or.it.eq.nstep)then
@@ -84,6 +84,7 @@ module mod_analysis
 
    end subroutine analysis
 
+   ! TODO: move these subroutines to io.F90
    subroutine trajout(x,y,z,time_step)
    use mod_const, only: ANG
    use mod_files, only: UMOVIE

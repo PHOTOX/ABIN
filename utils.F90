@@ -1,6 +1,7 @@
 ! Various helper functions and subroutines that may be used throughout the program.
 module mod_utils
    use mod_const, only: DP
+   use mod_interfaces
    implicit none
    public
    contains
@@ -9,12 +10,78 @@ module mod_utils
    real(DP),intent(in) :: x(:,:), y(:,:), z(:,:)
    integer,intent(in)  :: at1, at2, iw
    real(DP) :: r
+   if(at1 == at2)then
+      write(*,*)'ERROR: Atom indices in function get_distance are not unique!'
+      call abinerror('get_distance')
+   end if
+
    r =     ( x(at1, iw) - x(at2, iw) )**2
    r = r + ( y(at1, iw) - y(at2, iw) )**2
    r = r + ( z(at1, iw) - z(at2, iw) )**2
    r = sqrt(r)
    get_distance = r
    end function get_distance
+
+   real(DP) function get_angle(x, y, z, at1, at2, at3, iw)
+   use mod_const, only: PI
+   real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
+   integer, intent(in) :: iw
+   real(DP) :: vec1x, vec1y, vec1z
+   real(DP) :: vec2x, vec2y, vec2z
+   integer :: at1, at2, at3
+
+   if(at1 == at2 .or. at1 == at3 .or. at2 == at3)then
+      write(*,*)'ERROR: Atom indices in function get_angle are not unique!'
+      call abinerror('get_angle')
+   end if
+   
+   vec1x = x(at1,iw) - x(at2,iw)
+   vec1y = y(at1,iw) - y(at2,iw)
+   vec1z = z(at1,iw) - z(at2,iw)
+   vec2x = x(at3,iw) - x(at2,iw)
+   vec2y = y(at3,iw) - y(at2,iw)
+   vec2z = z(at3,iw) - z(at2,iw)
+   get_angle = 180 / pi * acos((vec1x*vec2x + vec1y*vec2y + vec1z*vec2z)/ &
+   (sqrt(vec1x**2 + vec1y**2 + vec1z**2) * sqrt(vec2x**2 + vec2y**2 + vec2z**2)))
+   
+   return 
+   end function get_angle
+   
+   real(DP) function get_dihedral(x, y, z, at1, at2, at3, at4, iw, shiftdih)
+   use mod_const, only: PI
+   real(DP), intent(in) :: x(:,:), y(:,:), z(:,:), shiftdih
+   integer, intent(in) :: iw
+   real(DP) :: vec1x, vec1y, vec1z
+   real(DP) :: vec2x, vec2y, vec2z
+   real(DP) :: vec3x, vec3y, vec3z, sign
+   real(DP) :: norm1x, norm1y, norm1z, norm2x, norm2y, norm2z
+   integer :: at1, at2, at3, at4
+   
+   vec1x = x(at1,iw) - x(at2,iw)
+   vec1y = y(at1,iw) - y(at2,iw)
+   vec1z = z(at1,iw) - z(at2,iw)
+   vec2x = x(at3,iw) - x(at2,iw)
+   vec2y = y(at3,iw) - y(at2,iw)
+   vec2z = z(at3,iw) - z(at2,iw)
+   vec3x = x(at4,iw) - x(at3,iw)
+   vec3y = y(at4,iw) - y(at3,iw)
+   vec3z = z(at4,iw) - z(at3,iw)
+   
+   norm1x = vec1y*vec2z - vec1z*vec2y
+   norm1y = vec1z*vec2x - vec1x*vec2z
+   norm1z = vec1x*vec2y - vec1y*vec2x
+   norm2x = vec3y*vec2z - vec3z*vec2y
+   norm2y = vec3z*vec2x - vec3x*vec2z
+   norm2z = vec3x*vec2y - vec3y*vec2x
+
+   sign = norm1x*vec3x + norm1y*vec3y + norm1z*vec3z
+   get_dihedral = 180/pi * acos((norm1x*norm2x + norm1y*norm2y + norm1z*norm2z)/ &
+   (sqrt(norm1x**2 + norm1y**2 + norm1z**2) * sqrt(norm2x**2 + norm2y**2 + norm2z**2)))
+   
+   if (sign.gt.0) get_dihedral = shiftdih - get_dihedral
+   
+   return
+   end function get_dihedral
 
    function SanitizeString(string) result (return_string)
       character(len=*),intent(in) :: string
@@ -161,6 +228,5 @@ module mod_utils
         time_data(6),':',time_data(7),'  ',time_data(3),'.',time_data(2),'.',&
         time_data(1)
    end function get_formatted_date_and_time
-
 
 end module mod_utils

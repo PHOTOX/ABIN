@@ -447,14 +447,16 @@ module mod_files
    integer, parameter :: UDOTPRODCI=31, UCHARGES=32
    integer, parameter :: UDIP = 33, UTDIP = 34
    integer, parameter :: UWFN = 35 ! this one is not permanently opened
+   ! Analysis output
+   integer, parameter :: UDIST = 36, UANG = 37, UDIH = 38
    save
 
    CONTAINS
 
-   SUBROUTINE files_init(isbc, phase)
+   SUBROUTINE files_init(isbc, phase, ndist, nang, ndih)
    use mod_general
    use mod_system, only: names
-   integer, intent(in)  :: isbc, phase
+   integer, intent(in)  :: isbc, phase, ndist, nang, ndih
    character(len=10)    :: chaccess
    integer              :: i
 
@@ -490,6 +492,11 @@ module mod_files
    chfiles(UDIP)='dipoles.dat'
    chfiles(UTDIP)='trans_dipoles.dat'
    chfiles(UDOTPRODCI)='dotprodci.dat'
+
+!  Geometry analysis output
+   chfiles(UDIST)='distances.dat'
+   chfiles(UANG)='angles.dat'
+   chfiles(UDIH)='dihedrals.dat'
 
    ! Here we ensure, that previous files are deleted
    if(irest.eq.0)then
@@ -595,6 +602,20 @@ module mod_files
          write(UCVDCV,*)'#         Time[fs]  Cv-DCV   Cv_cumul_DCV'
       endif
    endif
+
+   ! Analysis
+   if(ndist.gt.0)then
+      open(UDIST, file=chfiles(UDIST), access=chaccess, action='write')
+      write(UDIST,'(A)')"# Distances [Angstrom]"
+   end if
+   if(nang.gt.0)then
+      open(UANG, file=chfiles(UANG), access=chaccess, action='write')
+      write(UANG,'(A)')"# Angles [Degree]"
+   end if
+   if(ndih.gt.0)then
+      open(UDIH, file=chfiles(UDIH), access=chaccess, action='write')
+      write(UDIH,'(A)')"# Dihedral Angles [Degree]"
+   end if
 
    end subroutine files_init
 
