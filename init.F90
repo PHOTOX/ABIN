@@ -986,6 +986,10 @@ subroutine init(dt, time_data)
          write(*,*)'ERROR: LZ not implemented with TeraChem over MPI'
          error=1
       endif
+      if(ipimd.eq.5.and.nwalk.ne.1)then
+         write(*,*)'ERROR: LZ not implemented with multiple walkers.'
+         error=1
+      endif
       if(istage.ne.1.and.istage.ne.0)then
          write(*,*)'ERROR: istage has to be 0 or 1'
          error=1 

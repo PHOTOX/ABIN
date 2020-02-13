@@ -18,6 +18,7 @@ module mod_lz
    public :: lz_init, lz_hop, lz_finalize !Routines
    public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz !User defined variables
    public :: en_array_lz, tocalc_lz, istate_lz !Routine variables
+   !Caveat: Every time we call force_class en_array_lz is updated
 
    real(DP) :: deltaE_lz
    ! Initial electronic state
@@ -28,8 +29,11 @@ module mod_lz
 
    !Module variables
    integer  :: istate_lz
-   real(DP),allocatable :: en_array_lz(:,:)
+   real(DP),allocatable :: en_array_lz(:,:), en_array_lz_backup(:,:)
    real(DP),allocatable :: fx_old(:,:), fy_old(:,:), fz_old(:,:)
+   real(DP),allocatable :: px_temp(:,:), py_temp(:,:), pz_temp(:,:)
+   real(DP),allocatable :: x_prev(:,:), y_prev(:,:), z_prev(:,:), &
+                           fx_prev(:,:), fy_prev(:,:), fz_prev(:,:)
    save
 
    CONTAINS
@@ -52,8 +56,11 @@ module mod_lz
    end do
 
    !Allocate energy arrays
-   allocate(en_array_lz(nstate_lz, 3)) !last 3 energies (1: current, 2: n-1, 3: n-3)
+   allocate(en_array_lz(nstate_lz, 3), en_array_lz_backup(nstate_lz, 3)) !last 3 energies (1: current, 2: n-1, 3: n-3)
    allocate(fx_old(natom,nwalk),fy_old(natom,nwalk),fz_old(natom,nwalk))
+   allocate(px_temp(natom,nwalk),py_temp(natom,nwalk),pz_temp(natom,nwalk))
+   allocate(x_prev(natom,nwalk),y_prev(natom,nwalk),z_prev(natom,nwalk), &
+            fx_prev(natom,nwalk),fy_prev(natom,nwalk),fz_prev(natom,nwalk))
    en_array_lz=0.0d0
 
    end subroutine lz_init
@@ -149,40 +156,57 @@ module mod_lz
     write (fmt_in,'(I2.2)') istate_lz
     write (fmt_out,'(I2.2)') ihop
     ! Energy conservation criteria
-    if ((Epot.lt.Ekin).and.(abs(Epot * AUTOEV).lt.deltaE_lz))then
+    if ((Epot2.lt.Ekin).and.(abs(Epot2 * AUTOEV).lt.deltaE_lz))then
         !HOP
         write(*,*)"Adiabatic HOP! (",trim(fmt_in),"->",trim(fmt_out) ,")dE/a.u.", Epot2, &
                                   "Probability:", prob(ihop), "Random n:",hop_rdnum
+        !We need to get to previous geometry, adjust its velocity according to
+        !target state and do 1 step forward on the new state
         istate_lz = ihop
-        !Get new forces
+        !a) Previous geometry
+        x = x_prev; y = y_prev; z = z_prev;
+        !b) Gradient for new state 
         do iat=1, natom
             fx_old(iat,1) = fxc(iat,1)
             fy_old(iat,1) = fyc(iat,1)
             fz_old(iat,1) = fzc(iat,1)
         end do
-        !Gradient to compute                 
+
         do ist1=1, nstate_lz
           if(ist1.eq.istate_lz)then
-             tocalc_lz(ist1) = 1
-          else                 
-             tocalc_lz(ist1) = 0
+            tocalc_lz(ist1) = 1
+          else
+            tocalc_lz(ist1) = 0
           end if
-        end do                      
+        end do
+        en_array_lz_backup = en_array_lz
         call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
-        !Adjust velocities from previous step to new forces
-        do iat=1, natom
-           vx(iat,1) = vx(iat,1) + (dt/2.0d0) * (-fx_old(iat,1)+fxc(iat,1)) / amt(iat,1)
-           vy(iat,1) = vy(iat,1) + (dt/2.0d0) * (-fy_old(iat,1)+fyc(iat,1)) / amt(iat,1)
-           vz(iat,1) = vz(iat,1) + (dt/2.0d0) * (-fz_old(iat,1)+fzc(iat,1)) / amt(iat,1)
-        end do 
 
-        !Simple velocity rescaling (https://doi.org/10.1063/1.4882073) 
+        do iat=1, natom
+            vx(iat,1) = vx(iat,1) + (dt/2.0d0) * (-fx_old(iat,1)-2*fx_prev(iat,1)+fxc(iat,1)) / amt(iat,1)
+            vy(iat,1) = vy(iat,1) + (dt/2.0d0) * (-fy_old(iat,1)-2*fy_prev(iat,1)+fyc(iat,1)) / amt(iat,1)
+            vz(iat,1) = vz(iat,1) + (dt/2.0d0) * (-fz_old(iat,1)-2*fz_prev(iat,1)+fzc(iat,1)) / amt(iat,1)
+        end do
+
+        !c) Simple velocity rescaling (https://doi.org/10.1063/1.4882073) 
         vel_rescale = sqrt(1-(dE/Ekin))
         do iat=1, natom
             vx(iat,1) = vx(iat,1) * vel_rescale
             vy(iat,1) = vy(iat,1) * vel_rescale
             vz(iat,1) = vz(iat,1) * vel_rescale
         end do
+
+        !d) Do a verlet step forward 
+        px_temp = amt * vx; py_temp = amt * vy; pz_temp = amt * vz;
+        px_temp = px_temp + dt/2 * fxc; py_temp = py_temp + dt/2 * fyc; pz_temp = pz_temp + dt/2 * fzc;
+        x = x + dt * px_temp / amt; y = y + dt * py_temp / amt; z = z + dt * pz_temp / amt;
+        call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+        px_temp = px_temp + dt/2 * fxc; py_temp = py_temp + dt/2 * fyc; pz_temp= pz_temp + dt/2 * fzc;
+        vx = px_temp / amt; vy = py_temp / amt; vz = pz_temp / amt;
+
+        !e) Update only last energy history entry
+        en_array_lz(:,2) = en_array_lz_backup(:,2)
+        en_array_lz(:,3) = en_array_lz_backup(:,3)
 
      else
         write(*,*)"NO adiabatic HOP (",trim(fmt_in),"->",trim(fmt_out) ,")dE/a.u.", Epot2, &
@@ -273,7 +297,9 @@ module mod_lz
              tocalc_lz(ist1) = 0
           end if
         end do                     
+        en_array_lz_backup = en_array_lz
         call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+        en_array_lz = en_array_lz_backup
         !Adjust velocities from previous step to new forces
         do iat=1, natom
            vx(iat,1) = vx(iat,1) + (dt/2.0d0) * (-fx_old(iat,1)+fxc(iat,1)) / amt(iat,1)
@@ -292,6 +318,9 @@ module mod_lz
      end if
 
    end if
+
+   !Archive
+   x_prev = x; y_prev = y; z_prev = z; fx_prev = fxc; fy_prev = fyc; fz_prev = fzc;
 
    !Write
    if(modulo(it,nwrite).eq.0)then
@@ -421,7 +450,8 @@ module mod_lz
 
    subroutine lz_finalize()
    ! Deallocate arrays
-       deallocate(en_array_lz, fx_old, fy_old, fz_old)
+       deallocate(en_array_lz, en_array_lz_backup, fx_old, fy_old, fz_old)
+       deallocate(px_temp, py_temp, pz_temp, x_prev, y_prev, z_prev, fx_prev, fy_prev, fz_prev)
    end subroutine lz_finalize
 
 end module mod_lz
