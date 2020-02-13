@@ -156,7 +156,7 @@ module mod_lz
     write (fmt_in,'(I2.2)') istate_lz
     write (fmt_out,'(I2.2)') ihop
     ! Energy conservation criteria
-    if ((Epot2.lt.Ekin).and.(abs(Epot2 * AUTOEV).lt.deltaE_lz))then
+    if ((dE.lt.Ekin).and.(abs(Epot2 * AUTOEV).lt.deltaE_lz))then
         !HOP
         write(*,*)"Adiabatic HOP! (",trim(fmt_in),"->",trim(fmt_out) ,")dE/a.u.", Epot2, &
                                   "Probability:", prob(ihop), "Random n:",hop_rdnum
