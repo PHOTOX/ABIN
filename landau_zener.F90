@@ -125,7 +125,10 @@ module mod_lz
      if ((en_diff(1).gt.en_diff(2)).and.(en_diff(2).lt.en_diff(3)).and.(it.gt.2))then
         second_der = ((en_diff(3) - 2 * en_diff(2) + en_diff(1)) / dt**2)
         prob(ist1) = exp(-PI/2*(sqrt(en_diff(2)**3 / second_der)))
-        !write(*,*)"Hop? (",ist,"->",ist1 ,")dE/a.u.", en_diff(2), "Probability:", prob(ist1)
+        write (fmt_in,'(I2.2)') ist
+        write (fmt_out,'(I2.2)') ist1
+        write(*,*)"Three-point minimum (",trim(fmt_in),"->",trim(fmt_out) , &
+                  ") dE/a.u.", en_diff(2), "Probability:", prob(ist1)
         if(prob(ist1).gt.1)then
            call abinerror('landau_zener_prob')
         end if
@@ -145,6 +148,8 @@ module mod_lz
       if(hop_rdnum.lt.prob(ist1))then
          ihop = ist1
          exit
+      else if(prob(ist1).gt.0)then
+         write(*,*)"NO hop, Random n:",hop_rdnum
       end if
    end do                             
 
@@ -158,8 +163,8 @@ module mod_lz
     ! Energy conservation criteria
     if ((dE.lt.Ekin).and.(abs(Epot2 * AUTOEV).lt.deltaE_lz))then
         !HOP
-        write(*,*)"Adiabatic HOP! (",trim(fmt_in),"->",trim(fmt_out) ,")dE/a.u.", Epot2, &
-                                  "Probability:", prob(ihop), "Random n:",hop_rdnum
+        write(*,*)"Adiabatic HOP! (",trim(fmt_in),"->",trim(fmt_out) ,") dE/a.u.", Epot2, &
+                                  "Random n:",hop_rdnum
         !We need to get to previous geometry, adjust its velocity according to
         !target state and do 1 step forward on the new state
         istate_lz = ihop
