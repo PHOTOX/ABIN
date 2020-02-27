@@ -7,9 +7,10 @@ ibead=$2
 input=input$ibead
 geom=../geom.dat.$ibead
 natom=$(cat $geom | wc -l )
+scratch=scratch$ibead
 
 #----------------USER SETUP-----------------------
-method=OM2    # semiempirical methods, usually OMx
+method=OM3    # semiempirical methods, usually OMx
 charge=0      # molecular charge
 multi=0       # multiplicity
               # 0 Closed-shell singlet
@@ -59,7 +60,10 @@ END {
 }
 ' $geom >> $input
 
-$MNDOEXE < $input &> $input.out
+mkdir -p $scratch
+cd $scratch
+$MNDOEXE < ../$input &> ../$input.out
+cd ../
 
 #---------------ERROR CHECK-----------------------------
 
@@ -73,7 +77,7 @@ fi
 
 grep 'TOTAL ENERGY' $input.out | awk '{printf "%.8f\n", $4/27.211396}' > ../engrad.dat.$ibead
 
-grep -A$(($natom*3))  'INTERNAL COORDINATES AND GRADIENTS'  fort.15 | tail -n +2 | awk '
+grep -A$(($natom*3))  'INTERNAL COORDINATES AND GRADIENTS'  $scratch/fort.15 | tail -n +2 | awk '
 BEGIN{toAU=0.000843297}
 NR%3==1{gradx=$4*toAU}
 NR%3==2{grady=$4*toAU}
