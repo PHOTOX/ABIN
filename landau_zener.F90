@@ -57,10 +57,10 @@ module mod_lz
 
    !Allocate energy arrays
    allocate(en_array_lz(nstate_lz, 3), en_array_lz_backup(nstate_lz, 3)) !last 3 energies (1: current, 2: n-1, 3: n-3)
-   allocate(fx_old(natom,nwalk),fy_old(natom,nwalk),fz_old(natom,nwalk))
-   allocate(px_temp(natom,nwalk),py_temp(natom,nwalk),pz_temp(natom,nwalk))
-   allocate(x_prev(natom,nwalk),y_prev(natom,nwalk),z_prev(natom,nwalk), &
-            fx_prev(natom,nwalk),fy_prev(natom,nwalk),fz_prev(natom,nwalk))
+   allocate(fx_old(natom,nwalk+1),fy_old(natom,nwalk+1),fz_old(natom,nwalk+1))
+   allocate(px_temp(natom,nwalk+1),py_temp(natom,nwalk+1),pz_temp(natom,nwalk+1))
+   allocate(x_prev(natom,nwalk+1),y_prev(natom,nwalk+1),z_prev(natom,nwalk+1), &
+            fx_prev(natom,nwalk+1),fy_prev(natom,nwalk+1),fz_prev(natom,nwalk+1))
    en_array_lz=0.0d0
 
    end subroutine lz_init
