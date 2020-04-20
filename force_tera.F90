@@ -30,8 +30,8 @@ module mod_terampi
    real(DP)  :: mpi_sleep = 0.05
    public :: teraport, newcomms, mpi_sleep, nteraservers
    public :: force_tera, natmm_tera
-   public :: handle_mpi_error
 #ifdef MPI
+   public :: handle_mpi_error
    public :: finalize_terachem, initialize_terachem, connect_terachem
 #endif
    save
