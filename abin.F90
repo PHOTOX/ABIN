@@ -21,6 +21,7 @@ program abin_dyn
    use mod_arrays
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
+   use mod_lz, only: lz_hop
    use mod_kinetic, ONLY: temperature
    use mod_utils, only: abinerror, archive_file
    use mod_shake, only: nshake
@@ -210,6 +211,14 @@ program abin_dyn
 
          endif
 
+!        LANDAU ZENER HOPPING
+         if(ipimd.eq.5)then
+            call lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, pot)
+            px = amt * vx
+            py = amt * vy
+            pz = amt * vz
+         endif
+
 #ifdef MPI
 !        SWAP REMD REPLICAS
          if (iremd.eq.1.and.modulo(it,nswap).eq.0)then
@@ -317,6 +326,7 @@ subroutine finish(error_code)
    use mod_gle,    only: finalize_gle
    use mod_estimators, only: h
    use mod_harmon, only: hess
+   use mod_lz,     only: lz_finalize
 
 #ifdef USEFFTW
    use mod_fftw3,  only: fftw_end
@@ -407,6 +417,9 @@ end if
       call plumed_f_gfinalize()
     end if
 #endif
+
+if(ipimd.eq.5) call lz_finalize()
+
 end subroutine finish
 
 

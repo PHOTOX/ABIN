@@ -1,0 +1,11 @@
+For singlet dynamics only:
+  mv r.molpro-lz-S r.molpro-lz
+  *FILETREE:
+    /MOLPRO-LZ/r.molpro-lz
+
+
+For singlet/triplet dynamics:
+  mv r.molpro-lz-ST r.molpro-lz
+  *FILETREE:
+    /MOLPRO-LZ/r.molpro-lz
+              /r.molpro-lz.soc

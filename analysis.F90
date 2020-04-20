@@ -11,7 +11,8 @@ module mod_analysis
    !These are the character string that we check for during restart.
    character(len=*),parameter :: chnose='NHC momenta',chQT='Quantum Thermostat',chLT='Langevin Thermostat', &
             chSH='Coefficients for SH', chAVG='Cumulative averages of various estimators', &
-            chcoords='Cartesian Coordinates [au]', chvel='Cartesian Velocities [au]'
+            chcoords='Cartesian Coordinates [au]', chvel='Cartesian Velocities [au]', &
+            chLZ='Energy difference history for LZ'
 
    CONTAINS
 
@@ -188,13 +189,14 @@ module mod_analysis
    use mod_kinetic,only: entot_cumul, est_temp_cumul
    use mod_sh_integ, only: sh_write_wf
    use mod_sh,     only: write_nacmrest,ntraj,istate
+   use mod_lz,     only: en_array_lz, nstate_lz, istate_lz
    use mod_gle
    use mod_random
    use mod_terampi_sh, only: write_wfn
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
    integer,intent(in) :: time_step
-   integer :: iat,iw,inh,itrj,is
+   integer :: iat,iw,inh,itrj,is,ist
    LOGICAL :: file_exists
    character(len=200)    :: chout, chsystem, chformat
 
@@ -244,6 +246,14 @@ module mod_analysis
       write(102,*)chSH
       write(102,*)istate(itrj)
       call sh_write_wf(102, itrj)
+   endif
+
+   if(ipimd.eq.5)then
+      write(102,*)chLZ
+      write(102,*)istate_lz
+      do ist=1, nstate_lz
+          write(102,*)en_array_lz(ist,1),en_array_lz(ist,2),en_array_lz(ist,3)
+      end do
    endif
 
    if(inose.eq.1)then
@@ -324,13 +334,14 @@ module mod_analysis
    use mod_kinetic,  only: entot_cumul, est_temp_cumul
    use mod_sh_integ, only: sh_read_wf
    use mod_sh,       only: write_nacmrest,ntraj,istate
+   use mod_lz,       only: en_array_lz, nstate_lz, istate_lz
    use mod_gle
    use mod_random
    use mod_terampi_sh, only: read_wfn
    real(DP),intent(out)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(out)  :: vx(:,:),vy(:,:),vz(:,:)
    integer,intent(out)   :: it
-   integer :: iat,iw,inh,itrj,is
+   integer :: iat,iw,inh,itrj,is,ist
    character(len=100) :: chtemp
    character(len=200) :: chformat
    logical :: prngread
@@ -375,6 +386,15 @@ module mod_analysis
       itrj = 1
       read(111,*)istate(itrj)
       call sh_read_wf(111, itrj)
+   endif
+
+   if(ipimd.eq.5)then
+     read(111,'(A)')chtemp
+     call checkchar(chtemp, chlz)
+     read(111,*)istate_lz
+     do ist=1, nstate_lz 
+      read(111,*)en_array_lz(ist,1),en_array_lz(ist,2),en_array_lz(ist,3)
+     enddo
    endif
 
    if(inose.eq.1.and.readNHC.eq.1)then

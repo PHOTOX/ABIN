@@ -6,6 +6,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_harmon,   only: hess
    use mod_sh_integ, only: nstate
    use mod_sh,       only: nac_accu1, tocalc, en_array, istate
+   use mod_lz,       only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
    use mod_qmmm,     only: natqm
    use mod_utils,    only: abinerror, lowertoupper
    use mod_io,       only: read_forces
@@ -72,6 +73,24 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          close(MAXUNITS+iw+2*walkmax) 
       endif
 
+!     Landau-Zener
+      if(ipimd.eq.5)then
+
+         open(unit=MAXUNITS+iw+2*walkmax,file='state.dat')
+         write(MAXUNITS+iw+2*walkmax,'(I2)')nstate_lz !How many el. states
+
+         !do ist1=1,nstate_lz
+         !   write(MAXUNITS+iw+2*walkmax,'(I1,A1)',advance='no')tocalc_lz(ist1),' '
+         !end do
+         !First we have singlets, then triplets
+         do ist1=1,nstate_lz
+           if(tocalc_lz(ist1).eq.1) write(MAXUNITS+iw+2*walkmax,'(I1,A1)')ist1, ' ' !Number of gradient state
+         end do
+         write(MAXUNITS+iw+2*walkmax,'(I1,A1)')nsinglet_lz, ' ' !Number of singlets
+         write(MAXUNITS+iw+2*walkmax,'(I1,A1)')ntriplet_lz, ' ' !Number of triplets
+         close(MAXUNITS+iw+2*walkmax)
+      endif
+
 !---  HERE we decide which program we use to obtain gradients and energies
 !     e.g. ./G09/r.g09
       chsystem='./'//trim(LowerToUpper(chpot))//'/r.'//chpot
@@ -92,7 +111,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 
 !     for SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)
 !     TODO: This should not be hard-coded
-      if(ipimd.eq.2.or.ipimd.eq.4)then
+      if(ipimd.eq.2.or.ipimd.eq.4.or.ipimd.eq.5)then
          write(chsystem,'(A60,I3,A12)')chsystem, 7, ' < state.dat'
       endif
      
@@ -149,6 +168,23 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          ! TODO-EH: eclas must be correctly overwritten later
          eclas = en_array(istate(iw),iw)
       end if
+! LZ      
+      if(ipimd.eq.5)then
+         !Move old energies by 1
+         en_array_lz(:,3) = en_array_lz(:,2)
+         en_array_lz(:,2) = en_array_lz(:,1) 
+         !Store the new one
+         en_array_lz(1,1) = temp1
+         do ist1=2,nstate_lz
+            read(MAXUNITS+iw,*,IOSTAT=iost)en_array_lz(ist1,1)
+            if(iost.ne.0)then
+               write(*,*)'ERROR: Could not read excited state energy from file ', chforce
+               write(*,*)'Fortran ERROR = ', iost
+               call abinerror('force_abin')
+            endif
+         enddo
+         eclas = en_array_lz(istate_lz,1)
+      end if
 
 !     TODO-EH: Read additional forces probably somewhere here, use second index (iw) for different states
 !     Actually, we should make a routine read_engrad() and make it general for both EH and SH
@@ -156,6 +192,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       
       if (ipimd.eq.2.or.ipimd.eq.4)then
          iost = read_forces(fx, fy, fz, natqm, tocalc(istate(iw), istate(iw)), MAXUNITS+iw)
+      else if (ipimd.eq.5)then
+         iost = read_forces(fx, fy, fz, natqm, tocalc_lz(istate_lz), MAXUNITS+iw) !Save only the computed state
       else
 !     reading energy gradients from engrad.dat
          iost = read_forces(fx, fy, fz, natqm, iw, MAXUNITS+iw)

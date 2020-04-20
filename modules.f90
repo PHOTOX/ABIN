@@ -19,6 +19,7 @@ module mod_const
    real(DP), parameter :: AUTOK=3.1577464d5 ! temperature in a.u. to Kelvins
    real(DP), parameter :: ME=9.10938215d-31 ! electron mass
    real(DP), parameter :: AUTOM=5.2917720859d-11 ! atomic length
+   real(DP), parameter :: AUTOCM=2.1947463d5 ! atomic units to cm-1
    real(DP), parameter :: AMBTOAU=0.84d0/15.3067320d0 !charges to MACSIMUS in init
    real(DP), parameter :: AUTOKCAL=6.2750946943d2,AUTOKK=3.1577322d5,AUTOEV=27.21138386d0
    real(DP), parameter :: AUTODEBYE =  2.54174623d0
@@ -538,6 +539,13 @@ module mod_files
 
    open(UTEMPER,file=chfiles(UTEMPER), access=chaccess, action='write')
    write(UTEMPER,*)'#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
+
+   if(ipimd.eq.5)then
+      open(UPES,file=chfiles(UPES),access=chaccess,action='write')
+      write(UPES,*)'#    Time[fs] Potential energies (singlets, triplets)'
+      open(UPOP,file=chfiles(UPOP),access=chaccess,action='write')
+      write(UPOP,*)'#    Time[fs] CurrentState   Populations Sum-of-Populations'
+   endif
 
    if(ipimd.eq.2)then
       open(UPOP,file=chfiles(UPOP),access=chaccess,action='write')
