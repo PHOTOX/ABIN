@@ -13,6 +13,7 @@ module mod_sh_integ
    public :: sh_write_wf, sh_read_wf, sh_debug_wf
    public :: integ, phase, el_pop
    public :: nstate, popsumthr
+   public :: correct_decoherence
 
    ! Electronic State coefficients
    real(DP) :: cel_re(NSTMAX, NTRAJMAX), cel_im(NSTMAX, NTRAJMAX)
@@ -24,7 +25,10 @@ module mod_sh_integ
    ! Number of electronic states
    integer :: nstate = 1
    ! Numerical integrator (defualt is Butcher 5-th order)
-   character(len=10) :: integ='butcher'
+   character(len=10) :: integ = 'butcher'
+   ! TODO: Switch this on by default, and provide the opposite keyword
+   ! to replicate older data
+   logical :: correct_decoherence = .false.
 
    CONTAINS
 
@@ -360,52 +364,59 @@ module mod_sh_integ
    end subroutine butcherstep
 
 
-   subroutine sh_decoherence_correction(en_array_int, alpha, Ekin_mom, istate, itrj, dtp)
+   ! Simple decoherence correction per Grannuci, Persico (2007)
+   ! "Critical appraisal of the fewest switches algorithm for surface hopping"
+   ! https://doi.org/10.1063/1.2715585
+   subroutine sh_decoherence_correction(potential_energies, alpha, kinetic_energy, current_state, itrj, dtp)
       use mod_utils, only: abinerror
-      real(DP),intent(in) :: en_array_int(NSTMAX,NTRAJMAX)
-      real(DP), intent(in)  :: alpha, Ekin_mom, dtp
-      integer, intent(in)   :: istate, itrj
+      real(DP), intent(in) :: potential_energies(NSTMAX, NTRAJMAX)
+      real(DP), intent(in) :: alpha, kinetic_energy, dtp
+      integer, intent(in)  :: current_state, itrj
       integer  :: ist1
-      real(DP) :: apom,edif,tau,fact,sum_norm
+      real(DP) :: delta_e, tau, scaling_factor, renormalization_factor, sum_norm
 
       do ist1=1,nstate
-         if(ist1.ne.istate) then
+         if(ist1.eq.current_state) cycle
 
-!           Calculation of the exponential factor               
-            edif = abs( en_array_int(ist1,itrj)-en_array_int(istate,itrj) )
-            tau = 1 / edif
-            apom = alpha / ekin_mom
-            tau = tau * (1.0d0+apom)
-            fact = dexp(-dtp/tau)
+         delta_e = abs( potential_energies(ist1, itrj) - potential_energies(current_state, itrj) )
+         tau = (1.0d0 + alpha/kinetic_energy) / delta_e
+         scaling_factor = dexp(-dtp/tau)
+
+         ! Testing the correct approach, the scaling factor is damping populations,
+         ! not the coefficients! The Eq. 17 in the Persico paper is wrong
+         ! TODO: We should of course switch to the correct formula by default,
+         ! but we need to support the incorrect version if we ever want to replicate old data
+         if (correct_decoherence)then
+           scaling_factor = dsqrt(scaling_factor)
+         end if
    
-            cel_re(ist1,itrj) = cel_re(ist1,itrj) * fact
-            cel_im(ist1,itrj) = cel_im(ist1,itrj) * fact
+         cel_re(ist1, itrj) = cel_re(ist1, itrj) * scaling_factor
+         cel_im(ist1, itrj) = cel_im(ist1, itrj) * scaling_factor
+      enddo
+
+      ! Renormalize the current state
+      sum_norm = 1.0d0
+      do ist1 = 1, nstate
+         if(ist1.ne.current_state) then
+            sum_norm = sum_norm - cel_re(ist1,itrj)**2 - cel_im(ist1,itrj)**2
          endif
       enddo
 
-      ! Renormalization of the current state
-      sum_norm=1.0d0
-      do ist1=1,nstate
-         if(ist1.ne.istate) then
-            sum_norm=sum_norm-cel_re(ist1,itrj)**2-cel_im(ist1,itrj)**2
-         endif
-      enddo
-
-      fact = sum_norm / (cel_re(istate,itrj)**2 + cel_im(istate,itrj)**2+1.0d-7)
+      renormalization_factor = sum_norm / (cel_re(current_state, itrj)**2 + cel_im(current_state, itrj)**2+1.0d-7)
 
       ! Following should never happen as we check for popsumthr later in this subroutine
-      if(fact.lt.0.0d0)then
+      if(renormalization_factor.lt.0.0d0)then
          write(*,*)'Fatal error in surfacehop during decoherence renormalization.'
-         write(*,*)'fact=',fact,'but should be > 0'
+         write(*,*)'fact=', renormalization_factor, 'but should be > 0'
          write(*,*)'This usually means inaccurate integration of electronic SE.'
          write(*,*)'Increase number of substeps or use more accurate integrator.'
          call abinerror('surfacehop')
       end if
 
-      fact = sqrt(fact)
+      renormalization_factor = sqrt(renormalization_factor)
 
-      cel_re(istate,itrj) = cel_re(istate,itrj) * fact
-      cel_im(istate,itrj) = cel_im(istate,itrj) * fact
+      cel_re(current_state, itrj) = cel_re(current_state, itrj) * renormalization_factor
+      cel_im(current_state, itrj) = cel_im(current_state, itrj) * renormalization_factor
 
       call sh_calc_elpop(itrj)
 

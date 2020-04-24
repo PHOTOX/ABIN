@@ -78,7 +78,7 @@ subroutine init(dt, time_data)
    use mod_nhc
    use mod_estimators
    use mod_harmon
-   use mod_sh_integ, only: nstate, integ, phase, popsumthr
+   use mod_sh_integ, only: nstate, integ, phase, popsumthr, correct_decoherence
    use mod_sh
    use mod_lz,       only: lz_init, initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz
    use mod_qmmm
@@ -156,7 +156,7 @@ subroutine init(dt, time_data)
 
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,decoh_alpha,popthr,ignore_state, &
                      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, natmm_tera, &
-                     dE_S0S1_thr
+                     dE_S0S1_thr, correct_decoherence
              
    namelist /lz/     initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz 
 
@@ -297,7 +297,7 @@ subroutine init(dt, time_data)
       write(*,*)'Reading xyz coordinates from file ',trim(chcoords)
       write(*,*)'XYZ Units = '//trim(xyz_units)
       if(chveloc.ne.'')then
-         write(*,*)'Reading initial velocities [a.u.] from file', trim(chveloc)
+         write(*,*)'Reading initial velocities [a.u.] from file ', trim(chveloc)
       end if
       print '(a)', chdivider
       call PrintLogo(time_data)
