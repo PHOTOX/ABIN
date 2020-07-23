@@ -104,12 +104,12 @@ init.o : init.F90 ${ALLDEPENDS}
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DDATE="'${DATE}'" -DCOMMIT="'${COMMIT}'" -c init.F90
 
 clean :
+	cd WATERMODELS && make clean
 	/bin/rm -f *.o *.mod $(OUT)
 
 # Remove NAB objects as well
 distclean :
 	/bin/rm -f *.o *.mod NAB/*.o $(OUT)
-	cd WATERMODELS && make clean
 
 # Run test suite 
 test :
