@@ -86,7 +86,6 @@ subroutine init(dt, time_data)
    use mod_nab
    use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
-   use mod_guillot,  only: inames_guillot
    use mod_splined_grid, only: initialize_spline
    use mod_utils
    use mod_vinit
@@ -135,7 +134,7 @@ subroutine init(dt, time_data)
    REAL, POINTER  :: REALPTR => NULL ()
 #endif
 
-   namelist /general/natom, pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess,imini,nproc,iqmmm, &
+   namelist /general/ natom, pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive,xyz_units, &
             dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
@@ -707,10 +706,9 @@ subroutine init(dt, time_data)
 !-----some stuff for spherical boundary onditions
       if(isbc.eq.1) call sbc_init(x,y,z)
 
-!-----inames initialization for guillot rm MM part. 
+!-----inames initialization for the MM part. 
 !-----We do this also because string comparison is very costly
-      if(iqmmm.eq.3.or.pot.eq.'mm'.or.pot=='guillot') allocate( inames(natom) )
-      if(pot.eq.'guillot') call inames_guillot()
+      if(iqmmm.eq.3.or.pot.eq.'mm') allocate( inames(natom) )
 
       if(iqmmm.eq.3.or.pot.eq.'mm')then 
          do iat = 1, MAXTYPES
@@ -746,30 +744,14 @@ subroutine init(dt, time_data)
 
 
 #ifdef NAB
-      if (pot.eq."nab".or.pot_ref.eq."nab".or.iqmmm.eq.2)then
+      if (pot.eq."nab".or.pot_ref.eq."nab")then
          if (alpha_pme.lt.0) alpha_pme = pi / cutoff
          if (kappa_pme.lt.0) kappa_pme = alpha_pme
-         call nab_init(alpha_pme, cutoff, nsnb, ipbc, ips, iqmmm) !C function...see nabinit.c
+         call nab_init(alpha_pme, cutoff, nsnb, ipbc, ips) !C function in nabinit.c
 
          if(ipbc.eq.1)then
-            allocate ( charges(natom) )
-         if (nchain.eq.1) f=3
-            call nab_getbox(boxx,boxy,boxz) !see nabinit.c
-            call nab_getcharges(charges) !see nabinit.c
-
-            do iat=1,natom
-               charges(iat)=charges(iat)*ambtoau*sqrt(167100.75d0)  !for macsimus units
-            enddo
-            write(*,*)'Box sizes[Ang]: ',boxx,boxy,boxz
-            write(*,*)'Half of box size: ',boxx2,boxy2,boxz2
-!           write(*,*)x(iat,1)/ang,y(iat,1)/ang,z(iat,1)/ang,charges(iat)
-            call ewald(VECPTR,VECPTR,charges,REALPTR,boxx,boxy,boxz,cutoff,alpha_pme,kappa_pme,epsinf,natom,ipom2)
-            boxx = boxx * ANG
-            boxy = boxy * ANG
-            boxz = boxz * ANG
-            boxx2 = 0.5d0 * boxx
-            boxy2 = 0.5d0 * boxy
-            boxz2 = 0.5d0 * boxz
+            write(*,*)'ERROR: Periodic Boundary Conditions not supported'
+            call abinerror('init')
          endif
       endif
 #endif
@@ -886,10 +868,6 @@ subroutine init(dt, time_data)
       endif
       if(iqmmm.lt.0.or.iqmmm.gt.3)then
        write(*,*)'Error: iqmmm must be 0, 1, 2 or 3.'
-       error=1
-      endif
-      if(iqmmm.eq.2.and.ipbc.eq.1)then
-       write(*,*)'QM/MM with PBC not supported !'
        error=1
       endif
       if(integ.ne.'euler'.and.integ.ne.'rk4'.and.integ.ne.'butcher')then

@@ -1,4 +1,5 @@
-
+! Fortran interfaces created by hand
+! for functions outside of modules
 module mod_interfaces
    use mod_const, only: DP
    INTERFACE

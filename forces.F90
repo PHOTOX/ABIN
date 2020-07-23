@@ -186,7 +186,6 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    use mod_nab,      only: force_nab
    use mod_harmon,   only: force_harmon,force_2dho,force_morse,force_doublewell
    use mod_splined_grid
-   use mod_guillot,  only: force_guillot
    use mod_cp2k,     only: force_cp2k
    use mod_terampi,     only: force_tera
    use mod_terampi_sh,  only: force_terash
@@ -219,8 +218,6 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
          call force_2dho(x, y, z, fx, fy, fz, eclas)
       case ("morse")
          call force_morse(x, y, z, fx, fy, fz, eclas)
-      case ("guillot")
-         call force_guillot(x, y, z, fx, fy, fz, eclas)
       case ("doublewell")
          call force_doublewell(x, y, z, fx, fy, fz, eclas)
       case ("nab")

@@ -24,7 +24,7 @@ endif
 
 
 F_OBJS := arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o plumed.o \
-          force_nab.o force_bound.o force_guillot.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
+          force_nab.o force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
           force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o density.o analysis.o \
           minimizer.o mdstep.o forces.o abin.o
 
@@ -32,7 +32,7 @@ F_OBJS := arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o pl
 LIBS += WATERMODELS/libttm.a
 
 ifeq ($(strip $(NAB)),TRUE)
-  C_OBJS = EWALD/ewaldf.o nabinit_pme.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o # NAB/binpos.o
+  C_OBJS = nab_init.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o # NAB/binpos.o
   # The following libraries were compiled with gfortran
   LIBS   += NAB/libnab.a # NAB/arpack.a  # NAB/blas.a
   CFLAGS +=  -INAB/include  
@@ -85,7 +85,7 @@ LDLIBS = -lm -lstdc++ ${LIBS}
 
 # Adding rest of the Fortran objects
 # This hack is needed for force_tera.o and fftw_interface.o
-F_OBJS := modules.o utils.o interfaces.o io.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
+F_OBJS := modules.o utils.o fortran_interfaces.o io.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
 
 ifeq ($(strip $(CP2K)),TRUE)
 ALLDEPENDS = ${C_OBJS} ${F_OBJS}
@@ -108,7 +108,7 @@ clean :
 
 # Remove NAB objects as well
 distclean :
-	/bin/rm -f *.o *.mod NAB/*.o EWALD/*.o $(OUT)
+	/bin/rm -f *.o *.mod NAB/*.o $(OUT)
 	cd WATERMODELS && make clean
 
 # Run test suite 

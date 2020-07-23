@@ -12,7 +12,7 @@
       integer  :: natmol(2000) !hardcoded for older gfortran
 #endif
       integer  :: nmol=1 !used for wraping, independent of nmolt
-      integer  :: ipbc=0,nsnb=1
+      integer  :: ipbc=0, nsnb=1
       integer  :: ips=0 ! 1-both LJ and coul, 2-coul 3- LJ
       save
       contains
@@ -86,16 +86,13 @@
 
       enddo
 
-      !if (iwrap.gt.0) write(*,*)'Number of wraps in this step:',iwrap
-
       end subroutine
 
       subroutine force_nab(x, y, z, fx, fy, fz, eclas, walkmax)
       use mod_const,       only: AUtoKCAL, ANG, AUtoKK
-      use mod_general,     only: ihess, natom, ncalc, idebug, iqmmm, it
+      use mod_general,     only: ihess, natom, ncalc, idebug, it
       use mod_estimators,  only: h
       use mod_harmon,      only: hess
-      use mod_qmmm,        only: natqm
       real(DP), intent(in)    :: x(:,:),y(:,:),z(:,:)
       real(DP), intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
       real(DP), intent(inout) :: eclas
@@ -108,13 +105,10 @@
       real(DP)                :: energy,del
       integer :: iat,iat1,iat2,pom,iw
       integer :: idum1=1,idum2=1,idum3=1,idum4=1,idum5=1,idum6=1,idum7=1,idum8=1
-      !pro ewalda
-      real(DP) ::  mme,mme2,en_ewald,mme_qmmm
+      real(DP) :: mme, mme2
       integer  :: iter  !jak casto delame non-bonded list update?musi byt totozne s hodnotou v souboru sff_my.c
 
 #ifdef NAB
-      en_ewald=0.0d0
-
 
       del = fac2 * walkmax
       iter = it   !dulezite pro update non-bond listu
@@ -172,71 +166,12 @@
        pom=pom+3
       enddo
 
-! calculation of reciprocal part of Ewald sum
-! grad se nemusi nulovat, prepisuje se uvnitr ewalda
-      if(ipbc.eq.1)then
-       call ewald(xyz,grad,charges,en_ewald,boxx,boxy,boxz,cutoff,alpha_pme,kappa_pme,epsinf,natom,ipbc)
-       pom=1
-       do iat=1,natom
-        fx(iat,iw)=fx(iat,iw)+grad(pom)/fac3  
-        fy(iat,iw)=fy(iat,iw)+grad(pom+1)/fac3
-        fz(iat,iw)=fz(iat,iw)+grad(pom+2)/fac3
-        pom=pom+3
-       enddo
-      endif
-
-!     CORRECTION FOR QMMM, COMPUTING ONLY QM PART and SUBSTRACTING FROM THE WHOLE SYSTEM
-!     currently does not work!!!
-!     PBC NOT SUPPORTED!
-      if(iqmmm.eq.2)then
-
-        if(idebug.eq.1)then
-                iter=-1
-        else  
-                iter=-5  ! we don't update nblist for QM part!!!!
-        endif
-        energy=energy-mme_qmmm( xyz, grad, iter) !grad se nemusi nulovat
-
-!       if(ihess.eq.1)then
-!        energy=energy-mme2(xyz,grad,h,dummy1,dummy2,idum1,idum2,idum3,idum4,idum5,idum6,idum7,idum8,iter,dummy3)
-!        pom=1
-!        do iat1=1,natqm*3
-!         do iat2=1,natqm*3
-!           hess(iat1,iat2,iw)=hess(iat1,iat2,iw)-h(pom)/del
-!           pom=pom+1
-!         enddo
-!        enddo
-!      endif
-
-       pom=1
-       do iat=1,natqm
-        fx(iat,iw)=fx(iat,iw)+grad(pom)/fac
-        fy(iat,iw)=fy(iat,iw)+grad(pom+1)/fac
-        fz(iat,iw)=fz(iat,iw)+grad(pom+2)/fac
-        pom=pom+3
-       enddo
-
-      endif
-!----END-OF-QMMM-----------------------       
-
 !convert energies to au units
-      en_ewald=en_ewald/autoKK ! K to a.u.
-      energy=energy/autokcal
+      energy = energy / autokcal
 
-      eclas=eclas+energy+en_ewald
+      eclas = eclas + energy
       enddo
 !!$OMP END PARALLEL DO
-
-      
-!       open(100,file="hessian_nab.dat")
-!       iw=1
-!       do iat1=1,natom*3
-!        do iat2=1,natom*3
-!         write(100,*)hess(iat1,iat2,iw)
-!    pom=pom+1
-!   enddo
-!  enddo
-!  close(100)
 
       eclas = eclas / walkmax
 #endif
