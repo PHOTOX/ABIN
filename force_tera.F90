@@ -100,7 +100,7 @@ subroutine send_tera(x, y, z, iw, newcomm)
    real(DP),intent(in)     ::  x(:,:),y(:,:),z(:,:)
    integer,intent(in)      ::  iw, newcomm
    real(DP) :: coords(3, size(x,1) )
-   character(len=2) :: names_qm(size(x,1)+5)
+   character(len=2) :: names_qm(size(x,1)+6)
    integer  :: ierr, iat
    logical  :: ltest
 
