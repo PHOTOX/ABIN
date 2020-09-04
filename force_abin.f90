@@ -84,10 +84,10 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          !end do
          !First we have singlets, then triplets
          do ist1=1,nstate_lz
-           if(tocalc_lz(ist1).eq.1) write(MAXUNITS+iw+2*walkmax,'(I1,A1)')ist1, ' ' !Number of gradient state
+           if(tocalc_lz(ist1).eq.1) write(MAXUNITS+iw+2*walkmax,'(I2,A1)')ist1, ' ' !Number of gradient state
          end do
-         write(MAXUNITS+iw+2*walkmax,'(I1,A1)')nsinglet_lz, ' ' !Number of singlets
-         write(MAXUNITS+iw+2*walkmax,'(I1,A1)')ntriplet_lz, ' ' !Number of triplets
+         write(MAXUNITS+iw+2*walkmax,'(I2,A1)')nsinglet_lz, ' ' !Number of singlets
+         write(MAXUNITS+iw+2*walkmax,'(I2,A1)')ntriplet_lz, ' ' !Number of triplets
          close(MAXUNITS+iw+2*walkmax)
       endif
 

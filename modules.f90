@@ -35,7 +35,7 @@ module mod_array_size
    implicit none
    integer,parameter   :: MAXCHAIN=10, MAXTYPES = 10
    integer,parameter   :: NBINMAX=2000, NDISTMAX=30
-   integer,parameter   :: NSTMAX=20, NTRAJMAX=1
+   integer,parameter   :: NSTMAX=50, NTRAJMAX=1
    save
 end module  mod_array_size
 
