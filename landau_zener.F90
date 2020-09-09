@@ -85,13 +85,13 @@ module mod_lz
    real(DP),intent(in)    :: dt
    character(len=*),intent(in) :: chpot
 
-   real(DP) :: prob(NSTMAX)
+   real(DP) :: prob(NSTMAX), prob2(NSTMAX), probc
    real(DP) :: ran(10)
    real(DP) :: en_diff(3), second_der, soc_matrix(nsinglet_lz,ntriplet_lz)
    integer  :: ihop, icross, ihist, ist1, ist2, iat, ibeg, iend!, istatus
    integer  :: row, col, S_to_T !itest, iost
    integer  :: ist                     ! =istate_lz
-   real(DP) :: Ekin, Epot, Epot2, dE, hop_rdnum, vel_rescale, stepfs, molveloc, grad_diff
+   real(DP) :: Ekin, Epot, Epot2, dE, hop_rdnum, hop_rdnum2, vel_rescale, stepfs, molveloc, grad_diff
    real(DP) :: one=1.0d0
    character(len=100) :: formt, fmt_in, fmt_out!, chSOC='SOC.dat'
 
@@ -107,6 +107,8 @@ module mod_lz
    !(But we should compute singlet+triplet probs together and decide in the END)
 
    prob=0.0d0
+   prob2=0.0d0
+   probc=0.0d0
    
    if (ist.le.nsinglet_lz)then   !Singlet 1->nsinglet_lz
        ibeg=1
@@ -146,12 +148,28 @@ module mod_lz
    do ist1=ibeg, iend 
       if (ist1.eq.ist) cycle
       if(hop_rdnum.lt.prob(ist1))then
-         ihop = ist1
-         exit
+         prob2(ist1)=prob(ist1)       !All probable hops
       else if(prob(ist1).gt.0)then
-         write(*,*)"NO hop, Random n:",hop_rdnum
+         write (fmt_in,'(I2.2)') ist1
+         write(*,*)"NO hop on state ", trim(fmt_in),", Random n:",hop_rdnum
       end if
-   end do                             
+   end do 
+
+   ! Determine on which state (weighted sampling of all probable hops)
+   call vranf(ran,1,0,6)
+   hop_rdnum2 = ran(1)
+   do ist1=ibeg, iend
+      if (ist1.eq.ist) cycle
+      probc=probc+prob2(ist1)/sum(prob2) !0 if none, 1 if one
+      if(hop_rdnum2.lt.probc)then
+          ihop = ist1
+          exit
+      else if(prob2(ist1).gt.0)then
+          write (fmt_in,'(I2.2)') ist1
+          write(*,*)"NO hop on state ", trim(fmt_in),", Random n2:",hop_rdnum2
+      end if
+
+   end do
 
    if(ihop.ne.0)then
     Ekin = ekin_v(vx,vy,vz)
