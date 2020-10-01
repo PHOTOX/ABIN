@@ -25,7 +25,7 @@ MPI_INC  = -I$(MPI_PATH)/include/
 
 # Should we compile with NAB libraries (AMBER force field)
 # Currently only possible with gfortran
-NAB  = TRUE
+NAB = FALSE
 
 # Compile with PLUMED?
 PLUM = FALSE
