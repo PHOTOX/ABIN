@@ -13,10 +13,8 @@ cd TESTS
 function dif_files {
 local status=0
 local cont
-local cont_no
 local files
 local f
-cont_no=1
 # Do comparison for all existing reference files
 files=$(ls *.ref)
 for f in $files   # $* 
@@ -26,26 +24,11 @@ do
       diff $file $file.ref > $file.diff
       if [[ $? -ge 1 ]];then
          diff -y -W 500  $file $file.ref | egrep -e '|' -e '<' -e '>' > $file.diff
-         ../numdiff.py $file.diff 2> /dev/null
+         ../numdiff.py $file.diff
       fi
-      if [[ $? -ge 1 && $cont_no -eq 1 ]];then
+      if [[ $? -ne 0 ]];then
          status=1
-         echo "File $file differ from the reference. Continue anyway? [y/n]"
-         while true 
-         do
-            read cont
-            #if [[ $cont = "n" || $cont = "no" ]];then
-            #   echo "Exiting..."
-            #   exit 1
-            if [[ $cont = "y" || $cont = "yes" ]];then
-               echo "Continuing..."
-               cont_no=0
-               break
-            else 
-               exit 1
-            #   echo "Please enter 'y' or 'n'"
-            fi
-         done
+         echo "File $file differ from the reference."
       fi
    fi
 done
