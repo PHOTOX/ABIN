@@ -6,7 +6,7 @@ OUT = abin
 FC = gfortran
 CC = gcc 
 CXX = g++
-FFLAGS :=   -O2 -fopenmp  
+FFLAGS := -g -fopenmp
 
 #C compiler is used for NAB library, do not change this
 CFLAGS :=   -O2  # do not use any other fancy stuff and no fopenmp for this
