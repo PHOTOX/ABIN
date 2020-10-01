@@ -28,7 +28,6 @@
 
 #include "qtip4pf.h"
 
-////////////////////////////////////////////////////////////////////////////////
 extern"C" {
 void force_water_(const double *x,const double  *y,const double *z, double *fx,double *fy,double *fz, double *eclas,const int *natom,const int* nwalk, const int *watpot)
 {
@@ -72,7 +71,7 @@ void force_water_(const double *x,const double  *y,const double *z, double *fx,d
       default:
          //TODO: move this check to check_water subroutine
          std::cerr << "Error: Parameter watpot out of range." << std::endl;
-         //return 1;
+         return;
         break;
       }
       *eclas += E;
@@ -88,11 +87,7 @@ void force_water_(const double *x,const double  *y,const double *z, double *fx,d
 
    *eclas /= AUTOKCAL;
 
-//   return 0;
-
 }
 
 // externC
 }
-
-////////////////////////////////////////////////////////////////////////////////

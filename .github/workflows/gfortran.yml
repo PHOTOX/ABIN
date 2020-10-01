@@ -10,10 +10,21 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    strategy: 
+      fail-fast: false
+      matrix:
+         gcc_v: [7, 8, 9]
+      env:
+        FC: gfortran
+        GCC_V: ${{ matrix.gcc_v}}
 
     steps:
     - uses: actions/checkout@v2
-    - name: make
-      run: gfortran -v && cp make.vars.example make.vars && make
-    - name: make test
+    - name: Install GFortran
+      run: |
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
+        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
+    - name: build
+      run: gfortran -v && g++ -v && cp make.vars.example make.vars && make
+    - name: test
       run: make test
