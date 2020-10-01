@@ -14,6 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: cp make.vars.example make.vars && make
+      run: gfortran -v && cp make.vars.example make.vars && make
     - name: make test
       run: make test
