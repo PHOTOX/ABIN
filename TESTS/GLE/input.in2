@@ -2,7 +2,7 @@ This is a sample input file for ABIN
 NOTE: order of input sections matters!!
 
 &general
-nstep=20,
+nstep=2,
 irest=1,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
 idebug=0
 iknow=0
