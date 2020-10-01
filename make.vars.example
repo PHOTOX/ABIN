@@ -12,7 +12,7 @@ FFLAGS :=   -O2 -fopenmp
 CFLAGS :=   -O2  # do not use any other fancy stuff and no fopenmp for this
 
 # Should we compile mpi version?
-MPI = TRUE
+MPI = FALSE
 MPI_PATH = YOUR_PATH TO MPI INSTALLATION
 ifeq  ($(MPI),TRUE) 
   FC = $(MPI_PATH)/bin/mpifort
