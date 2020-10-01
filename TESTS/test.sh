@@ -70,6 +70,8 @@ if [[ $2 == "sh" ]];then
    folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
 elif  [[ $2 = "all" || $2 = "clean" ]];then
    folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM GLE PIGLE)
+   # DH: Temporarily disable GLE and PIGLE tests
+   folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM)
    if [[ $3 = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=NAB

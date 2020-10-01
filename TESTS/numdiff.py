@@ -16,7 +16,7 @@ import readline
 decimal.getcontext().prec = 17
 
 # TODO: Relative delta
-DELTA=1e-16
+DELTA=1e-15
 #decimal.getcontext().rounding = "ROUND_DOWN"
 
 usage = "USAGE: %prog input_diff_file"
