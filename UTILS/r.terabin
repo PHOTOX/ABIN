@@ -64,8 +64,9 @@ if [[ $? -eq 0 ]];then
 fi
 
 export LD_LIBRARY_PATH=
-source SetEnvironment.sh TERACHEM trunk
+source SetEnvironment.sh TERACHEM
 source SetEnvironment.sh ABIN mpi
+export OMP_NUM_THREADS=$N_TERA_SERVERS
 #hostname="403-as67-01"
 hostname=$HOSTNAME
 MPIRUN_TERA="$MPIRUN -n 1 -nameserver $hostname"
