@@ -10,6 +10,7 @@ FFLAGS :=   -O2 -fopenmp
 
 #C compiler is used for NAB library, do not change this
 CFLAGS :=   -O2  # do not use any other fancy stuff and no fopenmp for this
+CXXFLAGS := -O2 -Wall -std=c++11
 
 # Should we compile mpi version?
 MPI = FALSE
