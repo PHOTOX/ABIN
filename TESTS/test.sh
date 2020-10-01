@@ -1,14 +1,14 @@
 #!/bin/bash
 ABINEXE="$PWD/$1 -x mini.dat"
 
-
 MPI=$(awk -F"[# ,=]+" '{if($1=="MPI")print $2}' make.vars)
 if [[ $MPI = "TRUE" ]];then
    export MPI_PATH=$(awk -F"[# ,=]+" '{if($1=="MPI_PATH") print $2}' make.vars)
    export LD_LIBRARY_PATH=$MPI_PATH/lib:$LD_LIBRARY_PATH
 fi
 
-cd TESTS 
+cd TESTS || exit 1
+TESTDIR=$PWD
 
 function dif_files {
 local status=0
@@ -70,8 +70,6 @@ if [[ $2 == "sh" ]];then
    folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
 elif  [[ $2 = "all" || $2 = "clean" ]];then
    folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM GLE PIGLE)
-   # Temporarily disabling GLE test
-   #folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIGLE PIMD SHAKE HARMON MINI QMMM )
    if [[ $3 = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=NAB
@@ -120,13 +118,12 @@ echo ${folders[@]}
 
 for dir in ${folders[@]}
 do
-   if [[ ! -e $dir ]];then
-      echo "Directory $dir not found. Skipping...."
-      continue
-   else
-      echo "Entering directory $dir"
+   if [[ ! -d $dir ]];then
+      echo "Directory $dir not found. Exiting prematurely."
+      exit 1
    fi
-   cd $dir 
+   echo "Entering directory $dir"
+   cd $dir || exit 1
 
    if [[ -f "test.sh" ]];then
       ./test.sh clean 
@@ -136,7 +133,7 @@ do
 
    if [[ $2 = "clean" ]];then
       echo "Cleaning files in directory $dir "
-      cd ../
+      cd $TESTDIR || exit 1
       continue
    fi
 
@@ -172,14 +169,15 @@ do
 
    if [[ $? -ne "0" ]];then
       err=1
+      echo "$dir FAILED"
+      echo "======================="
    else
       echo "PASSED"
       echo "======================="
    fi
-   cd ../
+   cd $TESTDIR || exit 1
 done
 
-cd ../
 echo " "
 
 if [[ $err -ne "0" ]];then
@@ -189,5 +187,3 @@ else
 fi
 
 exit $err
-
-
