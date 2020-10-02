@@ -8,7 +8,7 @@ on:
 jobs:
   basic_build:
     runs-on: ubuntu-latest
-    strategy: 
+    strategy:
       fail-fast: true
       matrix:
          gcc_v: [7, 8, 9]
@@ -30,7 +30,7 @@ jobs:
 
   optimized_build:
     runs-on: ubuntu-latest
-    strategy: 
+    strategy:
       fail-fast: true
       matrix:
          gcc_v: [7, 8, 9]
@@ -50,10 +50,30 @@ jobs:
     - name: test
       run: make test
 
+  # Consider whether this needs to be a separate job
+  # or whether it should be default for all builds
+  # Here we just take the defaults everywhere, except turning on FFTW
+  fftw_build:
+    # Let's try the latest Ubuntu 20.2
+    # ubuntu-latest is still 18.0 on Github
+    # https://github.com/actions/virtual-environments#available-environments
+    runs-on: ubuntu-20.04
+    needs: basic_build
+    strategy:
+      fail-fast: true
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install FFTW libraries
+      run: sudo apt-get install libfftw3-dev
+    - name: build
+      run: ./configure --fftw && make
+    - name: test
+      run: make test
+
   mpich_build:
     runs-on: ubuntu-latest
     needs: basic_build
-    strategy: 
+    strategy:
       fail-fast: true
       matrix:
          gcc_v: [7, 8, 9]
@@ -78,7 +98,7 @@ jobs:
   openmpi_build:
     runs-on: ubuntu-latest
     needs: basic_build
-    strategy: 
+    strategy:
       fail-fast: true
       matrix:
          gcc_v: [7, 8, 9]
