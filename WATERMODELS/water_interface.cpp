@@ -29,17 +29,27 @@
 #include "qtip4pf.h"
 
 extern"C" {
-void force_water_(const double *x,const double  *y,const double *z, double *fx,double *fy,double *fz, double *eclas,const int *natom,const int* nwalk, const int *watpot)
+void force_water_(
+    const double *x,
+    const double *y,
+    const double *z,
+    double *fx,
+    double *fy,
+    double *fz,
+    double *eclas,
+    const int *natom,
+    const int* nwalk, 
+    const int *watpot)
 {
-   const int nwater = *natom/3;
+   const int nwater = *natom / 3;
    double E;
-   double grd[9*nwater];
-   double crd[9*nwater];
+   double grd[9 * nwater];
+   double crd[9 * nwater];
 
    // conversion constants
-   const double ANG=1.889726132873;
-   const double AUTOKCAL=627.50946943;
-   const double FAC=1/ANG/AUTOKCAL;
+   const double ANG = 1.889726132873;
+   const double AUTOKCAL = 627.50946943;
+   const double FAC = 1 / ANG / AUTOKCAL;
 
 
    h2o::qtip4pf pot1;
@@ -49,10 +59,11 @@ void force_water_(const double *x,const double  *y,const double *z, double *fx,d
 
    for (int iw=0;iw < *nwalk;iw++) {
 
+      // Convert to Angstroms
       for (int iat=0; iat < *natom;iat++) {
-         crd[3*iat]=x[iw*(*natom)+iat]/ANG;
-         crd[3*iat+1]=y[iw*(*natom)+iat]/ANG;
-         crd[3*iat+2]=z[iw*(*natom)+iat]/ANG;
+         crd[3*iat] = x[iw*(*natom)+iat] / ANG;
+         crd[3*iat+1] = y[iw*(*natom)+iat] / ANG;
+         crd[3*iat+2] = z[iw*(*natom)+iat] / ANG;
       }
 
       switch ( *watpot) {
@@ -74,9 +85,10 @@ void force_water_(const double *x,const double  *y,const double *z, double *fx,d
          return;
         break;
       }
-      *eclas += E;
 
+      *eclas += E / AUTOKCAL;
 
+      // Convert forces to atomic units (for ABIN)
       for (int iat=0; iat < *natom;iat++) {
          fx[iw*(*natom)+iat]=-grd[3*iat]*FAC;
          fy[iw*(*natom)+iat]=-grd[1+3*iat]*FAC;
@@ -84,8 +96,6 @@ void force_water_(const double *x,const double  *y,const double *z, double *fx,d
       }
 
    }
-
-   *eclas /= AUTOKCAL;
 
 }
 

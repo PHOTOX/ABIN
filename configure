@@ -1,0 +1,182 @@
+#!/bin/bash
+# ABIN local configuration generator
+#
+# The local build configuration is stored in make.vars,
+# which is NOT under version control.
+
+# Output file name (do not change)
+VARS=make.vars
+
+# Default configure options
+MPI=FALSE
+CP2K=FALSE
+PLUMED=FALSE
+FFTW=FALSE
+ABINEXE=abin
+
+function show_help()
+{
+echo "
+NAME
+   configure - generate local configuration for ABIN
+
+SYNOPSIS
+   configure [--debug] [--mpi path/to/mpi] [--plumed path/to/plumed] [--cp2k]
+
+OPTIONS
+   --debug       Compile in debug mode
+   --mpi         Compile with MPI support
+                 (needed for REMD and interface with TeraChem)
+   --plumed      Compile with Plumed library
+   --fftw        Use FFTW library (needed for normal mode PIMD)
+   --cp2k        Cross-compile with CP2K (experimental)
+"
+}
+
+# Overwrite default options from command line
+PARAMS="$@"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --debug)
+        FFLAGS="-g -O0 -fopenmp -Wall"
+        shift
+        ;;
+      --mpi)
+        MPI=TRUE
+        if [[ $# -lt 2 ]]; then
+            echo "Error: missing MPI_PATH argument"
+            exit 1
+        fi
+        MPI_PATH=$2
+        shift 2
+        ;;
+      --plumed)
+        PLUMED=TRUE
+        if [[ $# -lt 2 ]]; then
+            echo "Error: missing PLUMED_PATH argument"
+            exit 1
+        fi
+        PLUMED_PATH=$2
+        shift 2
+        ;;
+      --fftw)
+        echo "Using FFTW library, assuming it's in your LD_LIBRARY_PATH"
+        FFTW=TRUE
+        shift
+        ;;
+      --cp2k)
+        CP2K=TRUE
+        shift
+        ;;
+      *)
+        show_help
+        exit 1
+        ;;
+    esac
+done
+
+echo "Generating local build configuration for ABIN"
+echo "Writing config to $VARS"
+echo "# Local build configuration" > $VARS
+echo "# This file was built as follows." >> $VARS
+echo "# $0 $PARAMS" >> $VARS
+
+if [[ -z $FFLAGS ]];then
+   # Default build
+   FFLAGS="-O2 -fopenmp"
+   # Overwrite this by exporting FFLAGS before running configure
+fi
+
+if [[ -z $FC ]];then
+   if [[ $MPI = "TRUE" ]];then
+      FC=$MPI_PATH/bin/mpifort
+   else
+      FC="gfortran"
+   fi
+fi
+
+if [[ ! -f $FC && ! `which $FC` ]];then
+   echo "ERROR: $FC not found"
+   exit 1
+fi
+
+CC="gcc"
+CXX="c++"
+CXXFLAGS="-O2 -Wall -std=c++11"
+
+if [[ $MPI = "TRUE" ]];then
+   echo "Compilation with MPI"
+   ABINEXE=abin.mpi
+   # TODO: Check that MPI_PATH exists and contains
+   # necessary directories...
+fi
+
+if [[ $PLUMED = "TRUE" ]];then
+   if [[ ! -f $PLUMED_PATH/Plumed.inc ]];then
+      echo "File $PLUMED_PATH/Plumed.inc does not exist!"
+      exit 1
+   fi
+fi
+
+# Print all vars to make.vars
+echo "
+# This file is included in Makefile
+
+# Name of the final binary
+BIN = $ABINEXE
+
+# Compilers
+FC = $FC
+CC = $CC
+CXX = $CXX
+
+# Compiler flags
+FFLAGS = $FFLAGS
+CXXFLAGS = $CXXFLAGS
+
+# NAB (TO BE REMOVED)
+NAB = FALSE
+
+# MPI library
+MPI = $MPI
+#MPI_INC = $MPI_PATH/include
+# OpenMPI
+#MPI_LIBS = -L$MPI_PATH/lib -lmpi
+# MPICH
+#MPI_LIBS = -L$MPI_PATH/lib -lmpich -lmpl
+
+# Compilation with Plumed library
+PLUMED = $PLUMED
+PLUMED_LINK = $PLUMED_PATH/Plumed.inc
+# TODO: Figure out what this should be
+# (it is referenced in Makefile)
+PLUMED_STATIC_LOAD = $PLUMED_PATH
+
+# FFTW library is typically shipped with your system
+# It is needed for normal mode coordinate transformation in PIMD
+FFTW = $FFTW
+" >> make.vars
+
+# TODO: Make automatic check for FFTW library
+
+if [[ $CP2K = "TRUE" ]];then
+   echo "Linkink with CP2K"
+   echo "Setup paths to CP2K libs manually in make.vars"
+   echo "
+CP2KPATH = /usr/local/src/programes/src/cp2k-2.6.2/lib/Linux-x86-64-gfortran-mkl/sopt/
+MKL = /intel/parallel_studio_2015_update5/mkl/lib/intel64/
+LIBINT_LIB = /libint/1.1.4-gcc/lib
+FFTW_LIB = /fftw/3.3.4-gcc/lib/
+LIBXC_LIB = /libxc/2.1.2-gcc/lib
+MKL_LIBS = -ldl -L\$(MKL) -lmkl_blas95_lp64 -lmkl_lapack95_lp64\
+           -Wl,--start-group \${MKL}/libmkl_intel_lp64.a \${MKL}/libmkl_sequential.a\
+            \${MKL}/libmkl_core.a -Wl,--end-group -lpthread
+
+CP2K_LIBS = \$(MKL_LIBS) \
+            \$(FFTW_LIB)/libfftw3.a\
+            \$(LIBXC_LIB)/libxc.a\
+            \$(LIBINT_LIB)/libderiv.a\
+            \$(LIBINT_LIB)/libint.a
+" >> make.vars
+fi
+

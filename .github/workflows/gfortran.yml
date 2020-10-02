@@ -4,27 +4,48 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master ]
 
 jobs:
-  build:
-
+  basic_build:
     runs-on: ubuntu-latest
     strategy: 
-      fail-fast: false
+      fail-fast: true
       matrix:
          gcc_v: [7, 8, 9]
     env:
       FC: gfortran
+      FFLAGS: -O0 -fopenmp -Wall
       GCC_V: ${{ matrix.gcc_v}}
 
     steps:
     - uses: actions/checkout@v2
-    - name: Install GFortran
+    - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
     - name: build
-      run: gfortran -v && g++ -v && cp make.vars.example make.vars && make
+      run: ./configure && make
+    - name: test
+      run: make test
+
+  optimized_build:
+    runs-on: ubuntu-latest
+    strategy: 
+      fail-fast: true
+      matrix:
+         gcc_v: [7, 8, 9]
+    env:
+      FC: gfortran
+      FFLAGS: -O3 -fopenmp -Wall
+      GCC_V: ${{ matrix.gcc_v}}
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set GFortran version
+      run: |
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
+        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
+    - name: build
+      run: ./configure && make
     - name: test
       run: make test
