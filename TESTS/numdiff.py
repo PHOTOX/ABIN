@@ -42,7 +42,7 @@ def failed(reference, test):
    print('Significant numerical difference in file %s' % inpfile)
    print('Reference: ' + reference)
    print('Test: ' + test)
-   print('Delta = ', delta)
+   print('Delta = ' + delta)
    exit(1)
 
 def compare(numbers1, numbers2):

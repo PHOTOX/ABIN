@@ -54,6 +54,8 @@ jobs:
   # or whether it should be default for all builds
   # Here we just take the defaults everywhere, except turning on FFTW
   fftw_build:
+    # Temporarily disable
+    if: false
     # Let's try the latest Ubuntu 20.2
     # ubuntu-latest is still 18.0 on Github
     # https://github.com/actions/virtual-environments#available-environments
