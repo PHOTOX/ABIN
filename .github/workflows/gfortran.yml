@@ -55,7 +55,7 @@ jobs:
   # Here we just take the defaults everywhere, except turning on FFTW
   fftw_build:
     # Temporarily disable
-    if: true
+    if: false
     # Let's try the latest Ubuntu 20.2
     # ubuntu-latest is still 18.0 on Github
     # https://github.com/actions/virtual-environments#available-environments
@@ -65,8 +65,8 @@ jobs:
       fail-fast: true
       matrix:
          gcc_v: [7, 8, 9]
-    env:
-      FFLAGS: -O0 -fopenmp -Wall
+#    env:
+#      FFLAGS: -O0 -fopenmp -Wall
     steps:
     - uses: actions/checkout@v2
     - name: Install FFTW libraries
