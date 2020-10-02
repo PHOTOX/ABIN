@@ -1,13 +1,12 @@
 &general
-nstep=1,
+nstep=10,
 irest=0,
-idebug=6
-iknow=0
+idebug=0,
+iknow=0,
 
-pot='mmwater'
+pot='mmwater'		
 watpot=1
-ipimd=0,		!classical simulation 0, quantum simulation 1
-nwalk=1,		!number of random walkers 
+mdtype='md',		!classical simulation 0, quantum simulation 1
 
 dt=20.,			!number of steps and timestep
 irandom=131313,  	!random seed
