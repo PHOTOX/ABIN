@@ -117,6 +117,7 @@ distclean :
 	/bin/rm -f *.o *.mod NAB/*.o $(BIN)
 
 # Run test suite 
+# TODO: Pass MPI_PATH as well
 test :
 	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} ${PLUM}
 

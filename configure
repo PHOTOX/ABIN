@@ -83,13 +83,19 @@ echo "# $0 $PARAMS" >> $VARS
 
 if [[ -z $FFLAGS ]];then
    # Default build
-   FFLAGS="-O2 -fopenmp"
    # Overwrite this by exporting FFLAGS before running configure
+   FFLAGS="-O2 -fopenmp"
 fi
 
 if [[ -z $FC ]];then
    if [[ $MPI = "TRUE" ]];then
-      FC=$MPI_PATH/bin/mpifort
+      if [[ $MPI_PATH != "" ]];then
+         FC=$MPI_PATH/bin/mpifort
+      else
+         # By using an empty path, we presume that MPI
+         # is already available by default system paths
+         FC=mpifort
+      fi
    else
       FC="gfortran"
    fi
@@ -139,11 +145,12 @@ NAB = FALSE
 
 # MPI library
 MPI = $MPI
-#MPI_INC = $MPI_PATH/include
+MPI_PATH = $MPI_PATH
+#MPI_INC = \$(MPI_PATH)/include
 # OpenMPI
-#MPI_LIBS = -L$MPI_PATH/lib -lmpi
+#MPI_LIBS = -L\$(MPI_PATH)/lib -lmpi
 # MPICH
-#MPI_LIBS = -L$MPI_PATH/lib -lmpich -lmpl
+#MPI_LIBS = -L\$(MPI_PATH)/lib -lmpich -lmpl
 
 # Compilation with Plumed library
 PLUMED = $PLUMED

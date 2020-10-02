@@ -49,3 +49,30 @@ jobs:
       run: ./configure && make
     - name: test
       run: make test
+
+  mpich_build:
+    runs-on: ubuntu-latest
+    needs: basic_build
+    strategy: 
+      fail-fast: true
+      matrix:
+         gcc_v: [7, 8, 9]
+         mpich_v: [3.3.0]
+    env:
+      FC: mpifort
+      FFLAGS: -O2 -fopenmp
+      GCC_V: ${{ matrix.gcc_v}}
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set GFortran version
+      run: |
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
+        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
+    - name: Install default Ubuntu MPICH
+      run: sudo apt-get install mpich
+    - name: build ABIN
+      run: ./configure --mpi "" && make
+    - name: test
+      run: make test
+

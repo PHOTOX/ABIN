@@ -1,10 +1,24 @@
 #!/bin/bash
+
+# Parameters passed from Makefile
 ABINEXE="$PWD/$1 -x mini.dat"
+
+TESTS="$2"
+NAB="$3"
+MPI="$4"
+CP2K="$5"
+FFTW="$6"
+PLUMED="$7"
 
 MPI=$(awk -F"[# ,=]+" '{if($1=="MPI")print $2}' make.vars)
 if [[ $MPI = "TRUE" ]];then
-   export MPI_PATH=$(awk -F"[# ,=]+" '{if($1=="MPI_PATH") print $2}' make.vars)
-   export LD_LIBRARY_PATH=$MPI_PATH/lib:$LD_LIBRARY_PATH
+   MPI_PATH=$(awk -F"[# ,=]+" '{if($1=="MPI_PATH") print $2}' make.vars)
+   if [[ -d "$MPI_PATH" ]];then
+      export MPI_PATH=$MPI_PATH
+   fi
+   if [[ -d "$MPI_PATH/lib" ]];then
+      export LD_LIBRARY_PATH=$MPI_PATH/lib:$LD_LIBRARY_PATH
+   fi
 fi
 
 cd TESTS || exit 1
@@ -66,25 +80,30 @@ files=( *-RESTART.wfn* cp2k.out bkl.dat phase.dat wfcoef.dat restart_sh.bin rest
 
 # EULER should check wf_thresh conditions
 # TODO: Make test_readme.txt, with specifications of every test, maybe include only in input.in
-if [[ $2 == "sh" ]];then
+if [[ $TESTS == "sh" ]];then
+
    folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
-elif  [[ $2 = "all" || $2 = "clean" ]];then
-   folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM GLE PIGLE)
+
+elif  [[ $TESTS = "all" || $2 = "clean" ]];then
+   #folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM GLE PIGLE)
    # DH: Temporarily disable GLE and PIGLE tests
    folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM)
-   if [[ $3 = "TRUE" ]];then
+
+   if [[ $NAB = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=NAB
       let index++
       folders[index]=NAB_HESS
    fi
-   if [[ $4 = "TRUE" ]];then
+
+   if [[ $MPI = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=REMD
 #      let index++
       #      folders[index]=TERAPI # does not yet work
    fi
-   if [[ $5 = "TRUE" ]];then
+
+   if [[ $CP2K = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=CP2K
       if [[ $4 = "TRUE" ]];then
@@ -100,19 +119,26 @@ elif  [[ $2 = "all" || $2 = "clean" ]];then
       # TODO: Split this test, test OPENMP separately
       folders[index]=ABINITIO
    fi
-   if [[ $6 = "TRUE" ]];then
+
+   if [[ $FFTW = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=PIGLET
       let index++
       folders[index]=PILE
    fi
-   if [[ $7 = "TRUE" ]];then
+
+   if [[ $PLUMED = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=PLUMED
    fi
 else
+
+   # Only one test selected, e.g. by running
+   # make test TEST=CMD
    folders=$2
+
 fi
+
 #folders=( SHAKE )
 
 echo "Running tests in directories:"
@@ -142,15 +168,17 @@ do
    # Redirection to dev/null apparently needed for CP2K tests.
    # Otherwise, STDIN is screwed up. I have no idea why.
    # http://stackoverflow.com/questions/1304600/read-error-0-resource-temporarily-unavailable
+   # TODO: Figure out a different solution
    if [[ -f "test.sh" ]];then
 
-      ./test.sh $ABINEXE 2> /dev/null
+      #./test.sh $ABINEXE 2> /dev/null
+      ./test.sh $ABINEXE
 
    else
       if [[ -f "velocities.in" ]];then
-         $ABINEXE -v "velocities.in" > output  
+         $ABINEXE -v "velocities.in" > output
       else
-         $ABINEXE > output  
+         $ABINEXE > output
       fi
 
       #for testing restart
