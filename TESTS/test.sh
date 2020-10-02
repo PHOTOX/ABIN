@@ -6,9 +6,9 @@ ABINEXE="$PWD/$1 -x mini.dat"
 TESTS="$2"
 NAB="$3"
 MPI="$4"
-CP2K="$5"
-FFTW="$6"
-PLUMED="$7"
+FFTW="$5"
+PLUMED="$6"
+CP2K="$7"
 
 MPI=$(awk -F"[# ,=]+" '{if($1=="MPI")print $2}' make.vars)
 if [[ $MPI = "TRUE" ]];then
@@ -89,6 +89,12 @@ elif  [[ $TESTS = "all" || $2 = "clean" ]];then
    # DH: Temporarily disable GLE and PIGLE tests
    folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM)
 
+   let index=${#folders[@]}+1
+   # TODO: Split this test, test OpenMP separately
+   # We assume we always compile with -fopenmp
+   # We should actually try to determine that somehow
+   folders[index]=ABINITIO
+
    if [[ $NAB = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=NAB
@@ -99,25 +105,16 @@ elif  [[ $TESTS = "all" || $2 = "clean" ]];then
    if [[ $MPI = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=REMD
-#      let index++
-      #      folders[index]=TERAPI # does not yet work
+      # TODO: Test MPI interface with TC
+      # TODO: Test SH-MPI interface with TC
+      # folders[index]=TERAPI # does not yet work
    fi
 
    if [[ $CP2K = "TRUE" ]];then
-      let index=${#folders[@]}+1
-      folders[index]=CP2K
-      if [[ $4 = "TRUE" ]];then
-         let index++
-         folders[index]=CP2K_MPI
-      fi
-      # At this point, we do not support MMWATER with CP2K
-      # which is used in majority of tests
-      folders=(SH_BUTCHER HARMON CP2K CP2K_MPI)
-   else
-      let index=${#folders[@]}+1
+      # At this point, we do not support MMWATER potential 
+      # with CP2K, which is used in majority of tests
       # ABINITIO needs OpenMP, which is not compatible with CP2K interface
-      # TODO: Split this test, test OPENMP separately
-      folders[index]=ABINITIO
+      folders=(SH_BUTCHER HARMON CP2K CP2K_MPI)
    fi
 
    if [[ $FFTW = "TRUE" ]];then
@@ -131,6 +128,7 @@ elif  [[ $TESTS = "all" || $2 = "clean" ]];then
       let index=${#folders[@]}+1
       folders[index]=PLUMED
    fi
+
 else
 
    # Only one test selected, e.g. by running

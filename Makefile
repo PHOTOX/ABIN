@@ -118,16 +118,16 @@ distclean :
 
 # Run test suite 
 # TODO: Pass MPI_PATH as well
-test :
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} ${PLUM}
+test : ${BIN}
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${NAB} ${MPI} ${FFTW} ${PLUM} ${CP2K} 
 
 # Clean all test folders.
 testclean :
-	/bin/bash TESTS/test.sh ${BIN} clean ${NAB} ${MPI} ${CP2K} ${FFTW} $(PLUM)
+	/bin/bash TESTS/test.sh ${BIN} clean ${NAB} ${MPI} ${FFTW} $(PLUM) ${CP2K}
 
 # This will automatically generate new reference data for tests
 makeref :
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} $(PLUM) makeref
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${NAB} ${MPI} ${FFTW} $(PLUM) ${CP2K} makeref
  
 # Dummy target for debugging purposes
 debug: 

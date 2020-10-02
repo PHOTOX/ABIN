@@ -162,6 +162,9 @@ PLUMED_STATIC_LOAD = $PLUMED_PATH
 # FFTW library is typically shipped with your system
 # It is needed for normal mode coordinate transformation in PIMD
 FFTW = $FFTW
+
+# Experimental cross-compilation with CP2K
+CP2K = $CP2K
 " >> make.vars
 
 # TODO: Make automatic check for FFTW library
