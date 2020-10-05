@@ -9,7 +9,7 @@ jobs:
   basic_build:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
          gcc_v: [7, 8, 9]
     env:
@@ -124,4 +124,30 @@ jobs:
     - name: build ABIN
       run: ./configure --mpi "" && make
     - name: test
+      run: make test
+
+
+  plumed_build:
+    # TODO: This is just a stub for now, need to figure out how to build Plumed
+    # Once that is done, remove the following line
+    if: false
+    runs-on: ubuntu-latest
+    needs: basic_build
+    strategy:
+      fail-fast: true
+      matrix:
+         gcc_v: [7, 8, 9]
+    env:
+      FFLAGS: -O2 -fopenmp
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download Plumed
+      run: mkdir ~/plumed && cd ~/plumed && wget plumed_url
+    - name: build Plumed
+      run: cd ~/plumed && ./configure && make && make install
+    # TODO: Cache plumed build
+    # TODO: Maybe try different Plumed versions?
+    - name: build ABIN
+      run: ./configure --plumed /path/to/plumed && make
+    - name: test ABIN
       run: make test
