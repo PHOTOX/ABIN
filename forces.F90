@@ -6,7 +6,6 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_general,  only: natom, nwalk, istage, inormalmodes, iqmmm, it, &
                            pot, pot_ref, idebug, en_restraint
    use mod_qmmm,     only: force_LJCoul
-   use mod_nab,      only: ipbc,wrap,nsnb,force_nab
    use mod_sbc,      only: force_sbc, isbc !,ibag
    use mod_system,   only: conatom
    use mod_nhc,      only: inose
@@ -44,6 +43,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
 
 ! Back stage transformation, Cartesian coordinates are kept in trans
 ! matrices (even if staging is OFF!)
+! TODO: Rename transx to cart_x, cart_y, cart_z
    if(istage.eq.1)then
       call QtoX(x,y,z,transx,transy,transz)
    else if(inormalmodes.gt.0)then
@@ -59,24 +59,29 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
       enddo 
    endif
 
-!  wraping molecules back to the box 
-   if (chpot.eq.'nab'.and.ipbc.eq.1.and.modulo(it,nsnb).eq.0) call wrap(transx,transy,transz)
+   ! TODO: wraping molecules back to the PBC box 
+   ! The original code was used only for NAB force field potential,
+   ! but perhaps it could be useful elsewhere
+   ! (e.g. if we start doing QM/MM with PBC.
+   ! Don't forget that if we do this here, we would need to propagate
+   ! this change back to x, y, z (e.g. normal modes or staging in PIMD)
+   ! if (ipbc.eq.1) call wrap(transx, transy, transz)
 
 
-   ! LET'S GET FORCES! Ab initio interface is still deeper in force_abin
+   ! LET'S GET FORCES! 
+   ! The ab initio interface is still deeper in force_abin()
    call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, chpot, nwalk)
 
-!  Spherical harmonic potential
+   ! TODO: It would probably make sense to put the following additional forces
+   ! and QM/MM inside the force_wrapper as well.
+   ! Spherical harmonic potential
    if (isbc.eq.1) call force_sbc(transx,transy,transz,fxab,fyab,fzab)
-!  if (ibag.eq.1) call force_bag(transx,transy,transz,fxab,fyab,fzab)
 
-!---------QMMM SECTION-----------------
-!  ONIOM method (iqmmm=1) is called in force_abin
-!  The following are not working at the moment
-   if(iqmmm.eq.2) call force_nab(transx, transy, transz, fxab, fyab, fzab, eclas, nwalk)
+   ! QMMM SECTION
+   ! ONIOM method (iqmmm=1) is called in force_abin
+   ! The following are not working at the moment
    if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
 
-!  PLUMED SECTION
    if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
 !------- ER(energy restraint) SECTION ---
@@ -94,7 +99,6 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
 
       call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, pot_ref, nwalk)
       if(isbc.eq.1)  call force_sbc(transx,transy,transz,fxab,fyab,fzab)
-      if(iqmmm.eq.2) call force_nab(transx, transy, transz, fxab, fyab, fzab, eclas, nwalk)
       if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
       if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
@@ -108,8 +112,8 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    end if
 
 
-!--TRANSFORMING FORCES FROM CARTESIAN TO STAGING or NORMAL MODE COORDS--!
-!--forces are divided by nwalk inside the FXtoFQ routine!---------------!
+   ! TRANSFORMING FORCES FROM CARTESIAN TO STAGING or NORMAL MODE COORDS
+   ! Forces are divided by nwalk inside the FXtoFQ routine
    if(istage.eq.1)then
 
       call FXtoFQ(fxab,fyab,fzab,fx,fy,fz)
@@ -156,24 +160,6 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
 
    energy = eclas
 
-!--for PBC we do wrapping of molecules back to the box    
-!  We should probably be doing this somewhere else, 
-!  this is confusing
-   if(chpot.eq.'nab'.and.ipbc.eq.1)then
-
-! Stage transformation,
-      if(istage.eq.1)then
-         call XtoQ(transx,transy,transz,x,y,z)
-      else if(inormalmodes.gt.0)then
-         call XtoU(transx,transy,transz,x,y,z)
-      else
-         x = transx
-         y = transy
-         z = transz
-      endif
-
-   endif
-
 end subroutine force_clas
 
 
@@ -183,7 +169,6 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    use mod_general,  only: natom, ipimd
    use mod_water,    only: watpot
    use mod_qmmm,     only: force_LJCoul
-   use mod_nab,      only: force_nab
    use mod_harmon,   only: force_harmon,force_2dho,force_morse,force_doublewell
    use mod_splined_grid
    use mod_cp2k,     only: force_cp2k
@@ -220,8 +205,6 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
          call force_morse(x, y, z, fx, fy, fz, eclas)
       case ("doublewell")
          call force_doublewell(x, y, z, fx, fy, fz, eclas)
-      case ("nab")
-         call force_nab(x, y, z, fx, fy, fz, eclas, walkmax)
       case ("_cp2k_")
          call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
       case ("_tera_")
