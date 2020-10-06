@@ -4,24 +4,7 @@ or any later version, except for parts noted below.
 A copy of this license is given later in this file. 
 
 Random number generator was kindly provided by prof. M. Lewerenze
-and is provided under GNU GPL v3 license. See file random.f90
-
-ABIN uses Ewald summation routines kindly provided by J. Kolafa
-from the MACSIMUS package. See http://www.vscht.cz/fch/software/macsimus/.
-This code is provided under the GNU GPL license.
-
-The source code and libraries in the folder NAB were copied 
-and modified from AmberTools package, which was released under GPLv3 license as well,
-except for the following functions/libraries.
-
-* The netcdf codes are made available in accordance with the copyright
-  notice in NAB/include/netcdf.h
-
-* The lapack and blas libraries are in the public domain.  See these
-  subdirectories for more information.
-
-* The arpack code is released under a BSD license.  See the src/arpack/LICENSE
-  file for more information.
+and is provided under GNU GPL v3 license. See random.f90
 
 ==============================================================================
 Here is the text of the GPL license:

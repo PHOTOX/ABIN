@@ -27,21 +27,12 @@ endif
 
 
 F_OBJS := arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o plumed.o \
-          force_nab.o force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
+          force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
           force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o density.o analysis.o \
           minimizer.o mdstep.o forces.o abin.o
 
 
 LIBS += WATERMODELS/libttm.a
-
-# TODO: Remove NAB
-ifeq ($(strip $(NAB)),TRUE)
-  C_OBJS = nab_init.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o
-  # The following libraries were compiled with gfortran
-  LIBS   += NAB/libnab.a
-  CFLAGS +=  -INAB/include  
-  DFLAGS +=  -DNAB
-endif
 
 ifeq ($(strip $(FFTW)),TRUE)
   ifneq ($(CP2K),TRUE)
@@ -59,9 +50,6 @@ ifeq ($(strip $(CP2K)),TRUE)
   # The following variables should be the same that were used to compile CP2K.
   # Also, be carefull with FFTW clashes
   LIBS += -L${CP2KPATH} -lcp2k ${CP2K_LIBS} 
-ifeq ($(strip $(NAB)),TRUE)
-   $(error "Cannot combine CP2K interface with NAB")
-endif
 ifeq ($(strip $(FFTW)),TRUE)
    $(info "!!!!!-------------WARNING---------------!!!!!!!")
    $(info "Using FFTW flag with CP2K may lead to troubles!")
@@ -112,22 +100,18 @@ clean :
 	cd WATERMODELS && make clean
 	/bin/rm -f *.o *.mod $(BIN)
 
-# Remove NAB objects as well
-distclean :
-	/bin/rm -f *.o *.mod NAB/*.o $(BIN)
-
-# Run test suite 
+# Run the test suite
 # TODO: Pass MPI_PATH as well
 test : ${BIN}
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${NAB} ${MPI} ${FFTW} ${PLUM} ${CP2K} 
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUM} ${CP2K}
 
 # Clean all test folders.
 testclean :
-	/bin/bash TESTS/test.sh ${BIN} clean ${NAB} ${MPI} ${FFTW} $(PLUM) ${CP2K}
+	/bin/bash TESTS/test.sh ${BIN} clean ${MPI} ${FFTW} $(PLUM) ${CP2K}
 
 # This will automatically generate new reference data for tests
 makeref :
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${NAB} ${MPI} ${FFTW} $(PLUM) ${CP2K} makeref
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUM) ${CP2K} makeref
  
 # Dummy target for debugging purposes
 debug: 

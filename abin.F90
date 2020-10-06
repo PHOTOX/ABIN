@@ -390,9 +390,6 @@ subroutine finish(error_code)
    if(inose.eq.1) call finalize_nhc()
    if(inose.gt.1.and.inose.lt.5) call finalize_gle()
 
-!TODO dealokovat pole v NABU ...tj zavolet mme rutinu s iter=-3 nebo tak neco
-!   if(pot.eq.'nab') call mme(NULL,NULL,iter)
-
 #ifdef MPI
 if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
    if (error_code.eq.0.and.pot.ne."_cp2k_")then

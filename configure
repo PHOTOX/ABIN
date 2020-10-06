@@ -106,7 +106,6 @@ if [[ ! -f $FC && ! `which $FC` ]];then
    exit 1
 fi
 
-CC="gcc"
 CXX="c++"
 CXXFLAGS="-O2 -Wall -std=c++11"
 
@@ -133,15 +132,11 @@ BIN = $ABINEXE
 
 # Compilers
 FC = $FC
-CC = $CC
 CXX = $CXX
 
 # Compiler flags
 FFLAGS = $FFLAGS
 CXXFLAGS = $CXXFLAGS
-
-# NAB (TO BE REMOVED)
-NAB = FALSE
 
 # MPI library
 MPI = $MPI

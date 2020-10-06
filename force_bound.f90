@@ -1,5 +1,5 @@
-!---                    by Daniel Hollas,15.3.2012
-!--contains spherical potential SBC and elastig bag(TO DO)
+! Harmonic Spherical Potential 
+! (Spherical boundary conditions - SBC)
 MODULE mod_sbc
    use mod_const, only: DP, AUtoM, ME, PI
    implicit none
@@ -119,6 +119,8 @@ MODULE mod_sbc
       return
    end subroutine
 
+   ! TODO: This could be a general purpose routine,
+   ! move to utils
    subroutine calc_com(x, y, z, iw ,xcm, ycm, zcm)
    use mod_general, only: natom
    use mod_system, ONLY: am
@@ -143,31 +145,3 @@ MODULE mod_sbc
    end subroutine calc_com
 
 END MODULE mod_sbc
-
-
-!      MODULE mod_bag
-!      real(DP),allocatable :: neigh1(:),neigh2(:),neigh3(:)
-!      real(DP) :: some_parameters
-!      save
- !     CONTAINS
- !
- !     SUBROUTINE bag_init()
- !     !allocate(neigh1,neig)
- !     END SUBROUTINE
-!
-!      SUBROUTINE force_bag(x,y,z,fx,fy,fz)
-!      use mod_general
-!      use mod_system, ONLY:am,names 
-!      implicit none
-!      real(DP) x(:,:),y(:,:),z(:,:)
-!      real(DP) fx(:,:),fy(:,:),fz(:,:)
-!      real(DP)  :: r,frb
-!      integer :: iat,iw
-!
-!
-!
-!
-!
-!      END SUBROUTINE
-!      END MODULE
-

@@ -5,9 +5,17 @@
 1. What is ABIN?
 ----------------
 
-ABIN is a program for performing ab initio molecular dynamics. It was designed specifically to deal with quantum nuclear effects. It can do path integral simulations and also utilizes recently developed quantum thermostat based on General Langevin equation. It can also simulate non-adiabatic events using Surface-hoping algorithm.
+ABIN is a program for performing ab initio molecular dynamics.
+It was designed specifically to deal with quantum nuclear effects.
+It can do path integral simulations and also utilizes quantum thermostat based on General Langevin equation.
+It can also simulate non-adiabatic events using Surface-hoping algorithm.
 
-The basic philosophy of this program is simple. While the program itself handles the propagation of the system according to the equations of motion, the forces and energies are taken from the external electronic structure program such as ORCA or TeraChem. The call to the chosen external program is handled via a simple shell script. Therefore, writing a new interface is rather straightforward and can be done without any changes to the ABIN code or ab initio code.
+The basic philosophy of this program is simple.
+While the program itself handles the propagation of the system according to the equations of motion,
+the forces and energies are taken from the external electronic structure program such as ORCA or TeraChem.
+The call to the chosen external program is handled via a simple shell script.
+Therefore, writing a new interface is rather straightforward
+and can be done without any changes to ABIN or the ab initio code.
 
 The code is provided under the GNU General Public License.
 A full text of the license can be found in the file LICENCE.
@@ -22,18 +30,16 @@ A full documentation can be found in the folder DOC.
 ---------------
 2. INSTALLATION
 ---------------
-To compile the code, you need a gfortran and gcc compiler with a version at least 4.3.
-However, version 4.6 and higher is recommended.
-If your distribution does not have the required version of the compilers, it can be downloaded from this website:
-https://gcc.gnu.org/wiki/GFortranBinaries
-The site offers compiled binaries and required libraries so compilation is typically not needed.
+To compile the code, you need a gfortran and g++ compiler version >=4.3.
+Version 4.6 and higher is recommended.
 
-For some features, you will also need to install the FFTW library. It is usually provided with your Linux distribution.
+For some features, you will also need to install the FFTW library.
+It is usually provided with your Linux distribution.
 It can also be downloaded here: http://www.fftw.org/
 
 The compilation can be as easy as:
 
-`$ make`
+`$ ./configure && make`
 
 You can test the installation by:
 
@@ -41,7 +47,7 @@ You can test the installation by:
 
 If you modify the source code and want to recompile, you should always clean up by:
 
-`$ make  clean; make`
+`$ make clean`
 
 -------------------------------
 3. STRUCTURE OF THE SOURCE CODE
@@ -51,10 +57,9 @@ Short descriptions of key source files.
 
 | Path     | Description |
 |----------|-------------|
-| SAMPLE/         | Contains sample input files. |
-| INTERFACES/     | Contains bash interfaces to common ab initio codes. |
-| UTIL/           | Contains some handy scripts that might be useful in conjuction with the MD code. |
-| NAB/            | Contains force field routines taken from AmberTools package. |
+| SAMPLE/         | Sample input files. |
+| INTERFACES/     | BASH interfaces to common ab initio codes. |
+| UTIL/           | Handy scripts that might be useful in conjuction with the MD code. |
 | abin.F90        | Main routine. |
 | modules.F90     | Modules containing all basic variables. |
 | init.F90        | Big ugly init routine. Reads input parameters, restart files and checks for errors in input. |

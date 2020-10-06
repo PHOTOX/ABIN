@@ -83,7 +83,6 @@ subroutine init(dt, time_data)
    use mod_lz,       only: lz_init, initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz
    use mod_qmmm
    use mod_gle
-   use mod_nab
    use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
    use mod_splined_grid, only: initialize_spline
@@ -129,10 +128,6 @@ subroutine init(dt, time_data)
    integer :: irand
 !$ integer :: nthreads, omp_get_max_threads
 !  wnw "optimal" frequency for langevin (inose=3) 
-#ifdef NAB
-   REAL, POINTER, DIMENSION(:) :: VECPTR => NULL ()  !null pointer
-   REAL, POINTER  :: REALPTR => NULL ()
-#endif
 
    namelist /general/ natom, pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
@@ -160,8 +155,6 @@ subroutine init(dt, time_data)
    namelist /lz/     initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz 
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
-
-   namelist /nab/    ipbc,alpha_pme,kappa_pme,cutoff,nsnb,ips,epsinf,natmol,nmol
 
 
    chcoords = 'mini.dat'
@@ -508,15 +501,6 @@ subroutine init(dt, time_data)
          rewind(150)
       end if
 
-      if(iqmmm.eq.2.or.pot.eq.'nab'.or.pot_ref.eq.'nab')then
-#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
-         allocate ( natmol(natom) )
-#endif
-         natmol = 0
-         read(150, nab)
-         rewind(150)
-      end if
-
       close(150)
 !--END OF READING INPUT---------------
 
@@ -593,11 +577,6 @@ subroutine init(dt, time_data)
          allocate ( hess(natom*3,natom*3,nwalk) )
          allocate ( cvhess_cumul(nwalk) )
          cvhess_cumul=0.0d0
-         if (pot.eq.'nab'.or.pot_ref.eq.'nab')then
-!!$OMP PARALLEL
-            allocate ( h(natom*natom*9) )
-!!$OMP END PARALLEL
-         endif
       endif
 
 !     SHAKE initialization, determining the constrained bond lenghts
@@ -743,23 +722,10 @@ subroutine init(dt, time_data)
    if(my_rank.eq.0) write(*,*)'Pid of the current proccess is:',pid
 
 
-#ifdef NAB
-      if (pot.eq."nab".or.pot_ref.eq."nab")then
-         if (alpha_pme.lt.0) alpha_pme = pi / cutoff
-         if (kappa_pme.lt.0) kappa_pme = alpha_pme
-         call nab_init(alpha_pme, cutoff, nsnb, ipbc, ips) !C function in nabinit.c
-
-         if(ipbc.eq.1)then
-            write(*,*)'ERROR: Periodic Boundary Conditions not supported'
-            call abinerror('init')
-         endif
-      endif
-#endif
-
-!  Open files for writing
+   ! Open files for writing
+   ! TODO: It's strange that we're passing these random params here...
    call files_init(isbc, phase)
 
-!--------END OF INITIALIZATION-------------------
    call flush(6)
 
    CONTAINS
@@ -780,13 +746,6 @@ subroutine init(dt, time_data)
          error=1
 !$       end if
       end if
-
-#ifndef NAB
-      if(pot.eq.'nab')then
-         write(*,*)'FATAL ERROR: The program was not compiled with NAB libraries.'
-         call abinerror('init')
-      end if
-#endif
 
 #ifndef USEFFTW
       if(inormalmodes.gt.0)then
@@ -858,12 +817,6 @@ subroutine init(dt, time_data)
        write(*,*)'Number of walkers for PIMD (nwalk) <=1 !'
        write(*,*)'Either set ipimd=0 for classical simulation or'
        write(*,*)'set nwalk > 1'
-       error=1
-      endif
-      if(ipbc.eq.1.and.nmol.le.1)then
-       write(*,*)'You have to specify number of molecules(nmol=x) for PBC!'
-       write(*,*)'Also dont forget to specify number of atoms in molecules(array natmol)'
-       write(*,*)'These are used to wrap molecules back to the box'
        error=1
       endif
       if(iqmmm.lt.0.or.iqmmm.gt.3)then
@@ -1140,29 +1093,13 @@ subroutine init(dt, time_data)
        error=1
       endif
 
-      if(isbc.eq.1.and.ipbc.eq.1)then
-       write(*,*)'Spherical boundary conditions not compatible with periodic boundary conditions!'
-       error=1
-      endif
-
-      if(ipbc.eq.1)then
-       ipom=0
-       do iat=1,nmol
-        ipom=ipom+natmol(iat)
-       enddo
-       if(ipom.ne.natom)then
-        write(*,*)'Number of atoms in molecules(natmol) doesnt match with natom.'
-        error=1
-       endif
-      endif
-
       if(inose.eq.1.and.imasst.eq.0)then
        ipom=0
        do iat=1,nmolt
         ipom=ipom+natmolt(iat)
        enddo
        if(ipom.ne.natom)then
-        write(*,*)'Number of atoms in thermostated molecules(natmol) doesnt match with natom.'
+        write(*,*)'Number of atoms in thermostated molecules(natmolt) doesnt match with natom.'
         write(*,*)'This is probably mistake in input.Exiting...'
        write(*,*)chknow
         if(iknow.ne.1) error=1

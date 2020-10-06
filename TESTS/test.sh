@@ -4,11 +4,10 @@
 ABINEXE="$PWD/$1 -x mini.dat"
 
 TESTS="$2"
-NAB="$3"
-MPI="$4"
-FFTW="$5"
-PLUMED="$6"
-CP2K="$7"
+MPI="$3"
+FFTW="$4"
+PLUMED="$5"
+CP2K="$6"
 
 MPI=$(awk -F"[# ,=]+" '{if($1=="MPI")print $2}' make.vars)
 if [[ $MPI = "TRUE" ]];then
@@ -94,13 +93,6 @@ elif  [[ $TESTS = "all" || $2 = "clean" ]];then
    # We assume we always compile with -fopenmp
    # We should actually try to determine that somehow
    folders[index]=ABINITIO
-
-   if [[ $NAB = "TRUE" ]];then
-      let index=${#folders[@]}+1
-      folders[index]=NAB
-      let index++
-      folders[index]=NAB_HESS
-   fi
 
    if [[ $MPI = "TRUE" ]];then
       let index=${#folders[@]}+1
