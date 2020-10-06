@@ -1,22 +1,34 @@
 #!/bin/bash
+
+# Parameters passed from Makefile
 ABINEXE="$PWD/$1 -x mini.dat"
 
+TESTS="$2"
+NAB="$3"
+MPI="$4"
+FFTW="$5"
+PLUMED="$6"
+CP2K="$7"
 
 MPI=$(awk -F"[# ,=]+" '{if($1=="MPI")print $2}' make.vars)
 if [[ $MPI = "TRUE" ]];then
-   export MPI_PATH=$(awk -F"[# ,=]+" '{if($1=="MPI_PATH") print $2}' make.vars)
-   export LD_LIBRARY_PATH=$MPI_PATH/lib:$LD_LIBRARY_PATH
+   MPI_PATH=$(awk -F"[# ,=]+" '{if($1=="MPI_PATH") print $2}' make.vars)
+   if [[ -d "$MPI_PATH" ]];then
+      export MPI_PATH=$MPI_PATH
+   fi
+   if [[ -d "$MPI_PATH/lib" ]];then
+      export LD_LIBRARY_PATH=$MPI_PATH/lib:$LD_LIBRARY_PATH
+   fi
 fi
 
-cd TESTS 
+cd TESTS || exit 1
+TESTDIR=$PWD
 
 function dif_files {
 local status=0
 local cont
-local cont_no
 local files
 local f
-cont_no=1
 # Do comparison for all existing reference files
 files=$(ls *.ref)
 for f in $files   # $* 
@@ -26,26 +38,11 @@ do
       diff $file $file.ref > $file.diff
       if [[ $? -ge 1 ]];then
          diff -y -W 500  $file $file.ref | egrep -e '|' -e '<' -e '>' > $file.diff
-         ../numdiff.py $file.diff 2> /dev/null
+         ../numdiff.py $file.diff
       fi
-      if [[ $? -ge 1 && $cont_no -eq 1 ]];then
+      if [[ $? -ne 0 ]];then
          status=1
-         echo "File $file differ from the reference. Continue anyway? [y/n]"
-         while true 
-         do
-            read cont
-            #if [[ $cont = "n" || $cont = "no" ]];then
-            #   echo "Exiting..."
-            #   exit 1
-            if [[ $cont = "y" || $cont = "yes" ]];then
-               echo "Continuing..."
-               cont_no=0
-               break
-            else 
-               exit 1
-            #   echo "Please enter 'y' or 'n'"
-            fi
-         done
+         echo "File $file differ from the reference."
       fi
    fi
 done
@@ -83,51 +80,63 @@ files=( *-RESTART.wfn* cp2k.out bkl.dat phase.dat wfcoef.dat restart_sh.bin rest
 
 # EULER should check wf_thresh conditions
 # TODO: Make test_readme.txt, with specifications of every test, maybe include only in input.in
-if [[ $2 == "sh" ]];then
+if [[ $TESTS == "sh" ]];then
+
    folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
-elif  [[ $2 = "all" || $2 = "clean" ]];then
-   folders=( CMD GLE SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIGLE PIMD SHAKE HARMON MINI QMMM )
-   if [[ $3 = "TRUE" ]];then
+
+elif  [[ $TESTS = "all" || $2 = "clean" ]];then
+   #folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM GLE PIGLE)
+   # DH: Temporarily disable GLE and PIGLE tests
+   folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM)
+
+   let index=${#folders[@]}+1
+   # TODO: Split this test, test OpenMP separately
+   # We assume we always compile with -fopenmp
+   # We should actually try to determine that somehow
+   folders[index]=ABINITIO
+
+   if [[ $NAB = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=NAB
       let index++
       folders[index]=NAB_HESS
    fi
-   if [[ $4 = "TRUE" ]];then
+
+   if [[ $MPI = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=REMD
-#      let index++
-      #      folders[index]=TERAPI # does not yet work
+      # TODO: Test MPI interface with TC
+      # TODO: Test SH-MPI interface with TC
+      # folders[index]=TERAPI # does not yet work
    fi
-   if [[ $5 = "TRUE" ]];then
-      let index=${#folders[@]}+1
-      folders[index]=CP2K
-      if [[ $4 = "TRUE" ]];then
-         let index++
-         folders[index]=CP2K_MPI
-      fi
-      # At this point, we do not support MMWATER with CP2K
-      # which is used in majority of tests
-      folders=(SH_BUTCHER HARMON CP2K CP2K_MPI)
-   else
-      let index=${#folders[@]}+1
+
+   if [[ $CP2K = "TRUE" ]];then
+      # At this point, we do not support MMWATER potential 
+      # with CP2K, which is used in majority of tests
       # ABINITIO needs OpenMP, which is not compatible with CP2K interface
-      # TODO: Split this test, test OPENMP separately
-      folders[index]=ABINITIO
+      folders=(SH_BUTCHER HARMON CP2K CP2K_MPI)
    fi
-   if [[ $6 = "TRUE" ]];then
+
+   if [[ $FFTW = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=PIGLET
       let index++
       folders[index]=PILE
    fi
-   if [[ $7 = "TRUE" ]];then
+
+   if [[ $PLUMED = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=PLUMED
    fi
+
 else
+
+   # Only one test selected, e.g. by running
+   # make test TEST=CMD
    folders=$2
+
 fi
+
 #folders=( SHAKE )
 
 echo "Running tests in directories:"
@@ -135,13 +144,12 @@ echo ${folders[@]}
 
 for dir in ${folders[@]}
 do
-   if [[ ! -e $dir ]];then
-      echo "Directory $dir not found. Skipping...."
-      continue
-   else
-      echo "Entering directory $dir"
+   if [[ ! -d $dir ]];then
+      echo "Directory $dir not found. Exiting prematurely."
+      exit 1
    fi
-   cd $dir 
+   echo "Entering directory $dir"
+   cd $dir || exit 1
 
    if [[ -f "test.sh" ]];then
       ./test.sh clean 
@@ -151,22 +159,24 @@ do
 
    if [[ $2 = "clean" ]];then
       echo "Cleaning files in directory $dir "
-      cd ../
+      cd $TESTDIR || exit 1
       continue
    fi
 
    # Redirection to dev/null apparently needed for CP2K tests.
    # Otherwise, STDIN is screwed up. I have no idea why.
    # http://stackoverflow.com/questions/1304600/read-error-0-resource-temporarily-unavailable
+   # TODO: Figure out a different solution
    if [[ -f "test.sh" ]];then
 
-      ./test.sh $ABINEXE 2> /dev/null
+      #./test.sh $ABINEXE 2> /dev/null
+      ./test.sh $ABINEXE
 
    else
       if [[ -f "velocities.in" ]];then
-         $ABINEXE -v "velocities.in" > output  
+         $ABINEXE -v "velocities.in" > output
       else
-         $ABINEXE > output  
+         $ABINEXE > output
       fi
 
       #for testing restart
@@ -187,14 +197,15 @@ do
 
    if [[ $? -ne "0" ]];then
       err=1
+      echo "$dir FAILED"
+      echo "======================="
    else
       echo "PASSED"
       echo "======================="
    fi
-   cd ../
+   cd $TESTDIR || exit 1
 done
 
-cd ../
 echo " "
 
 if [[ $err -ne "0" ]];then
@@ -204,5 +215,3 @@ else
 fi
 
 exit $err
-
-

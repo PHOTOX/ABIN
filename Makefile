@@ -4,7 +4,7 @@
 # which is not under version control
 # No user modification to this Makefile file should be necessary.
 
-# Simply type "make" and you should get the binary named $OUT
+# Simply type "make" and you should get the binary named $BIN
 # Before recompiling, it is wise to clean up by "make clean"
 
 # WARNING: dependecies on *.mod files are hidden!
@@ -18,6 +18,9 @@ include make.vars
 
 export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
+
+# TODO: Make this if check less stupid, we need to actually 
+# check we're in Git repo
 ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
@@ -31,10 +34,11 @@ F_OBJS := arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o pl
 
 LIBS += WATERMODELS/libttm.a
 
+# TODO: Remove NAB
 ifeq ($(strip $(NAB)),TRUE)
-  C_OBJS = nab_init.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o # NAB/binpos.o
+  C_OBJS = nab_init.o NAB/sff_my_pme.o NAB/memutil.o NAB/prm.o NAB/nblist_pme.o
   # The following libraries were compiled with gfortran
-  LIBS   += NAB/libnab.a # NAB/arpack.a  # NAB/blas.a
+  LIBS   += NAB/libnab.a
   CFLAGS +=  -INAB/include  
   DFLAGS +=  -DNAB
 endif
@@ -66,8 +70,8 @@ ifeq ($(strip $(FFTW)),TRUE)
 endif
 endif
 
-ifeq ($(strip $(PLUM)),TRUE)
- include ${PLUMLINK}
+ifeq ($(strip $(PLUMED)),TRUE)
+ include ${PLUMED_LINK}
  DFLAGS += -DPLUM
  LIBS += ${PLUMED_STATIC_LOAD}
 endif
@@ -95,33 +99,35 @@ endif
 
 
 # This is the default target
-${OUT} : init.o
+${BIN} : init.o
 	cd WATERMODELS && make all 
 	${FC} ${FFLAGS} ${ALLDEPENDS} $< ${LDLIBS} -o $@
 
 # Always recompile init.F90 to get current date and commit
+# TODO: Figure out a cleaner way to do this
 init.o : init.F90 ${ALLDEPENDS}
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DDATE="'${DATE}'" -DCOMMIT="'${COMMIT}'" -c init.F90
 
 clean :
 	cd WATERMODELS && make clean
-	/bin/rm -f *.o *.mod $(OUT)
+	/bin/rm -f *.o *.mod $(BIN)
 
 # Remove NAB objects as well
 distclean :
-	/bin/rm -f *.o *.mod NAB/*.o $(OUT)
+	/bin/rm -f *.o *.mod NAB/*.o $(BIN)
 
 # Run test suite 
-test :
-	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} ${PLUM}
+# TODO: Pass MPI_PATH as well
+test : ${BIN}
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${NAB} ${MPI} ${FFTW} ${PLUM} ${CP2K} 
 
 # Clean all test folders.
 testclean :
-	/bin/bash TESTS/test.sh ${OUT} clean ${NAB} ${MPI} ${CP2K} ${FFTW} $(PLUM)
+	/bin/bash TESTS/test.sh ${BIN} clean ${NAB} ${MPI} ${FFTW} $(PLUM) ${CP2K}
 
 # This will automatically generate new reference data for tests
 makeref :
-	/bin/bash TESTS/test.sh ${OUT} $(TEST) ${NAB} ${MPI} ${CP2K} ${FFTW} $(PLUM) makeref
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${NAB} ${MPI} ${FFTW} $(PLUM) ${CP2K} makeref
  
 # Dummy target for debugging purposes
 debug: 

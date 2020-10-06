@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 from optparse import OptionParser
 import decimal
-from sys import exit 
-from sys import argv
+from sys import argv, exit 
 # Workaround for STDIN problem for CP2K tests
 import readline
 
@@ -10,12 +9,13 @@ import readline
 # while disregarding insignificant numerical differences.
 
 # This script parses output from command:
-# $ diff -y file1 file2
+# diff -y file1 file2
 
 # It returns 1 when difference is found and 0 otherwise
 
 decimal.getcontext().prec = 17
 
+# TODO: Relative delta
 DELTA=1e-15
 #decimal.getcontext().rounding = "ROUND_DOWN"
 
@@ -31,24 +31,19 @@ except:
 
 print("Comparing numerical differences in file "+inpfile)
 
-def failed(n1, n2):
-   delta = float(n1) - float(n2)
-#  print('I may have found a significant numerical difference in file '+inpfile)
-#  print('Differing numbers: '+n1+"  "+n2)
-#  print('Delta = ',delta)
+def failed(reference, test):
+   delta = float(reference) - float(test)
    # Let's just not report small differences at all,
    # It just creates a noise
+   # TODO: Testing only 2 steps should allow to tighten this up significantly
    if delta < DELTA:
       return
    print('>>>>')
-   print('I may have found a significant numerical difference in file '+inpfile)
-   print('Differing numbers: '+n1+"  "+n2)
-   print('Delta = ',delta)
-#  The following is not really useful, just exit at first error
+   print('Significant numerical difference in file %s' % inpfile)
+   print('Reference: ' + reference)
+   print('Test: ' + test)
+   print('Delta = ' + str(delta))
    exit(1)
-   yn = raw_input('Is this difference ok? [y/n]')
-   if yn != "y":
-      exit(1)
 
 def compare(numbers1, numbers2):
     """Compare each element of numbers1 and numbers2"""
@@ -65,6 +60,7 @@ def compare(numbers1, numbers2):
           print("line1 = ", numbers1[i])
           print("line2 = ", numbers2[i])
           exit(1)
+
        if dec1 != dec2:
           # Compare sign, exponents, and digits separately
           sign1, digits1, exp1 = dec1.as_tuple() 
@@ -76,26 +72,26 @@ def compare(numbers1, numbers2):
           ints1=""
           ints2=""
           # Compare last 10 significant digits
+          # TODO: Why aren't we comparing all digits?
           for j in digits1[-10:]:
-             ints1+=str(j)
+             ints1 += str(j)
           for j in digits2[-10:]:
-             ints2+=str(j)
-          ints1=int(ints1)
-          ints2=int(ints2)
+             ints2 += str(j)
+          ints1 = int(ints1)
+          ints2 = int(ints2)
           # This allows to get rid off insignificant rounding errors
-          if abs(ints1-ints2) != 1:
-             #print(">>>>")
-             #print(len(numbers1), i)
+          if abs(ints1 - ints2) != 1:
              failed(numbers1[i], numbers2[i])
 
 
 with open(inpfile, 'r') as f:
    # If the file is empty something is wrong 
    # (e.g. file for comparison was not even generated)
-   if len(f.read())==0:
+   if len(f.read()) == 0:
       print("Blank file encountered.")
       exit(1)
    f.seek(0)
+
    for line in f:
       split = line.split()
       # Exit if there are non-numerical differences
@@ -105,7 +101,7 @@ with open(inpfile, 'r') as f:
            exit(1)
       # Skip line if there is no difference
       if '|' not in split:
-          continue 
+          continue
 
       split = line.split('|')
       diff1 = split[0].split()

@@ -6,9 +6,9 @@ if [[ "$1" = "clean" ]];then
 fi
 
 ABINEXE=$1
-MPIRUN=$MPI_PATH/bin/mpirun
+MPIRUN="$MPI_PATH/bin/mpirun"
 # If this fails, just try plain mpirun and hope for the best
-if [[ ! -e $MPIRUN ]];then
+if [[ ! -f $MPIRUN ]];then
    MPIRUN=mpirun
 fi
 

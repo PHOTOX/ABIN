@@ -56,7 +56,7 @@ struct electrostatics {
     const double* phi() const;
 
     static const size_t dip_maxiter = 5000;
-    static const double dip_tolerance = 1.0e-15;
+    static constexpr double dip_tolerance = 1.0e-15;
 
 private:
     size_t  m_size;
