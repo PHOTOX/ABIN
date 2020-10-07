@@ -52,7 +52,7 @@ module mod_random
 !     parameter (np=2281,nq=715)
 !     parameter (np=4423,nq=1393)
       use mod_const, only: DP
-      use mod_utils, only: debug_output
+      use mod_utils, only: abinerror
       private
       public    :: gautrg, vranf, rsavef
       integer,parameter :: np=1279, nq=418
@@ -244,7 +244,7 @@ module mod_random
 !      temp=x(k)-x(k+np-nq)
 !      x(k)=(temp+one)-float(int(temp+one))
 !----------------------------------------------------------------------
-!      subroutines called: xuinit,errprt    m. lewerenz may/91 & nov/93
+!      subroutines called: xuinit            m. lewerenz may/91 & nov/93
 
       implicit none
       real(DP), intent(out) :: ranv(nran)
@@ -385,7 +385,8 @@ module mod_random
           left=nran-j
           if(left.gt.0) goto 10
         else
-          call errprt(iout,'vranf','incorrect initialization',-1)
+          write(*,*)'ERROR: incorrect initialization in vranf'
+          call abinerror('vranf')
         end if
       end if
       return
@@ -427,7 +428,8 @@ module mod_random
       logical :: high
 
       if(nq.ge.np.or.iseed.eq.0) then
-        call errprt(iout,'xuinit','illegal seed parameter(s)',-1)
+        write(*,*)'illegal seed parameter(s) in xuinit'
+        call abinerror('xuinit')
       else
 
 !     set table to zero and exercise the bit generator a little
@@ -484,7 +486,7 @@ module mod_random
 !      nexec : number of warm up cycles for the table. nexec*nbit*np
 !              random numbers are generated and discarded; input
 !      iout  : unit number for messages, silent for iout.le.0; input
-!      subroutines called : errprt                   m. lewerenz mar/98
+!      subroutines called: x                         m. lewerenz mar/98
 
       implicit none
       ! DHmod, renamed x to y to prevent collision with module
@@ -494,7 +496,8 @@ module mod_random
       integer :: i, k
 
       if(nq.ge.np.or.np.eq.0.or.nq.eq.0) then
-        call errprt(iout,'xuwarm','illegal table parameter(s)',-1)
+        write(*,*)'ERROR: illegal table parameter(s)'
+        call abinerror('xuwarm')
       else
 
 !      exercise the generator for nexec rounds of np prn's
@@ -550,126 +553,8 @@ module mod_random
       RETURN
       END FUNCTION R1MACH
 
-!-----------------------------------------------------------------------
-!-------------------------- error handling -----------------------------
-!-----------------------------------------------------------------------
 
-      ! TODO: Get rid of this function. We should have our own one.
-      subroutine errprt(iout,pgname,text,icode)
-!      prints error messages from library subroutines
-
-!      iout   : unit number for message output, 0-> no output; input
-!      pgname : name of the subroutine calling errprt; input
-!      text   : message text; input
-!      icode  : severity code: 0 -> warning, < 0 -> fatal error with
-!               abort, else -> error but execution continues
-!      subroutines called : strlen                   m. lewerenz dec/93
-
-      character pgname*(*),text*(*),header*20,tail*40
-      save nerror,nwarn,icall
-!      common /errcnt/ maxerr,maxwrn
-      data icall/0/
-
-      if(icall.eq.0) then
-        icall=1
-        nerror=0
-        nwarn=0
-      end if
-
-      if(icode.lt.0) then
-        header='  *** fatal error,'
-        tail=', execution aborted ***'
-      else if(icode.eq.0) then
-        header='  *** warning,'
-        tail=' ***'
-        nwarn=nwarn+1
-      else
-        header='  *** error,'
-        tail=', return without action ***'
-        nerror=nerror+1
-      end if
-
-!      write the message on unit iout
-
-      if(iout.gt.0) then
-        call getstr(pgname,lname,iout)
-        call getstr(text,ltext,iout)
-        call getstr(header,lhead,iout)
-        call getstr(tail,ltail,iout)
-        write(iout,'(/6a/)') header(1:lhead),' ',text(1:ltext),' in ', &
-     &                      pgname(1:lname),tail(1:ltail)
-        call flush(iout)
-      end if
-
-      jcode=icode
-      if(maxerr.gt.0.and.nerror.ge.maxerr) then
-        if(iout.gt.0) write(iout,'(/a)')  &
-     &  '  *** maximum number of errors exceeded, program stopped *** '
-        jcode=-1
-      end if
-      if(maxwrn.gt.0.and.nwarn.ge.maxwrn) then
-        if(iout.gt.0) write(iout,'(/a)') &
-     &  '  *** maximum number of warnings exceeded, program stopped ***'
-        jcode=-1
-      end if
-      if(iout.gt.0) call flush(iout)
-!
-      if(jcode.lt.0) stop
-      return
-!
-! ---------------------------------------------------------------------
-!      error report, returns current number of errors and warning 
-!
-      entry errnum(nerr,nwrn)
-      nerr=nerror
-      nwrn=nwarn
-      return
-      end subroutine errprt
-
-
-      subroutine getstr(string,ls,iout)
-!
-!      eliminates leading and trailing blanks from string and returns
-!      length of remaining string
-!
-!      string : character string; input & output
-!               on output leading and trailing blanks of the original
-!               string are missing
-!      ls     : length of non blank portion of string; output
-!      iout   : fortran unit for messages, silent if iout.le.0; input
-!      subroutines called: errprt                    m. lewerenz jul/00
-!
-      character string*(*)
-!
-      ls=len(string)
-      if(ls.gt.0) then
-        i=0
-    5   i=i+1
-        if(i.le.ls) then
-          if(string(i:i).eq.' ') then
-            goto 5
-          else
-            ls=ls+1-i
-            if(i.gt.1) then
-              do j=1,ls
-                string(j:j)=string(j+i-1:j+i-1)
-              end do
-            end if
-   10       continue
-            if(string(ls:ls).eq.' ') then
-              ls=ls-1
-              goto 10
-            end if
-          end if
-        else
-          ls=0
-          call errprt(iout,'getstr','empty string',0)
-        end if
-      end if
-      return
-      end subroutine getstr
-
-!-    ROUTINE RSAVEF, reads or writes the state of the generator
+!     ROUTINE RSAVEF, reads or writes the state of the generator
       subroutine rsavef(iout,lread)
          use mod_utils, only: abinerror
          integer,intent(in) :: iout  !where do we write the state
