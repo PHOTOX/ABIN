@@ -14,6 +14,7 @@
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46539
 
 TEST=all
+BIN=abin
 include make.vars
 
 export SHELL=/bin/bash
