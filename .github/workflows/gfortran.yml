@@ -14,7 +14,7 @@ jobs:
          gcc_v: [7, 8, 9]
     env:
       FC: gfortran
-      FFLAGS: -O0 -fopenmp -Wall
+      FFLAGS: -O0 -fopenmp -Wall --coverage
       GCC_V: ${{ matrix.gcc_v}}
 
     steps:
@@ -27,6 +27,10 @@ jobs:
       run: ./configure && make
     - name: test
       run: make test
+    - name: Codecov upload
+      run:  bash <(curl -s https://codecov.io/bash)
+
+
 
   optimized_build:
     runs-on: ubuntu-latest
@@ -65,8 +69,8 @@ jobs:
       fail-fast: true
       matrix:
          gcc_v: [7, 8, 9]
-#    env:
-#      FFLAGS: -O0 -fopenmp -Wall
+    env:
+      FFLAGS: -O2 -fopenmp
     steps:
     - uses: actions/checkout@v2
     - name: Install FFTW libraries

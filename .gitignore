@@ -2,6 +2,9 @@
 make.vars
 abin.dev*
 *.o
+*.gcda
+*.gcno
+*.gcov
 date.inc
 *temp
 TESTS/*/*diff
