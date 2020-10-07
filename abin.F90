@@ -61,6 +61,8 @@ program abin_dyn
 !  Surface hopping initialization
    if(ipimd.eq.2.or.ipimd.eq.4)then
       call sh_init(x, y, z, vx, vy, vz)
+   else if(ipimd.eq.5.and.pot.eq.'_tera_')then
+      call sh_init(x, y, z, vx, vy, vz)
    endif
 
 !$ nthreads = omp_get_max_threads()
@@ -139,6 +141,8 @@ program abin_dyn
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
             if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_') call move_new2old_terash()
          end do
+      else if(ipimd.eq.5.and.pot.eq.'_tera_')then
+         call move_new2old_terash()
       end if
 
 !     LOOP OVER TIME STEPS
@@ -223,6 +227,8 @@ program abin_dyn
             px = amt * vx
             py = amt * vy
             pz = amt * vz
+
+            if(pot.eq.'_tera_') call move_new2old_terash()
          endif
 
 #ifdef USE_MPI

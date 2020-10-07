@@ -453,7 +453,7 @@ subroutine init(dt)
 #ifdef USE_MPI
    if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
       call initialize_terachem()
-      if (ipimd.eq.2.or.ipimd.eq.4) call init_terash(x, y, z)
+      if (ipimd.eq.2.or.ipimd.eq.4.or.ipimd.eq.5) call init_terash(x, y, z)
    end if
 #endif
 
@@ -856,8 +856,8 @@ subroutine init(dt)
           error=1
        endif
       endif
-      if(ipimd.eq.5.and.pot.eq.'_tera_')then
-         write(*,*)'ERROR: LZ not implemented with TeraChem over MPI'
+      if(ipimd.eq.5.and.pot.eq.'_tera_'.and.ntriplet_lz.gt.0)then
+         write(*,*)'ERROR: LZ S/T not implemented with TeraChem over MPI'
          error=1
       endif
       if(ipimd.eq.5.and.nwalk.ne.1)then

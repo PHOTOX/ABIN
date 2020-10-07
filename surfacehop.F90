@@ -69,7 +69,7 @@ module mod_sh
 !  INITIALIZATION ROUTINE (ugly, but works)
    subroutine sh_init(x, y, z, vx, vy, vz)
    use mod_const,      only: AUtoEV
-   use mod_general,    only: irest, natom, pot
+   use mod_general,    only: irest, natom, pot, ipimd
    use mod_interfaces, only: force_clas
    use mod_kinetic,    only: ekin_v
    real(DP),intent(inout)  :: x(:,:), y(:,:), z(:,:)
@@ -146,7 +146,7 @@ module mod_sh
 
    end do
 
-   if(irest.eq.1) call read_nacmrest()
+   if(irest.eq.1.and.ipimd.ne.5) call read_nacmrest()
 
    end subroutine sh_init
 
