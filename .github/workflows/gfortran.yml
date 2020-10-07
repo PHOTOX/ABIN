@@ -90,6 +90,8 @@ jobs:
   # Consider whether this needs to be a separate job
   # or whether it should be default for all builds
   # Here we just take the defaults everywhere, except turning on FFTW
+  # TODO: We actually need to build our own FFTW for different
+  # GFortran versions
   fftw_build:
     # Temporarily disable
     if: false

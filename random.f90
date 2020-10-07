@@ -58,19 +58,17 @@ module mod_random
       integer,parameter :: np=1279, nq=418
       real(DP)  :: x(np)
       integer   :: last, init
-      !gautrg variables determining its state
+      ! gautrg variables determining its state
       real(DP)  :: gsave
       integer   :: isave = -1
       integer   :: nroll = 1
-      ! This are not really important, from a former common block
-      integer   :: maxerr, maxwrn
       save
       contains
 
-      subroutine gautrg(gran,nran,iseed,iout)
+      subroutine gautrg(gran, nran, iseed)
 !     DH WARNING: initialiazation from gautrg and vranf are different
 !     gautrg gran is shifted by 1
-!     Apparently, nran must be >1
+!     Apparently, nran must be > 1
 !
 !      vectorized portable unit standard deviation gaussian random
 !      number generator using the box-mueller transformation method.
@@ -84,10 +82,7 @@ module mod_random
 !      nran  : number of desired random numbers, with nran=0 and iseed
 !              not 0 only generator initialization is done. no action
 !              when both are zero.
-!      iseed : if not 0, integer to start generator. use 0 to continue
-!              a previously used/initialized random sequence, unchanged
-!              on output.
-!      iout  : unit number for messages.
+!      iseed : (OPTIONAL) a positive non-zero integer to start generator.
 !
 !      times for the generation of 10**6 prn`s:
 !      rs6000/350 41 mhz    2.31 s 
@@ -100,11 +95,19 @@ module mod_random
 !      subroutines called: vranf, r1mach
 !      m. lewerenz 6/may/90, modified 17/jun/91, mar/95
  
-      implicit real(DP) (a-h,o-z)
+      implicit none
+      integer, intent(in) :: nran
+      integer, intent(in), optional :: iseed
+      ! TODO: Should probably be intent(out)
+      real(DP), intent(inout) :: gran(nran)
+
       real(DP),parameter  :: two=2.d0,twom=-two,one=1.d0
       integer,parameter :: npoly=11
-      real(DP) :: gran(nran),scf(npoly),xran(1),ccf(npoly)
-      real(DP) :: cx,sx,y
+      real(DP) :: scf(npoly),xran(1),ccf(npoly)
+      real(DP) :: cx, cxi, sx, sxi, y
+      real(DP) :: fac, trig
+      real(DP) :: tiny, twopi, pi4
+      integer :: i, newran
 !     save isave,gsave,tiny,twopi,pi4,scf,ccf
       save tiny,twopi,pi4,scf,ccf
 !     data isave/-1/
@@ -137,14 +140,20 @@ module mod_random
         twopi=pi4*8
       end if
 
-      if(iseed.ne.0) call vranf(gran,0,iseed,iout)
+      if(present(iseed))then
+         if(iseed.le.0)then
+            write(*,*)'ERROR: Random number seed must be a positive non-zero integer!'
+            call abinerror('gautrg')
+         end if
+         call vranf(gran, 0, iseed)
+      end if
 
       if(nran.gt.0) then
         newran=nran-isave
         if(isave.eq.1) gran(1)=gsave
-        call vranf(gran(isave+1),newran,0,iout)
+        call vranf(gran(isave+1), newran)
         do 100 i=1,newran-1,2
-        fac=sqrt(twom*log(gran(isave+i)+tiny))
+        fac = sqrt(twom*log(gran(isave+i)+tiny))
         !DHmod: renamed x to y to avoid conflict with x(np) from module
         y=pi4*gran(isave+i+1)
         cx=(((((((((ccf(11)*y+ccf(10))*y+ccf(9))*y+ccf(8))*y &
@@ -165,7 +174,7 @@ module mod_random
   100   continue
 
         if(mod(newran,2).eq.1) then
-          call vranf(xran,1,0,iout)
+          call vranf(xran, 1)
           fac=sqrt(twom*log(gran(nran)+tiny))
           trig=twopi*xran(1)
           gran(nran)=fac*sin(trig)
@@ -181,7 +190,7 @@ module mod_random
 !-------------------- ranf/vranf uniform random package ----------------
 !-----------------------------------------------------------------------
 
-      subroutine vranf(ranv,nran,iseed,iout)
+      subroutine vranf(ranv, nran, iseed)
 
 !      machine independent portable uniform random number generator for
 !      the interval [0,1) based on a floating point subtractive lagged
@@ -200,10 +209,7 @@ module mod_random
 !      nran  : number of desired random numbers. nran=0 and iseed.ne.0
 !              -> only generator initialization. no action when both 
 !              are zero.; input
-!      iseed : if not 0, integer to start generator. use 0 to continue
-!              a previously used/initialized random sequence, unchanged
-!              on output; input
-!      iout  : unit number for error messages. silent for iout.le.0
+!      iseed : (OPTIONAL) positive non-zero integer to start generator
 !
 ! ----------------------------------------------------------------------
 !      method:
@@ -248,15 +254,20 @@ module mod_random
 
       implicit none
       real(DP), intent(out) :: ranv(nran)
-      integer, intent(in) :: nran, iseed, iout
+      integer, intent(in) :: nran
+      integer, intent(in), optional :: iseed
       integer, parameter :: nratio=np/nq, nexec=4, mroll=4, zero=0.d0, one=1.d0
       real(DP) :: x1, x2, x3, x4
       integer :: i, j, k, left, loop, limit
 
-!      table initialization by xuinit
 
-      if(iseed.ne.0) then
-        call xuinit(x,np,nq,0,nexec,iseed,init,last,iout)
+      if(present(iseed))then
+         if(iseed.le.0)then
+            write(*,*)'ERROR: Random number seed must be a positive non-zero integer!'
+            call abinerror('vranf')
+         end if
+         ! table initialization by xuinit
+         call xuinit(x,np,nq,0,nexec,iseed,init,last)
       end if
 
 !      fibonacci generator updates elements of x in a cyclic fashion
@@ -394,7 +405,7 @@ module mod_random
 
 !-----------------------------------------------------------------------
 
-      subroutine xuinit(y, np, nq, mode, nexec, iseed, init, last, iout)
+      subroutine xuinit(y, np, nq, mode, nexec, iseed, init, last)
 
 !      initializes a (np,nq) lagged fibonacci generator table
 !      with random bits generated by a congruential generator using
@@ -413,12 +424,11 @@ module mod_random
 !      init  : returns updated seed of congruential generator.
 !              0 if table was not initialized, > 0 if ok; output
 !      last  : pointer to the last used number in the table; output
-!      iout  : unit number for messages, silent for iout.le.0; input
 !      subroutines called : none             m. lewerenz mar/93, mar/98
 
       implicit none
       real(DP), intent(inout) :: y(np)
-      integer, intent(in) :: np, nq, mode, nexec, iseed, iout
+      integer, intent(in) :: np, nq, mode, nexec, iseed
       integer, intent(inout) :: init, last
       integer, parameter :: ia=40692, ib=52774, ic=3791, ip=2147483399
       integer, parameter :: iphalf = ip / 2, nbit = 48
@@ -463,7 +473,7 @@ module mod_random
               add=add*half
             end do
           end do
-          if(nexec.gt.0) call xuwarm(y, np, nq, mode, nbit*nexec, iout)
+          if(nexec.gt.0) call xuwarm(y, np, nq, mode, nbit*nexec)
         end if
         init=ix
         last=0
@@ -473,7 +483,7 @@ module mod_random
 
 !-----------------------------------------------------------------------
 
-      subroutine xuwarm(y, np, nq, mode, nexec, iout)
+      subroutine xuwarm(y, np, nq, mode, nexec)
 
 !      warms up (p,q) lagged fibonacci generators (lfg) by nexec rounds
 
@@ -485,14 +495,13 @@ module mod_random
 !              mode=<0 -> subtractive generator, mode=1 additive
 !      nexec : number of warm up cycles for the table. nexec*nbit*np
 !              random numbers are generated and discarded; input
-!      iout  : unit number for messages, silent for iout.le.0; input
 !      subroutines called: x                         m. lewerenz mar/98
 
       implicit none
       ! DHmod, renamed x to y to prevent collision with module
       real(DP), intent(inout) :: y(np)
       real(DP), parameter :: zero = 0.d0, one = 1.d0
-      integer, intent(in) :: mode, nexec, iout, np, nq
+      integer, intent(in) :: mode, nexec, np, nq
       integer :: i, k
 
       if(nq.ge.np.or.np.eq.0.or.nq.eq.0) then
@@ -555,7 +564,7 @@ module mod_random
 
 
 !     ROUTINE RSAVEF, reads or writes the state of the generator
-      subroutine rsavef(iout,lread)
+      subroutine rsavef(iout, lread)
          use mod_utils, only: abinerror
          integer,intent(in) :: iout  !where do we write the state
 !         integer,intent(in) :: isave !0=read,1=save

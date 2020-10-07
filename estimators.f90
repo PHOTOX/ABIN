@@ -14,15 +14,15 @@ module mod_estimators
    save
    CONTAINS
 !--Expecting cartesian coordinates and forces!
-   subroutine estimators(x, y, z, fxab, fyab, fzab, eclas, dt)
-   use mod_general
+   subroutine estimators(x, y, z, fxab, fyab, fzab, eclas)
+   use mod_general, only: pot, natom, nwalk, it, sim_time, ncalc, nwrite, inormalmodes, imini, ihess, icv
    use mod_nhc, ONLY:temp, inose
    use mod_system, ONLY:am, dime
    use mod_harmon, ONLY:hess_harmon, hess_morse, hess_2dho, hess
    use mod_shake, only: nshake
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(in) :: fxab(:,:),fyab(:,:),fzab(:,:)
-   real(DP),intent(in) :: dt,eclas
+   real(DP),intent(in) :: eclas
    real(DP)  :: xc(size(x,1)), yc(size(x,1)), zc(size(x,1))
    real(DP)  :: cvhess( size(x,2) ), dc( size(x,1)*3, size(x,2) )
    real(DP)  :: est_vir,est_prim,cv_prim,cv_vir,cv_dcv
@@ -204,11 +204,6 @@ module mod_estimators
 
       if(icv.eq.1.and.enmini.lt.it)then
          write(UCV,'(F15.2,4E20.10)')sim_time*AUtoFS,cv_prim,cv_vir,cv_prim_cumul/it2,cv_vir_cumul/it2
-
-!       CV_PCV estimator is not correctly implemented at the moment        
-!       open(126,file='cv_pcv.dat',access='append')
-!       write(126,*)it*dt,cv_pcv
-!       close(126)
 
          if(ihess.eq.1)then
             write(UCVDCV,'(F15.2,2E20.10)')sim_time*AUtoFS,cv_dcv,cv_dcv_cumul/it2

@@ -20,10 +20,9 @@ CONTAINS
 
 ! B) Quadratic potential around target value (en_kk must be set)
 
-subroutine en_rest_init(dt)
+subroutine en_rest_init()
    use mod_general,  only: natom
    implicit none
-   real(DP),intent(in) :: dt
 
    allocate(fxr(natom,2)) ! two states, not beads.
    allocate(fyr(natom,2))
@@ -31,14 +30,16 @@ subroutine en_rest_init(dt)
 end subroutine en_rest_init
 
 subroutine energy_restraint(x, y, z, px, py, pz, eclas)
-   use mod_general,  only: natom, it, dt0 ! dt0 is the time step
+   use mod_general,  only: natom, dt0 ! dt0 is the time step
    use mod_utils,    only: abinerror
    use mod_const,    only: AMU
    use mod_system,   only: am
    use mod_sh,       only: en_array
    use mod_terampi_sh, only: force_terash
    implicit none
-   real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:),eclas
+   real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
+   ! TODO: Eclas is not modified in this routine, but probably should be
+   real(DP),intent(inout)  :: eclas
    real(DP),intent(inout)  :: px(:,:),py(:,:),pz(:,:)
    ! DH: I am surprised this works, since natom is not a constant
    real(DP),dimension(natom):: fxgs,fygs,fzgs,fxes,fyes,fzes
@@ -48,7 +49,6 @@ subroutine energy_restraint(x, y, z, px, py, pz, eclas)
 
 do iw=1,nwalk
 
-   ! DH call the extra forces and potentials here
    if(restrain_pot.eq.'_tera_')then
       call force_terash(x, y, z, fxr, fyr, fzr, eclasground)
       do iat=1,natom
@@ -73,8 +73,8 @@ do iw=1,nwalk
 !-----READING energy of groud state (engrad.ground.dat)
     open(901,file=chforce_ground,status='OLD',iostat=ios,action='read')
     if (ios.ne.0)then
-       write(*,*)'Error: could not read engrad.ground.dat.001! Check if you use proper &
-       external script for restrained energy dynamics.'
+       write(*,*)'Error: could not read ' // chforce_ground
+       write(*,*)'Check whether you use proper external script for restrained energy dynamics.'
        call abinerror('energy_restraint')
     end if
     read(901,*) eclasground

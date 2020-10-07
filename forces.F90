@@ -3,16 +3,15 @@
 ! Ab-initio programs are called from force_abin routine
 subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_const,    only: DP
-   use mod_general,  only: natom, nwalk, istage, inormalmodes, iqmmm, it, &
-                           pot, pot_ref, idebug, en_restraint
+   use mod_general,  only: natom, nwalk, istage, inormalmodes, iqmmm, &
+                           pot, pot_ref, idebug
    use mod_force_mm, only: force_LJ_Coulomb
    use mod_sbc,      only: force_sbc, isbc !,ibag
    use mod_system,   only: conatom
    use mod_nhc,      only: inose
    use mod_transform
    use mod_interfaces, only: force_wrapper
-   use mod_plumed,   only: iplumed, plumedfile, force_plumed
-   use mod_en_restraint
+   use mod_plumed,   only: iplumed, force_plumed
    implicit none
    real(DP),intent(inout) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
@@ -83,10 +82,6 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    if(iqmmm.eq.3) call force_LJ_Coulomb(transx, transy, transz, fxab, fyab, fzab, eclas)
 
    if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
-
-!------- ER(energy restraint) SECTION ---
-!if(en_restraint.ge.1) call energy_restraint(x, y, z, fxab,fyab,fzab,eclas)
-!----------------------------------------
 
 !  For reference potential and ring-polymer contraction
    if(pot_ref.ne.'none'.and.chpot.eq.pot)then
@@ -197,7 +192,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
          call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
 #endif
       case ("splined_grid")
-         call force_splined_grid(x, y, z, fx, fy, fz, eclas)
+         ! Only 1D spline grid supported at the moment
+         call force_splined_grid(x, fx, eclas)
       case ("harm")
          call force_harmon(x, y, z, fx, fy, fz, eclas)
       case ("2dho")
@@ -205,7 +201,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
       case ("morse")
          call force_morse(x, y, z, fx, fy, fz, eclas)
       case ("doublewell")
-         call force_doublewell(x, y, z, fx, fy, fz, eclas)
+         call force_doublewell(x, y, fx, fy, eclas)
       case ("_cp2k_")
          call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
       case ("_tera_")
@@ -326,7 +322,7 @@ subroutine propagate_nm(x, y, z, px, py, pz, m, dt)
    use mod_const, only: DP, PI
    use mod_array_size
    use mod_general,   only: nwalk, natom
-   use mod_nhc,       only: temp, inose
+   use mod_nhc,       only: temp
    implicit none
    real(DP), intent(inout) :: x(:,:), y(:,:), z(:,:)
    real(DP), intent(inout) :: px(:,:), py(:,:), pz(:,:)

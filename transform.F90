@@ -87,7 +87,7 @@ module mod_transform
    use mod_system, ONLY: am
    real(DP),intent(out) :: amg(:,:), amt(:,:)
    real(DP)  :: lambda(size(amg,2)+1) !amg(natom,nwalk) - why +1?
-   integer :: iat, iw, k, nmodes, odd
+   integer :: iat, iw, nmodes, odd
 
 !  NOTE: am was multiplied by amu earlier in the init.F90
 
@@ -314,7 +314,7 @@ module mod_transform
    real(DP) :: x(:,:), y(:,:), z(:,:)
    real(DP) :: transx(:,:), transy(:,:), transz(:,:)
    integer  :: iat, iw
-   real(DP) :: dnwalk, equant, fac
+   real(DP) :: dnwalk, fac
    integer  :: nmodes, odd
 
    if(inormalmodes.eq.1)then
@@ -367,8 +367,6 @@ endif
    transx = transx / dnwalk
    transy = transy / dnwalk
    transz = transz / dnwalk
-
-!   call equant_nm(transx, transy, transz, equant)
 
 !  write(*,*)'original cartesian to normal modes'
 !  call print_xyz_arrays(x/ang,y/ang,z/ang)

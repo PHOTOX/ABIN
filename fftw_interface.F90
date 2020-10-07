@@ -1,9 +1,15 @@
-
+! Interface to FFTW library for Fast Fourier Transform
+! Currently utilized for normal mode transformation in Path Integral simulations
 module mod_fftw3
    use, intrinsic :: iso_c_binding
    private
 #ifdef USE_FFTW
-   public :: fftw_init, fftw_end
+   public :: fftw_init, fftw_end, plan_utox, plan_xtou
+   ! TODO: Not sure that these arrays should be public and live here,
+   ! They should probably we allocated where they are used in transform.F90
+   public :: x_in, y_in, z_in, cx, cy, cz
+   public :: fftw_execute_dft_r2c, fftw_execute_dft_c2r 
+   ! TODO: Is there a better way to do this in newer FFTW versions?
    include 'fftw3.f90'
    type(C_PTR) :: plan_utox,plan_xtou
    real(C_DOUBLE), dimension(:), allocatable :: x_in, y_in, z_in
@@ -11,6 +17,8 @@ module mod_fftw3
    save
    contains
 
+   ! TODO: This should be named more specifically, maybe
+   ! fftw_normalmodes_init()
    subroutine fftw_init(nwalk)
       use mod_const, only: DP
       use mod_utils, only: abinerror

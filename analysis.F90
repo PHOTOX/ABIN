@@ -17,7 +17,7 @@ module mod_analysis
    CONTAINS
 
 !  Contains all analysis stuff
-   SUBROUTINE analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
+   SUBROUTINE analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant)
    use mod_analyze_ext, only: analyze_ext
    use mod_estimators , only: estimators
    use mod_general,     only: it, ipimd, icv,nwrite, nwritef, nwritev, &
@@ -33,15 +33,17 @@ module mod_analysis
    real(DP),intent(inout)    :: vx(:,:),  vy(:,:),  vz(:,:)
    real(DP),intent(in)    :: amt(:,:)
    real(DP),intent(in)    :: eclas, equant
-   real(DP) :: dt  !,energy
+   real(DP) :: energy
 
-!  eclas comes from force_clas,equant from force_quantum
-!  energy=eclas+equant
+   ! eclas is the ab initio energy averaged per bead,
+   ! equant is additional harmonic energy between PI beads (from force_quantum)
+   ! TODO: Print equant or energy somewhere
+   energy = eclas + equant
 
    if(modulo(it,nwrite).eq.0.and.idebug.gt.0) call remove_rotations(x, y, z, vx, vy, vz, am, .false.)
 
    if (ipimd.eq.1.or.icv.eq.1)then
-      call estimators(x, y, z, fxc, fyc, fzc, eclas, dt)
+      call estimators(x, y, z, fxc, fyc, fzc, eclas)
    endif
 
    if(modulo(it,nwritex).eq.0)then
@@ -146,7 +148,12 @@ module mod_analysis
    fgeom='(A2,3E18.10E2)'
    fkom='(A10,3E13.5E2,A14,3E13.5E2)'
 
-   write(funit,*)natom
+   ! TODO: Include somehow the timestep in the output
+   ! Either here:
+   ! write(funit, *)natom, it
+   ! or maybe better here
+   ! write(funit,fkom)'time step', it, 'net force:',fx_tot,fy_tot,fz_tot,' torque force:',fx_rot,fy_rot,fz_rot
+   write(funit, *)natom
    write(funit,fkom)'net force:',fx_tot,fy_tot,fz_tot,' torque force:',fx_rot,fy_rot,fz_rot
    do iw=1,nwalk
       do iat=1,natom

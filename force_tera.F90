@@ -44,22 +44,18 @@ CONTAINS
 subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
    use mod_const,    only: DP, ANG
    use mod_utils,    only: abinerror
-   use mod_general,  only: iqmmm, nwalk
+   use mod_general,  only: iqmmm
    use mod_interfaces, only: oniom
    real(DP),intent(in)     ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)  ::  eclas
    integer,intent(in)      ::  walkmax
    integer  :: iw, itera
-   integer :: OMP_GET_NUM_THREADS, OMP_GET_THREAD_NUM
+   integer :: OMP_GET_THREAD_NUM
 
 ! DHnote: we cannot use Niklasson's propagator in TC if nwalk > 1
 ! This is a responsibility of the user
 
-! For parallel terachem servers, we would need to read multiple port.txt
-! files and newcomm would be an array. That's not implemented at this moment.
-
-!
    if(modulo(walkmax, nteraservers).ne.0)then
       write(*,*)'ERROR: Parameter "nwalk" must be divisible by "nteraservers"!'
       call abinerror("force_tera")
@@ -68,6 +64,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
 
    itera = 1
 
+! NOTE: Parallelization accross TeraChem servers
 !$OMP PARALLEL DO PRIVATE(itera)
    do iw=1, walkmax
 
@@ -94,7 +91,7 @@ end subroutine force_tera
 
 subroutine send_tera(x, y, z, iw, newcomm)
    use mod_const, only: DP, ANG
-   use mod_general, only: idebug, iqmmm, iremd, my_rank
+   use mod_general, only: idebug, iremd, my_rank
    use mod_system,only: names
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
@@ -104,8 +101,6 @@ subroutine send_tera(x, y, z, iw, newcomm)
    real(DP) :: coords(3, size(x,1) )
    character(len=2) :: names_qm(size(x,1)+6)
    integer  :: ierr, iat
-   logical  :: ltest
-
 
    do iat=1,natqm
       coords(1,iat) = x(iat,iw)/ANG
@@ -426,7 +421,7 @@ subroutine connect_terachem( itera )
    use mod_qmmm,  only: natqm
    use mod_system,only: names
    use mod_utils, only: abinerror
-   integer :: ierr, iat, itera
+   integer :: ierr, itera
 
    if (natmm_tera.gt.0)then
       allocate(mmcharges(natmm_tera))
@@ -455,7 +450,6 @@ subroutine connect_terachem( itera )
 
    subroutine finalize_terachem(error_code)
    integer, intent(in) :: error_code
-   integer :: request
    integer :: ierr, itera
    integer :: empty=0
 

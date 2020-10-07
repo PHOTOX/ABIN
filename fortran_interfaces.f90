@@ -4,10 +4,9 @@ module mod_interfaces
    use mod_const, only: DP
    INTERFACE
 
-   subroutine init(dt, values1)
+   subroutine init(dt)
    IMPORT :: DP
    real(DP),intent(out) :: dt
-   integer,dimension(8) :: values1
    end subroutine init
 
    subroutine print_compile_info()

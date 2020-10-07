@@ -33,6 +33,8 @@ module mod_water
    end if
 
    if (watpot.lt.1.or.watpot.gt.4)then
+      ! TODO: Print out what the various option means!
+      ! (different water force fields)
       write(*,*)'Error: parameter watpot must be 0,1,2,3 or 4.'
       call abinerror('check_water')
    end if

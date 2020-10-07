@@ -24,7 +24,6 @@ module mod_mdstep
 
 
    subroutine shiftP (px, py, pz, fx, fy, fz, dt)
-   use mod_general, only: nwalk, natom
    use mod_system,  only: conatom
    use mod_vinit,   only: constrainP
    real(DP),intent(inout)  :: px(:,:), py(:,:), pz(:,:)
@@ -84,7 +83,8 @@ module mod_mdstep
    use mod_general, ONLY: pot, ipimd, inormalmodes, en_restraint
    use mod_nhc, ONLY:inose
    use mod_interfaces, only: force_clas, propagate_nm
-   use mod_sh, only: ehrenfest_forces
+   ! Not yet implemented
+   !use mod_sh, only: ehrenfest_forces
    use mod_en_restraint
    real(DP),intent(inout) :: x(:,:), y(:,:), z(:,:)
    real(DP),intent(inout) :: fxc(:,:), fyc(:,:), fzc(:,:)
@@ -112,7 +112,7 @@ module mod_mdstep
       ! This is only a stub for now
       write(*,*)'ERROR: Ehrenfest MD not implemented yet!!'
       call abinerror('verletstep')
-      call ehrenfest_forces(x, y, z, fxc, fyc, fzc, px, py, pz, dt, eclas)
+      !call ehrenfest_forces(x, y, z, fxc, fyc, fzc, px, py, pz, dt, eclas)
    end if
 
    call shiftP (px, py, pz, fxc, fyc, fzc, dt/2)

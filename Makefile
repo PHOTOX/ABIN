@@ -25,6 +25,7 @@ MPI=FALSE
 FFTW=FALSE
 CP2K=FALSE
 PLUMED=FALSE
+LIBS=
 
 # Export all vars into submake commands
 export
@@ -50,8 +51,6 @@ F_OBJS := modules.o utils.o fortran_interfaces.o io.o random.o arrays.o qmmm.o f
 
 C_OBJS := water_interface.o
 
-STATIC_LIBS = WATERMODELS/libwater.a
-
 ifeq ($(strip $(FFTW)),TRUE)
   DFLAGS += -DUSE_FFTW
   ifeq ($(CP2K),TRUE)
@@ -74,9 +73,9 @@ ifeq ($(strip $(CP2K)),TRUE)
 endif
 
 ifeq ($(strip $(PLUMED)),TRUE)
- include ${PLUMED_LINK}
+ include ${PLUMED_INC}
  DFLAGS += -DUSE_PLUMED
- STATIC_LIBS += ${PLUMED_STATIC_LOAD}
+ LIBS += ${PLUMED_STATIC_LOAD}
 endif
 
 ifeq  ($(strip $(MPI)),TRUE) 
@@ -89,20 +88,21 @@ LIBS += -lm -lstdc++
 
 # This is the default target
 # TODO: Move all source code to src/ and call $(MAKE) -C src
-${BIN} : compile_info.o
+${BIN} : libabin.a
 	$(MAKE) -C WATERMODELS all
-	${FC} ${FFLAGS} ${C_OBJS} ${F_OBJS} ${STATIC_LIBS} abin.o compile_info.o ${LIBS} -o $@
+	${FC} ${FFLAGS} abin.o -L. -labin -LWATERMODELS/ -lwater ${LIBS} -o $@
+
+# Used for building Unit Tests
+libabin.a: compile_info.o
+	ar cru libabin.a ${C_OBJS} $(F_OBJS) compile_info.o && ranlib libabin.a
 
 # compile_info.F90 must be always recompiled to get the current date/time and git commit
 compile_info.o: compile_info.F90 ${C_OBJS} ${F_OBJS} abin.o
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DCOMPILE_DATE="'${DATE}'" -DGIT_COMMIT="'${COMMIT}'" -c $<
 
-# Used for building Unit Tests
-libabin.a: ${BIN}
-	ar cru libabin.a ${C_OBJS} $(F_OBJS) compile_info.o && ranlib libabin.a
 
 # Build and run Unit tests
-unittest: libabin.a
+unittest: ${BIN}
 	$(MAKE) -C unit_tests all
 	$(MAKE) -C unit_tests test
 

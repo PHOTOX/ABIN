@@ -8,7 +8,7 @@
 ! At this moment, coordinate and velocity transformations are NOT performed here
 ! Surface hopping is NOT initialized here.
 
-subroutine init(dt, time_data)
+subroutine init(dt)
    use mod_const
    use mod_interfaces, only: print_compile_info
    use mod_cmdline, only: get_cmdline
@@ -51,11 +51,10 @@ subroutine init(dt, time_data)
 #endif
    implicit none
    real(DP),intent(out) :: dt
-   integer,dimension(8), intent(out) :: time_data
    real(DP) :: masses(MAXTYPES)
    real(DP)  :: rans(10)
    integer :: iw, iat, natom_xyz, imol, shiftdihed = 1, iost
-   integer :: error, getpid, nproc=1, ipom, ipom2=0
+   integer :: error, getpid, nproc=1, ipom
    character(len=2)    :: massnames(MAXTYPES), atom
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
@@ -65,6 +64,7 @@ subroutine init(dt, time_data)
    LOGICAL :: file_exists
    logical        :: rem_comvel, rem_comrot
 !  real(DP) :: wnw=5.0d-5
+   ! Used for MPI calls
    integer :: ierr
    integer :: irand
 !$ integer :: nthreads, omp_get_max_threads
@@ -145,6 +145,7 @@ subroutine init(dt, time_data)
 ! We need to connect to TeraChem as soon as possible,
 ! because we want to shut down TeraChem nicely in case something goes wrong.
 #ifdef USE_MPI
+   ! TODO: Add explicit checks for ierr for all MPI calls!
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
    call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
    if (my_rank.eq.0.and.mpi_world_size.gt.1)then
@@ -180,7 +181,7 @@ subroutine init(dt, time_data)
 
 
    if (en_restraint.ge.1) then
-      call en_rest_init(dt)
+      call en_rest_init()
  
       if (en_restraint.eq.1)then
          write(*,*) 'Energy restraint is ON(1): Using method of Lagrange multipliers.'
@@ -541,8 +542,8 @@ subroutine init(dt, time_data)
         end do
      end if
 
-!    call vranf(rans,0,IRandom,6)  !initialize prng,maybe rewritten during restart
-     call gautrg(rans, 0, IRandom, 6)  !initialize prng, maybe rewritten during restart
+!    call vranf(rans,0,IRandom)  !initialize prng,maybe rewritten during restart
+     call gautrg(rans, 0, IRandom)  !initialize prng, maybe rewritten during restart
 
 !    THERMOSTAT INITIALIZATION
      if (inose.eq.1)then
@@ -1094,6 +1095,7 @@ subroutine init(dt, time_data)
       endif
    end subroutine check_inputsanity
 
+
    subroutine print_read_error(chfile, chmsg, iost)
       character(len=*), intent(in)  :: chmsg, chfile
       integer, intent(in)  :: iost
@@ -1103,8 +1105,8 @@ subroutine init(dt, time_data)
       call abinerror('init')
    end subroutine print_read_error
 
-   subroutine print_logo()
 
+   subroutine print_logo()
 print '(a)','                  _____     _    _      _ '
 print '(a)','        /\       |  _  \   | |  |  \   | |'
 print '(a)','       /  \      | |_|  |  | |  | | \  | |'
@@ -1172,12 +1174,9 @@ subroutine finish(error_code)
    use mpi
 #endif
    implicit none
-
-   real(DP) :: TIME
    integer, intent(in) :: error_code
    integer  :: i, ierr
    logical  :: lopen
-!   integer :: iter=-3
 
 #ifdef USE_MPI
    if (pot.eq.'_tera_')then
