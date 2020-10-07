@@ -132,7 +132,7 @@ module mod_random
 
       if(isave.lt.0) then
         isave=0
-        tiny=r1mach(0)**2
+        tiny = r1mach()**2
         pi4=atan(one)
         twopi=pi4*8
       end if
@@ -243,21 +243,6 @@ module mod_random
 !      alternative subtractive formulation bypassing if statements:
 !      temp=x(k)-x(k+np-nq)
 !      x(k)=(temp+one)-float(int(temp+one))
-! ----------------------------------------------------------------------
-
-!      timing in s for 10**7 random numbers:
-
-!      machine           mhz   unroll(4)     no unrolling
-!      ibm rs6000/350     41      2.67            3.9
-!      dec axp3800       200      1.17
-!      dec axp3600       150      1.35
-!      dec alpha 21164   250      0.45
-!      t3e alpha 21164   450      0.40
-!      sun ultra1        ???      1.38
-!      ibm 3090vf         58      ---        2.47(vec), 4.57(sc)
-!      cray t90          450      0.31      ranf() takes 0.13 s
-!      
-!      unrolling to depth 6 gives a slight speed increase.
 !----------------------------------------------------------------------
 !      subroutines called: xuinit,errprt    m. lewerenz may/91 & nov/93
 
@@ -543,7 +528,7 @@ module mod_random
       end subroutine xuwarm
 
 
-      FUNCTION R1MACH (IDUM)
+      FUNCTION R1MACH()
       IMPLICIT real(DP) (A-H,O-Z)
       PARAMETER (ONE=1.D0,TWO=2.D0,HALF=0.5D0)
       SAVE ICALL,EPS
@@ -569,8 +554,8 @@ module mod_random
 !-------------------------- error handling -----------------------------
 !-----------------------------------------------------------------------
 
+      ! TODO: Get rid of this function. We should have our own one.
       subroutine errprt(iout,pgname,text,icode)
-
 !      prints error messages from library subroutines
 
 !      iout   : unit number for message output, 0-> no output; input
@@ -640,11 +625,8 @@ module mod_random
       nwrn=nwarn
       return
       end subroutine errprt
-!
-!---+----|----+----|----+----|----+----|----+----|----+----|----+----|--
-!----------------------------------------------------------------------
-!---+----|----+----|----+----|----+----|----+----|----+----|----+----|--
-!
+
+
       subroutine getstr(string,ls,iout)
 !
 !      eliminates leading and trailing blanks from string and returns
