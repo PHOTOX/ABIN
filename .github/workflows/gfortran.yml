@@ -89,7 +89,7 @@ jobs:
          gcc_v: [7, 8, 9]
     env:
       FC: mpifort
-      FFLAGS: -O2 -fopenmp
+      FFLAGS: -O2 -fopenmp --coverage
       GCC_V: ${{ matrix.gcc_v}}
 
     steps:
@@ -104,6 +104,8 @@ jobs:
       run: ./configure --mpi "" && make
     - name: test
       run: make test
+    - name: Codecov upload
+      run:  bash <(curl -s https://codecov.io/bash)
 
   openmpi_build:
     runs-on: ubuntu-latest
