@@ -208,6 +208,7 @@ module mod_analysis
    character(len=200)    :: chout, chsystem, chformat
 
    if(pot.eq.'_tera_'.and.ipimd.eq.2) call write_wfn()
+   if(pot.eq.'_tera_'.and.ipimd.eq.5) call write_wfn()
 
    if(iremd.eq.1)then
       write(chout, '(A,I2.2)')'restart.xyz.', my_rank
@@ -340,7 +341,7 @@ module mod_analysis
    use mod_estimators
    use mod_kinetic,  only: entot_cumul, est_temp_cumul
    use mod_sh_integ, only: sh_read_wf
-   use mod_sh,       only: write_nacmrest,ntraj,istate
+   use mod_sh,       only: write_nacmrest,ntraj,istate,istate_init
    use mod_lz,       only: en_array_lz, nstate_lz, istate_lz
    use mod_gle
    use mod_random
@@ -399,6 +400,10 @@ module mod_analysis
      read(111,'(A)')chtemp
      call checkchar(chtemp, chlz)
      read(111,*)istate_lz
+     if(pot.eq.'_tera_')then
+        istate_init = istate_lz 
+        istate = istate_lz
+     end if
      do ist=1, nstate_lz 
       read(111,*)en_array_lz(ist,1),en_array_lz(ist,2),en_array_lz(ist,3)
      enddo
@@ -479,6 +484,7 @@ module mod_analysis
    close(111)
 
    if(pot.eq.'_tera_'.and.ipimd.eq.2) call read_wfn()
+   if(pot.eq.'_tera_'.and.ipimd.eq.5) call read_wfn()
 
    contains
 

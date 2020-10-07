@@ -47,13 +47,14 @@ end subroutine force_terash
 subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_const, only: DP, ANG
    use mod_array_size, only: NSTMAX
-   use mod_general, only: idebug, natom, en_restraint
+   use mod_general, only: idebug, natom, en_restraint, ipimd
    use mod_terampi, only: mpi_sleep, handle_mpi_error
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
    use mod_io, only: print_charges, print_dipoles, print_transdipoles
    use mod_sh_integ, only: nstate
    use mod_sh, only: check_CIVector, en_array, istate, nacx, nacy, nacz
+   use mod_lz, only: en_array_lz
    use mpi
    real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
    real(DP),intent(inout) :: eclas
@@ -89,6 +90,13 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    call handle_mpi_error(ierr)
 
    eclas = en_array(istate(itrj), itrj)
+
+   !Landau-Zener arrays
+   if (ipimd.eq.5)then 
+      en_array_lz(:,3) = en_array_lz(:,2);
+      en_array_lz(:,2) = en_array_lz(:,1);
+      en_array_lz(:,1) = en_array(:,1)
+   end if
 
    if (idebug>0) write(*, '(a)') 'Receiving transition dipoles from TC.'
    call MPI_Recv( TDip, (nstate-1)*3,  &

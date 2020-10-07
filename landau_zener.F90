@@ -4,15 +4,17 @@
 !    Andrey K. Belyaev and Oleg V. Lebedev
 ! Implemented by: J. Suchan, (J. Chalabala)
 
-! No TeraChem functionality YET
+! No S/T TeraChem functionality YET
 ! No energy checks
 ! No PIMD functionality
 
 module mod_lz
    use mod_const, only: DP
    use mod_utils, only: abinerror
-   use mod_general, only: nwalk
+   use mod_general, only: nwalk, pot
    use mod_array_size, only: NSTMAX, NTRAJMAX
+   use mod_sh, only: istate_init, istate, inac  !TERA-MPI interface
+   use mod_sh_integ, only: nstate               
    implicit none
    !private 
    public :: lz_init, lz_hop, lz_finalize !Routines
@@ -62,6 +64,12 @@ module mod_lz
    allocate(x_prev(natom,nwalk+1),y_prev(natom,nwalk+1),z_prev(natom,nwalk+1), &
             fx_prev(natom,nwalk+1),fy_prev(natom,nwalk+1),fz_prev(natom,nwalk+1))
    en_array_lz=0.0d0
+
+   if(pot.eq.'_tera_')then
+       nstate = nstate_lz
+       istate_init = initstate_lz
+       inac = 2
+   end if
 
    end subroutine lz_init
 
@@ -186,6 +194,7 @@ module mod_lz
         !We need to get to previous geometry, adjust its velocity according to
         !target state and do 1 step forward on the new state
         istate_lz = ihop
+        if(pot.eq.'_tera_') istate = ihop     !TERA-MPI
         !a) Previous geometry
         x = x_prev; y = y_prev; z = z_prev;
         !b) Gradient for new state 
