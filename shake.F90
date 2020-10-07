@@ -32,7 +32,7 @@ module mod_shake
       ! Or determine bonds in a better way
       hbond_len_thr = 2.0 * ANG
       ! Here we assume that each H atom has a single bond
-      num_shake = count_atoms('H')
+      num_shake = count_atoms_by_name('H')
       ! TODO: Not sure about this, but shake does not 
       ! work with PIMD anyway at this point
       iw = 1
@@ -78,18 +78,19 @@ module mod_shake
 
    end subroutine find_hbonds
 
-   real(DP) function count_atoms(atom_name)
+   ! TODO: Maybe move this to utils
+   integer function count_atoms_by_name(atom_name)
       use mod_general, only: natom
       use mod_system, only: names
       character(len=*), intent(in) :: atom_name
       integer :: nat, iat
       nat = 0
       do iat = 1, natom
-        if (names(iat).eq.atom_name) nat = nat +1
+        if (names(iat).eq.atom_name) nat = nat + 1
       end do
-      count_atoms = nat
+      count_atoms_by_name = nat
       return
-   end function count_atoms
+   end function count_atoms_by_name
 
 
    subroutine shake_init(x,y,z)

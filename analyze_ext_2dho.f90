@@ -1,4 +1,3 @@
-!---This is a template file for user-defined analysis function.
 !---This function will be called if anal_ext=1 in input(section general).
 !---Should the user need something more then coordinates(velocities,forces),
 ! he/she must also modify  analysis.f90 and possibly abin.f90

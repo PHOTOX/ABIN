@@ -10,12 +10,11 @@ module mod_analyze_ext
 
    subroutine analyze_ext(x,y,z,vx,vy,vz,amt)
    use mod_general, only: it
-   real(DP) x(:,:),y(:,:),z(:,:)
-   real(DP) vx(:,:),vy(:,:),vz(:,:)
-   real(DP) amt(:,:)
-   character(len=100)   :: chsystem
-   character(len=50)   :: chit
-
+   real(DP), intent(in) :: x(:,:),y(:,:),z(:,:)
+   real(DP), intent(in) :: vx(:,:),vy(:,:),vz(:,:)
+   real(DP), intent(in) :: amt(:,:)
+   character(len=100) :: chsystem
+   character(len=50) :: chit
 
    ! Launch external BASH script.
    ! Can be used to analyze wavefunction on-the-fly
@@ -23,12 +22,6 @@ module mod_analyze_ext
    chsystem='./analyze_ext.sh '//trim(chit)
    call system(chsystem)
 
-!   if(modulo(it,nwrite).eq.0)then
-!--print output every nwrite steps              
-!   endif
-   
    end subroutine analyze_ext
 
 end module
-                                        
-

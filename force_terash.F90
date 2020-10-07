@@ -53,7 +53,7 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_utils, only: abinerror
    use mod_io, only: print_charges, print_dipoles, print_transdipoles
    use mod_sh_integ, only: nstate
-   use mod_sh, only: check_CIVector, en_array, istate, nacx, nacy, nacz, tocalc
+   use mod_sh, only: check_CIVector, en_array, istate, nacx, nacy, nacz
    use mpi
    real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
    real(DP),intent(inout) :: eclas
@@ -62,7 +62,6 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    real(DP) :: qmcharges( size(fx,1) )
    integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iat,iw, ist1, ist2, itrj, ipom, i
-   integer  :: bufints(20)
    logical  :: ltest
    character*50 :: chsys_sleep
 
@@ -109,9 +108,7 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    call MPI_Recv( Dip,nstate*3, &
           MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
    call handle_mpi_error(ierr)
-!  do i=1, nstate
-!     T_FMS%ElecStruc%Dipole(i,1:3)=Dip(3*(i-1)+1:3*(i-1)+3)
-!  end do
+
    call print_dipoles(Dip, iw, nstate )
 
 !  Receive partial charges from TC
@@ -155,7 +152,9 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
          if (idebug>0) write(*, '(a,i3,i3)') 'Receiving derivatives between states.'&
          ,ist1, ist2
 
-
+         ! NOTE: We do not filter here based on tocalc because TC always sends the whole
+         ! derivative matrix, including zero elements, see 'terachem/fms.cpp:'
+         ! Is TC sending zero arrays for NAC that we did not want it to compute???
          call MPI_Recv( NAC, 3*natom, MPI_DOUBLE_PRECISION, &
               MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
          call handle_mpi_error(ierr)
@@ -215,7 +214,6 @@ subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
    use mod_const, only: DP, ANG, AUTOFS
    use mod_terampi, only: handle_mpi_error
    use mod_general, only: natom, idebug, sim_time, en_restraint
-   use mod_system, only: names
    use mod_qmmm,  only: natqm
    use mod_utils, only: abinerror
    use mod_sh_integ, only: nstate
@@ -226,7 +224,6 @@ subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
    integer, intent(in)     :: newcomm
    real(DP)                ::  bufdoubles(100)
    real(DP) :: qmcoords(3, size(x,1)), vels(3,size(vx,1) )
-   integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iw, iat, itrj, i, ist1, ist2
    integer  :: bufints(NSTMAX*(NSTMAX-1)/2+NSTMAX)
    integer, parameter :: FMSInit = 0
@@ -336,7 +333,7 @@ end subroutine send_terash
 
 subroutine init_terash(x, y, z)
    use mod_const, only: DP, ANG
-   use mod_general, only: idebug, nwalk, DP, natom
+   use mod_general, only: idebug, DP, natom
    use mod_system, only: names
    use mod_qmmm, only: natqm
    use mod_sh_integ, only: nstate
@@ -353,7 +350,7 @@ subroutine init_terash(x, y, z)
    newcomm = newcomms(1)
 
    iw = 1
-   do iat=1, natqm
+   do iat=1, natom
       qmcoords(1,iat) = x(iat,iw)
       qmcoords(2,iat) = y(iat,iw)
       qmcoords(3,iat) = z(iat,iw)
@@ -454,7 +451,7 @@ subroutine read_wfn()
    use mod_chars, only: chknow
    use mod_utils, only: abinerror, archive_file
    use mod_sh_integ,    only: nstate
-   character(len=200)    :: chout, chsystem
+   character(len=200)    :: chout
    logical  :: file_exists
    integer  :: temp, temp2, time_step
    real(DP) :: stime

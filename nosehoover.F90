@@ -149,7 +149,7 @@ module mod_nhc
    if(initNHC.eq.1.and.imasst.eq.1)then
       do inh=1,nchain
          do iw=1,nwalk
-            call gautrg(ran,natom*3,0,6)
+            call gautrg(ran, natom * 3)
             ipom=1
             do iat=1,natom 
                pnhx(iat,iw,inh) = ran(ipom)   * sqrt(temp*Qm(iw))
@@ -165,7 +165,7 @@ module mod_nhc
       do inh=1,nchain
          do iw=1,nwalk
             ! +1 if nmolt=1, gautrg needs array at least of length=2
-            call gautrg(ran,nmolt+1,0,6)
+            call gautrg(ran, nmolt + 1)
             do imol=1,nmolt 
                pnhx(imol,iw,inh)=ran(imol)*sqrt(temp*ms(imol,inh))
             enddo

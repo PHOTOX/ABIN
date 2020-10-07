@@ -3,8 +3,8 @@ the GNU General Public License, either version 3 of the License,
 or any later version, except for parts noted below.
 A copy of this license is given later in this file. 
 
-Random number generator was kindly provided by prof. M. Lewerenze
-and is provided under GNU GPL v3 license. See random.f90
+The random number generator in random.f90 was kindly provided by prof. M. Lewerenze
+and is distributed under the GNU GPL v3 license. See random.f90
 
 ==============================================================================
 Here is the text of the GPL license:

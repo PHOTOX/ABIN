@@ -29,7 +29,6 @@ module mod_gle
    real(DP)         :: langham
    integer          :: ns, ns_centroid, readQT=1
    real(DP), allocatable :: c1(:), c2(:)
-   integer  :: iglobal = 0
    save
 
 contains
@@ -87,7 +86,7 @@ contains
    integer :: iat, iw, pom
 
    pom=1
-   call gautrg(ran,natom*3*nwalk,0,6)
+   call gautrg(ran, natom * 3 * nwalk)
 
    ! This is a local version of the thermostat (PILE-L)
    ! TODO: implement global version according to equations 51-54
@@ -109,7 +108,7 @@ contains
   
    subroutine gle_init(dt)
    use mod_const, only: AUtoEV
-   use mod_general,only: natom, nwalk, inormalmodes, my_rank, iremd, irest
+   use mod_general,only: natom, nwalk, inormalmodes, my_rank, iremd
    use mod_utils, only: abinerror
    use mod_nhc,only: temp,inose
    implicit none
@@ -287,7 +286,7 @@ contains
    end subroutine gle_init
 
    subroutine initialize_momenta(C, iw)
-   use mod_arrays,  only: px, py, pz
+   !use mod_arrays,  only: px, py, pz
    use mod_general, only: natom
    use mod_utils,   only: abinerror
    real(DP), intent(in) :: C(:,:)
@@ -296,14 +295,14 @@ contains
    integer  :: i, j
    ! WARNING: this routine must be called after arrays are allocated!
    if(.not.allocated(ps))then
-      write(*,*)"WHOOOPS: Fatal programming error int gle.F90!!"
+      write(*,*)"WHOOOPS: Fatal programming error in gle.F90!"
       call abinerror("initialize_momenta")
    end if
 
    allocate(gr(ns+1))
 
    do j=1,natom*3
-      call gautrg(gr,ns+1,0,6)
+      call gautrg(gr, ns + 1)
       ! TODO, actually pass this to initialize momenta
       gp(j,:) = matmul(C, gr)
    end do
@@ -404,7 +403,7 @@ contains
 
 
    subroutine gle_propagate(p, T, S, mass, iw)
-   use mod_general, only: natom, inormalmodes
+   use mod_general, only: natom
    real(DP), intent(inout) :: p(:,:)
    real(DP), intent(in) :: T(:,:), S(:,:), mass(:,:)
    real(DP)  :: sqm
@@ -422,7 +421,7 @@ contains
    ! now, must compute random part. 
    ! first, fill up p of random n
    do i=1,ns+1
-      call gautrg(ran,natom*3,0,6)
+      call gautrg(ran, natom*3)
       do j=1,natom
          sqm = sqrt( mass(j,iw) )
          !<-- if m!= 1, alternatively one could perform the scaling here (check also init!)

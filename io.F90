@@ -10,20 +10,18 @@ module mod_io
 
    subroutine print_charges(charges, iw_ist)
    use mod_files, only: UCHARGES
-   use mod_general, only: nwalk, natom, it
-   use mod_system, only: names
+   use mod_general, only: natom, it
    use mod_const, only: DP
    integer, intent(in)  :: iw_ist
    real(KIND=DP),intent(in) :: charges(:)
    integer :: iat
 
-   write(UCHARGES, format5, advance='no')it,iw_ist
+   write(UCHARGES, format5, advance='no')it, iw_ist
    do iat=1,natom
       write(UCHARGES,format4, advance='no')charges(iat)
    enddo
 
    write(UCHARGES,*)
-
    end subroutine print_charges
 
    subroutine print_dipoles(dipoles, iw, nstates)
@@ -34,7 +32,7 @@ module mod_io
    real(KIND=DP) :: total_dip
    integer :: ind
 
-   write(UDIP,format1,advance='no')it
+   write(UDIP,format1,advance='no')it, iw
 
    do ind=1,3*nstates,3
       total_dip = dipoles(ind)**2 + dipoles(ind+1)**2 + dipoles(ind+2)**2
@@ -51,7 +49,7 @@ module mod_io
 
    subroutine print_transdipoles(tdipoles, istate, ntdip)
    use mod_files,  only: UTDIP
-   use mod_general,only: nwalk, natom, it
+   use mod_general,only: it
    integer, intent(in)  :: istate, ntdip
    real(KIND=DP),intent(in) :: tdipoles(:)
    real(KIND=DP) :: total_tdip

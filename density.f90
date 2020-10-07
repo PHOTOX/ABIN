@@ -25,7 +25,7 @@ module mod_density
    end subroutine dist_init
 
    subroutine density(x,y,z)
-   use mod_general,  only: it, nwalk, nwrite, pot,natom
+   use mod_general,  only: it, nwalk, nwrite
    use mod_system,   only: dime
    use mod_utils,    only: get_distance, abinerror
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)

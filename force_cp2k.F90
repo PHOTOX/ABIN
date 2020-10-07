@@ -158,7 +158,7 @@ end subroutine finalize_cp2k
 #endif
 
 subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
-   use mod_general,  only: natom, iqmmm, idebug, my_rank,mpi_world_size, nwalk
+   use mod_general,  only: natom, iqmmm, idebug, my_rank, mpi_world_size, nwalk
    use mod_utils,    only: abinerror
    use mod_interfaces, only: oniom
    use mod_utils,    only: abinerror

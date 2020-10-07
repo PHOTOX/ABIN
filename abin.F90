@@ -24,12 +24,11 @@ program abin_dyn
    use mod_lz, only: lz_hop
    use mod_kinetic, ONLY: temperature
    use mod_utils, only: abinerror, archive_file, get_formatted_date_and_time
-   use mod_shake, only: nshake
    use mod_transform
    use mod_mdstep
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
-   use mod_interfaces, only: force_clas, force_quantum
+   use mod_interfaces
    use mod_en_restraint
    use mod_plumed
    use mod_terampi_sh, only: move_new2old_terash
@@ -61,7 +60,7 @@ program abin_dyn
 
 !  Surface hopping initialization
    if(ipimd.eq.2.or.ipimd.eq.4)then
-      call sh_init(x, y, z, vx, vy, vz, dt)
+      call sh_init(x, y, z, vx, vy, vz)
    endif
 
 !$ nthreads = omp_get_max_threads()
@@ -246,7 +245,8 @@ program abin_dyn
             cycle
          end if
       
-         call temperature(px,py,pz,amt,dt,eclas)
+         ! TODO: Move this call inside analysis() subroutine
+         call temperature(px, py, pz, amt, eclas)
 
          if(istage.eq.1)then     
 
@@ -254,7 +254,7 @@ program abin_dyn
             call QtoX(x,y,z,transx,transy,transz)
             call FQtoFX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
             call analysis (transx,transy,transz,transxv,transyv,transzv,  &
-                         transfxc,transfyc,transfzc,amt,eclas,equant,dt)
+                         transfxc,transfyc,transfzc,amt,eclas,equant)
 
          else if(inormalmodes.gt.0)then
 
@@ -262,10 +262,10 @@ program abin_dyn
             call UtoX(vx,vy,vz,transxv,transyv,transzv)
             call UtoX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
             call analysis (transx,transy,transz,transxv,transyv,transzv,  &
-                         transfxc,transfyc,transfzc,amt,eclas,equant,dt)
+                         transfxc,transfyc,transfzc,amt,eclas,equant)
          else
       
-            call analysis (x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant,dt)
+            call analysis (x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant)
 
          endif
          

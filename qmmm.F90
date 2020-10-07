@@ -7,5 +7,7 @@ module mod_qmmm
    public :: natqm, natmm
    integer :: natqm, natmm
    ! NOT used anywhere at the moment
-   character(len=10)    :: qmmmtype='NA'
+   !character(len=10)    :: qmmmtype='NA'
+   ! Maybe move iqmmm here
+   ! TODO: Move ONIOM here
 end module mod_qmmm

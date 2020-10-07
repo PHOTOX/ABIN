@@ -12,7 +12,9 @@ module mod_sh
    ! We would need to read sh namelist inside this module
    ! and we should check input sanity here, not in input.F90
    public :: istate_init, substep, deltaE, inac, nohop, decoh_alpha, popthr, nac_accu1, nac_accu2
-   public :: surfacehop, sh_init, ehrenfest_forces
+   public :: surfacehop, sh_init
+   ! Not implemented yet
+   !public :: ehrenfest_forces
    public :: istate, ntraj, tocalc, en_array
    public :: nacx, nacy, nacz
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
@@ -65,14 +67,13 @@ module mod_sh
 
 
 !  INITIALIZATION ROUTINE (ugly, but works)
-   subroutine sh_init(x, y, z, vx, vy, vz, dt)
+   subroutine sh_init(x, y, z, vx, vy, vz)
    use mod_const,      only: AUtoEV
-   use mod_general,    only: irest, natom, it, pot
+   use mod_general,    only: irest, natom, pot
    use mod_interfaces, only: force_clas
    use mod_kinetic,    only: ekin_v
    real(DP),intent(inout)  :: x(:,:), y(:,:), z(:,:)
    real(DP),intent(in)     :: vx(:,:), vy(:,:), vz(:,:)
-   real(DP),intent(in)     :: dt
    real(DP)  :: dum_fx(size(x,1),size(x,2))
    real(DP)  :: dum_fy(size(y,1),size(y,2))
    real(DP)  :: dum_fz(size(z,1),size(z,2))
@@ -416,7 +417,6 @@ module mod_sh
 
 
    subroutine read_tdc(itrj, dt)
-   use mod_qmmm,only:natqm
    integer, intent(in)  :: itrj
    real(DP), intent(in) :: dt
    integer :: ist1, ist2, iunit, ijunk
@@ -496,15 +496,16 @@ module mod_sh
 
    !*************************************
    ! This is the main Ehrenfest routine !
+   !     !!   NOT IMPLEMENTED YET !!    !
    !*************************************
-   subroutine ehrenfest_forces(x, y, z, fxc, fyc, fzc, px, py, pz, dt, eclas)
+!   subroutine ehrenfest_forces(x, y, z, fxc, fyc, fzc, px, py, pz, dt, eclas)
 !   This subroutine must be called midstep in velocity verlet, after we call force_clas
 !    use mod_arrays, only: vx, vy, vz, vx_old, vy_old, vz_old
-    real(DP),intent(in) :: x(:,:), y(:,:), z(:,:)
-    real(DP),intent(in) :: px(:,:), py(:,:), pz(:,:)
-    real(DP),intent(in) :: fxc(:,:), fyc(:,:), fzc(:,:)
-    real(DP), intent(in) :: dt
-    real(DP), intent(inout) :: eclas
+!    real(DP),intent(in) :: x(:,:), y(:,:), z(:,:)
+!    real(DP),intent(in) :: px(:,:), py(:,:), pz(:,:)
+!    real(DP),intent(in) :: fxc(:,:), fyc(:,:), fzc(:,:)
+!    real(DP), intent(in) :: dt
+!    real(DP), intent(inout) :: eclas
 
 !    vx = px  ! these are momenta from time dt/2 !
 !    vy = py
@@ -512,9 +513,6 @@ module mod_sh
 
 !   call GET_NACME() ! calculate NACM at time DT
 
-
-   
-!   
 !   It has to extrapolate velocities from v(dt/2) to v(dt)
 !   This extrapolation can be quite accurate, since we can calculate approximate ehrenfest forces
 !   from eq XX simply by taking cel_re and cel_im from previous time step
@@ -538,7 +536,7 @@ module mod_sh
 !   At the end, don't forget to move ehrenfest forces to fxc(:,1) etc.
 !   fxc(:,1) = fx_eh
 
-   end subroutine ehrenfest_forces
+!   end subroutine ehrenfest_forces
 
 
 
@@ -547,7 +545,7 @@ module mod_sh
    !******************************
    subroutine surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
    use mod_const,    ONLY: ANG, AUTOFS
-   use mod_general,  ONLY: natom, pot, nwrite, idebug, it, sim_time
+   use mod_general,  ONLY: natom, nwrite, idebug, it, sim_time
    use mod_system,   ONLY: names
    use mod_files,    ONLY: UPOP,UPROB,UPES,UWFCOEF,UWFCOEF,UNACME, UBKL,UPHASE,UDOTPROD
    use mod_qmmm,     ONLY: natqm
@@ -733,7 +731,8 @@ do itrj=1,ntraj
          enddo
 
          ihop=0
-         call vranf(ran,1,0,6)
+         ! Get one random number between 0 and 1
+         call vranf(ran, 1)
          hop_rdnum = ran(1)
 
          ! determine, whether we hopped or not
@@ -942,7 +941,7 @@ enddo
 
 
    subroutine hop_dot(vx,vy,vz,instate,outstate,itrj,eclas)
-      use mod_general, ONLY:natom, idebug, pot
+      use mod_general, ONLY:natom, pot
       use mod_kinetic ,ONLY: ekin_v
       use mod_arrays,   ONLY: fxc, fyc, fzc, x, y, z
       use mod_interfaces, only: force_clas

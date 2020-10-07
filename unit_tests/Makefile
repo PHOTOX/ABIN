@@ -14,15 +14,13 @@ ifneq ($(strip $(PFUNIT_PATH)),)
   FFLAGS = $(PFUNIT_EXTRA_FFLAGS)
   FFLAGS += -I../
 endif
- 
-STATIC_LIBS = ../libabin.a ../WATERMODELS/libwater.a
 
-LDLIBS = -lm -lstdc++ ${LIBS}
+# NOTE: $(LIBS) are defined in the root Makefile
 
 utils_TESTS := test_utils.pf
 utils_REGISTRY :=
 utils_OTHER_SOURCES :=
-utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../" -labin -L"../WATERMODELS/" -lwater $(LDLIBS)
+utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../" -labin -L"../WATERMODELS/" -lwater ${LIBS}
 utils_OTHER_INCS :=
 
 $(eval $(call make_pfunit_test,utils))

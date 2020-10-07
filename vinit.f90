@@ -32,7 +32,7 @@ module mod_vinit
 !
 !------------------------------------------------------------------------
 SUBROUTINE vinit(TEMP, MASS, vx, vy, vz)
-   USE mod_general,  ONLY: natom, pot, nwalk, my_rank
+   USE mod_general,  ONLY: natom, pot, nwalk
    USE mod_random,   ONLY: gautrg
    real(DP),intent(out)    :: vx(:,:), vy(:,:), vz(:,:)
    real(DP),intent(in)     :: mass(:)
@@ -42,7 +42,7 @@ SUBROUTINE vinit(TEMP, MASS, vx, vy, vz)
 
    do iw=1,nwalk
 
-      call gautrg(rans,natom*3,0,6)  
+      call gautrg(rans, natom*3)
 
       pom=1
       do iat=1,natom
@@ -156,7 +156,7 @@ END SUBROUTINE remove_comvel
 
 subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
    use mod_system,      only: dime
-   use mod_general,     only: natom, nwalk, my_rank, pot
+   use mod_general,     only: natom, nwalk, my_rank
    real(DP),intent(in)     :: x(:,:), y(:,:), z(:,:)
    real(DP),intent(inout)  :: vx(:,:), vy(:,:), vz(:,:)
    real(DP),intent(in)     :: masses(:)
@@ -291,7 +291,7 @@ END SUBROUTINE REMOVE_ROTATIONS
       real(DP),intent(inout) :: px(:,:),py(:,:),pz(:,:)
       integer, intent(in) :: constrained_atoms
       integer :: iw,iat
-!     if (my_rank.eq.0) write(*,*)'Removing momentum of constrained atoms.'
+      if (my_rank.eq.0) write(*,*)'Removing momentum of constrained atoms.'
       do iw = 1, nwalk
          do iat = 1, constrained_atoms
             px(iat,iw) = 0.0d0

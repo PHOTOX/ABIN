@@ -141,7 +141,7 @@ module mod_lz
 
    !Hop?
    ihop=0
-   call vranf(ran,1,0,6)
+   call vranf(ran, 1)
    hop_rdnum = ran(1)
 
    ! Determine, whether we hopped or not
@@ -156,7 +156,7 @@ module mod_lz
    end do 
 
    ! Determine on which state (weighted sampling of all probable hops)
-   call vranf(ran,1,0,6)
+   call vranf(ran, 1)
    hop_rdnum2 = ran(1)
    do ist1=ibeg, iend
       if (ist1.eq.ist) cycle
@@ -246,7 +246,7 @@ module mod_lz
 
      Ekin = ekin_v(vx,vy,vz)
      molveloc = sqrt(2.0d0*Ekin/sum(am(1:natom)))
-     call vranf(ran,1,0,6)
+     call vranf(ran,1)
      hop_rdnum = ran(1)
      icross=0
 

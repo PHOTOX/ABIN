@@ -18,7 +18,6 @@ CONTAINS
    !TODO: make general subroutine check_mpi_error in utils.f90 and check every ierr
    subroutine remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
    use mod_general, only: my_rank, it
-   use mod_nhc,     only: temp
    use mod_random,  only: vranf
    real(DP),intent(inout)   ::  x(:,:), y(:,:), z(:,:)
    real(DP),intent(inout)   ::  px(:,:), py(:,:), pz(:,:)
@@ -31,7 +30,7 @@ CONTAINS
 
 
    ! Broadcast array of random numbers from rank 0 
-   if (my_rank.eq.0) call vranf(ran, nreplica-1, 0, 6)
+   if (my_rank.eq.0) call vranf(ran, nreplica - 1)
 
    ! TODO: This is probably no longer needed, each mpi rank has now
    ! "independent" prngs...
@@ -101,7 +100,6 @@ CONTAINS
 
    subroutine swap_replicas(x, y, z, px, py, pz, fxc, fyc, fzc, rank1, rank2)
    use mod_general, only: my_rank 
-   use mod_nhc,     only: temp
    real(DP),intent(inout)  ::  x(:,:), y(:,:), z(:,:)
    real(DP),intent(inout)  ::  px(:,:), py(:,:), pz(:,:)
    real(DP),intent(inout)  ::  fxc(:,:), fyc(:,:), fzc(:,:)

@@ -29,7 +29,7 @@ NAME
    configure - generate local configuration for ABIN
 
 SYNOPSIS
-   configure [--debug] [--mpi path/to/mpi] [--plumed path/to/plumed] [--pfunit path/to/pfunit] [--cp2k]
+   configure [--debug] [--mpi path/to/mpi] [--plumed path/to/plumed/lib] [--pfunit path/to/pfunit] [--cp2k]
 
 OPTIONS
    --debug       Compile in debug mode
@@ -109,7 +109,7 @@ done
 
 # Set to default if FFLAGS is not defined yet, see
 # https://stackoverflow.com/questions/11362250/in-bash-how-do-i-test-if-a-variable-is-defined-in-u-mode
-: ${FFLAGS:='-O2 -fopenmp'}
+: ${FFLAGS:='-O2 -fopenmp -Wall'}
 
 if [[ -z ${FC-} ]];then
    if [[ $MPI = "TRUE" ]];then
@@ -135,8 +135,8 @@ CXX="c++"
 CXXFLAGS="-O2 -Wall -std=c++11"
 
 if [[ $PLUMED = "TRUE" ]];then
-   if [[ ! -f $PLUMED_PATH/Plumed.inc ]];then
-      echo "File $PLUMED_PATH/Plumed.inc does not exist!"
+   if [[ ! -f $PLUMED_PATH/lib/Plumed.inc ]];then
+      echo "File $PLUMED_PATH/lib/Plumed.inc does not exist!"
       exit 1
    fi
 fi
@@ -169,7 +169,7 @@ MPI_PATH = $MPI_PATH
 
 # Compilation with Plumed library
 PLUMED = $PLUMED
-PLUMED_LINK = $PLUMED_PATH/Plumed.inc
+PLUMED_INC = $PLUMED_PATH/lib/Plumed.inc
 
 # FFTW library is typically shipped with your system
 # It is needed for normal mode coordinate transformation in PIMD

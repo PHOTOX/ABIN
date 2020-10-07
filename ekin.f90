@@ -9,7 +9,7 @@ module mod_kinetic
    real(DP) :: est_temp_cumul=0.0d0,entot_cumul=0.0d0
    save
    contains
-   subroutine temperature(px,py,pz,amt,dt,eclas)
+   subroutine temperature(px, py, pz, amt, eclas)
       use mod_const, ONLY:AUtoFS,AUtoK
       use mod_general
       use mod_system,ONLY: dime, f, conatom
@@ -21,7 +21,7 @@ module mod_kinetic
       integer :: iw,iat
       real(DP),intent(in)  :: px(:,:),py(:,:),pz(:,:)
       real(DP),intent(in)  :: amt(:,:)
-      real(DP),intent(in)  :: dt,eclas
+      real(DP),intent(in)  :: eclas
       real(DP)  :: est_temp,temp1,ekin_mom
       real(DP)  :: it2
       

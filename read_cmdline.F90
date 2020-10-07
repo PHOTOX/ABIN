@@ -26,11 +26,10 @@ module mod_cmdline
 
 
    subroutine get_cmdline(chinput, chcoords, chveloc, tc_port)
-      use mod_utils, only: abinerror, file_exists_or_exit
+   use mod_utils, only: abinerror, file_exists_or_exit
    character(len=*),intent(inout) :: chinput, chcoords, chveloc, tc_port
    character(len=len(chinput)) :: arg
    integer :: i
-   logical :: lexist
    
    i = 0
    do while (i < command_argument_count())

@@ -10,12 +10,15 @@ module mod_plumed
 CONTAINS
 
 subroutine plumed_init(dt)
-   use mod_general, only: natom, nwalk, irest
+   ! TODO: Plumed restart not working yet (I think)
+   use mod_general, only: natom !, irest
    use mod_const,   only: ANG, AUTOFS
+   use mod_utils, only: abinerror
    implicit none
-   real, parameter :: kB=8.3144621d-3
+   real(DP), parameter :: kB = 8.3144621D-3
    real(DP) :: dt, plumed_kbt, plumed_energyUnits, plumed_lengthUnits, plumed_timeUnits
    character(256) :: plumedoutfile
+   integer, parameter :: MIN_API_VERSION = 2
    integer  :: api_version
 
    !variables computation
@@ -26,8 +29,25 @@ subroutine plumed_init(dt)
    plumedoutfile = 'plumed.out'
 
 #ifdef USE_PLUMED
-   ! plumed init
+   ! Initialize the main plumed object
+   ! This must be the very first call!
    call plumed_f_gcreate()
+
+   ! This is valid only if API VERSION > 2
+   ! Pointer to an integer saying if we are restarting
+   ! (zero means no, one means yes)
+   ! We need to test this properly to make sure this works!
+   ! Also need to figure out when exactly this needs to be called
+   ! plumed_cmd(plumedmain,"setRestart",&res);
+
+   ! Get the API version from linked PLUMED
+   call plumed_f_gcmd("getApiVersion"//char(0),api_version);
+   write(*,*)"PLUMED API VERSION:", api_version
+   if (api_version.lt.MIN_API_VERSION) then
+      write(*,*)'ERROR: Plumed version not supported'
+      call abinerror('plumed_init')
+   end if
+
    call plumed_f_gcmd("setRealPrecision"//char(0),8)
    call plumed_f_gcmd("setMDEnergyUnits"//char(0),plumed_energyUnits)
    call plumed_f_gcmd("setMDLengthUnits"//char(0),plumed_lengthUnits)
@@ -38,16 +58,6 @@ subroutine plumed_init(dt)
    call plumed_f_gcmd("setTimestep"//char(0),dt)
    call plumed_f_gcmd("setKbT"//char(0),plumed_kbt)
    call plumed_f_gcmd("setLogFile"//char(0),trim(adjustl(plumedoutfile))//char(0)) 
-
-    ! TODO: 
-     
-    ! Require at least version 2
-    ! plumed_f_gcmd("getApiVersion"//char(0),api_version);   ! Pass the api version that plumed is using
-
-    ! This is valid only if API VERSION > 2
-    ! plumed_cmd(plumedmain,"setRestart",&res);                      // Pointer to
-    ! an integer saying if we are restarting (zero means no, one means yes)
-
  
    call plumed_f_gcmd("init"//char(0),0);
 #endif
@@ -55,7 +65,7 @@ end subroutine plumed_init
 
 
 subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
-   use mod_general,  only: natom, it, nwrite, nwalk
+   use mod_general,  only: natom, it, nwalk
    use mod_const,    only: AMU
    use mod_system,   only: am
    implicit none
@@ -104,12 +114,13 @@ subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
    call plumed_f_gcmd("setForcesY"//char(0),fyy)
    call plumed_f_gcmd("setForcesZ"//char(0),fzz)
    call plumed_f_gcmd("calc"//char(0),0); 
-! http://plumed.github.io/doc-v2.0/developer-doc/html/class_p_l_m_d_1_1_plumed_main.html#a4da81a378216f0739fe50bf620d72655
-   ! TODO: call plumed_cmd(plumedmain,"fflush"//char(0)); every nwrite
+   ! http://plumed.github.io/doc-v2.0/developer-doc/html/class_p_l_m_d_1_1_plumed_main.html#a4da81a378216f0739fe50bf620d72655
+   ! TODO: call plumed_cmd(plumedmain,"fflush"//char(0)) every nwrite
 
 #endif
 
 
+   ! TODO: Is this correct? Should these forces be scaled?
    do iat=1,natom
       fx(iat,iw) = fx(iat,iw) + fxx(iat) * nwalk  !Adding PLUMED forces to current ones, nwalk scaling for PIMD
       fy(iat,iw) = fy(iat,iw) + fyy(iat) * nwalk

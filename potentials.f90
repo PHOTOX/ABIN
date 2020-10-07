@@ -1,15 +1,15 @@
 !  Various analytical potentials
 !  Now including harmonic potential for diatomic molecule, 3D-harmonic and Morse
 !  For all these, hessian is also available.
-!  Now also includes double-well potential, originaly used for testing PLUMED.
-!  
-!  Parameters should be set in input section system
 
-!------------------------------------------------------
-!     some constansts for analytical potentials      
+!  Includes double-well potential, originaly used for testing PLUMED.
+!  
+!  Parameters should be set in input section 'system'
+
 module mod_harmon
    use mod_const, only: DP
    implicit none
+!--some constansts for analytical potentials      
 !--constants for 3DHO
    real(DP) :: k1=0.0d0,k2=0.0d0,k3=0.0d0
 !--constants for 1D 2-particle harmonic oscillator
@@ -24,6 +24,7 @@ module mod_harmon
    CONTAINS
 
 !------3D Harmonic Oscillator---only 1 particle!!
+   ! TODO: Rename this function to force_harmonic_oscillator()
    subroutine force_2dho(x,y,z,fxab,fyab,fzab,eclas)
       use mod_general, only: nwalk
       real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
@@ -47,11 +48,12 @@ module mod_harmon
       return
    end subroutine force_2dho
       
-!oooooooo DOUBLE WELL potential -- ref. Tuckerman, Statistical Mechanics,p350 --oooooooooooooooo
-  subroutine  force_doublewell(x,y,z,fxab,fyab,fzab,eclas)
+  ! 2D DOUBLE WELL potential
+  ! According to: Tuckerman, Statistical Mechanics, page 350
+  subroutine  force_doublewell(x,y,fxab,fyab,eclas)
       use mod_general, only: nwalk
-      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
-      real(DP),intent(out) :: fxab(:,:),fyab(:,:),fzab(:,:)
+      real(DP),intent(in)  :: x(:,:), y(:,:)
+      real(DP),intent(out) :: fxab(:,:), fyab(:,:)
       real(DP),intent(out) :: eclas
       integer              :: i
 
@@ -60,7 +62,6 @@ module mod_harmon
       do i=1,nwalk
          fxab(1,i) = -4*D0_dw*x(1,i) * (x(1,i)**2-r0_dw**2) - lambda_dw*y(1,i)
          fyab(1,i) = -k_dw * y(1,i) - lambda_dw*x(1,i)
-         fzab(1,i) = 0
          eclas = eclas + D0_dw*(x(1,i)**2-r0_dw**2)**2 + &
             0.5*k_dw*y(1,i)**2 + lambda_dw*x(1,i)*y(1,i)
       enddo
@@ -71,6 +72,7 @@ module mod_harmon
 
 
 !ccccccccHARMONIC OSCILLATOR--diatomic molecules--ccccccccccccccccccccc
+   ! TODO: Rename this, name should be distiguishable from force_2dho
    subroutine force_harmon(x,y,z,fxab,fyab,fzab,eclas)
       use mod_general, only: nwalk
       real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
@@ -265,6 +267,7 @@ module mod_harmon
 end module mod_harmon
 
 
+! 1D numerical potential with cubic splines
 module mod_splined_grid
    use mod_const, only: DP
    implicit none
@@ -287,17 +290,18 @@ CONTAINS
       return
    end function potential_cubic_spline
 
-   subroutine force_splined_grid(x, y, z, fx, fy, fz, eclas)
+   ! TODO: Remove y and z components from arguments, since we 
+   ! only support 1D spline at the moment
+   subroutine force_splined_grid(x, fx, eclas)
       use mod_general,  only: nwalk
       use mod_utils,    only: abinerror
-      real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
-      real(DP),intent(out) :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(in)  :: x(:,:)
+      real(DP),intent(out) :: fx(:,:)
       real(DP),intent(out) :: eclas
       real(DP) :: en_1, en_2, dx = 0.0001d0
-!      real(DP) :: potential_cubic_spline
       integer  :: iw
 
-      fy = 0.0d0; fz = 0.0d0; eclas = 0.0d0
+      eclas = 0.0d0
       do iw = 1, nwalk
 
          if(x(1, iw).lt.x_min.or.x(1, iw).gt.x_max)then

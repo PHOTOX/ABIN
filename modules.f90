@@ -139,29 +139,28 @@ module mod_system
    CONTAINS
 
    ! We should loop over this function over different beads
-   subroutine read_properties(traj_prop)
-   use mod_general, only: nwalk, natom
-   type(Traj_Properties), intent(out) :: traj_prop(:)
-   integer :: iw
+   !subroutine read_properties(traj_prop)
+   ! use mod_general, only: nwalk, natom
+   !type(Traj_Properties), intent(inout) :: traj_prop(:)
+   !integer :: iw
 
    ! we should make some generalized reading function in utils
    ! i.e. dipole moments and transition dipolo moments can reuse
    ! (e.g. simply read..) but where should we open the unit? 
    ! but maybe not, these things might be rather different?
 
-   do iw = 1, nwalk
+   !do iw = 1, nwalk
 
-   end do
+   !end do
 
-   end subroutine read_properties
+   !end subroutine read_properties
 
-   subroutine write_properties(traj_prop)
-   type(Traj_Properties), intent(out) :: traj_prop
+   !subroutine write_properties(traj_prop)
+   !type(Traj_Properties), intent(inout) :: traj_prop
 
    ! should introduce nwriteprop
    ! by default should equal nwritex
-
-   end subroutine write_properties
+   !end subroutine write_properties
 
    subroutine clean_prop_tempfiles
 
