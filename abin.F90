@@ -123,7 +123,9 @@ program abin_dyn
 #endif
       ! getting initial forces and energies
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot) 
-      if (ipimd.eq.1) call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
+      if (ipimd.eq.1)then
+         call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
+      end if
 
       ! if we use reference potential with RESPA
       if(pot_ref.ne.'none')then
@@ -170,7 +172,9 @@ program abin_dyn
 #ifdef MPI
             call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
-            if (my_rank.eq.0) call system('rm EXIT')
+            if (my_rank.eq.0)then
+               call system('rm EXIT')
+            end if
 
             exit                                          !break from time loop
 
@@ -206,8 +210,10 @@ program abin_dyn
             py = amt * vy
             pz = amt * vz
 
-            ! TODO: this should probably be in the surfacehop routine
-            if(pot.eq.'_tera_') call move_new2old_terash()
+            ! TODO: this should be in the surfacehop routine
+            if(pot.eq.'_tera_')then
+               call move_new2old_terash()
+            end if
 
          endif
 
@@ -235,7 +241,9 @@ program abin_dyn
          ! this would not be the case for REMD
 
 
-         if(modulo(it,ncalc).ne.0) cycle
+         if (modulo(it,ncalc).ne.0)then
+            cycle
+         end if
       
          call temperature(px,py,pz,amt,dt,eclas)
 
@@ -376,19 +384,31 @@ subroutine finish(error_code)
 
    do i=2,MAXUNITS
       inquire(unit=i,opened=lopen)
-      if (lopen.and.i.ne.5.and.i.ne.6) close(i)
+      ! TODO: This is not portable, do not hardcode 5 and 6!
+      if (lopen.and.i.ne.5.and.i.ne.6)then
+         close(i)
+      end if
    end do
 
-!--------------CLEANING-------------------------
-   if (allocated(hess)) deallocate ( hess )
-   if (allocated(h)) deallocate ( h )
+   if (allocated(hess))then
+      deallocate ( hess )
+   end if
+   if (allocated(h))then
+      deallocate ( h )
+   end if
 
 #ifdef USEFFTW
-   if (inormalmodes.gt.0) call fftw_end()
+   if (inormalmodes.gt.0)then
+      call fftw_end()
+   end if
 #endif
 
-   if(inose.eq.1) call finalize_nhc()
-   if(inose.gt.1.and.inose.lt.5) call finalize_gle()
+   if(inose.eq.1)then
+      call finalize_nhc()
+   end if
+   if(inose.gt.1.and.inose.lt.5)then
+      call finalize_gle()
+   end if
 
 #ifdef MPI
 if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
@@ -405,7 +425,9 @@ end if
 #endif
 #ifdef CP2K
 !  MPI_FINALIZE is called in this routine as well
-   if(pot.eq.'_cp2k_') call finalize_cp2k()
+   if(pot.eq.'_cp2k_')then
+      call finalize_cp2k()
+   end if
 #endif
 
 !   PLUMED closing session
@@ -415,7 +437,9 @@ end if
     end if
 #endif
 
-if(ipimd.eq.5) call lz_finalize()
+if(ipimd.eq.5)then
+   call lz_finalize()
+end if
 
 end subroutine finish
 
