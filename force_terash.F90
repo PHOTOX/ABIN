@@ -9,7 +9,7 @@ module mod_terampi_sh
    implicit none
    private
 #ifdef USE_MPI
-   public :: init_terash, send_terash
+   public :: init_terash
 #endif
    public :: force_terash, finalize_terash
    public :: write_wfn, read_wfn, move_new2old_terash, move_old2new_terash
