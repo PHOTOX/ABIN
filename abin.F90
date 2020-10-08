@@ -21,7 +21,7 @@ program abin_dyn
    use mod_arrays
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
-   use mod_lz, only: lz_hop
+   use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, ONLY: temperature
    use mod_utils, only: abinerror, archive_file, get_formatted_date_and_time
    use mod_transform
@@ -63,6 +63,7 @@ program abin_dyn
       call sh_init(x, y, z, vx, vy, vz)
    else if(ipimd.eq.5.and.pot.eq.'_tera_')then
       call sh_init(x, y, z, vx, vy, vz)
+      call lz_rewind(en_array_lz)
    endif
 
 !$ nthreads = omp_get_max_threads()
@@ -127,6 +128,9 @@ program abin_dyn
       if (ipimd.eq.1)then
          call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
       end if
+
+      ! Correct energy history for LZ 
+      if(ipimd.eq.5)  call lz_rewind(en_array_lz) 
 
       ! if we use reference potential with RESPA
       if(pot_ref.ne.'none')then

@@ -22,7 +22,7 @@ subroutine init(dt)
    use mod_harmon
    use mod_sh_integ, only: nstate, integ, phase, popsumthr, correct_decoherence
    use mod_sh
-   use mod_lz,       only: lz_init, initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz
+   use mod_lz
    use mod_qmmm, only: natqm, natmm
    use mod_force_mm
    use mod_gle
@@ -93,7 +93,7 @@ subroutine init(dt)
                      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, natmm_tera, &
                      dE_S0S1_thr, correct_decoherence
              
-   namelist /lz/     initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz 
+   namelist /lz/     initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz 
 
    namelist /qmmm/   natqm,natmm,q,rmin,eps,attypes
 
@@ -857,7 +857,7 @@ subroutine init(dt)
        endif
       endif
       if(ipimd.eq.5.and.pot.eq.'_tera_'.and.ntriplet_lz.gt.0)then
-         write(*,*)'ERROR: LZ S/T not implemented with TeraChem over MPI'
+         write(*,*)'ERROR: Landau-Zener with Singlet-Triplet transitions not implemented with TeraChem over MPI.'
          error=1
       endif
       if(ipimd.eq.5.and.nwalk.ne.1)then
@@ -930,6 +930,10 @@ subroutine init(dt)
              write(*,*)'Error(LZ): Sum of singlet and triplet states must give total number of states. Exiting...'
              error=1
           endif
+      endif
+      if(energydifthr_lz.lt.0)then
+       write(*,*)'Parameter energydifthr_lz must be positive number in eV units.'
+       error=1
       endif
       if(nac_accu1.le.0.or.nac_accu2.lt.0)then
        write(*,*)'Input error:NACME precision must be a positive integer.'

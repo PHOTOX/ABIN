@@ -5,24 +5,25 @@
 ! Implemented by: J. Suchan, (J. Chalabala)
 
 ! No S/T TeraChem functionality YET
-! No energy checks
+! No energy drift check
 ! No PIMD functionality
 
 module mod_lz
    use mod_const, only: DP
    use mod_utils, only: abinerror
-   use mod_general, only: nwalk, pot
+   use mod_general, only: nwalk, pot, irest
    use mod_array_size, only: NSTMAX, NTRAJMAX
    use mod_sh, only: istate_init, istate, inac  !TERA-MPI interface
    use mod_sh_integ, only: nstate               
    implicit none
    !private 
-   public :: lz_init, lz_hop, lz_finalize !Routines
-   public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz !User defined variables
+   public :: lz_init, lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize !Routines
+   public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz !User defined variables
    public :: en_array_lz, tocalc_lz, istate_lz !Routine variables
    !Caveat: Every time we call force_class en_array_lz is updated
 
-   real(DP) :: deltaE_lz
+   real(DP) :: deltaE_lz = 1.0d0     !Energy difference, up to which we consider possibility of LZ hops
+   real(DP) :: energydifthr_lz=0.5d0 !Maximum energy difference (eV) between two consecutive steps, used in check_energy_lz()
    ! Initial electronic state
    integer :: initstate_lz = 1
    integer :: tocalc_lz(NSTMAX)
@@ -35,7 +36,7 @@ module mod_lz
    real(DP),allocatable :: fx_old(:,:), fy_old(:,:), fz_old(:,:)
    real(DP),allocatable :: px_temp(:,:), py_temp(:,:), pz_temp(:,:)
    real(DP),allocatable :: x_prev(:,:), y_prev(:,:), z_prev(:,:), &
-                           fx_prev(:,:), fy_prev(:,:), fz_prev(:,:)
+                           vx_prev(:,:), vy_prev(:,:), vz_prev(:,:)
    save
 
    CONTAINS
@@ -62,9 +63,10 @@ module mod_lz
    allocate(fx_old(natom,nwalk+1),fy_old(natom,nwalk+1),fz_old(natom,nwalk+1))
    allocate(px_temp(natom,nwalk+1),py_temp(natom,nwalk+1),pz_temp(natom,nwalk+1))
    allocate(x_prev(natom,nwalk+1),y_prev(natom,nwalk+1),z_prev(natom,nwalk+1), &
-            fx_prev(natom,nwalk+1),fy_prev(natom,nwalk+1),fz_prev(natom,nwalk+1))
+            vx_prev(natom,nwalk+1),vy_prev(natom,nwalk+1),vz_prev(natom,nwalk+1))
    en_array_lz=0.0d0
 
+   !TERA-MPI parameters
    if(pot.eq.'_tera_')then
        nstate = nstate_lz
        istate_init = initstate_lz
@@ -96,15 +98,15 @@ module mod_lz
    real(DP) :: prob(NSTMAX), prob2(NSTMAX), probc
    real(DP) :: ran(10)
    real(DP) :: en_diff(3), second_der, soc_matrix(nsinglet_lz,ntriplet_lz)
-   integer  :: ihop, icross, ihist, ist1, ist2, iat, ibeg, iend!, istatus
-   integer  :: row, col, S_to_T !itest, iost
+   integer  :: ihop, icross, ihist, ist1, iat, ibeg, iend!, istatus
+   integer  :: S_to_T !itest, iost
    integer  :: ist                     ! =istate_lz
    real(DP) :: Ekin, Epot, Epot2, dE, hop_rdnum, hop_rdnum2, vel_rescale, stepfs, molveloc, grad_diff
    real(DP) :: one=1.0d0
    character(len=100) :: formt, fmt_in, fmt_out!, chSOC='SOC.dat'
 
    !TODO: energy drift
-   !call check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
+   call check_energy_lz(en_array_lz,istate_lz,energydifthr_lz)
    !call check_energydrift(vx, vy, vz, itrj)
 
    !Current state
@@ -194,16 +196,16 @@ module mod_lz
         !We need to get to previous geometry, adjust its velocity according to
         !target state and do 1 step forward on the new state
         istate_lz = ihop
-        if(pot.eq.'_tera_') istate = ihop     !TERA-MPI
+        if(pot.eq.'_tera_') istate = ihop     !TERA-MPI TODO: refactor, separate lz from sh for _tera_ usage completely
         !a) Previous geometry
         x = x_prev; y = y_prev; z = z_prev;
-        !b) Gradient for new state 
+        !b) Previous velocities
         do iat=1, natom
-            fx_old(iat,1) = fxc(iat,1)
-            fy_old(iat,1) = fyc(iat,1)
-            fz_old(iat,1) = fzc(iat,1)
+            vx(iat,1) = vx_prev(iat,1)
+            vy(iat,1) = vy_prev(iat,1)
+            vz(iat,1) = vz_prev(iat,1)
         end do
-
+        !c) Gradient for new state 
         do ist1=1, nstate_lz
           if(ist1.eq.istate_lz)then
             tocalc_lz(ist1) = 1
@@ -214,13 +216,7 @@ module mod_lz
         en_array_lz_backup = en_array_lz
         call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
-        do iat=1, natom
-            vx(iat,1) = vx(iat,1) + (dt/2.0d0) * (-fx_old(iat,1)-2*fx_prev(iat,1)+fxc(iat,1)) / amt(iat,1)
-            vy(iat,1) = vy(iat,1) + (dt/2.0d0) * (-fy_old(iat,1)-2*fy_prev(iat,1)+fyc(iat,1)) / amt(iat,1)
-            vz(iat,1) = vz(iat,1) + (dt/2.0d0) * (-fz_old(iat,1)-2*fz_prev(iat,1)+fzc(iat,1)) / amt(iat,1)
-        end do
-
-        !c) Simple velocity rescaling (https://doi.org/10.1063/1.4882073) 
+        !d) Simple velocity rescaling (https://doi.org/10.1063/1.4882073) 
         vel_rescale = sqrt(1-(dE/Ekin))
         do iat=1, natom
             vx(iat,1) = vx(iat,1) * vel_rescale
@@ -228,7 +224,8 @@ module mod_lz
             vz(iat,1) = vz(iat,1) * vel_rescale
         end do
 
-        !d) Do a verlet step forward 
+        !d) Do a verlet step forward from previous position 
+        !verletstep() function in mdstep.f90 is not declared yet, expressing explicitly
         px_temp = amt * vx; py_temp = amt * vy; pz_temp = amt * vz;
         px_temp = px_temp + dt/2 * fxc; py_temp = py_temp + dt/2 * fyc; pz_temp = pz_temp + dt/2 * fzc;
         x = x + dt * px_temp / amt; y = y + dt * py_temp / amt; z = z + dt * pz_temp / amt;
@@ -352,7 +349,7 @@ module mod_lz
    end if
 
    !Archive
-   x_prev = x; y_prev = y; z_prev = z; fx_prev = fxc; fy_prev = fyc; fz_prev = fzc;
+   x_prev = x; y_prev = y; z_prev = z; vx_prev = vx; vy_prev = vy; vz_prev = vz;
 
    !Write
    if(modulo(it,nwrite).eq.0)then
@@ -375,7 +372,7 @@ module mod_lz
    character(len=*),intent(in) :: chpot
 
    integer                     :: itest, iost, ISTATUS, system, row, col
-   character(len=20)    :: formt, chSOC='SOC.dat'
+   character(len=20)    :: chSOC='SOC.dat'
    character(len=100)   :: chsystem
    logical              :: file_exists
    
@@ -427,10 +424,36 @@ module mod_lz
    close(unit=MAXUNITS+100)
    end subroutine lz_getsoc
 
+   subroutine check_energy_lz(en_array_lz,istate_lz,energydifthr_lz)
+   use mod_utils,    ONLY: abinerror
+   use mod_const,    ONLY: AUTOEV
+   use mod_general,  ONLY: it
+
+   real(DP),intent(in) :: en_array_lz(:,:)
+   integer,intent(in)  :: istate_lz 
+   real(DP),intent(in) :: energydifthr_lz 
+
+   !Did the PES changed abruptly? LZ might induce unphysical hops. 
+   if ((abs(en_array_lz(istate_lz, 1)-en_array_lz(istate_lz, 2))*AUTOEV).ge.energydifthr_lz.and.it.gt.1)then
+     write(*,*)"!!!QM energy of current state changed more than",energydifthr_lz, "eV."
+     write(*,*)"State ", istate_lz,", change: ",(abs(en_array_lz(istate_lz, 1)-en_array_lz(istate_lz, 2)))*AUTOEV," eV"
+     write(*,*)"LZ unstable. Terminating."
+     call abinerror('check_energy_lz')
+   end if 
+
+   end subroutine check_energy_lz
+
+   subroutine lz_rewind(en_array_lz)
+   !Routine for deleting interim calculations from LZ energy history (e.g. initialization of forces)
+   real(DP),intent(inout) :: en_array_lz(:,:)
+
+   en_array_lz(:,1) = en_array_lz(:,2)
+   en_array_lz(:,2) = en_array_lz(:,3)
+   end subroutine lz_rewind 
 
    subroutine lz_getgraddiff(grad_diff, ist, ist1, x, y, z, vx, vy, vz, fxc, fyc, fzc)
    !Computes gradient difference * velocity to predict dEgap/dt
-   use mod_general,  ONLY: natom, pot, dt0
+   use mod_general,  ONLY: natom, pot
    use mod_interfaces, only: force_clas
 
    real(DP),intent(inout) :: grad_diff
@@ -480,10 +503,52 @@ module mod_lz
 
    end subroutine lz_getgraddiff
 
+   subroutine lz_restout(fileunit)
+   integer,intent(in) :: fileunit
+   integer :: ist
+
+   write(fileunit,*)istate_lz
+   do ist=1, nstate_lz
+       write(fileunit,*)en_array_lz(ist,1),en_array_lz(ist,2),en_array_lz(ist,3)
+   end do
+  
+   end subroutine lz_restout
+
+   subroutine lz_restin(fileunit,x,y,z,vx,vy,vz)
+   integer,intent(in) :: fileunit
+   real(DP),intent(out)  :: x(:,:),y(:,:),z(:,:)
+   real(DP),intent(out)  :: vx(:,:),vy(:,:),vz(:,:)
+   integer :: ist
+
+   read(fileunit,*)istate_lz
+   !Reset which gradients to compute
+   do ist=1, nstate_lz
+       if(ist.eq.istate_lz)then
+          tocalc_lz(ist) = 1
+       else
+          tocalc_lz(ist) = 0
+       end if
+   end do
+
+   !TERA-MPI parameters
+   if(pot.eq.'_tera_')then
+      istate_init = istate_lz
+      istate = istate_lz
+   end if
+
+   do ist=1, nstate_lz
+      read(fileunit,*)en_array_lz(ist,1),en_array_lz(ist,2),en_array_lz(ist,3)
+   enddo
+   
+   !Store previous step values
+   x_prev = x; y_prev = y; z_prev = z; vx_prev = vx; vy_prev = vy; vz_prev = vz;
+
+   end subroutine lz_restin
+
    subroutine lz_finalize()
    ! Deallocate arrays
        deallocate(en_array_lz, en_array_lz_backup, fx_old, fy_old, fz_old)
-       deallocate(px_temp, py_temp, pz_temp, x_prev, y_prev, z_prev, fx_prev, fy_prev, fz_prev)
+       deallocate(px_temp, py_temp, pz_temp, x_prev, y_prev, z_prev, vx_prev, vy_prev, vz_prev)
    end subroutine lz_finalize
 
 end module mod_lz
