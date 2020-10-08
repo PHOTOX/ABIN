@@ -196,7 +196,7 @@ module mod_analysis
    use mod_kinetic,only: entot_cumul, est_temp_cumul
    use mod_sh_integ, only: sh_write_wf
    use mod_sh,     only: write_nacmrest,ntraj,istate
-   use mod_lz,     only: en_array_lz, nstate_lz, istate_lz
+   use mod_lz,     only: lz_restout 
    use mod_gle
    use mod_random
    use mod_terampi_sh, only: write_wfn
@@ -258,10 +258,7 @@ module mod_analysis
 
    if(ipimd.eq.5)then
       write(102,*)chLZ
-      write(102,*)istate_lz
-      do ist=1, nstate_lz
-          write(102,*)en_array_lz(ist,1),en_array_lz(ist,2),en_array_lz(ist,3)
-      end do
+      call lz_restout(102)
    endif
 
    if(inose.eq.1)then
@@ -342,7 +339,7 @@ module mod_analysis
    use mod_kinetic,  only: entot_cumul, est_temp_cumul
    use mod_sh_integ, only: sh_read_wf
    use mod_sh,       only: write_nacmrest,ntraj,istate,istate_init
-   use mod_lz,       only: en_array_lz, nstate_lz, istate_lz
+   use mod_lz,       only: lz_restin
    use mod_gle
    use mod_random
    use mod_terampi_sh, only: read_wfn
@@ -399,14 +396,7 @@ module mod_analysis
    if(ipimd.eq.5)then
      read(111,'(A)')chtemp
      call checkchar(chtemp, chlz)
-     read(111,*)istate_lz
-     if(pot.eq.'_tera_')then
-        istate_init = istate_lz 
-        istate = istate_lz
-     end if
-     do ist=1, nstate_lz 
-      read(111,*)en_array_lz(ist,1),en_array_lz(ist,2),en_array_lz(ist,3)
-     enddo
+     call lz_restin(111,x,y,z,vx,vy,vz)
    endif
 
    if(inose.eq.1.and.readNHC.eq.1)then

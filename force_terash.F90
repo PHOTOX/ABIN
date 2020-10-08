@@ -92,9 +92,11 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    eclas = en_array(istate(itrj), itrj)
 
    !Landau-Zener arrays
-   if (ipimd.eq.5)then 
+   if (ipimd.eq.5)then
+      !Move old energies by 1 
       en_array_lz(:,3) = en_array_lz(:,2);
       en_array_lz(:,2) = en_array_lz(:,1);
+      !Store the new one
       en_array_lz(:,1) = en_array(:,1)
    end if
 
