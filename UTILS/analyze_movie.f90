@@ -1,10 +1,8 @@
 ! Simple program for analysis of bonds, angles and dihedrals
-! from xyz trajectories.
-! We pull out time evolution as well as histograms.
+! from XYZ trajectories.
+! Writes out time evolution as well as histograms.
 
-! Daniel Hollas     2014
-
-! 2016, RDF funcionality added
+! Author: Daniel Hollas
 
 module mod_analyze
 implicit none
@@ -14,7 +12,7 @@ save
 
 CONTAINS
 
-! The following function should respect the PBC conditions
+! The following function also handles the PBC conditions
 real*8 function get_distance( at1, at2, boxx, boxy, boxz)
    implicit none
    integer,intent(in) :: at1, at2
@@ -29,8 +27,8 @@ real*8 function get_distance( at1, at2, boxx, boxy, boxz)
       dx = x(at1) - x(at2)
       dy = y(at1) - y(at2)
       dz = z(at1) - z(at2)
-
    end if
+
    if (boxx.gt.0)then
       dx = dx - boxx * nint(dx/boxx)
       dy = dy - boxy * nint(dy/boxy)
@@ -154,12 +152,6 @@ chmovie = 'movie.xyz'
 call Get_cmdline(chmovie, nbin_dist, nbin_ang, nbin_dih, distmin, distmax, shiftdih, lecho, &
                imod, boxx, boxy, boxz)
 
-! the following formats were not a good idea and are now obsolete
-10 format(I3)
-20 format(2I3)
-30 format(3I3)
-40 format(4I3)
-
 ! Now read from stdin, what to analyze
 select case (imod)
 case (0)
@@ -195,7 +187,7 @@ if (nang.gt.0)then
 end if
 
 if (lecho) write(*,*)'How many dihedrals?'
-read(*, 10,IOSTAT = iost) ndih
+read(*, '(I3)', IOSTAT = iost) ndih
 if (iost.ne.0) call PrintInputError()
 
 if (ndih.gt.0)then
@@ -361,6 +353,10 @@ if (imod.eq.0)then
    
       r(idist) = get_distance(dists(1,idist), dists(2,idist), boxx, boxy, boxz)
    
+      ! TODO: Put histograming at the end
+      ! so we can calculate optimal bin width based on Scott's rule
+      ! https://en.wikipedia.org/wiki/Histogram#Number_of_bins_and_width
+      ! and can calculate max and min data
       ipom = ceiling( ( (r(idist)) - distmin )/dx )
       if(ipom.gt.nbin_dist.or.ipom.le.0)then
          write(*,*)'Problems with bond distribution function'
@@ -477,7 +473,7 @@ if (nang.gt.0)then
       anorm=0.0d0
 
       do ian=1,nbin_ang
-         anorm=anorm+bins_ang(ian,idist)
+         anorm = anorm + bins_ang(ian,idist)
       enddo
 
       do ian=1,nbin_ang
@@ -533,24 +529,18 @@ deallocate( z )
 
 end program
 
-
-
-
-
-
-
    
 subroutine Get_cmdline(chmovie, nbin_dist, nbin_ang, nbin_dih, distmin, distmax, shiftdih, lecho, &
             imod, boxx, boxy, boxz)
 implicit none
-real*8,intent(inout)  :: distmin, distmax, boxx, boxy, boxz
-real*8,intent(inout)  :: shiftdih
+real*8,intent(inout) :: distmin, distmax, boxx, boxy, boxz
+real*8,intent(inout) :: shiftdih
 integer,intent(inout) :: nbin_dist,nbin_ang,nbin_dih
 integer, intent(inout) :: imod
-character(len=100),intent(out)   :: chmovie
-character(len=100)   :: arg
-integer             :: i
-logical, intent(inout)  :: lecho
+character(len=100),intent(out) :: chmovie
+logical, intent(inout) :: lecho
+character(len=100) :: arg
+integer :: i, ngeom
 
 i=0
 do while (i < command_argument_count())
@@ -587,6 +577,12 @@ do while (i < command_argument_count())
     i=i+1
     call get_command_argument(i, arg)
     read(arg,*)distmax
+  case ('-optimal_nbin')
+    i=i+1
+    call get_command_argument(i, arg)
+    read(arg,*)ngeom
+    call print_bin_number_estimators(ngeom)
+    stop 0
   case ('-box')
     i=i+1
     call get_command_argument(i, arg)
@@ -642,4 +638,46 @@ subroutine PrintInputError()
   stop 1
 end subroutine PrintInputError
 
+! Various estimates to number of bins
+! See https://en.wikipedia.org/wiki/Histogram#Number_of_bins_and_width
+function square_root_bin_number(n) result(k)
+   integer, intent(in) :: n
+   integer :: k
+   k = ceiling(sqrt(REAL(n)))
+end function square_root_bin_number
+
+function sturges_bin_number(n) result(k)
+   integer, intent(in) :: n
+   integer :: k
+   k = ceiling(log(REAL(n))/log(2.0d0)) + 1
+end function sturges_bin_number
+
+function rice_bin_number(n) result(k)
+   integer, intent(in) :: n
+   integer :: k
+   k = ceiling(2*(REAL(n)**(1/3.d0)))
+end function rice_bin_number
+
+function scott_bin_width(n, sigma) result(h)
+   integer, intent(in) :: n
+   real*8, intent(in) :: sigma
+   real*8 :: h
+   h = 3.5d0 * sigma / n**(1/3.0d0)
+end function scott_bin_width
+
+! TODO Freedman-Diaconis choice
+
+
+subroutine print_bin_number_estimators(ngeom)
+   integer, intent(in) :: ngeom
+   integer :: square_root_bin_number, sturges_bin_number, rice_bin_number
+
+   write(*,'(A)')'Printing various estimators for optimal number of bins'
+   write(*,'(A)')'Square root estimate'
+   write(*,'(A4,I5)')'k = ', square_root_bin_number(ngeom)
+   write(*,'(A)')'Sturges estimate'
+   write(*,'(A4,I5)')'k = ', sturges_bin_number(ngeom)
+   write(*,'(A)')'Rice estimate'
+   write(*,'(A4,I5)')'k = ', rice_bin_number(ngeom)
+end subroutine print_bin_number_estimators
 
