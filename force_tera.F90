@@ -21,7 +21,7 @@ module mod_terampi
    integer, parameter   :: MAXTERASERVERS=9
    integer, parameter :: MPI_TAG_ERROR = 13, MPI_TAG_EXIT = 0
    ! By default, take port name from a file
-   character*100  :: teraport = ''
+   character(len=1024) :: teraport = ''
    integer     ::  newcomms(MAXTERASERVERS) ! Communicator, initialized in mpi_init subroutine
 !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
    integer  ::  natmm_tera=0
@@ -117,7 +117,7 @@ subroutine send_tera(x, y, z, iw, newcomm)
 
 
    ! Send natqm and the type of each qmatom
-   if (idebug > 1) then
+   if (idebug.gt.1) then
       write(6,'(/, a, i0)') 'Sending natqm = ', natqm
       call flush(6)
    end if
@@ -127,7 +127,7 @@ subroutine send_tera(x, y, z, iw, newcomm)
    do iat=1,natqm
       names_qm(iat) = names(iat)
    end do
-   if ( idebug > 1 ) then
+   if ( idebug.gt.1 ) then
       write(6,'(/,a)') 'Sending QM atom types: '
       write(*,*)(names_qm(iat), iat=1,natqm)
       call flush(6)
@@ -325,19 +325,20 @@ end subroutine receive_tera
 
 subroutine connect_terachem( itera )
    use mod_utils, only: abinerror
-   use mod_general, only: iremd, my_rank
+   use mod_general, only: iremd, my_rank, idebug
    include 'mpif.h'
    integer, intent(in) :: itera
    character(len=MPI_MAX_PORT_NAME) :: port_name
    integer :: ierr, newcomm, iost
    real(DP) :: timer
-   character(len=50) :: server_name, portfile
+   character(len=1024) :: server_name, portfile
    character(len=1) :: chtera
 
    ! -----------------------------------
    ! Look for server_name, get port name
    ! After 60 seconds, exit if not found
    ! -----------------------------------
+   port_name = ''
 
    if(itera.gt.MAXTERASERVERS)then
       write(*,*)'ERROR: We currently support only ',MAXTERASERVERS, 'TC servers!'
@@ -364,12 +365,19 @@ subroutine connect_terachem( itera )
 
          call MPI_LOOKUP_NAME(trim(server_name), MPI_INFO_NULL, port_name, ierr)
          if (ierr == MPI_SUCCESS) then
-            write(6,'(2a)') 'Found port: ', trim(port_name)
-            call flush(6)
-            exit
+            ! This sometimes happens, I have no idea why.
+            if(len_trim(port_name).eq.0)then
+               write(6,'(a)') 'Found empty port, retrying...'
+               call system('sleep 1')
+            else
+               write(6,'(2a)') 'Found port: ', trim(port_name)
+               call flush(6)
+               exit
+            end if
          else
             ! Let's wait a bit
             ! Too many calls to MPI_LOOKUP_NAME can crash the hydra_nameserver process
+            if(idebug.gt.1) write(6, '(A)')'Waiting for TC port'
             call system('sleep 1')
          end if
        
