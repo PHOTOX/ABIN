@@ -16,6 +16,7 @@ jobs:
       FC: gfortran
       FFLAGS: -O0 -fopenmp -Wall --coverage
       GCC_V: ${{ matrix.gcc_v}}
+      PFUNIT_PATH: pfunit
 
     steps:
     - uses: actions/checkout@v2
@@ -23,10 +24,14 @@ jobs:
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
+    # fPUnit library is used to build and run unittests
+    # TODO: Cache pFUnit build
+    - name: Download and build fPUnit
+      run: ./install_pfunit.sh ${PFUNIT_PATH}
     - name: build
-      run: ./configure && make
+      run: ./configure --pfunit ${PFUNIT_PATH}/build/installed/ && make
     - name: test
-      run: make test
+      run: make test && make unittest
     - name: Codecov upload
       run:  bash <(curl -s https://codecov.io/bash)
 

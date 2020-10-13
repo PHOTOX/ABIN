@@ -50,7 +50,7 @@ ifeq ($(strip $(CP2K)),TRUE)
   FFLAGS += -fno-openmp
   # The following variables should be the same that were used to compile CP2K.
   # Also, be carefull with FFTW clashes
-  LIBS += -L${CP2KPATH} -lcp2k ${CP2K_LIBS} 
+  LIBS += -L${CP2K_PATH} -lcp2k ${CP2K_LIBS} 
 ifeq ($(strip $(FFTW)),TRUE)
    $(info "!!!!!-------------WARNING---------------!!!!!!!")
    $(info "Using FFTW flag with CP2K may lead to troubles!")
@@ -72,6 +72,14 @@ ifeq  ($(strip $(MPI)),TRUE)
   F_OBJS := remd.o ${F_OBJS}
 endif
 
+# Compile Unit Tests using pFUnit library
+ifeq  ($(strip $(PFUNIT)),TRUE)
+  LATEST_PFUNIT_DIR := $(lastword $(shell echo $(wildcard $(PFUNIT_PATH)/PFUNIT-4.*) | xargs -n1 | sort -V))
+  include $(LATEST_PFUNIT_DIR)/include/PFUNIT.mk
+  FFLAGS += $(PFUNIT_EXTRA_FFLAGS)
+endif
+
+
 LDLIBS = -lm -lstdc++ ${LIBS}
 # The following line does not seem to work
 #LDLIBS = ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
@@ -80,10 +88,11 @@ LDLIBS = -lm -lstdc++ ${LIBS}
 # This hack is needed for force_tera.o and fftw_interface.o
 F_OBJS := modules.o utils.o fortran_interfaces.o io.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
 
+# DH: Not sure why this ifeq is neccessary
 ifeq ($(strip $(CP2K)),TRUE)
-ALLDEPENDS = ${C_OBJS} ${F_OBJS}
+ALLDEPENDS = ${F_OBJS}
 else
-ALLDEPENDS = ${C_OBJS} ${F_OBJS} WATERMODELS/water_interface.o
+ALLDEPENDS = ${F_OBJS} WATERMODELS/water_interface.o
 endif
 
 
@@ -99,7 +108,7 @@ init.o : init.F90 ${ALLDEPENDS}
 
 clean :
 	cd WATERMODELS && make clean
-	/bin/rm -f *.o *.mod $(BIN)
+	/bin/rm -f *.o *.mod libabin.a $(BIN)
 
 # Run the test suite
 # TODO: Pass MPI_PATH as well
@@ -113,6 +122,13 @@ testclean :
 # This will automatically generate new reference data for tests
 makeref :
 	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUM) ${CP2K} makeref
+
+libabin.a : init.o
+	ar cru libabin.a init.o $(ALLDEPENDS) && ranlib libabin.a
+
+unittest : libabin
+	# TODO: compile and execute unittests
+
  
 # Dummy target for debugging purposes
 debug: 
@@ -121,7 +137,6 @@ debug:
 	echo ${DFLAGS}
 	echo ${CFLAGS}
 	echo ${FFLAGS}
-	echo ${C_OBJS}
 	echo ${F_OBJS}
 
 .PHONY: clean distclean test testclean makeref debug
