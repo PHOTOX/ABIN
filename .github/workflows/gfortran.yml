@@ -5,7 +5,9 @@ on:
     branches: [ master ]
   pull_request:
 
+
 jobs:
+
   basic_build:
     runs-on: ubuntu-latest
     strategy:
@@ -24,14 +26,26 @@ jobs:
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
+
     # fPUnit library is used to build and run unittests
     # TODO: Cache pFUnit build
-    - name: Download and build fPUnit
+    # Per https://github.com/actions/cache/blob/main/examples.md#node---npm
+    - name: pFUnit build Cache
+      id: pfunit-cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.PFUNIT_PATH }}/build/installed
+        key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('install_pfunit.sh') }}
+
+    # TODO: Maybe we should specify a specific commit in install_pfunit.sh
+    # So that we're not dependent on changes in pFUnit
+    - name: Download and build pFUnit
       run: ./install_pfunit.sh ${PFUNIT_PATH}
-    - name: build
+
+    - name: build ABIN
       run: ./configure --pfunit ${PFUNIT_PATH}/build/installed/ && make
-    - name: test
-      run: make test && make unittest
+    - name: test ABIN
+      run: make unittest && make test
     - name: Codecov upload
       run:  bash <(curl -s https://codecov.io/bash)
 
@@ -39,8 +53,8 @@ jobs:
 
   optimized_build:
     runs-on: ubuntu-latest
+    needs: basic_build
     strategy:
-      fail-fast: true
       matrix:
          gcc_v: [7, 8, 9]
     env:
@@ -54,6 +68,21 @@ jobs:
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
+
+    # fPUnit library is used to build and run unittests
+    # TODO: Cache pFUnit build
+    # Per https://github.com/actions/cache/blob/main/examples.md#node---npm
+    - name: pFUnit build Cache
+      id: pfunit-cache
+      uses: actions/cache@v2
+      with:
+        # TODO: Figure out whether this path can be specified via vars
+        path: ${{ env.PFUNIT_PATH }}/build/installed
+        key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('install_pfunit.sh') }}
+
+    - name: Download and build pFUnit
+      run: ./install_pfunit.sh ${PFUNIT_PATH}
+
     - name: build
       run: ./configure && make
     - name: test
