@@ -126,7 +126,7 @@ makeref :
 libabin.a : init.o
 	ar cru libabin.a init.o $(ALLDEPENDS) && ranlib libabin.a
 
-unittest : libabin
+unittest : libabin.a
 	# TODO: compile and execute unittests
 
  
@@ -137,7 +137,7 @@ debug:
 	echo ${DFLAGS}
 	echo ${CFLAGS}
 	echo ${FFLAGS}
-	echo ${F_OBJS}
+	echo ${ALLDEPENDS}
 
 .PHONY: clean distclean test testclean makeref debug
 

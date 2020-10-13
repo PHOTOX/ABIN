@@ -14,6 +14,7 @@ git clone --recursive https://github.com/Goddard-Fortran-Ecosystem/pFUnit $REPO_
 
 mkdir -p build && cd build
 export FC=gfortran
+export FFLAGS=
 # TODO: Make it possible to change final install dir via shell parameter
 cmake .. -DGIT_SUBMODULE=OFF -DSKIP_FHAMCREST=YES
 make tests
