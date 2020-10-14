@@ -58,7 +58,7 @@ while [[ $# -gt 0 ]]; do
             exit 1
         fi
         MPI_PATH=$2
-        if [[ ! -d $MPI_PATH ]]; then
+        if [[ ! -z $MPI_PATH && ! -d $MPI_PATH ]]; then
             echo "$MPI_PATH is not a directory!"
             exit 1
         fi
