@@ -27,8 +27,6 @@ jobs:
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
 
     # fPUnit library is used to build and run unittests
-    # TODO: Cache pFUnit build
-    # Per https://github.com/actions/cache/blob/main/examples.md#node---npm
     - name: pFUnit build Cache
       id: pfunit-cache
       uses: actions/cache@v2
@@ -44,8 +42,10 @@ jobs:
 
     - name: build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
+
     - name: test ABIN
       run: make test
+
    # TODO: Separete unit test coverage
     - name: Codecov upload
       run:  bash <(curl -s https://codecov.io/bash)
@@ -69,14 +69,10 @@ jobs:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
 
-    # fPUnit library is used to build and run unittests
-    # TODO: Cache pFUnit build
-    # Per https://github.com/actions/cache/blob/main/examples.md#node---npm
     - name: pFUnit build Cache
       id: pfunit-cache
       uses: actions/cache@v2
       with:
-        # TODO: Figure out whether this path can be specified via vars
         path: ${{ env.HOME }}/pfunit/build/installed
         key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('install_pfunit.sh') }}
 
@@ -85,7 +81,8 @@ jobs:
       run: ./install_pfunit.sh ${HOME}/pfunit
 
     - name: build ABIN
-      run: ./configure && make
+      run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
+
     - name: test ABIN
       run: make test
 
