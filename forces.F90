@@ -192,7 +192,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
          call force_LJCoul(x, y, z, fx, fy, fz, eclas)
 #ifndef CP2K
 ! With CP2K interface there is a problem with underscoring
-! so we don't support water force fields (which are not combinaeble with CP2K anyway
+! so we don't support water force fields (which are not combineable with CP2K anyway
       case ("mmwater")
          call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
 #endif

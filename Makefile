@@ -114,7 +114,7 @@ init.o : init.F90 ${F_OBJS} abin.o
 
 clean :
 	cd WATERMODELS && make clean
-	/bin/rm -f *.o *.mod libabin.a $(BIN)
+	/bin/rm -f *.o *.mod libabin.a test_*.F90 $(BIN)
 
 # Run the test suite
 # TODO: Pass MPI_PATH as well
@@ -143,7 +143,7 @@ unittest : libabin.a
 unittest_TESTS := test_utils.pf
 unittest_REGISTRY :=
 unittest_OTHER_SOURCES :=
-unittest_OTHER_LIBRARIES := $(LDLIBS) -L. -labin -LWATERMODELS/ -lttm
+unittest_OTHER_LIBRARIES := ${FFLAGS} -L. -labin -LWATERMODELS/ -lttm $(LDLIBS) 
 unittest_OTHER_INCS :=
 
 $(eval $(call make_pfunit_test,unittest))
