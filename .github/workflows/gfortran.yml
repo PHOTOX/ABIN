@@ -40,6 +40,7 @@ jobs:
     # TODO: Maybe we should specify a specific commit in install_pfunit.sh
     # So that we're not dependent on changes in pFUnit
     - name: Download and build pFUnit
+      if: steps.pfunit-cache.outputs.cache-hit != 'true'
       run: ./install_pfunit.sh ${PFUNIT_PATH}
 
     - name: build ABIN
@@ -84,6 +85,7 @@ jobs:
         key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('install_pfunit.sh') }}
 
     - name: Download and build pFUnit
+      if: steps.pfunit-cache.outputs.cache-hit != 'true'
       run: ./install_pfunit.sh ${PFUNIT_PATH}
 
     - name: build ABIN
