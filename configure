@@ -15,7 +15,6 @@ MPI=FALSE
 CP2K=FALSE
 PLUMED=FALSE
 FFTW=FALSE
-PFUNIT=FALSE
 ABINEXE=abin
 
 MPI_PATH=''
@@ -59,6 +58,10 @@ while [[ $# -gt 0 ]]; do
             exit 1
         fi
         MPI_PATH=$2
+        if [[ ! -d $MPI_PATH ]]; then
+            echo "$MPI_PATH is not a directory!"
+            exit 1
+        fi
         shift 2
         ;;
       --plumed)
@@ -68,15 +71,22 @@ while [[ $# -gt 0 ]]; do
             exit 1
         fi
         PLUMED_PATH=$2
+        if [[ ! -d $PLUMED_PATH ]]; then
+            echo "$PLUMED_PATH is not a directory!"
+            exit 1
+        fi
         shift 2
         ;;
       --pfunit)
-        PFUNIT=TRUE
         if [[ $# -lt 2 ]]; then
             echo "Error: missing PFUNIT_PATH argument"
             exit 1
         fi
         PFUNIT_PATH=$2
+        if [[ ! -d $PFUNIT_PATH ]]; then
+            echo "$PFUNIT_PATH is not a directory!"
+            exit 1
+        fi
         shift 2
         ;;
       --fftw)
@@ -140,8 +150,9 @@ echo "Generating local build configuration for ABIN"
 echo "Writing config to $VARS"
 
 # Print all vars to make.vars
+rm -rf $VARS
 echo "
-# Local build configuration, this file is included into Makefile
+# Local build configuration, included into Makefile
 
 # This file was built as follows.
 # $0 $PARAMS
@@ -181,15 +192,13 @@ FFTW = $FFTW
 CP2K = $CP2K
 
 # Compile with unit tests
-PFUNIT = $PFUNIT
-PFUNIT_PATH = $PFUNIT_PATH
-" >> make.vars
+PFUNIT_PATH = $PFUNIT_PATH" > $VARS
 
 # TODO: Make automatic check for FFTW library
 
 if [[ $CP2K = "TRUE" ]];then
    echo "Linkink with CP2K"
-   echo "Setup paths to CP2K libs manually in make.vars"
+   echo "Setup paths to CP2K libs manually in $VARS"
    echo "
 CP2K_PATH = /usr/local/src/programes/src/cp2k-2.6.2/lib/Linux-x86-64-gfortran-mkl/sopt/
 MKL = /intel/parallel_studio_2015_update5/mkl/lib/intel64/
@@ -205,6 +214,6 @@ CP2K_LIBS = \$(MKL_LIBS) \
             \$(LIBXC_LIB)/libxc.a\
             \$(LIBINT_LIB)/libderiv.a\
             \$(LIBINT_LIB)/libint.a
-" >> make.vars
+" >> $VARS
 fi
 

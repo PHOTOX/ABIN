@@ -26,12 +26,10 @@ ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
 
-
 F_OBJS := arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o plumed.o \
           force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
           force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o density.o analysis.o \
           minimizer.o mdstep.o forces.o
-
 
 # TODO: Separate static and dynamic LIBS
 # TODO: Rename libttm to libwater.a or something
@@ -74,15 +72,6 @@ ifeq  ($(strip $(MPI)),TRUE)
   F_OBJS := remd.o ${F_OBJS}
 endif
 
-# Compile Unit Tests using pFUnit library
-ifeq  ($(strip $(PFUNIT)),TRUE)
-  LATEST_PFUNIT_DIR := $(lastword $(shell echo $(wildcard $(PFUNIT_PATH)/PFUNIT-4.*) | xargs -n1 | sort -V))
-  include $(LATEST_PFUNIT_DIR)/include/PFUNIT.mk
-  # TODO: Should these apply to the abin binary as well?
-  FFLAGS += $(PFUNIT_EXTRA_FFLAGS)
-endif
-
-
 LDLIBS = -lm -lstdc++ ${LIBS}
 # The following line does not seem to work
 #LDLIBS = ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
@@ -91,9 +80,6 @@ LDLIBS = -lm -lstdc++ ${LIBS}
 # This hack is needed for force_tera.o and fftw_interface.o
 F_OBJS := modules.o utils.o fortran_interfaces.o io.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
 
-# DH: Not sure why this ifeq is neccessary
-# TODO: Adding abin.o hackily here, so that the main function is not defined within
-# F_OBJS, which are used for unit tests
 ifneq ($(strip $(CP2K)),TRUE)
    F_OBJS := ${F_OBJS} WATERMODELS/water_interface.o
 endif
@@ -102,9 +88,15 @@ endif
 # TODO: Make abin.o the default target, and put the compile info module there?
 ${BIN} : init.o
 	# TODO: Separate this step and do it properly (via libttm.a dependency)
-	cd WATERMODELS && make all
+	$(MAKE) -C WATERMODELS all
 	# TODO: Once abin.o is the default target, remove it from line below
 	${FC} ${FFLAGS} ${F_OBJS} ${STATIC_LIBS} abin.o $< ${LDLIBS} -o $@
+	# Build Unit Tests if pFUnit library is available
+	# (run install_pfunit.sh to install it)
+ifneq ($(strip $(PFUNIT_PATH)),)
+	ar cru libabin.a init.o $(F_OBJS) && ranlib libabin.a
+	$(MAKE) -C unit_tests all
+endif
 
 # Always recompile init.F90 to get current date and commit
 # TODO: Figure out a cleaner way to do this
@@ -113,12 +105,18 @@ init.o : init.F90 ${F_OBJS} abin.o
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DDATE="'${DATE}'" -DCOMMIT="'${COMMIT}'" -c init.F90
 
 clean :
-	cd WATERMODELS && make clean
-	/bin/rm -f *.o *.mod libabin.a test_*.F90 $(BIN)
+	$(MAKE) -C WATERMODELS clean
+	/bin/rm -f *.o *.mod libabin.a $(BIN)
+ifneq ($(strip $(PFUNIT_PATH)),)
+	$(MAKE) -C unit_tests clean
+endif
 
 # Run the test suite
 # TODO: Pass MPI_PATH as well
 test : ${BIN}
+ifneq ($(strip $(PFUNIT_PATH)),)
+	$(MAKE) -C unit_tests test
+endif
 	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUM} ${CP2K}
 
 # Clean all test folders.
@@ -129,25 +127,6 @@ testclean :
 makeref :
 	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUM) ${CP2K} makeref
 
-# TODO: Remove the dependency on init.o
-# (need to mock finalize() routine, which we need to do anyway)
-# TODO: Seems like this does not work correctly
-# after `make clean`, `make unittest` fails to build
-libabin.a : init.o $(F_OBJS)
-	ar cru libabin.a init.o $(F_OBJS) && ranlib libabin.a
-
-unittest : libabin.a
-
-# TODO: All unit tests in tests directory, and
-# should have their own Makefile
-unittest_TESTS := test_utils.pf
-unittest_REGISTRY :=
-unittest_OTHER_SOURCES :=
-unittest_OTHER_LIBRARIES := ${FFLAGS} -L. -labin -LWATERMODELS/ -lttm $(LDLIBS) 
-unittest_OTHER_INCS :=
-
-$(eval $(call make_pfunit_test,unittest))
- 
 # Dummy target for debugging purposes
 debug: 
 	echo ${LIBS}
@@ -156,10 +135,11 @@ debug:
 	echo ${CFLAGS}
 	echo ${FFLAGS}
 
-.PHONY: clean distclean test testclean makeref debug
+.PHONY: clean test testclean makeref debug
 
 .SUFFIXES: .F90 .f90 .f95 .f03 .F03
 
+# TODO: Use only .F90
 .F90.o:
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
 
