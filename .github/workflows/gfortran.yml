@@ -44,11 +44,14 @@ jobs:
 
     - name: build ABIN
       run: ./configure --pfunit ${PFUNIT_PATH}/build/installed/ && make
+    # TODO: Need to figure out whether we will have a single binary
+    # for all unit tests or not
+    - name: Unit tests
+      run: make unittest && ./unittest
     - name: test ABIN
-      run: make unittest && make test
+      run: make test
     - name: Codecov upload
       run:  bash <(curl -s https://codecov.io/bash)
-
 
 
   optimized_build:
@@ -83,9 +86,13 @@ jobs:
     - name: Download and build pFUnit
       run: ./install_pfunit.sh ${PFUNIT_PATH}
 
-    - name: build
+    - name: build ABIN
       run: ./configure && make
-    - name: test
+    # TODO: Need to figure out whether we will have a single binary
+    # for all unit tests or not
+    - name: Unit tests
+      run: make unittest && ./unittest
+    - name: test ABIN
       run: make test
 
   # Consider whether this needs to be a separate job

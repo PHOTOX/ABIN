@@ -1256,3 +1256,119 @@ call print_compile_info(time_data)
 
 end subroutine init
 
+subroutine finish(error_code)
+   use mod_arrays, only: deallocate_arrays
+   use mod_general
+   use mod_files,  only: MAXUNITS
+   use mod_nhc!,   only: finalize_nhc
+   use mod_gle,    only: finalize_gle
+   use mod_estimators, only: h
+   use mod_harmon, only: hess
+   use mod_lz,     only: lz_finalize
+
+#ifdef USEFFTW
+   use mod_fftw3,  only: fftw_end
+#endif
+
+#ifdef CP2K
+   use mod_cp2k,   only: finalize_cp2k
+#endif
+
+#ifdef PLUM
+   use mod_plumed
+#endif
+
+#ifdef MPI
+   use mod_terampi, only: finalize_terachem
+   use mod_terampi_sh, only: finalize_terash
+   implicit none
+   include "mpif.h"
+   integer :: errmpi
+#else
+   implicit none
+#endif
+
+   real(DP) :: TIME
+   integer  :: i, ierr, error_code
+   logical  :: lopen
+!   integer :: iter=-3
+
+#ifdef MPI
+   if (pot.eq.'_tera_')then
+      if (ipimd.eq.2) then
+         call finalize_terash()
+      end if
+      call finalize_terachem(error_code)
+   end if
+#endif
+
+   if (my_rank.eq.0)then
+      write(*,*)''
+      if (error_code.eq.0)then
+         write(*,*)'Job finished!'
+      end if
+   end if
+
+
+   call deallocate_arrays( )
+
+   do i=2,MAXUNITS
+      inquire(unit=i,opened=lopen)
+      ! TODO: This is not portable, do not hardcode 5 and 6!
+      if (lopen.and.i.ne.5.and.i.ne.6)then
+         close(i)
+      end if
+   end do
+
+   if (allocated(hess))then
+      deallocate ( hess )
+   end if
+   if (allocated(h))then
+      deallocate ( h )
+   end if
+
+#ifdef USEFFTW
+   if (inormalmodes.gt.0)then
+      call fftw_end()
+   end if
+#endif
+
+   if(inose.eq.1)then
+      call finalize_nhc()
+   end if
+   if(inose.gt.1.and.inose.lt.5)then
+      call finalize_gle()
+   end if
+
+#ifdef MPI
+if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
+   if (error_code.eq.0.and.pot.ne."_cp2k_")then
+      call MPI_FINALIZE ( errmpi )
+      if (errmpi.ne.0)then
+         write(*,*)'Bad signal from MPI_FINALIZE: ', errmpi
+         ! Let's try to continue
+      end if
+   else if (error_code.gt.0)then
+      call MPI_Abort(MPI_COMM_WORLD, ierr)
+   end if
+end if
+#endif
+#ifdef CP2K
+!  MPI_FINALIZE is called in this routine as well
+   if(pot.eq.'_cp2k_')then
+      call finalize_cp2k()
+   end if
+#endif
+
+!   PLUMED closing session
+#ifdef PLUM
+    if (iplumed.eq.1) then
+      call plumed_f_gfinalize()
+    end if
+#endif
+
+if(ipimd.eq.5)then
+   call lz_finalize()
+end if
+
+end subroutine finish

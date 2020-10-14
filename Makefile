@@ -30,10 +30,12 @@ endif
 F_OBJS := arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o plumed.o \
           force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
           force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o density.o analysis.o \
-          minimizer.o mdstep.o forces.o abin.o
+          minimizer.o mdstep.o forces.o
 
 
-LIBS += WATERMODELS/libttm.a
+# TODO: Separate static and dynamic LIBS
+# TODO: Rename libttm to libwater.a or something
+STATIC_LIBS = WATERMODELS/libttm.a
 
 ifeq ($(strip $(FFTW)),TRUE)
   ifneq ($(CP2K),TRUE)
@@ -62,7 +64,7 @@ endif
 ifeq ($(strip $(PLUMED)),TRUE)
  include ${PLUMED_LINK}
  DFLAGS += -DPLUM
- LIBS += ${PLUMED_STATIC_LOAD}
+ STATIC_LIBS += ${PLUMED_STATIC_LOAD}
 endif
 
 ifeq  ($(strip $(MPI)),TRUE) 
@@ -76,6 +78,7 @@ endif
 ifeq  ($(strip $(PFUNIT)),TRUE)
   LATEST_PFUNIT_DIR := $(lastword $(shell echo $(wildcard $(PFUNIT_PATH)/PFUNIT-4.*) | xargs -n1 | sort -V))
   include $(LATEST_PFUNIT_DIR)/include/PFUNIT.mk
+  # TODO: Should these apply to the abin binary as well?
   FFLAGS += $(PFUNIT_EXTRA_FFLAGS)
 endif
 
@@ -89,21 +92,24 @@ LDLIBS = -lm -lstdc++ ${LIBS}
 F_OBJS := modules.o utils.o fortran_interfaces.o io.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
 
 # DH: Not sure why this ifeq is neccessary
-ifeq ($(strip $(CP2K)),TRUE)
-ALLDEPENDS = ${F_OBJS}
-else
-ALLDEPENDS = ${F_OBJS} WATERMODELS/water_interface.o
+# TODO: Adding abin.o hackily here, so that the main function is not defined within
+# F_OBJS, which are used for unit tests
+ifneq ($(strip $(CP2K)),TRUE)
+   F_OBJS := ${F_OBJS} WATERMODELS/water_interface.o
 endif
 
-
 # This is the default target
+# TODO: Make abin.o the default target, and put the compile info module there?
 ${BIN} : init.o
-	cd WATERMODELS && make all 
-	${FC} ${FFLAGS} ${ALLDEPENDS} $< ${LDLIBS} -o $@
+	# TODO: Separate this step and do it properly (via libttm.a dependency)
+	cd WATERMODELS && make all
+	# TODO: Once abin.o is the default target, remove it from line below
+	${FC} ${FFLAGS} ${F_OBJS} ${STATIC_LIBS} abin.o $< ${LDLIBS} -o $@
 
 # Always recompile init.F90 to get current date and commit
 # TODO: Figure out a cleaner way to do this
-init.o : init.F90 ${ALLDEPENDS}
+# TODO: We should move this into abin.F90
+init.o : init.F90 ${F_OBJS} abin.o
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DDATE="'${DATE}'" -DCOMMIT="'${COMMIT}'" -c init.F90
 
 clean :
@@ -123,12 +129,24 @@ testclean :
 makeref :
 	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUM) ${CP2K} makeref
 
-libabin.a : init.o
-	ar cru libabin.a init.o $(ALLDEPENDS) && ranlib libabin.a
+# TODO: Remove the dependency on init.o
+# (need to mock finalize() routine, which we need to do anyway)
+# TODO: Seems like this does not work correctly
+# after `make clean`, `make unittest` fails to build
+libabin.a : init.o $(F_OBJS)
+	ar cru libabin.a init.o $(F_OBJS) && ranlib libabin.a
 
 unittest : libabin.a
-	# TODO: compile and execute unittests
 
+# TODO: All unit tests in tests directory, and
+# should have their own Makefile
+unittest_TESTS := test_utils.pf
+unittest_REGISTRY :=
+unittest_OTHER_SOURCES :=
+unittest_OTHER_LIBRARIES := $(LDLIBS) -L. -labin -LWATERMODELS/ -lttm
+unittest_OTHER_INCS :=
+
+$(eval $(call make_pfunit_test,unittest))
  
 # Dummy target for debugging purposes
 debug: 
@@ -137,7 +155,6 @@ debug:
 	echo ${DFLAGS}
 	echo ${CFLAGS}
 	echo ${FFLAGS}
-	echo ${ALLDEPENDS}
 
 .PHONY: clean distclean test testclean makeref debug
 
