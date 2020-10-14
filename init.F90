@@ -8,6 +8,7 @@ module compile_info
    integer,dimension(8),intent(in) :: time_data
    character(len=1024) :: cmdline
 
+   ! DATE and COMMIT are defined and exported in Makefile
    print *, 'Compiled at  ', DATE
    print *, COMMIT
 !$ print *,'Compiled with parallel OpenMP support for PIMD.'
@@ -1312,6 +1313,7 @@ subroutine finish(error_code)
 
    call deallocate_arrays( )
 
+   ! TODO: Move this to a subroutine in mod_files
    do i=2,MAXUNITS
       inquire(unit=i,opened=lopen)
       ! TODO: This is not portable, do not hardcode 5 and 6!
@@ -1340,6 +1342,7 @@ subroutine finish(error_code)
       call finalize_gle()
    end if
 
+   ! TODO: We should have an MPI module handling this
 #ifdef MPI
 if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
    if (error_code.eq.0.and.pot.ne."_cp2k_")then
@@ -1367,8 +1370,8 @@ end if
     end if
 #endif
 
-if(ipimd.eq.5)then
-   call lz_finalize()
-end if
+   if(ipimd.eq.5)then
+      call lz_finalize()
+   end if
 
 end subroutine finish

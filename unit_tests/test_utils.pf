@@ -8,14 +8,14 @@ contains
    @test
    subroutine test_uppertolower()
 
-      @assertEqual("a", UpperToLower("A"), "UpperToLower('A')")
+      @assertEqual("abc-._", UpperToLower("AbC-._"), "UpperToLower('AbC-._')")
    
    end subroutine test_uppertolower
 
    @test
    subroutine test_lower_to_upper()
 
-      @assertEqual("A", LowerToUpper("a"), "LowerToUpper('a')")
+      @assertEqual("ABC-._", LowerToUpper("AbC-._"), "LowerToUpper('AbC-._')")
    
    end subroutine test_lower_to_upper
 

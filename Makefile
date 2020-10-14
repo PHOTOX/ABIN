@@ -101,8 +101,10 @@ ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests all
 endif
 
+# Build and run Unit tests
 unittest : ${BIN}
 	$(MAKE) -C unit_tests all
+	$(MAKE) -C unit_tests test
 
 # Always recompile init.F90 to get current date and commit
 # TODO: Figure out a cleaner way to do this
