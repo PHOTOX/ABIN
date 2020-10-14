@@ -15,6 +15,9 @@
 
 TEST=all
 BIN=abin
+
+# Export all vars into submake commands
+export
 include make.vars
 
 export SHELL=/bin/bash
@@ -98,6 +101,9 @@ ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests all
 endif
 
+unittest : ${BIN}
+	$(MAKE) -C unit_tests all
+
 # Always recompile init.F90 to get current date and commit
 # TODO: Figure out a cleaner way to do this
 # TODO: We should move this into abin.F90
@@ -135,7 +141,7 @@ debug:
 	echo ${CFLAGS}
 	echo ${FFLAGS}
 
-.PHONY: clean test testclean makeref debug
+.PHONY: clean test testclean makeref debug unittest
 
 .SUFFIXES: .F90 .f90 .f95 .f03 .F03
 

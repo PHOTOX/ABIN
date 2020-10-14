@@ -8,9 +8,7 @@ if [[ "$#" -eq 1 && ! -z $1 ]];then
    REPO_DIR=$1
 fi
 
-
 git clone --recursive https://github.com/Goddard-Fortran-Ecosystem/pFUnit $REPO_DIR && cd $REPO_DIR
-
 
 mkdir -p build && cd build
 export FC=gfortran
