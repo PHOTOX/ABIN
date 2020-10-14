@@ -31,7 +31,7 @@ jobs:
       id: pfunit-cache
       uses: actions/cache@v2
       with:
-        path: ${{ env.HOME}}/pfunit/build/installed
+        path: ~/pfunit/build/installed
         key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('install_pfunit.sh') }}
 
     # TODO: Maybe we should specify a specific commit in install_pfunit.sh
@@ -73,7 +73,7 @@ jobs:
       id: pfunit-cache
       uses: actions/cache@v2
       with:
-        path: ${{ env.HOME }}/pfunit/build/installed
+        path: ~/pfunit/build/installed
         key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('install_pfunit.sh') }}
 
     - name: Download and build pFUnit
