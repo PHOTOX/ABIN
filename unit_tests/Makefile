@@ -20,7 +20,7 @@ LDLIBS = -lm -lstdc++ ${LIBS}
 utils_TESTS := test_utils.pf
 utils_REGISTRY :=
 utils_OTHER_SOURCES :=
-utils_OTHER_LIBRARIES := -lgcov -L"../" -labin -L"../WATERMODELS/" -lttm $(LDLIBS)
+utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../" -labin -L"../WATERMODELS/" -lttm $(LDLIBS)
 utils_OTHER_INCS :=
 
 $(eval $(call make_pfunit_test,utils))
