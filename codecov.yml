@@ -5,6 +5,19 @@ coverage:
   precision: 2
   round: down
   range: "70...100"
+  status:
+    project:
+      # https://docs.codecov.io/docs/commit-status
+      default:
+        target: auto
+        # Allow coverage drop by 1%
+        threshold: 0.5%
+        # For now, only report results,
+        # do not fail CI if coverage doesn't meet target
+        informational: true
+    patch:
+        target: auto
+        threshold: 1%
 
 parsers:
   gcov:
