@@ -658,7 +658,7 @@ subroutine init(dt, time_data)
                read(500,*, IOSTAT=iost)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
                if (iost.ne.0) call err_read(chveloc,"Could not read velocities.", iost)
                atom = LowerToUpper(atom)
-               if (atom.ne.names(iat))then
+               if (atom.ne.LowerToUpper(names(iat)))then
                   write(*,*)'Offending line:'
                   write(*,*)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
                   call err_read(chveloc,"Inconsistent atom types in input velocities.", iost)
