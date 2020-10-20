@@ -1,6 +1,7 @@
 *mod
 make.vars
 abin.dev*
+libabin.a
 *.o
 *.gcda
 *.gcno

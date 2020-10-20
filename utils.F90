@@ -21,6 +21,7 @@ module mod_utils
       character(len=len(string))  :: return_string
       integer                     :: c, i
 
+      ! TODO: Not sure whether this is handling non-ASCII cases correctly
       return_string = adjustl(string)
       do i=1,len(trim(return_string))
          c = iachar( return_string(i:i))
@@ -68,6 +69,13 @@ module mod_utils
       end do
    end function LowerToUpper
 
+   ! TODO: Maybe move this into a separate error handling module, 
+   ! together with finish(), and move it to a separate file
+   ! Though need to figure out how to do it without having circular dependencies :-(
+   ! abinerror is needed everywhere, so shouldn't depend on much,
+   ! but finish() is basically dependent on everything. :-(
+   !
+   ! In any case, mod_utils should not depend on anything outside of mod_const and mod_general!
    subroutine abinerror(chcaller)
       use mod_general,  only: my_rank
       character(len=*),intent(in)   :: chcaller

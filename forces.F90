@@ -185,13 +185,14 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    eclas = 0.0d0
 !  Here we decide which forces we want.
 !  By default we call external program in force_abin routine
-!  TODO: All internal potentials should begin by '_'
+!  TODO: All keywords for internal potentials should begin and end by '_'
+!  such as _tera_
    SELECT CASE (chpot)
       case ("mm")
          call force_LJCoul(x, y, z, fx, fy, fz, eclas)
 #ifndef CP2K
-! With CP2K interface there is a problem with underscoring, so we don't support NAB and
-! water force fields
+! With CP2K interface there is a problem with underscoring
+! so we don't support water force fields (which are not combineable with CP2K anyway
       case ("mmwater")
          call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
 #endif

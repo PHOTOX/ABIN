@@ -4,6 +4,9 @@
 # The local build configuration is stored in make.vars,
 # which is NOT under version control.
 
+# Exit script immediately upon error
+set -euo pipefail
+
 # Output file name (do not change)
 VARS=make.vars
 
@@ -14,6 +17,11 @@ PLUMED=FALSE
 FFTW=FALSE
 ABINEXE=abin
 
+MPI_PATH=''
+PFUNIT_PATH=''
+PLUMED_PATH=''
+CP2K_PATH=''
+
 function show_help()
 {
 echo "
@@ -21,7 +29,7 @@ NAME
    configure - generate local configuration for ABIN
 
 SYNOPSIS
-   configure [--debug] [--mpi path/to/mpi] [--plumed path/to/plumed] [--cp2k]
+   configure [--debug] [--mpi path/to/mpi] [--plumed path/to/plumed] [--pfunit path/to/pfunit] [--cp2k]
 
 OPTIONS
    --debug       Compile in debug mode
@@ -30,6 +38,8 @@ OPTIONS
    --plumed      Compile with Plumed library
    --fftw        Use FFTW library (needed for normal mode PIMD)
    --cp2k        Cross-compile with CP2K (experimental)
+   --pfunit      Compile with unit tests using pFUnit library
+                 (use ./install_pfunit.sh to install it first)
 "
 }
 
@@ -48,6 +58,10 @@ while [[ $# -gt 0 ]]; do
             exit 1
         fi
         MPI_PATH=$2
+        if [[ ! -z $MPI_PATH && ! -d $MPI_PATH ]]; then
+            echo "$MPI_PATH is not a directory!"
+            exit 1
+        fi
         shift 2
         ;;
       --plumed)
@@ -57,6 +71,22 @@ while [[ $# -gt 0 ]]; do
             exit 1
         fi
         PLUMED_PATH=$2
+        if [[ ! -d $PLUMED_PATH ]]; then
+            echo "$PLUMED_PATH is not a directory!"
+            exit 1
+        fi
+        shift 2
+        ;;
+      --pfunit)
+        if [[ $# -lt 2 ]]; then
+            echo "Error: missing PFUNIT_PATH argument"
+            exit 1
+        fi
+        PFUNIT_PATH=$2
+        if [[ ! -d $PFUNIT_PATH ]]; then
+            echo "$PFUNIT_PATH is not a directory!"
+            exit 1
+        fi
         shift 2
         ;;
       --fftw)
@@ -75,19 +105,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "Generating local build configuration for ABIN"
-echo "Writing config to $VARS"
-echo "# Local build configuration" > $VARS
-echo "# This file was built as follows." >> $VARS
-echo "# $0 $PARAMS" >> $VARS
+# Set to default if FFLAGS is not defined yet, see
+# https://stackoverflow.com/questions/11362250/in-bash-how-do-i-test-if-a-variable-is-defined-in-u-mode
+: ${FFLAGS:='-O2 -fopenmp'}
 
-if [[ -z $FFLAGS ]];then
-   # Default build
-   # Overwrite this by exporting FFLAGS before running configure
-   FFLAGS="-O2 -fopenmp"
-fi
-
-if [[ -z $FC ]];then
+if [[ -z ${FC-} ]];then
    if [[ $MPI = "TRUE" ]];then
       if [[ $MPI_PATH != "" ]];then
          FC=$MPI_PATH/bin/mpifort
@@ -102,7 +124,8 @@ if [[ -z $FC ]];then
 fi
 
 if [[ ! -f $FC && ! `which $FC` ]];then
-   echo "ERROR: $FC not found"
+   echo "ERROR: program \"$FC\" not found"
+   echo "Consider exporting variable \"FC\" manually"
    exit 1
 fi
 
@@ -123,9 +146,16 @@ if [[ $PLUMED = "TRUE" ]];then
    fi
 fi
 
+echo "Generating local build configuration for ABIN"
+echo "Writing config to $VARS"
+
 # Print all vars to make.vars
+rm -rf $VARS
 echo "
-# This file is included in Makefile
+# Local build configuration, included into Makefile
+
+# This file was built as follows.
+# $0 $PARAMS
 
 # Name of the final binary
 BIN = $ABINEXE
@@ -160,15 +190,17 @@ FFTW = $FFTW
 
 # Experimental cross-compilation with CP2K
 CP2K = $CP2K
-" >> make.vars
+
+# Compile with unit tests
+PFUNIT_PATH = $PFUNIT_PATH" > $VARS
 
 # TODO: Make automatic check for FFTW library
 
 if [[ $CP2K = "TRUE" ]];then
    echo "Linkink with CP2K"
-   echo "Setup paths to CP2K libs manually in make.vars"
+   echo "Setup paths to CP2K libs manually in $VARS"
    echo "
-CP2KPATH = /usr/local/src/programes/src/cp2k-2.6.2/lib/Linux-x86-64-gfortran-mkl/sopt/
+CP2K_PATH = /usr/local/src/programes/src/cp2k-2.6.2/lib/Linux-x86-64-gfortran-mkl/sopt/
 MKL = /intel/parallel_studio_2015_update5/mkl/lib/intel64/
 LIBINT_LIB = /libint/1.1.4-gcc/lib
 FFTW_LIB = /fftw/3.3.4-gcc/lib/
@@ -182,6 +214,6 @@ CP2K_LIBS = \$(MKL_LIBS) \
             \$(LIBXC_LIB)/libxc.a\
             \$(LIBINT_LIB)/libderiv.a\
             \$(LIBINT_LIB)/libint.a
-" >> make.vars
+" >> $VARS
 fi
 

@@ -5,7 +5,9 @@ on:
     branches: [ master ]
   pull_request:
 
+
 jobs:
+
   basic_build:
     runs-on: ubuntu-latest
     strategy:
@@ -23,19 +25,37 @@ jobs:
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
-    - name: build
-      run: ./configure && make
-    - name: test
+
+    # pFUnit library is used to build and run unit tests
+    - name: pFUnit build Cache
+      id: pfunit-cache
+      uses: actions/cache@v2
+      with:
+        path: ~/pfunit/build/installed
+        # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
+        key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('install_pfunit.sh') }}
+
+    # TODO: We should specify a specific commit in install_pfunit.sh
+    # so that we're not dependent on changes in pFUnit
+    - name: Download and build pFUnit
+      if: steps.pfunit-cache.outputs.cache-hit != 'true'
+      run: ./install_pfunit.sh ${HOME}/pfunit
+
+    - name: build ABIN
+      run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
+
+    - name: test ABIN
       run: make test
+
+   # TODO: Separate unit test coverage
     - name: Codecov upload
       run:  bash <(curl -s https://codecov.io/bash)
 
 
-
   optimized_build:
     runs-on: ubuntu-latest
+    needs: basic_build
     strategy:
-      fail-fast: true
       matrix:
          gcc_v: [7, 8, 9]
     env:
@@ -49,9 +69,22 @@ jobs:
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
-    - name: build
-      run: ./configure && make
-    - name: test
+
+    - name: pFUnit build Cache
+      id: pfunit-cache
+      uses: actions/cache@v2
+      with:
+        path: ~/pfunit/build/installed
+        key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('install_pfunit.sh') }}
+
+    - name: Download and build pFUnit
+      if: steps.pfunit-cache.outputs.cache-hit != 'true'
+      run: ./install_pfunit.sh ${HOME}/pfunit
+
+    - name: build ABIN
+      run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
+
+    - name: test ABIN
       run: make test
 
   # Consider whether this needs to be a separate job
