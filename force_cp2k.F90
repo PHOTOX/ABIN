@@ -55,7 +55,7 @@ subroutine init_cp2k()
     use mod_general, only: natom, idebug, nwalk, my_rank, mpi_world_size
     use mod_utils, only: abinerror
     use iso_c_binding, only: C_CHAR,c_null_char
-#ifdef MPI
+#ifdef USE_MPI
     include "mpif.h"
 #endif
     integer :: ierr, bead
@@ -69,7 +69,7 @@ subroutine init_cp2k()
     character(len=300)  :: chsed
     character(len=4)    :: chbead
 
-#ifdef MPI
+#ifdef USE_MPI
    CALL cp2k_init()
 
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
@@ -146,7 +146,7 @@ subroutine finalize_cp2k()
    deallocate( force )
    call cp2k_destroy_force_env(f_env_id)
 
-#ifdef MPI
+#ifdef USE_MPI
    CALL cp2k_finalize()
 #else
    call cp2k_finalize_without_mpi()
@@ -162,7 +162,7 @@ subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
    use mod_utils,    only: abinerror
    use mod_interfaces, only: oniom
    use mod_utils,    only: abinerror
-#ifdef MPI
+#ifdef USE_MPI
    include "mpif.h"
    integer  :: status(MPI_STATUS_SIZE)
 #endif
@@ -183,7 +183,7 @@ subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
 !   bead = modulo(my_rank, walkmax)
    cp2k_masterrank = 0
    cp2k_mastersize = 1
-#ifdef MPI
+#ifdef USE_MPI
    call MPI_Comm_rank(cp2k_mastercomm, cp2k_masterrank, ierr)
    call MPI_Comm_size(cp2k_mastercomm, cp2k_mastersize, ierr)
 
@@ -238,7 +238,7 @@ subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
 
    end do
 
-#ifdef MPI
+#ifdef USE_MPI
 
    if (cp2k_mpi_beads)then
       call MPI_Allreduce(eclas, eclas_mpi, 1, MPI_DOUBLE_PRECISION, MPI_SUM, cp2k_mastercomm, ierr) 

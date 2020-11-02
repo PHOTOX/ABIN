@@ -10,6 +10,10 @@ module mod_interfaces
    integer,dimension(8) :: values1
    end subroutine init
 
+   subroutine print_compile_info()
+
+   end subroutine print_compile_info
+
    ! has to be here or in its own module, as it depends on mod_sh
    ! and mod_sh depends on force_clas
    subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)

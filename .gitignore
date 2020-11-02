@@ -30,7 +30,6 @@ TESTS/*/ERROR
 TESTS/SH_BUTCHER/geom.?.?.?
 TESTS/CP2K*/WATER*
 TESTS/PLUMED/*
-WATERMODELS/libttm.a
 DOC/*.log
 DOC/*.bbl
 DOC/*.aux

@@ -23,7 +23,7 @@ program abin_dyn
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop
    use mod_kinetic, ONLY: temperature
-   use mod_utils, only: abinerror, archive_file
+   use mod_utils, only: abinerror, archive_file, get_formatted_date_and_time
    use mod_shake, only: nshake
    use mod_transform
    use mod_mdstep
@@ -31,30 +31,29 @@ program abin_dyn
    use mod_analysis, only: analysis, restout
    use mod_interfaces, only: force_clas, force_quantum
    use mod_en_restraint
-#ifdef PLUM
    use mod_plumed
-#endif
    use mod_terampi_sh, only: move_new2old_terash
-#ifdef MPI
-   use mod_remd, only: nswap, remd_swap
+   use mod_remd
    implicit none
+#ifdef USE_MPI
    include 'mpif.h'
-#else
-   implicit none
 #endif
+   ! TODO: These should probably be defined and stored in some module, not here
    real(DP)    :: dt=20.0d0, eclas, equant
    integer     :: itrj
    LOGICAL     :: file_exists
    integer,dimension(8) :: time_start, time_end
-   real(DP) :: TIME
+   real(DP) :: total_cpu_time
    integer  :: ierr
 !$ integer  :: nthreads,omp_get_max_threads
 
-   ! This cannot be in init because of namelist 'system'
-   if(my_rank.eq.0) call clean_temp_files()
+   call date_and_time(VALUES=time_start)
 
 !  INPUT AND INITIALIZATION SECTION
-   call init(dt, time_start) 
+   call init(dt)
+
+   ! This cannot be in init because of the namelist 'system'
+   if (my_rank.eq.0) call clean_temp_files()
 
    if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then
       call archive_file('restart.xyz',it)
@@ -68,10 +67,12 @@ program abin_dyn
 !$ nthreads = omp_get_max_threads()
    if (my_rank.eq.0)then
 !$    write(*,*)'Number of OpenMP threads used = ', nthreads
+      write(*,'(A)')'Job started at: ' // trim(get_formatted_date_and_time(time_start))
       write(*,*)''
    end if
 
-!  Stage transformation
+   ! TODO: Move this bit to a helper function
+!  Staging transformation for Path Integrals
 !  Masses, velocities and positions are transformed here into a new set of u variables
 !  See Tuckermann's article in "Quantum Simulations of Complex Many Body Systems'. 
    if(istage.eq.1)then
@@ -98,9 +99,9 @@ program abin_dyn
 !  End of transformations
 
 !-----Note that amt equals am if staging is off
-   px = amt * vx   
-   py = amt * vy   
-   pz = amt * vz  
+   px = amt * vx
+   py = amt * vy
+   pz = amt * vz
 
 
    if (ipimd.eq.3)then
@@ -109,14 +110,13 @@ program abin_dyn
        
    else
 
-
       if (my_rank.eq.0)then
          write(*,*)
          write(*,*)'#      Step     Time [fs]'
       end if
 !---------------- PROPAGATION-----------------------------------
 
-#ifdef MPI
+#ifdef USE_MPI
       ! Without this Barrier, ranks > 0 do not write geom.dat in force_clas
       ! I don't know why the hell not.
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
@@ -147,8 +147,9 @@ program abin_dyn
       it=it+1
       do it=(it),nstep
 
-#ifdef MPI
-!        This is needed, because all ranks need to see EXIT
+         ! TODO: Move this bit to a helper function check_for_exit()
+#ifdef USE_MPI
+!        This is needed, because all ranks need to see fle EXIT
 !        Maybe we should get rid of it for performance reasons
 !        We could still call Abort from rank0, but we would not be sure that we are on
 !        the same timestep. Does it matter??
@@ -169,7 +170,7 @@ program abin_dyn
                call restout(x,y,z,vx,vy,vz,it-1)
             endif
 
-#ifdef MPI
+#ifdef USE_MPI
             call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
             if (my_rank.eq.0)then
@@ -225,7 +226,7 @@ program abin_dyn
             pz = amt * vz
          endif
 
-#ifdef MPI
+#ifdef USE_MPI
 !        SWAP REMD REPLICAS
          if (iremd.eq.1.and.modulo(it,nswap).eq.0)then
             call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
@@ -300,25 +301,19 @@ program abin_dyn
    
    call finish(0)
 
-!  TIMING
+!  FINAL TIMING
 !  TODO: Maybe we should print some statistics more often
 !  i.e. hours per picosecond or sth like that
    if (my_rank.eq.0)then
-      call cpu_time(TIME)
-      write(*,*)' Total cpu time [s] (does not include ab initio calculations)'
-      write(*,*)TIME
-      write(*,*)' Total cpu time [hours] (does not include ab initio calculations)'
-      write(*,*)TIME/3600.
+      call cpu_time(total_cpu_time)
+      write(*,'(A)')'Total cpu time [s] (does not include ab initio calculations)'
+      write(*,*)total_cpu_time
+      write(*,'(A)')'Total cpu time [hours] (does not include ab initio calculations)'
+      write(*,*)total_cpu_time / 3600.
  
+      write(*,'(A)')'Job started at:  ' // trim(get_formatted_date_and_time(time_start))
       call date_and_time(VALUES=time_end)
-      write(*,*)'Job started at:'
-      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")time_start(5),':', &
-           time_start(6),':',time_start(7),'  ',time_start(3),'.',time_start(2),'.',&
-           time_start(1)
-      write(*,*)'Job finished at:'
-      write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")time_end(5),':',&
-           time_end(6),':',time_end(7),'  ',time_end(3),'.',time_end(2),'.',&
-           time_end(1)
+      write(*,'(A)')'Job finished at: ' // trim(get_formatted_date_and_time(time_end))
    end if
 
 end 

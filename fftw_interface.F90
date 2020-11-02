@@ -1,6 +1,9 @@
 
 module mod_fftw3
    use, intrinsic :: iso_c_binding
+   private
+#ifdef USE_FFTW
+   public :: fftw_init, fftw_end
    include 'fftw3.f90'
    type(C_PTR) :: plan_utox,plan_xtou
    real(C_DOUBLE), dimension(:), allocatable :: x_in, y_in, z_in
@@ -45,6 +48,8 @@ module mod_fftw3
          call fftw_destroy_plan(plan_utox)
       endif
    end subroutine fftw_end
+
+#endif
 
 end module mod_fftw3
 

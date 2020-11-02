@@ -30,7 +30,7 @@ module mod_terampi
    real(DP)  :: mpi_sleep = 0.05
    public :: teraport, newcomms, mpi_sleep, nteraservers
    public :: force_tera, natmm_tera
-#ifdef MPI
+#ifdef USE_MPI
    public :: handle_mpi_error
    public :: finalize_terachem, initialize_terachem, connect_terachem
 #endif
@@ -72,7 +72,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
 !$    itera = OMP_GET_THREAD_NUM() + 1
 
 
-#ifdef MPI
+#ifdef USE_MPI
       call send_tera(x, y, z, iw, newcomms(itera))
 
       call receive_tera(fx, fy,fz, eclas, iw, walkmax, newcomms(itera))
@@ -87,7 +87,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
 end subroutine force_tera
 
 
-#ifdef MPI
+#ifdef USE_MPI
 
 subroutine send_tera(x, y, z, iw, newcomm)
    use mod_const, only: DP, ANG

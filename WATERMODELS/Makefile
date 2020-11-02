@@ -1,17 +1,24 @@
 CXX = g++
-CXXFLAGS = -O2 -Wall -std=c++11
+CXXFLAGS = -g -O2 -Wall
 
-LIBTTM_OBJ = qtip4pf.o ps.o electrostatics.o gammq.o smear.o \
+LIB_OBJ = qtip4pf.o ps.o electrostatics.o gammq.o smear.o \
              ttm2f.o ttm3f.o ttm4f.o
 
-all: water_interface.o libttm.a
+TEST_OBJ = xyz-water-utils.o io-xyz.o test-ttm.o
 
-water_interface.o: water_interface.cpp
-	$(CXX) $(CXXFLAGS) water_interface.cpp -c
+all: libwater.a
 
-libttm.a: $(LIBTTM_OBJ)
-	ar cru libttm.a $(LIBTTM_OBJ) && ranlib libttm.a
+libwater.a: $(LIB_OBJ)
+	ar cru libwater.a $(LIB_OBJ) && ranlib libwater.a
+
+test-ttm: libwater.a $(TEST_OBJ)
+	$(CXX) -o test-ttm $(TEST_OBJ) libwater.a
+
+test: test-ttm
+	./test-ttm hexamers/prism-tschumper-ccsdt.xyz
+	./test-ttm hexamers/cage-tschumper-ccsdt.xyz
 
 clean:
-	rm -f libttm.a $(LIBTTM_OBJ) water_interface.o
+	rm -f *.a *.o test-ttm
 
+.PHONY: test
