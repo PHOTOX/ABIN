@@ -3,6 +3,8 @@
 # Parameters passed from Makefile
 ABINEXE="$PWD/$1 -x mini.dat"
 
+# TODO: This is extremely brittle, we should at least
+# verify that the number of parameters is correct!
 TESTS="$2"
 MPI="$3"
 FFTW="$4"

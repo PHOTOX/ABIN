@@ -1,3 +1,6 @@
+! TODO: Move this to a separate file
+! and pass DATE and COMMIT as a parameters to this function,
+! so that abin.F90 can be the default target in Makefile
 module compile_info
 
    CONTAINS
@@ -9,8 +12,8 @@ module compile_info
    character(len=1024) :: cmdline
 
    ! DATE and COMMIT are defined and exported in Makefile
-   print *, 'Compiled at  ', DATE
-   print *, COMMIT
+   print *, 'Compiled at ', COMPILE_DATE
+   print *, GIT_COMMIT
 !$ print *,'Compiled with parallel OpenMP support for PIMD.'
 #ifdef USEFFTW
    write(*,*)'Compiled with FFTW support.'
