@@ -1,30 +1,43 @@
-# Super simple Makefile for ABIN		Daniel Hollas,2014
+# Super simple Makefile for ABIN
 
-# The user defined variables are included from file "make.vars',
+# The user-defined variables are included from file "make.vars',
 # which is not under version control
 # No user modification to this Makefile file should be necessary.
 
 # Simply type "make" and you should get the binary named $BIN
 # Before recompiling, it is wise to clean up by "make clean"
 
-# WARNING: dependecies on *.mod files are hidden!
-# If you change modules, you should recompile the whole thing i.e. make clean;make
+# WARNING: dependecies on *.mod files are not properly resolved here!
+# If you change modules, you should recompile the whole thing by running
+# $ make clean && make
 
 # For compilation with static system libraries, see:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46539
 
+# Some defaults, likely to be overwritten by make.vars
+# By default run all tests in TESTS/
 TEST=all
+# ABIN binary name
 BIN=abin
+# Optional compilation parameters
+# Some functionality will not work without them
+MPI=FALSE
+FFTW=FALSE
+CP2K=FALSE
+PLUMED=FALSE
 
 # Export all vars into submake commands
 export
+# User-defined compilation parameters are in make.vars
+# and should override defaults defined above
 include make.vars
 
 export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
 
-# TODO: Make this if check less stupid, we need to actually 
-# check we're in Git repo
+# TODO: Make this ifeq less stupid,
+# We should not presume that Git is available
+# and if it is, we need to actually verify we're in a Git repo
 ifeq ($(shell git --version|cut -b -3),git)
 export COMMIT=`git log -1 --pretty=format:"commit %H"`
 endif
@@ -34,8 +47,7 @@ F_OBJS := arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o pl
           force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o density.o analysis.o \
           minimizer.o mdstep.o forces.o
 
-# TODO: Separate static and dynamic LIBS
-# TODO: Rename libttm to libwater.a or something
+# TODO: Rename libttm.a to libwater.a
 STATIC_LIBS = WATERMODELS/libttm.a
 
 ifeq ($(strip $(FFTW)),TRUE)
@@ -64,11 +76,13 @@ endif
 
 ifeq ($(strip $(PLUMED)),TRUE)
  include ${PLUMED_LINK}
+ # TODO: Rename to USEPLUMED
  DFLAGS += -DPLUM
  STATIC_LIBS += ${PLUMED_STATIC_LOAD}
 endif
 
 ifeq  ($(strip $(MPI)),TRUE) 
+  # TODO: Rename to USEMPI
   DFLAGS += -DMPI
   INC    += $(MPI_INC)
   LIBS   += $(MPI_LIBS)
@@ -110,7 +124,7 @@ unittest : ${BIN}
 # TODO: Figure out a cleaner way to do this
 # TODO: We should move this into abin.F90
 init.o : init.F90 ${F_OBJS} abin.o
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DDATE="'${DATE}'" -DCOMMIT="'${COMMIT}'" -c init.F90
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DCOMPILE_DATE="'${DATE}'" -DGIT_COMMIT="'${COMMIT}'" -c init.F90
 
 clean :
 	$(MAKE) -C WATERMODELS clean
@@ -121,22 +135,25 @@ endif
 
 # Run the test suite
 # TODO: Pass MPI_PATH as well
+# TODO: This invocation of TESTS/test.sh is extremely brittle, because
+# it relies that all pamaraters (e.g. FFTW) are defined and not empty
+# For now, we define defaults for them at the top, before including make.vars
 test : ${BIN}
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests test
 endif
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUM} ${CP2K}
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUMED} ${CP2K}
 
 # Clean all test folders.
 testclean :
-	/bin/bash TESTS/test.sh ${BIN} clean ${MPI} ${FFTW} $(PLUM) ${CP2K}
+	/bin/bash TESTS/test.sh ${BIN} clean ${MPI} ${FFTW} $(PLUMED) ${CP2K}
 
 # This will automatically generate new reference data for tests
 makeref :
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUM) ${CP2K} makeref
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} makeref
 
 # Dummy target for debugging purposes
-debug: 
+debug :
 	echo ${LIBS}
 	echo ${INC}
 	echo ${DFLAGS}

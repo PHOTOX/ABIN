@@ -1,12 +1,10 @@
 *mod
 make.vars
-abin.dev*
 libabin.a
 *.o
 *.gcda
 *.gcno
 *.gcov
-date.inc
 *temp
 TESTS/*/*diff
 TESTS/*/*dat
@@ -39,6 +37,6 @@ DOC/*.aux
 DOC/*.blg
 DOC/*.toc
 DOC/*out
-abin.mpi
-abin.cp2k*
-abin.dev
+# Default binary name
+abin
+abin.*

@@ -180,9 +180,6 @@ MPI_PATH = $MPI_PATH
 # Compilation with Plumed library
 PLUMED = $PLUMED
 PLUMED_LINK = $PLUMED_PATH/Plumed.inc
-# TODO: Figure out what this should be
-# (it is referenced in Makefile)
-PLUMED_STATIC_LOAD = $PLUMED_PATH
 
 # FFTW library is typically shipped with your system
 # It is needed for normal mode coordinate transformation in PIMD
