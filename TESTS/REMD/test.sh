@@ -6,12 +6,21 @@ if [[ "$1" = "clean" ]];then
 fi
 
 ABINEXE=$1
-MPIRUN="$MPI_PATH/bin/mpirun"
-# If this fails, just try plain mpirun and hope for the best
-if [[ ! -f $MPIRUN ]];then
+
+# If MPI_PATH is not set, let's hope mpirun is in PATH
+if [[ ! -d $MPI_PATH ]];then
    MPIRUN=mpirun
+elif [[ -f "$MPI_PATH/bin/orterun" ]];then
+  # OpenMPI does not allow oversubscribing by default,
+  # i.e. more MPI processes than CPU cores.
+  # Github Actions runners have only 2 CPUs,
+  # so we need to explicitly set oversubscription
+  MPIRUN="$MPI_PATH/bin/orterun -oversubscribe"
+else
+  MPIRUN="$MPI_PATH/bin/mpirun"
 fi
 
-$MPIRUN  -np 3 $ABINEXE -i input.in -v vel0.in > output
-$MPIRUN  -np 3 $ABINEXE -i input.in2 >> output
+
+$MPIRUN -np 3 $ABINEXE -i input.in -v vel0.in > output
+$MPIRUN -np 3 $ABINEXE -i input.in2 >> output
 #$MPIRUN -np 2 xterm -e gdb ../../abin.mpi

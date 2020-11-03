@@ -56,7 +56,7 @@ subroutine init_cp2k()
     use mod_utils, only: abinerror
     use iso_c_binding, only: C_CHAR,c_null_char
 #ifdef USE_MPI
-    include "mpif.h"
+    use mpi
 #endif
     integer :: ierr, bead
     integer :: new_size, new_rank
@@ -163,7 +163,7 @@ subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
    use mod_interfaces, only: oniom
    use mod_utils,    only: abinerror
 #ifdef USE_MPI
-   include "mpif.h"
+   use mpi
    integer  :: status(MPI_STATUS_SIZE)
 #endif
    real(DP),intent(in)    :: x(:,:),  y(:,:),  z(:,:)

@@ -46,10 +46,10 @@ subroutine init(dt, time_data)
    use mod_remd
    use mod_terampi
    use mod_terampi_sh
-   implicit none
 #ifdef USE_MPI
-   include 'mpif.h'
+   use mpi
 #endif
+   implicit none
    real(DP),intent(out) :: dt
    integer,dimension(8), intent(out) :: time_data
    real(DP) :: masses(MAXTYPES)
@@ -1169,15 +1169,13 @@ subroutine finish(error_code)
 #ifdef USE_MPI
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
-   implicit none
-   include "mpif.h"
-   integer :: errmpi
-#else
-   implicit none
+   use mpi
 #endif
+   implicit none
 
    real(DP) :: TIME
-   integer  :: i, ierr, error_code
+   integer, intent(in) :: error_code
+   integer  :: i, ierr
    logical  :: lopen
 !   integer :: iter=-3
 
@@ -1217,6 +1215,8 @@ subroutine finish(error_code)
    end if
 
 #ifdef USE_FFTW
+   ! TODO: Heere we expect we only use FFTW
+   ! for normal modes. Is that true?
    if (inormalmodes.gt.0)then
       call fftw_end()
    end if
@@ -1229,20 +1229,17 @@ subroutine finish(error_code)
       call finalize_gle()
    end if
 
-   ! TODO: We should have an MPI module handling this
-#ifdef USE_MPI
-if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
-   if (error_code.eq.0.and.pot.ne."_cp2k_")then
-      call MPI_FINALIZE ( errmpi )
-      if (errmpi.ne.0)then
-         write(*,'(A)')'Bad signal from MPI_FINALIZE: ', errmpi
-         ! Let's try to continue
-      end if
-   else if (error_code.gt.0)then
-      call MPI_Abort(MPI_COMM_WORLD, ierr)
-   end if
-end if
+#ifdef USE_PLUMED
+    if (iplumed.eq.1) then
+      call plumed_f_gfinalize()
+    end if
 #endif
+
+   ! Cleanup Landau-Zener
+   if(ipimd.eq.5)then
+      call lz_finalize()
+   end if
+
 #ifdef CP2K
 !  MPI_FINALIZE is called in this routine as well
    if(pot.eq.'_cp2k_')then
@@ -1250,15 +1247,20 @@ end if
    end if
 #endif
 
-!   PLUMED closing session
-#ifdef USE_PLUMED
-    if (iplumed.eq.1) then
-      call plumed_f_gfinalize()
-    end if
-#endif
-
-   if(ipimd.eq.5)then
-      call lz_finalize()
+! At last, we terminate MPI processes
+! TODO: We should have an MPI module handling this
+#ifdef USE_MPI
+if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
+   if (error_code.eq.0.and.pot.ne."_cp2k_")then
+      call MPI_Finalize(ierr)
+      if (ierr.ne.MPI_SUCCESS)then
+         write(*,'(A)')'Bad signal from MPI_FINALIZE: ', ierr
+         ! Let's try to continue
+      end if
+   else if (error_code.gt.0)then
+      call MPI_Abort(MPI_COMM_WORLD, error_code, ierr)
    end if
+end if
+#endif
 
 end subroutine finish

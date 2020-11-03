@@ -34,10 +34,10 @@ program abin_dyn
    use mod_plumed
    use mod_terampi_sh, only: move_new2old_terash
    use mod_remd
-   implicit none
 #ifdef USE_MPI
-   include 'mpif.h'
+   use mpi
 #endif
+   implicit none
    ! TODO: These should probably be defined and stored in some module, not here
    real(DP)    :: dt=20.0d0, eclas, equant
    integer     :: itrj

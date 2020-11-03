@@ -54,7 +54,7 @@ subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_io, only: print_charges, print_dipoles, print_transdipoles
    use mod_sh_integ, only: nstate
    use mod_sh, only: check_CIVector, en_array, istate, nacx, nacy, nacz, tocalc
-   include 'mpif.h'
+   use mpi
    real(DP),intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
    real(DP),intent(inout) :: eclas
    integer, intent(in)    :: newcomm
@@ -220,7 +220,7 @@ subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
    use mod_utils, only: abinerror
    use mod_sh_integ, only: nstate
    use mod_sh,    only: istate, tocalc, ignore_state 
-   include 'mpif.h'
+   use mpi
    real(DP),intent(in)     :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)  :: vx(:,:),vy(:,:),vz(:,:)
    integer, intent(in)     :: newcomm
@@ -341,7 +341,7 @@ subroutine init_terash(x, y, z)
    use mod_qmmm, only: natqm
    use mod_sh_integ, only: nstate
    use mod_terampi, only: newcomms, natmm_tera, handle_mpi_error
-   include 'mpif.h'
+   use mpi
    real(DP),intent(in)  ::  x(:,:), y(:,:), z(:,:)
    real(DP) :: qmcoords(3, size(x,1))
    integer  :: status(MPI_STATUS_SIZE)
