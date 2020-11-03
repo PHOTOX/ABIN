@@ -84,7 +84,7 @@ ifeq  ($(strip $(MPI)),TRUE)
 endif
 
 LIBS += -lm -lstdc++
-# The following line does for static compilatioon does not seem to work
+# The following line for statically linking GFortran libs does not seem to work
 #LIBS := ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
 
 # This is the default target
@@ -94,7 +94,7 @@ ${BIN} : compile_info.o
 	${FC} ${FFLAGS} ${C_OBJS} ${F_OBJS} ${STATIC_LIBS} abin.o compile_info.o ${LIBS} -o $@
 
 # compile_info.F90 must be always recompiled to get the current date/time and git commit
-compile_info.o : compile_info.F90 ${C_OBJS} ${F_OBJS} abin.o
+compile_info.o: compile_info.F90 ${C_OBJS} ${F_OBJS} abin.o
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DCOMPILE_DATE="'${DATE}'" -DGIT_COMMIT="'${COMMIT}'" -c $<
 
 # Used for building Unit Tests
@@ -102,11 +102,11 @@ libabin.a: ${BIN}
 	ar cru libabin.a ${C_OBJS} $(F_OBJS) compile_info.o && ranlib libabin.a
 
 # Build and run Unit tests
-unittest : libabin.a
+unittest: libabin.a
 	$(MAKE) -C unit_tests all
 	$(MAKE) -C unit_tests test
 
-clean :
+clean:
 	$(MAKE) -C WATERMODELS clean
 	/bin/rm -f *.o *.mod *.gcno *gcda libabin.a $(BIN)
 ifneq ($(strip $(PFUNIT_PATH)),)
@@ -118,18 +118,18 @@ endif
 # TODO: This invocation of TESTS/test.sh is extremely brittle, because
 # it relies that all pamaraters (e.g. FFTW) are defined and not empty
 # For now, we define defaults for them at the top, before including make.vars
-test : ${BIN}
+test: ${BIN}
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) unittest
 endif
 	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUMED} ${CP2K}
 
 # Clean all test folders.
-testclean :
+testclean:
 	/bin/bash TESTS/test.sh ${BIN} clean ${MPI} ${FFTW} $(PLUMED) ${CP2K}
 
 # This will automatically generate new reference data for tests
-makeref :
+makeref:
 	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} makeref
 
 # Dummy target for debugging purposes

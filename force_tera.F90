@@ -16,6 +16,9 @@ module mod_terampi
 ! Date: September 2014 - September 2015
 ! ----------------------------------------------------------------
    use mod_const, only: DP
+#ifdef USE_MPI
+   use mpi
+#endif
    implicit none
    private
    integer, parameter   :: MAXTERASERVERS=9
@@ -96,7 +99,6 @@ subroutine send_tera(x, y, z, iw, newcomm)
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
    use mod_interfaces, only: oniom
-   include 'mpif.h'
    real(DP),intent(in)     ::  x(:,:),y(:,:),z(:,:)
    integer,intent(in)      ::  iw, newcomm
    real(DP) :: coords(3, size(x,1) )
@@ -206,7 +208,6 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    use mod_general, only: idebug
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
-   include 'mpif.h'
    real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)  ::  eclas
    integer,intent(in)      ::  iw, walkmax, newcomm
@@ -326,7 +327,6 @@ end subroutine receive_tera
 subroutine connect_terachem( itera )
    use mod_utils, only: abinerror
    use mod_general, only: iremd, my_rank, idebug
-   include 'mpif.h'
    integer, intent(in) :: itera
    character(len=MPI_MAX_PORT_NAME) :: port_name
    integer :: ierr, newcomm, iost
@@ -347,7 +347,7 @@ subroutine connect_terachem( itera )
       call abinerror('force_tera')
    end if
 
-   timer = MPI_WTIME(ierr)
+   timer = MPI_WTIME()
 
    ! This allows us to retry failed MPI_LOOKUP_NAME() call
    call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
@@ -381,7 +381,7 @@ subroutine connect_terachem( itera )
             call system('sleep 1')
          end if
        
-         if ( (MPI_WTIME(ierr)-timer) > 60 ) then ! Time out after 60 seconds
+         if ( (MPI_WTIME()-timer) > 60 ) then ! Time out after 60 seconds
             write(*,*)'Port "'//trim(server_name)//'" not found. Timed out after 60 seconds.'
             call abinerror("connect_to_terachem")
          end if
@@ -426,7 +426,6 @@ subroutine connect_terachem( itera )
    use mod_qmmm,  only: natqm
    use mod_system,only: names
    use mod_utils, only: abinerror
-   include 'mpif.h'
    integer :: ierr, iat, itera
 
    if (natmm_tera.gt.0)then
@@ -455,7 +454,6 @@ subroutine connect_terachem( itera )
 
 
    subroutine finalize_terachem(error_code)
-   include 'mpif.h'
    integer, intent(in) :: error_code
    integer :: request
    integer :: ierr, itera
@@ -481,7 +479,6 @@ subroutine connect_terachem( itera )
    ! TODO: call this after each MPI call
    subroutine handle_mpi_error(mpi_err, mpi_status, mpi_datatype, expected_count)
    use mod_utils,    only: abinerror
-   include 'mpif.h'
    integer, intent(in) :: mpi_err
    integer, intent(in), optional :: mpi_status(MPI_STATUS_SIZE)
    integer, intent(in), optional :: mpi_datatype, expected_count

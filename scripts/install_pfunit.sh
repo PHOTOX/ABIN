@@ -23,7 +23,7 @@ echo "
 Succesfully installed pFUnit library 
 Set the following path in your make.vars
 
-PFUNIT_DIR = $REPO_DIR/build/installed/
+PFUNIT_PATH = $REPO_DIR/build/installed/
 
 or rerun configure as
 ./configure --pfunit $REPO_DIR/build/installed/

@@ -1,10 +1,10 @@
-
+! Temperature Replica-Exchange MD (also known as parallel tempering)
 module mod_remd
   use mod_const, only: DP
   use mod_utils, only: abinerror
-  implicit none
 #ifdef USE_MPI
-  include "mpif.h"
+  use mpi
+  implicit none
   private
   public :: remd_init, remd_swap
   public :: nreplica, nswap, deltaT, Tmax, temp_list
@@ -143,26 +143,26 @@ CONTAINS
 !   write(*,*)'pz ', pz, my_rank
    if (my_rank.eq.rank1)then
       dest = rank2
-      call MPI_Send(x, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_x, MPI_COMM_WORLD, status,  ierr )
-      call MPI_Send(y, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_y, MPI_COMM_WORLD, status,  ierr )
-      call MPI_Send(z, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_z, MPI_COMM_WORLD, status,  ierr )
-      call MPI_Send(px, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_px, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(py, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_py, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(pz, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_pz, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(fxc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fx, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(fyc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fy, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(fzc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fz, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(reps(my_rank+1), 1, MPI_INTEGER, dest, tag_fz, MPI_COMM_WORLD, status, ierr )
-      call MPI_Recv(x_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_x, MPI_COMM_WORLD, status, ierr )
-      call MPI_recv(y_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_y, MPI_COMM_WORLD, status, ierr )
-      call MPI_recv(z_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_z, MPI_COMM_WORLD, status, ierr )
-      call MPI_recv(px_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_px, MPI_COMM_WORLD, status, ierr )
-      call MPI_recv(py_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_py, MPI_COMM_WORLD, status, ierr )
-      call MPI_recv(pz_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_pz, MPI_COMM_WORLD, status, ierr )
-      call MPI_recv(fxc_new ,size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fx, MPI_COMM_WORLD, status, ierr )
-      call MPI_recv(fyc_new ,size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fy, MPI_COMM_WORLD, status, ierr )
-      call MPI_recv(fzc_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fz, MPI_COMM_WORLD, status, ierr )
-      call MPI_recv(irank, 1, MPI_INTEGER, dest, tag_fz, MPI_COMM_WORLD, status, ierr )
+      call MPI_Send(x, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_x, MPI_COMM_WORLD, ierr)
+      call MPI_Send(y, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_y, MPI_COMM_WORLD, ierr)
+      call MPI_Send(z, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_z, MPI_COMM_WORLD, ierr)
+      call MPI_Send(px, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_px, MPI_COMM_WORLD, ierr)
+      call MPI_Send(py, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_py, MPI_COMM_WORLD, ierr)
+      call MPI_Send(pz, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_pz, MPI_COMM_WORLD, ierr)
+      call MPI_Send(fxc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fx, MPI_COMM_WORLD, ierr)
+      call MPI_Send(fyc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fy, MPI_COMM_WORLD, ierr)
+      call MPI_Send(fzc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fz, MPI_COMM_WORLD, ierr)
+      call MPI_Send(reps(my_rank+1), 1, MPI_INTEGER, dest, tag_fz, MPI_COMM_WORLD, ierr)
+      call MPI_Recv(x_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_x, MPI_COMM_WORLD, status, ierr)
+      call MPI_recv(y_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_y, MPI_COMM_WORLD, status, ierr)
+      call MPI_recv(z_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_z, MPI_COMM_WORLD, status, ierr)
+      call MPI_recv(px_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_px, MPI_COMM_WORLD, status, ierr)
+      call MPI_recv(py_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_py, MPI_COMM_WORLD, status, ierr)
+      call MPI_recv(pz_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_pz, MPI_COMM_WORLD, status, ierr)
+      call MPI_recv(fxc_new ,size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fx, MPI_COMM_WORLD, status, ierr)
+      call MPI_recv(fyc_new ,size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fy, MPI_COMM_WORLD, status, ierr)
+      call MPI_recv(fzc_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fz, MPI_COMM_WORLD, status, ierr)
+      call MPI_recv(irank, 1, MPI_INTEGER, dest, tag_fz, MPI_COMM_WORLD, status, ierr)
       reps(my_rank+1) = irank
    else if (my_rank.eq.rank2)then
       dest = rank1
@@ -176,16 +176,16 @@ CONTAINS
       call MPI_recv(fyc_new ,size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fy, MPI_COMM_WORLD, status, ierr )
       call MPI_recv(fzc_new, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fz, MPI_COMM_WORLD, status, ierr )
       call MPI_recv(irank, 1, MPI_INTEGER, dest, tag_fz, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(x, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_x, MPI_COMM_WORLD, status,  ierr )
-      call MPI_Send(y, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_y, MPI_COMM_WORLD, status,  ierr )
-      call MPI_Send(z, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_z, MPI_COMM_WORLD, status,  ierr )
-      call MPI_Send(px, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_px, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(py, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_py, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(pz, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_pz, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(fxc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fx, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(fyc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fy, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(fzc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fz, MPI_COMM_WORLD, status, ierr )
-      call MPI_Send(reps(my_rank+1), 1, MPI_INTEGER, dest, tag_fz, MPI_COMM_WORLD, status, ierr )
+      call MPI_Send(x, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_x, MPI_COMM_WORLD, ierr)
+      call MPI_Send(y, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_y, MPI_COMM_WORLD, ierr)
+      call MPI_Send(z, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_z, MPI_COMM_WORLD, ierr)
+      call MPI_Send(px, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_px, MPI_COMM_WORLD, ierr)
+      call MPI_Send(py, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_py, MPI_COMM_WORLD, ierr)
+      call MPI_Send(pz, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_pz, MPI_COMM_WORLD, ierr)
+      call MPI_Send(fxc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fx, MPI_COMM_WORLD, ierr )
+      call MPI_Send(fyc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fy, MPI_COMM_WORLD, ierr )
+      call MPI_Send(fzc, size1*size2, MPI_DOUBLE_PRECISION, dest, tag_fz, MPI_COMM_WORLD, ierr )
+      call MPI_Send(reps(my_rank+1), 1, MPI_INTEGER, dest, tag_fz, MPI_COMM_WORLD, ierr)
       reps(my_rank+1) = irank
    end if
 
@@ -299,7 +299,7 @@ CONTAINS
 
    end subroutine remd_init
 
+! USE_MPI
 #endif
 
 end module mod_remd
-
