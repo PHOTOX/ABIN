@@ -58,6 +58,8 @@ while [[ $# -gt 0 ]]; do
             exit 1
         fi
         MPI_PATH=$2
+        # We allow passing "" as empty path to allow
+        # default system-wide MPI installations
         if [[ ! -z $MPI_PATH && ! -d $MPI_PATH ]]; then
             echo "$MPI_PATH is not a directory!"
             exit 1
@@ -132,13 +134,6 @@ fi
 CXX="c++"
 CXXFLAGS="-O2 -Wall -std=c++11"
 
-if [[ $MPI = "TRUE" ]];then
-   echo "Compilation with MPI"
-   ABINEXE=abin.mpi
-   # TODO: Check that MPI_PATH exists and contains
-   # necessary directories...
-fi
-
 if [[ $PLUMED = "TRUE" ]];then
    if [[ ! -f $PLUMED_PATH/Plumed.inc ]];then
       echo "File $PLUMED_PATH/Plumed.inc does not exist!"
@@ -171,11 +166,6 @@ CXXFLAGS = $CXXFLAGS
 # MPI library
 MPI = $MPI
 MPI_PATH = $MPI_PATH
-#MPI_INC = \$(MPI_PATH)/include
-# OpenMPI
-#MPI_LIBS = -L\$(MPI_PATH)/lib -lmpi
-# MPICH
-#MPI_LIBS = -L\$(MPI_PATH)/lib -lmpich -lmpl
 
 # Compilation with Plumed library
 PLUMED = $PLUMED
@@ -197,11 +187,11 @@ if [[ $CP2K = "TRUE" ]];then
    echo "Linkink with CP2K"
    echo "Setup paths to CP2K libs manually in $VARS"
    echo "
-CP2K_PATH = /usr/local/src/programes/src/cp2k-2.6.2/lib/Linux-x86-64-gfortran-mkl/sopt/
-MKL = /intel/parallel_studio_2015_update5/mkl/lib/intel64/
+CP2K_PATH = /cp2k/lib/Linux-x86-64-gfortran-mkl/sopt/
 LIBINT_LIB = /libint/1.1.4-gcc/lib
 FFTW_LIB = /fftw/3.3.4-gcc/lib/
 LIBXC_LIB = /libxc/2.1.2-gcc/lib
+MKL = $(MKLROOT)/lib/intel64
 MKL_LIBS = -ldl -L\$(MKL) -lmkl_blas95_lp64 -lmkl_lapack95_lp64\
            -Wl,--start-group \${MKL}/libmkl_intel_lp64.a \${MKL}/libmkl_sequential.a\
             \${MKL}/libmkl_core.a -Wl,--end-group -lpthread
@@ -213,4 +203,3 @@ CP2K_LIBS = \$(MKL_LIBS) \
             \$(LIBINT_LIB)/libint.a
 " >> $VARS
 fi
-

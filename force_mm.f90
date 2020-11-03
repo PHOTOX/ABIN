@@ -1,22 +1,22 @@
-!- Simple subroutine for calculation of Coulomb na Lennard-Jones forces and energies
-!- Daniel Hollas                        2013
-!------------------------------------------------------
-
-! TODO: This module should be probably split into two.
-! We need some master module for QMMM models
+! Simple subroutine for calculation of
+! Coulomb na Lennard-Jones forces and energies
 
 ! Currently, this module does not really support QMMM,
 ! Instead we can only do pure MM with LJ and Coulomb potential
-module mod_qmmm
+module mod_force_mm
    use mod_const, only: DP
    use mod_array_size, only: MAXTYPES
    use mod_utils, only: abinerror
+   use mod_qmmm, only: natmm, natqm
    implicit none
-   integer              :: natqm, natmm
+   private
+   public :: inames_init, ABr_init, force_LJ_Coulomb
+   ! TODO: These should all be private
+   public :: attypes, q, rmin, eps
    character(len=2)     :: attypes( MAXTYPES )
+   ! L-J Combination rules
    character(len=10),parameter :: LJcomb='LB' !no other option for now
-   character(len=10)    :: qmmmtype='NA'
-   real(DP)             :: q( MAXTYPES ), rmin( MAXTYPES ), eps( MAXTYPES )
+   real(DP) :: q( MAXTYPES ), rmin( MAXTYPES ), eps( MAXTYPES )
    real(DP),allocatable  :: AIJ(:,:),BIJ(:,:)
    save
    CONTAINS
@@ -64,7 +64,7 @@ module mod_qmmm
    enddo
    end subroutine
 
-   subroutine force_LJCoul(x,y,z,fx,fy,fz,eclas)
+   subroutine force_LJ_Coulomb(x,y,z,fx,fy,fz,eclas)
    use mod_array_size
    use mod_general
    use mod_system, ONLY:inames 
@@ -103,6 +103,6 @@ module mod_qmmm
    enddo
 
 
-   end subroutine force_LJCoul
+   end subroutine force_LJ_Coulomb
 
-end module mod_qmmm
+end module mod_force_mm

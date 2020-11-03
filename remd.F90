@@ -3,16 +3,19 @@ module mod_remd
   use mod_const, only: DP
   use mod_utils, only: abinerror
   implicit none
+#ifdef USE_MPI
   include "mpif.h"
-  public
-  private :: swap_replicas, MAX_REPLICA, ratios_cumul, reps
+  private
+  public :: remd_init, remd_swap
+  public :: nreplica, nswap, deltaT, Tmax, temp_list
   integer, parameter :: MAX_REPLICA=50
   integer :: nreplica, nswap=-1, reps(MAX_REPLICA)=-1
   real(DP) :: deltaT=-1, Tmax=-1
   real(DP) :: temp_list(MAX_REPLICA)=-1, ratios_cumul(MAX_REPLICA)=0.0d0
 
 CONTAINS
-   !TODO: make general subroutine MPI_ERROR in utils.f90 and check every ierr
+
+   !TODO: make general subroutine check_mpi_error in utils.f90 and check every ierr
    subroutine remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
    use mod_general, only: my_rank, it
    use mod_nhc,     only: temp
@@ -295,6 +298,8 @@ CONTAINS
    reps(my_rank+1) = my_rank
 
    end subroutine remd_init
+
+#endif
 
 end module mod_remd
 

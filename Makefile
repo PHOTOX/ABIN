@@ -35,100 +35,80 @@ include make.vars
 export SHELL=/bin/bash
 export DATE=`date +"%X %x"`
 
-# TODO: Make this ifeq less stupid,
-# We should not presume that Git is available
-# and if it is, we need to actually verify we're in a Git repo
-ifeq ($(shell git --version|cut -b -3),git)
-export COMMIT=`git log -1 --pretty=format:"commit %H"`
+export COMMIT=NaN
+ifeq ($(shell git --version | cut -b -3),git)
+  ifneq ($(shell git status 2>&1 | head -1 | cut -b -5),fatal)
+    export COMMIT=`git rev-parse HEAD`
+  endif
 endif
 
-F_OBJS := arrays.o transform.o potentials.o estimators.o gle.o ekin.o vinit.o plumed.o \
-          force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
-          force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o density.o analysis.o \
-          minimizer.o mdstep.o forces.o
+F_OBJS := modules.o utils.o fortran_interfaces.o io.o random.o arrays.o qmmm.o fftw_interface.o \
+          shake.o nosehoover.o gle.o transform.o potentials.o estimators.o ekin.o vinit.o plumed.o \
+          remd.o force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
+          force_mm.o force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o density.o analysis.o \
+          minimizer.o mdstep.o forces.o read_cmdline.o init.o
 
-# TODO: Rename libttm.a to libwater.a
-STATIC_LIBS = WATERMODELS/libttm.a
+C_OBJS := water_interface.o
+
+STATIC_LIBS = WATERMODELS/libwater.a
 
 ifeq ($(strip $(FFTW)),TRUE)
-  ifneq ($(CP2K),TRUE)
-   LIBS := -lfftw3 ${LIBS}
+  DFLAGS += -DUSE_FFTW
+  ifeq ($(CP2K),TRUE)
+    $(info "!!!!!-------------WARNING---------------!!!!!!!")
+    $(info "Using FFTW flag with CP2K may lead to troubles!")
+    $(info "!!!!!-------------WARNING---------------!!!!!!!")
+    $(info "")
+  else
+    LIBS += -lfftw3
   endif
-  DFLAGS += -DUSEFFTW
-  F_OBJS := fftw_interface.o ${F_OBJS}
 endif
 
 ifeq ($(strip $(CP2K)),TRUE)
   DFLAGS += -DCP2K 
-  FFLAGS += -fno-underscoring 
   # OpenMP does not work with -fno-underscoring
-  FFLAGS += -fno-openmp
+  FFLAGS += -fno-underscoring -fno-openmp
   # The following variables should be the same that were used to compile CP2K.
   # Also, be carefull with FFTW clashes
   LIBS += -L${CP2K_PATH} -lcp2k ${CP2K_LIBS} 
-ifeq ($(strip $(FFTW)),TRUE)
-   $(info "!!!!!-------------WARNING---------------!!!!!!!")
-   $(info "Using FFTW flag with CP2K may lead to troubles!")
-   $(info "!!!!!-------------WARNING---------------!!!!!!!")
-   $(info "")
-endif
 endif
 
 ifeq ($(strip $(PLUMED)),TRUE)
  include ${PLUMED_LINK}
- # TODO: Rename to USEPLUMED
- DFLAGS += -DPLUM
+ DFLAGS += -DUSE_PLUMED
  STATIC_LIBS += ${PLUMED_STATIC_LOAD}
 endif
 
 ifeq  ($(strip $(MPI)),TRUE) 
-  # TODO: Rename to USEMPI
-  DFLAGS += -DMPI
-  INC    += $(MPI_INC)
-  LIBS   += $(MPI_LIBS)
-  F_OBJS := remd.o ${F_OBJS}
+  DFLAGS += -DUSE_MPI
 endif
 
-LDLIBS = -lm -lstdc++ ${LIBS}
-# The following line does not seem to work
-#LDLIBS = ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
-
-# Adding rest of the Fortran objects
-# This hack is needed for force_tera.o and fftw_interface.o
-F_OBJS := modules.o utils.o fortran_interfaces.o io.o force_mm.o random.o shake.o nosehoover.o  ${F_OBJS}
-
-ifneq ($(strip $(CP2K)),TRUE)
-   F_OBJS := ${F_OBJS} WATERMODELS/water_interface.o
-endif
+LIBS += -lm -lstdc++
+# The following line does for static compilatioon does not seem to work
+#LIBS := ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
 
 # This is the default target
-# TODO: Make abin.o the default target, and put the compile info module there?
-${BIN} : init.o
-	# TODO: Separate this step and do it properly (via libttm.a dependency)
+# TODO: Move all source code to src/ and call $(MAKE) -C src
+${BIN} : compile_info.o
 	$(MAKE) -C WATERMODELS all
-	# TODO: Once abin.o is the default target, remove it from line below
-	${FC} ${FFLAGS} ${F_OBJS} ${STATIC_LIBS} abin.o $< ${LDLIBS} -o $@
-	# Build Unit Tests if pFUnit library is available
-	# (run install_pfunit.sh to install it)
-ifneq ($(strip $(PFUNIT_PATH)),)
-	ar cru libabin.a init.o $(F_OBJS) && ranlib libabin.a
-	$(MAKE) -C unit_tests all
-endif
+	${FC} ${FFLAGS} ${C_OBJS} ${F_OBJS} ${STATIC_LIBS} abin.o compile_info.o ${LIBS} -o $@
+
+# compile_info.F90 must be always recompiled to get the current date/time and git commit
+compile_info.o : compile_info.F90 ${C_OBJS} ${F_OBJS} abin.o
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DCOMPILE_DATE="'${DATE}'" -DGIT_COMMIT="'${COMMIT}'" -c $<
+
+# Used for building Unit Tests
+libabin.a: ${BIN}
+	ar cru libabin.a ${C_OBJS} $(F_OBJS) compile_info.o && ranlib libabin.a
 
 # Build and run Unit tests
-unittest : ${BIN}
+unittest : libabin.a
 	$(MAKE) -C unit_tests all
 	$(MAKE) -C unit_tests test
 
-# Always recompile init.F90 to get current date and commit
-# TODO: Figure out a cleaner way to do this
-# TODO: We should move this into abin.F90
-init.o : init.F90 ${F_OBJS} abin.o
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DCOMPILE_DATE="'${DATE}'" -DGIT_COMMIT="'${COMMIT}'" -c init.F90
-
 clean :
 	$(MAKE) -C WATERMODELS clean
-	/bin/rm -f *.o *.mod libabin.a $(BIN)
+	/bin/rm -f *.o *.mod *.gcno *gcda libabin.a $(BIN)
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests clean
 endif
@@ -140,7 +120,7 @@ endif
 # For now, we define defaults for them at the top, before including make.vars
 test : ${BIN}
 ifneq ($(strip $(PFUNIT_PATH)),)
-	$(MAKE) -C unit_tests test
+	$(MAKE) unittest
 endif
 	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUMED} ${CP2K}
 
@@ -162,11 +142,14 @@ debug :
 
 .PHONY: clean test testclean makeref debug unittest
 
-.SUFFIXES: .F90 .f90 .f95 .f03 .F03
+.SUFFIXES: .F90 .f90 .f95 .f03 .F03 .cpp
 
 # TODO: Use only .F90
 .F90.o:
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
+
+.cpp.o:
+	$(CXX) $(CXXLAGS) $(DFLAGS) -c $<
 
 .f90.o:
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<

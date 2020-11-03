@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: basic_build
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
          gcc_v: [7, 8, 9]
     env:

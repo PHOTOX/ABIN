@@ -1,4 +1,7 @@
 # Makefile for ABIN Unit Tests
+# Should be invoked from top level Makefile,
+# which defines certain variables used here,
+# namely path to PFUNIT library
  
 # Compile Unit Tests using pFUnit library
 #
@@ -12,15 +15,14 @@ ifneq ($(strip $(PFUNIT_PATH)),)
   FFLAGS += -I../
 endif
  
-# TODO: Rename libttm to libwater.a or something
-STATIC_LIBS = ../libabin.a ../WATERMODELS/libttm.a
+STATIC_LIBS = ../libabin.a ../WATERMODELS/libwater.a
 
 LDLIBS = -lm -lstdc++ ${LIBS}
 
 utils_TESTS := test_utils.pf
 utils_REGISTRY :=
 utils_OTHER_SOURCES :=
-utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../" -labin -L"../WATERMODELS/" -lttm $(LDLIBS)
+utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../" -labin -L"../WATERMODELS/" -lwater $(LDLIBS)
 utils_OTHER_INCS :=
 
 $(eval $(call make_pfunit_test,utils))

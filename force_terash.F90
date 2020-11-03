@@ -8,7 +8,7 @@ module mod_terampi_sh
    use mod_const, only: DP
    implicit none
    private
-#ifdef MPI
+#ifdef USE_MPI
    public :: init_terash, send_terash
 #endif
    public :: force_terash, finalize_terash
@@ -30,7 +30,7 @@ subroutine force_terash(x, y, z, fx, fy, fz, eclas)
 
    ! for SH, we use only one TC server...
    ! might be changes if we ever implement more elaborate SH schemes
-#ifdef MPI
+#ifdef USE_MPI
    call send_terash(x, y, z, fx, fy, fz, newcomms(1))
 
    call receive_terash(fx, fy, fz, eclas, newcomms(1))
@@ -42,7 +42,7 @@ subroutine force_terash(x, y, z, fx, fy, fz, eclas)
 end subroutine force_terash
 
 
-#ifdef MPI
+#ifdef USE_MPI
 
 subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_const, only: DP, ANG

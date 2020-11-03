@@ -5,7 +5,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    use mod_const,    only: DP
    use mod_general,  only: natom, nwalk, istage, inormalmodes, iqmmm, it, &
                            pot, pot_ref, idebug, en_restraint
-   use mod_qmmm,     only: force_LJCoul
+   use mod_force_mm, only: force_LJ_Coulomb
    use mod_sbc,      only: force_sbc, isbc !,ibag
    use mod_system,   only: conatom
    use mod_nhc,      only: inose
@@ -80,7 +80,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    ! QMMM SECTION
    ! ONIOM method (iqmmm=1) is called in force_abin
    ! The following are not working at the moment
-   if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
+   if(iqmmm.eq.3) call force_LJ_Coulomb(transx, transy, transz, fxab, fyab, fzab, eclas)
 
    if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
@@ -99,7 +99,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
 
       call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, pot_ref, nwalk)
       if(isbc.eq.1)  call force_sbc(transx,transy,transz,fxab,fyab,fzab)
-      if(iqmmm.eq.3) call force_LJCoul(transx, transy, transz, fxab, fyab, fzab, eclas)
+      if(iqmmm.eq.3) call force_LJ_Coulomb(transx, transy, transz, fxab, fyab, fzab, eclas)
       if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
       fxab = fx - fxab
@@ -168,7 +168,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    use mod_interfaces, only: force_abin
    use mod_general,  only: natom, ipimd
    use mod_water,    only: watpot
-   use mod_qmmm,     only: force_LJCoul
+   use mod_force_mm, only: force_LJ_Coulomb
    use mod_harmon,   only: force_harmon,force_2dho,force_morse,force_doublewell
    use mod_splined_grid
    use mod_cp2k,     only: force_cp2k
@@ -186,10 +186,10 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
 !  Here we decide which forces we want.
 !  By default we call external program in force_abin routine
 !  TODO: All keywords for internal potentials should begin and end by '_'
-!  such as _tera_
+!  such as pot='_tera_'
    SELECT CASE (chpot)
       case ("mm")
-         call force_LJCoul(x, y, z, fx, fy, fz, eclas)
+         call force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas)
 #ifndef CP2K
 ! With CP2K interface there is a problem with underscoring
 ! so we don't support water force fields (which are not combineable with CP2K anyway

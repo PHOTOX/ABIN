@@ -244,7 +244,7 @@ module mod_transform
 !     in trans matrices,values in x,y and z matrices are NOT modified!!      
 !     masses are also modified
    subroutine UtoX(x,y,z,transx,transy,transz)
-#ifdef USEFFTW
+#ifdef USE_FFTW
       use mod_fftw3
 #endif
    use mod_general, only: nwalk, inormalmodes
@@ -264,7 +264,7 @@ module mod_transform
 
    call equant_nm(x, y, z, equant)
 
-#ifdef USEFFTW
+#ifdef USE_FFTW
    do iat = 1, natom
 
       cx(1) = complex(x(iat,1),0)
@@ -307,7 +307,7 @@ module mod_transform
 !  in trans matrices,values in x,y and z matrices are NOT modified!!
 !  see https://github.com/i-pi/i-pi/blob/2a09a6d652b1ffe5f485c4c078c1085db6fcf63a/ipi/utils/nmtransform.py
    subroutine XtoU(x,y,z,transx,transy,transz)
-#ifdef USEFFTW
+#ifdef USE_FFTW
    use mod_fftw3
 #endif
    use mod_general, only: idebug, inormalmodes
@@ -327,7 +327,7 @@ module mod_transform
 
 !   call equant_cart(x, y, z, equant)
 
-#ifdef USEFFTW
+#ifdef USE_FFTW
    do iat = 1, natom
       do iw = 1, nwalk
          x_in(iw) = x(iat,iw)

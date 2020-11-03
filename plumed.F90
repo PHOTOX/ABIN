@@ -25,7 +25,7 @@ subroutine plumed_init(dt)
    plumed_timeUnits = AUTOFS * 0.001d0   ! au time -> ps
    plumedoutfile = 'plumed.out'
 
-#ifdef PLUM
+#ifdef USE_PLUMED
    ! plumed init
    call plumed_f_gcreate()
    call plumed_f_gcmd("setRealPrecision"//char(0),8)
@@ -89,7 +89,7 @@ subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
    pbox = 0.0d0
    plumvirial = 0.0d0
 
-#ifdef PLUM
+#ifdef USE_PLUMED
 
    call plumed_f_gcmd("setStep"//char(0),it)
    call plumed_f_gcmd("setPositionsX"//char(0),xx)

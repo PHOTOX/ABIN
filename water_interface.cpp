@@ -22,14 +22,18 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "ttm2f.h"
-#include "ttm3f.h"
-#include "ttm4f.h"
+#include "WATERMODELS/ttm2f.h"
+#include "WATERMODELS/ttm3f.h"
+#include "WATERMODELS/ttm4f.h"
 
-#include "qtip4pf.h"
+#include "WATERMODELS/qtip4pf.h"
 
 extern"C" {
-void force_water_(
+#ifdef CP2K
+  void force_water(
+#else
+  void force_water_(
+#endif
     const double *x,
     const double *y,
     const double *z,
@@ -40,7 +44,7 @@ void force_water_(
     const int *natom,
     const int* nwalk, 
     const int *watpot)
-{
+  {
    const int nwater = *natom / 3;
    double E;
    double grd[9 * nwater];

@@ -1,67 +1,3 @@
-! TODO: Move this to a separate file
-! and pass DATE and COMMIT as a parameters to this function,
-! so that abin.F90 can be the default target in Makefile
-module compile_info
-
-   CONTAINS
-   subroutine print_compile_info(time_data)
-#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
-   use iso_fortran_env, only: compiler_version, compiler_options
-#endif
-   integer,dimension(8),intent(in) :: time_data
-   character(len=1024) :: cmdline
-
-   ! DATE and COMMIT are defined and exported in Makefile
-   print *, 'Compiled at ', COMPILE_DATE
-   print *, GIT_COMMIT
-!$ print *,'Compiled with parallel OpenMP support for PIMD.'
-#ifdef USEFFTW
-   write(*,*)'Compiled with FFTW support.'
-#endif
-#ifdef CP2K
-   write(*,*)'Compiled with in-built CP2K interface.'
-#endif
-#ifdef PLUM
-   write(*,*)'Compiled with PLUMED (static lib).'
-#endif
-#ifdef MPI
-   write(*,*)'Compiled with MPI support.'
-   write(*,*)'(used for REMD and direct CP2K and TeraChem interfaces.)'
-#endif
-   print *,' '
-
-#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
-   print *, 'This program was compiled by ',  &
-             compiler_version(), ' using the options: '
-   print *,     compiler_options()
-#endif
-
-   print '(a)',''
-!   print '(a)','#################### RUNTIME INFO ####################'
-   print '(a)','          RUNTIME INFO'
-   print '(a)',' '
-   write(*,'(A16)',advance='no')'Job started at: '
-   write(*,"(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)")time_data(5),':', &
-        time_data(6),':',time_data(7),'  ',time_data(3),'.',time_data(2),'.',&
-        time_data(1)
-   write(*,'(A17)')"Running on node: "
-   call system('uname -n')
-   write(*,'(A19)')'Working directory: '
-   call system('pwd')
-   write(*,*)
-   call get_command(cmdline)
-   write(*,*)trim(cmdline)
-   call flush(6)
-   call get_command_argument(0, cmdline)
-   write(*,*)
-   call system('ldd '//cmdline)
-   print '(a)',' '
-
-   end subroutine print_compile_info
-
-end module compile_info
-
-
 ! This messy function performs many things, among others:
 ! 1. Reading input
 ! 2. Input sanity check
@@ -74,6 +10,8 @@ end module compile_info
 
 subroutine init(dt, time_data)
    use mod_const
+   use mod_interfaces, only: print_compile_info
+   use mod_cmdline, only: get_cmdline
    use mod_files
    use mod_arrays
    use mod_array_size
@@ -85,7 +23,8 @@ subroutine init(dt, time_data)
    use mod_sh_integ, only: nstate, integ, phase, popsumthr, correct_decoherence
    use mod_sh
    use mod_lz,       only: lz_init, initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz
-   use mod_qmmm
+   use mod_qmmm, only: natqm, natmm
+   use mod_force_mm
    use mod_gle
    use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
@@ -100,19 +39,17 @@ subroutine init(dt, time_data)
    use mod_plumed,   only: iplumed, plumedfile, plumed_init
    use mod_en_restraint
    use mod_transform, only:init_mass
-#ifdef USEFFTW
+#ifdef USE_FFTW
    use mod_fftw3,    only: fftw_init
 #endif
-! #ifdef CP2K
    use mod_cp2k
-! #endif
-#ifdef MPI
    use mod_remd
-#endif
    use mod_terampi
    use mod_terampi_sh
-   use compile_info
    implicit none
+#ifdef USE_MPI
+   include 'mpif.h'
+#endif
    real(DP),intent(out) :: dt
    integer,dimension(8), intent(out) :: time_data
    real(DP) :: masses(MAXTYPES)
@@ -140,7 +77,7 @@ subroutine init(dt, time_data)
             en_restraint, en_diff, en_kk, restrain_pot, &
             pot_ref, nstep_ref, nteraservers, cp2k_mpi_beads
 
-#ifdef MPI
+#ifdef USE_MPI
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temp_list
 #endif
 
@@ -171,10 +108,9 @@ subroutine init(dt, time_data)
 
    chdivider = "######################################################"
 
-   call Get_cmdline(chinput, chcoords, chveloc, teraport)
+   call get_cmdline(chinput, chcoords, chveloc, teraport)
 
-   ! READING INPUT
-
+   ! READING MAIN INPUT
    open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ")
    read(150, general)
    rewind(150)
@@ -196,7 +132,7 @@ subroutine init(dt, time_data)
       write(*,*)''
       call abinerror('init')
 #endif
-#ifdef MPI
+#ifdef USE_MPI
    else
       call MPI_INIT ( ierr )
       if (ierr.ne.0)then
@@ -208,9 +144,7 @@ subroutine init(dt, time_data)
 
 ! We need to connect to TeraChem as soon as possible,
 ! because we want to shut down TeraChem nicely in case something goes wrong.
-#ifdef MPI
-   ! TODO: Shouldn't these by called only when we actually need MPI?
-   ! Like REMD or pot=_tera_?
+#ifdef USE_MPI
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
    call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
    if (my_rank.eq.0.and.mpi_world_size.gt.1)then
@@ -296,7 +230,11 @@ subroutine init(dt, time_data)
          write(*,*)'Reading initial velocities [a.u.] from file ', trim(chveloc)
       end if
       print '(a)', chdivider
-      call PrintLogo(time_data)
+      call print_logo()
+      print '(a)', chdivider
+      call print_compile_info()
+      print '(a)', chdivider
+      call print_runtime_info()
       print '(a)', chdivider
       print '(a)','                                              '
       SELECT CASE (ipimd)
@@ -325,7 +263,7 @@ subroutine init(dt, time_data)
    open(111, file = chcoords, status = "old", action = "read")
    read(111, '(I50)', iostat = iost)natom_xyz
    !TODO following line does not work
-   if (iost.ne.0) call err_read(chcoords,"Expected number of atoms on the first line.", iost)
+   if (iost.ne.0) call print_read_error(chcoords,"Expected number of atoms on the first line.", iost)
    if(natom_xyz.ne.natom.and.natom.gt.0)then
      write(*,'(A,A)')'WARNING: Number of atoms specified in ', trim(chinput)
      write(*,'(A,A)')'does not match with the XYZ geometry in ', trim(chcoords)
@@ -397,7 +335,7 @@ subroutine init(dt, time_data)
 
    if(iplumed.eq.1) then
 
-#ifdef PLUM
+#ifdef USE_PLUMED
       call plumed_init(dt)
       write(*,*) 'PLUMED is on'
       write(*,*) 'PLUMEDfile is ', trim(plumedfile)
@@ -414,7 +352,7 @@ subroutine init(dt, time_data)
    do iat = 1, natom
 
      read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
-     if(iost.ne.0) call err_read(chcoords,'Could not read atom names and coordinates', iost)
+     if(iost.ne.0) call print_read_error(chcoords,'Could not read atom names and coordinates', iost)
      names(iat) = LowerToUpper(names(iat))
      if (UpperToLower(trim(xyz_units)).eq."angstrom")then
          x(iat,1) = x(iat,1) * ANG
@@ -489,7 +427,7 @@ subroutine init(dt, time_data)
       end if
 
    if(iremd.eq.1)then
-#ifdef MPI
+#ifdef USE_MPI
       read(150, remd)
       rewind(150)
       call remd_init(temp, temp0)
@@ -511,7 +449,7 @@ subroutine init(dt, time_data)
 !$ call OMP_set_num_threads(nproc)
 !$ nthreads = omp_get_max_threads()
 
-#ifdef MPI
+#ifdef USE_MPI
    if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
       call initialize_terachem()
       if (ipimd.eq.2.or.ipimd.eq.4) call init_terash(x, y, z)
@@ -559,7 +497,7 @@ subroutine init(dt, time_data)
          write(*, '(A, F6.2)')"with timestep [fs] ", dt * AUtoFS
       end if
 
-#ifdef USEFFTW
+#ifdef USE_FFTW
       if(inormalmodes.gt.0) call fftw_init(nwalk)
 #endif
 
@@ -648,23 +586,23 @@ subroutine init(dt, time_data)
          open(500,file=chveloc, status='OLD', action = "READ")
          do iw=1,nwalk
             read(500,*, IOSTAT=iost)natom_xyz
-            if (iost.ne.0) call err_read(chveloc,"Could not read velocities on line 1.", iost)
+            if (iost.ne.0) call print_read_error(chveloc,"Could not read velocities on line 1.", iost)
             if(natom_xyz.ne.natom)then
                write(*,'(A,A)')'Nunmber of atoms in velocity input ', trim(chveloc)
                write(*,'(A,A)')'does not match with XYZ coordinates in ', trim(chcoords)
                call abinerror('init')
             endif
             read(500,*, IOSTAT=iost)
-            if (iost.ne.0) call err_read(chveloc,"Could not read velocities on line 2.", iost)
+            if (iost.ne.0) call print_read_error(chveloc,"Could not read velocities on line 2.", iost)
           
             do iat=1,natom
                read(500,*, IOSTAT=iost)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
-               if (iost.ne.0) call err_read(chveloc,"Could not read velocities.", iost)
+               if (iost.ne.0) call print_read_error(chveloc,"Could not read velocities.", iost)
                atom = LowerToUpper(atom)
                if (atom.ne.LowerToUpper(names(iat)))then
                   write(*,*)'Offending line:'
                   write(*,*)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
-                  call err_read(chveloc,"Inconsistent atom types in input velocities.", iost)
+                  call print_read_error(chveloc,"Inconsistent atom types in input velocities.", iost)
                end if
             end do
          end do
@@ -719,7 +657,7 @@ subroutine init(dt, time_data)
       write(*,*)
    end if
    call flush(6)
-#ifdef MPI
+#ifdef USE_MPI
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
    pid=GetPID()
@@ -751,7 +689,7 @@ subroutine init(dt, time_data)
 !$       end if
       end if
 
-#ifndef USEFFTW
+#ifndef USE_FFTW
       if(inormalmodes.gt.0)then
          write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
          write(*,*)'Normal mode transformations cannot be performed.'
@@ -1150,28 +1088,22 @@ subroutine init(dt, time_data)
        endif 
       endif
 
-
       if(error.eq.1)then
          write(*,*)'Input errors were found! Exiting now...'
-         call abinerror('init')
+         call abinerror('check_inputsanity')
       endif
-
-
-
    end subroutine check_inputsanity
 
-   subroutine err_read(chfile, chmsg, iost)
+   subroutine print_read_error(chfile, chmsg, iost)
       character(len=*), intent(in)  :: chmsg, chfile
       integer, intent(in)  :: iost
       write(*,*) trim(chmsg)
       write(*,'(A,A)')'Error when reading file ', trim(chfile)
       write(*,*)'Error code was', iost
       call abinerror('init')
-   end subroutine err_read
+   end subroutine print_read_error
 
-   subroutine PrintLogo(time_data)
-   integer,dimension(8),intent(out) :: time_data
-   call date_and_time(VALUES=time_data)
+   subroutine print_logo()
 
 print '(a)','                  _____     _    _      _ '
 print '(a)','        /\       |  _  \   | |  |  \   | |'
@@ -1187,78 +1119,30 @@ print '(a)',' '
 print '(a)',' version 1.1'
 print '(a)',' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek'
 print '(a)',' '
+   end subroutine print_logo
 
-call print_compile_info(time_data)
 
-   end subroutine PrintLogo
-
-   subroutine PrintHelp()
-   implicit none
-   integer,dimension(8) :: time_data
-   call date_and_time(VALUES=time_data)
-    print '(a)', ''
-    print '(a)', 'ABIN: Multipurpose ab initio MD program.'
-    print '(a)', ''
-    call print_compile_info(time_data)
-    print '(a)', ''
-    print '(a)', 'cmdline options:'
-    print '(a)', ''
-    print '(a)', '  -h, --help               print help and exit'
-    print '(a)', '  -i <input_parameters>    default: input.in'
-    print '(a)', '  -x <input_coordinates>   default: mini.dat'
-    print '(a)', '  -v <input_velocities>    no default'
-    print '(a)', ''
-   end subroutine PrintHelp
-
-   subroutine Get_cmdline(chinput, chcoords, chveloc, tc_port)
-   character(len=*),intent(inout) :: chinput, chcoords, chveloc, tc_port
-   character(len=len(chinput)) :: arg
-   integer :: i
-   logical :: lexist
-   
-   i=0
-   do while (i < command_argument_count())
-
-     i = i + 1
-     call get_command_argument(i, arg)
-   
-      select case (arg)
-      case ('-h', '--help')
-         call PrintHelp()
-         stop 0
-      case ('-i')
-         i = i + 1
-         call get_command_argument(i, arg)
-         !-format specifier is needed here in case of slashes
-         read(arg,'(A)')chinput
-         chinput=trim(chinput)
-      case ('-x')
-         i = i + 1
-         call get_command_argument(i, arg)
-         read(arg,'(A)')chcoords
-         chcoords=trim(chcoords)
-      case ('-v')
-         i = i + 1
-         call get_command_argument(i, arg)
-         read(arg,'(A)')chveloc
-         chveloc=trim(chveloc)
-      case ('-M')
-         i = i + 1
-         call get_command_argument(i, arg)
-         read(arg,'(A)')tc_port
-         tc_port=trim(tc_port)
-      case default
-         write(*,'(A)')'Invalid command line argument '//arg
-         call abinerror('Get_cmdline')
-      end select
-
-   end do
-
-   call file_exists_or_exit(chinput)
-   ! Input velocities and coordinates are checked elsewhere
-   end subroutine Get_cmdline
+   subroutine print_runtime_info()
+   character(len=1024) :: cmdline
+   print '(a)',''
+   print '(a)','          RUNTIME INFO'
+   print '(a)',' '
+   write(*,'(A17)')"Running on node: "
+   call system('uname -n')
+   write(*,'(A19)')'Working directory: '
+   call system('pwd')
+   write(*,*)
+   call get_command(cmdline)
+   write(*,*)trim(cmdline)
+   call flush(6)
+   call get_command_argument(0, cmdline)
+   write(*,*)
+   call system('ldd ' // cmdline)
+   print '(a)',' '
+   end  subroutine print_runtime_info
 
 end subroutine init
+
 
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
@@ -1270,7 +1154,7 @@ subroutine finish(error_code)
    use mod_harmon, only: hess
    use mod_lz,     only: lz_finalize
 
-#ifdef USEFFTW
+#ifdef USE_FFTW
    use mod_fftw3,  only: fftw_end
 #endif
 
@@ -1278,11 +1162,11 @@ subroutine finish(error_code)
    use mod_cp2k,   only: finalize_cp2k
 #endif
 
-#ifdef PLUM
+#ifdef USE_PLUMED
    use mod_plumed
 #endif
 
-#ifdef MPI
+#ifdef USE_MPI
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
    implicit none
@@ -1297,7 +1181,7 @@ subroutine finish(error_code)
    logical  :: lopen
 !   integer :: iter=-3
 
-#ifdef MPI
+#ifdef USE_MPI
    if (pot.eq.'_tera_')then
       if (ipimd.eq.2) then
          call finalize_terash()
@@ -1309,7 +1193,7 @@ subroutine finish(error_code)
    if (my_rank.eq.0)then
       write(*,*)''
       if (error_code.eq.0)then
-         write(*,*)'Job finished!'
+         write(*,'(A)')'Job finished!'
       end if
    end if
 
@@ -1332,7 +1216,7 @@ subroutine finish(error_code)
       deallocate ( h )
    end if
 
-#ifdef USEFFTW
+#ifdef USE_FFTW
    if (inormalmodes.gt.0)then
       call fftw_end()
    end if
@@ -1346,12 +1230,12 @@ subroutine finish(error_code)
    end if
 
    ! TODO: We should have an MPI module handling this
-#ifdef MPI
+#ifdef USE_MPI
 if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
    if (error_code.eq.0.and.pot.ne."_cp2k_")then
       call MPI_FINALIZE ( errmpi )
       if (errmpi.ne.0)then
-         write(*,*)'Bad signal from MPI_FINALIZE: ', errmpi
+         write(*,'(A)')'Bad signal from MPI_FINALIZE: ', errmpi
          ! Let's try to continue
       end if
    else if (error_code.gt.0)then
@@ -1367,7 +1251,7 @@ end if
 #endif
 
 !   PLUMED closing session
-#ifdef PLUM
+#ifdef USE_PLUMED
     if (iplumed.eq.1) then
       call plumed_f_gfinalize()
     end if
