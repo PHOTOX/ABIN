@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -g -O2 -Wall
+CXXFLAGS = -O2 -Wall -std=c++11
 
 LIB_OBJ = qtip4pf.o ps.o electrostatics.o gammq.o smear.o \
              ttm2f.o ttm3f.o ttm4f.o
