@@ -3,24 +3,22 @@
 # Parameters passed from Makefile
 ABINEXE="$PWD/$1 -x mini.dat"
 
-# TODO: This is extremely brittle, we should at least
 # verify that the number of parameters is correct!
+if [[ $# -ne 7 ]]; then
+  echo "ERROR: Incorrect number of parameters passed to $0"
+  echo "Invoked as:"
+  echo "$0 $@"
+  exit 1
+fi
+
 TESTS="$2"
 MPI="$3"
 FFTW="$4"
 PLUMED="$5"
 CP2K="$6"
-
-MPI=$(awk -F"[# ,=]+" '{if($1=="MPI")print $2}' make.vars)
-if [[ $MPI = "TRUE" ]];then
-   MPI_PATH=$(awk -F"[# ,=]+" '{if($1=="MPI_PATH") print $2}' make.vars)
-   if [[ -d "$MPI_PATH" ]];then
-      export MPI_PATH=$MPI_PATH
-   fi
-   if [[ -d "$MPI_PATH/lib" ]];then
-      export LD_LIBRARY_PATH=$MPI_PATH/lib:$LD_LIBRARY_PATH
-   fi
-fi
+ACTION="$7"
+# NOTE: For MPI tests, we rely on the fact that
+# MPI_PATH is exported in Makefile!
 
 cd TESTS || exit 1
 TESTDIR=$PWD
@@ -79,13 +77,8 @@ err=0
 
 files=( *-RESTART.wfn* cp2k.out bkl.dat phase.dat wfcoef.dat restart_sh.bin restart_sh.bin.old restart_sh.bin.?? nacm_all.dat minimize.dat geom.mini.xyz temper.dat temper.dat radius.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? DYN/OUT* MM/OUT* state.dat stateall.dat stateall_grad.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie.xyz movie_mini.xyz restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz )
 
-# EULER should check wf_thresh conditions
-# TODO: Make test_readme.txt, with specifications of every test, maybe include only in input.in
-if [[ $TESTS == "sh" ]];then
-
-   folders=( SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE )
-
-elif  [[ $TESTS = "all" || $2 = "clean" ]];then
+# Run all tests
+if  [[ $TESTS = "all" ]];then
    #folders=( CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM GLE PIGLE)
    # DH: Temporarily disable GLE and PIGLE tests
    folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE PIMD SHAKE HARMON MINI QMMM)
@@ -131,8 +124,6 @@ else
 
 fi
 
-#folders=( SHAKE )
-
 echo "Running tests in directories:"
 echo ${folders[@]}
 
@@ -145,14 +136,18 @@ do
    echo "Entering directory $dir"
    cd $dir || exit 1
 
+   # Always clean test directory
+   # before runnning the test
    if [[ -f "test.sh" ]];then
-      ./test.sh clean 
+      ./test.sh clean
    else
       clean ${files[@]}
    fi
 
-   if [[ $2 = "clean" ]];then
-      echo "Cleaning files in directory $dir "
+   # If we just want to clean the directories,
+   # we skip the the actual test here
+   if [[ $ACTION = "clean" ]];then
+      echo "Cleaning files in directory $dir"
       cd $TESTDIR || exit 1
       continue
    fi
@@ -179,7 +174,7 @@ do
       fi
    fi
 
-   if [[ $8 = "makeref" ]];then
+   if [[ $ACTION = "makeref" ]];then
 
       makeref ${files[@]}
 

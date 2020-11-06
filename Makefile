@@ -114,52 +114,30 @@ ifneq ($(strip $(PFUNIT_PATH)),)
 endif
 
 # Run the test suite
-# TODO: Pass MPI_PATH as well
-# TODO: This invocation of TESTS/test.sh is extremely brittle, because
-# it relies that all pamaraters (e.g. FFTW) are defined and not empty
-# For now, we define defaults for them at the top, before including make.vars
 test: ${BIN}
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) unittest
 endif
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUMED} ${CP2K}
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUMED} ${CP2K} test
 
 # Clean all test folders.
 testclean:
-	/bin/bash TESTS/test.sh ${BIN} clean ${MPI} ${FFTW} $(PLUMED) ${CP2K}
+	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} clean
 
 # This will automatically generate new reference data for tests
 makeref:
 	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} makeref
 
-# Dummy target for debugging purposes
-debug :
-	echo ${LIBS}
-	echo ${INC}
-	echo ${DFLAGS}
-	echo ${CFLAGS}
-	echo ${FFLAGS}
 
-.PHONY: clean test testclean makeref debug unittest
+.PHONY: clean test testclean makeref unittest
 
-.SUFFIXES: .F90 .f90 .f95 .f03 .F03 .cpp
+%.o: %.F90
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $(DFLAGS) -c $<
 
 # TODO: Use only .F90
-.F90.o:
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
-
-.cpp.o:
-	$(CXX) $(CXXLAGS) $(DFLAGS) -c $<
-
-.f90.o:
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
-
-.f95.o:
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
-
-.f03.o:
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
-
-.F03.o:
+%.o: %.f90
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
 
