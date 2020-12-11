@@ -45,10 +45,12 @@ do
       if [[ $? -ge 1 ]];then
          diff -y -W 500  $file $file.ref | egrep -e '|' -e '<' -e '>' > $file.diff
          ../numdiff.py $file.diff
-      fi
-      if [[ $? -ne 0 ]];then
-         status=1
-         echo "File $file differ from the reference."
+         if [[ $? -ne 0 ]];then
+            status=1
+            echo "File $file differs from the reference."
+         fi
+      else
+         rm $file.diff
       fi
    fi
 done
