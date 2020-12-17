@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -uo pipefail
+
 # Parameters passed from Makefile
 ABINEXE="$PWD/$1 -x mini.dat"
 
@@ -19,6 +21,11 @@ CP2K="$6"
 ACTION="$7"
 # NOTE: For MPI tests, we rely on the fact that
 # MPI_PATH is exported in Makefile!
+if [[ $MPI = "TRUE" && -z ${MPI_PATH:-} ]];then
+  echo "ERROR: \$MPI_PATH not set"
+  echo "Make sure to set MPI_PATH in make.vars"
+  exit 1
+fi
 
 cd TESTS || exit 1
 TESTDIR=$PWD
@@ -59,7 +66,7 @@ do
    if [[ -f $file.ref ]];then
       mv $file $file.ref
    else
-      echo "Something horrible happened during makeref"
+      echo "ERROR: Something horrible happened during makeref"
       exit 1
    fi
 done
@@ -120,7 +127,7 @@ else
 
    # Only one test selected, e.g. by running
    # make test TEST=CMD
-   folders=$2
+   folders=${TESTS}
 
 fi
 
