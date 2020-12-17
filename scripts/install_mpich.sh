@@ -5,7 +5,7 @@
 # and MPI process manager (mpirun)
 
 # Exit script immediately upon error
-set -eou pipefail
+set -euo pipefail
 
 # Path as an optional first parameter
 MPICH_DIR="${1-/home/$USER/mpich}"

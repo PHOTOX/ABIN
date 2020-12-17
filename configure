@@ -135,8 +135,9 @@ CXX="c++"
 CXXFLAGS="-O2 -Wall -std=c++11"
 
 if [[ $PLUMED = "TRUE" ]];then
-   if [[ ! -f $PLUMED_PATH/lib/Plumed.inc ]];then
-      echo "File $PLUMED_PATH/lib/Plumed.inc does not exist!"
+   PLUMED_INC=${PLUMED_PATH}/lib/plumed/src/lib/Plumed.inc
+   if [[ ! -f ${PLUMED_INC} ]];then
+      echo "File $PLUMED_INC does not exist!"
       exit 1
    fi
 fi
@@ -169,7 +170,7 @@ MPI_PATH = $MPI_PATH
 
 # Compilation with Plumed library
 PLUMED = $PLUMED
-PLUMED_INC = $PLUMED_PATH/lib/Plumed.inc
+PLUMED_INC = ${PLUMED_INC:-}
 
 # FFTW library is typically shipped with your system
 # It is needed for normal mode coordinate transformation in PIMD

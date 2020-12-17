@@ -163,7 +163,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [7, 8, 9]
+         # Let's just test one version, we do not really
+         # use OpenMPI with ABIN, and we already test all GCC
+         # versions with MPICH
+         gcc_v: [7]
     env:
       ABIN_FFLAGS: -O0 -fopenmp
       # To speed-up OpenMPI build
@@ -178,7 +181,7 @@ jobs:
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
-    - name: OpenMPI build Cache
+    - name: OpenMPI build cache
       id: openmpi-cache
       uses: actions/cache@v2
       with:
@@ -199,26 +202,40 @@ jobs:
 
 
   plumed_build:
-    # TODO: This is just a stub for now, need to figure out how to build Plumed
-    # Once that is done, remove the following line
-    if: false
     runs-on: ubuntu-latest
     needs: basic_build
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [7, 8, 9]
+         plumed_v: [2.5.3, 2.6.2]
+
     env:
-      FFLAGS: -O2 -fopenmp
+      PLUMED_V: ${{ matrix.plumed_v}}
+      ABIN_FFLAGS: -O0 -fopenmp --coverage
+      # Speeding up the Plumed build
+      CFLAGS: -O0
+      CXXLAGS: -O0
+
     steps:
     - uses: actions/checkout@v2
-    - name: Download Plumed
-      run: mkdir ~/plumed && cd ~/plumed && wget plumed_url
-    - name: build Plumed
-      run: cd ~/plumed && ./configure && make && make install
-    # TODO: Cache plumed build
-    # TODO: Maybe try different Plumed versions?
+    - name: Plumed build cache
+      id: plumed-cache
+      uses: actions/cache@v2
+      with:
+        path: ~/plumed/${{ env.PLUMED_V }}/install
+        key: ${{runner.os}}-plumed${{env.PLUMED_V}}-${{hashFiles('scripts/install_plumed.sh')}}
+
+    - name: Build and Install PLUMED
+      if: steps.plumed-cache.outputs.cache-hit != 'true'
+      run: ./scripts/install_plumed.sh ${HOME}/plumed ${PLUMED_V}
+
     - name: build ABIN
-      run: ./configure --plumed /path/to/plumed && make
+      run: |
+        export FFLAGS=${ABIN_FFLAGS} &&\
+        ./configure --plumed "${HOME}/plumed/${PLUMED_V}/install" &&\
+        make
     - name: test ABIN
       run: make test
+
+    - name: Codecov upload
+      run:  bash <(curl -s https://codecov.io/bash)
