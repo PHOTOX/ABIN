@@ -10,12 +10,13 @@ coverage:
       # https://docs.codecov.io/docs/commit-status
       default:
         target: auto
-        # Allow coverage drop by 1%
+        # Allow coverage drop by x%
         threshold: 0.5%
         # For now, only report results,
         # do not fail CI if coverage doesn't meet target
         informational: true
     patch:
+      default:
         target: auto
         threshold: 1%
 

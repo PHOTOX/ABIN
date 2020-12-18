@@ -28,8 +28,9 @@ module mod_const
    save
 end module mod_const
 
-!  mod_array_size contains various array limits. Modify here if you need larger arrays.
-!  Most of the arrays are allocated dynamically
+! mod_array_size contains various array limits.
+! Modify here if you need larger arrays.
+! Most of the other arrays are allocated dynamically.
 module mod_array_size
    use mod_const, only: DP 
    implicit none

@@ -1,8 +1,7 @@
 # TESTING basic CMD
 # TESTING independence of the order of namelists
-# TESTING atom contraints
+# TESTING atom constraints
 # TESTING removing COM rotations
-
 &nhcopt
 inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
 temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
