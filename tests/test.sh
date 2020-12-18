@@ -18,13 +18,11 @@ FFTW="$4"
 PLUMED="$5"
 CP2K="$6"
 ACTION="$7"
+
 # NOTE: For MPI tests, we rely on the fact that
-# MPI_PATH is exported in Makefile!
-if [[ $MPI = "TRUE" && -z ${MPI_PATH:-} ]];then
-  echo "ERROR: \$MPI_PATH not set"
-  echo "Make sure to set MPI_PATH in make.vars"
-  exit 1
-fi
+# MPI_PATH is defined in make.vars and exported in Makefile.
+# It's not needed if you use system-wide MPI installation
+# or if mpirun is in your PATH.
 
 if [[ $ACTION = "makeref" ]];then
   echo "ERROR: You should not call makeref on all tests at once."

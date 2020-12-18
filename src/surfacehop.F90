@@ -301,7 +301,7 @@ module mod_sh
    INQUIRE(FILE=chin, EXIST=file_exists)
    if(.not.file_exists)then
       write(*,*)'ERROR: Surface Hopping restart file does not exist! '//trim(chin)
-      call abinerror('read_wfn')
+      call abinerror('read_nacmrest')
    end if
 
    open(iunit1,file=chin,action="read", status="old", access="sequential", form="unformatted")
