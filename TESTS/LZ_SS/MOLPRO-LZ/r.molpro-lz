@@ -1,0 +1,9 @@
+#!/bin/bash
+cd MOLPRO-LZ
+timestep=$1
+ibead=$2
+
+let fline=9*timestep+9
+
+head -n $fline allforces.dat | tail -n 9 > ../engrad.dat.$ibead
+

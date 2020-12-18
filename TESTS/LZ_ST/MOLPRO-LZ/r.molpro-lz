@@ -1,0 +1,12 @@
+#!/bin/bash
+cd MOLPRO-LZ
+timestep=$1
+ibead=$2
+
+let fline=14*timestep+14
+
+head -n $fline allforces.dat | tail -n 14 > ../engrad.dat.$ibead
+
+echo "timestep: $timestep" >> ../stateall.dat
+cat ../state.dat | head -2 >> ../stateall.dat
+

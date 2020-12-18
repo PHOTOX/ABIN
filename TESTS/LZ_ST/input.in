@@ -1,0 +1,33 @@
+&general
+irandom=  1039269484,                 ! random seed
+pot='molpro-lz',		            ! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho 
+natom=9,		                !number of atoms
+irest=0,	    	            ! should we restart from restart.xyz? (ignoring mini.dat)
+
+ipimd=5,	                	! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
+nstep=3,  	  	            	! number of steps
+dt=10,			                ! timestep [au]
+
+nwrite=1,		                ! how often some output should be printed (estimators etc.)
+nwritex=1,		              	! how often should we print coordinates?
+nrest=1,		                ! how often we print restart files?
+nwritev=1,		                ! how often we print velocities?
+narchive=100
+/
+
+&nhcopt
+temp0=0.0,		                ! temperature [K] for Maxwell-Boltzmann sampling and thermostat
+temp=0.0,		
+inose=0,		                ! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, Langevin 3
+/
+
+&lz
+initstate_lz=4,
+nstate_lz=5,
+nsinglet_lz=2,
+ntriplet_lz=3,
+deltaE_lz=1.5,
+/
+
+
+

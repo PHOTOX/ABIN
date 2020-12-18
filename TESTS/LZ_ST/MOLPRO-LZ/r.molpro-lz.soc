@@ -1,0 +1,5 @@
+#!/bin/bash
+cd MOLPRO-LZ
+
+cp SOC.dat ../
+
