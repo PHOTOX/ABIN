@@ -14,8 +14,9 @@
 # For compilation with static system libraries, see:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46539
 
-# Some defaults, likely to be overwritten by make.vars
-# By default run all tests in TESTS/
+# Set defaults, likely to be overwritten in make.vars
+ 
+# By default run all end-to-end tests in tests/
 TEST=all
 # ABIN binary name
 BIN=abin
@@ -30,7 +31,7 @@ LIBS=
 # Export all vars into submake commands
 export
 # User-defined compilation parameters are in make.vars
-# and should override defaults defined above
+# and should override the defaults defined above
 include make.vars
 
 export SHELL=/bin/bash
@@ -42,14 +43,6 @@ ifeq ($(shell git --version | cut -b -3),git)
     export COMMIT=`git rev-parse HEAD`
   endif
 endif
-
-F_OBJS := modules.o fortran_interfaces.o utils.o io.o random.o arrays.o qmmm.o fftw_interface.o \
-          shake.o nosehoover.o gle.o transform.o potentials.o estimators.o ekin.o vinit.o plumed.o \
-          remd.o force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
-          force_mm.o force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o geom_analysis.o analysis.o \
-          minimizer.o mdstep.o forces.o read_cmdline.o init.o
-
-C_OBJS := water_interface.o
 
 ifeq ($(strip $(FFTW)),TRUE)
   DFLAGS += -DUSE_FFTW
@@ -87,19 +80,9 @@ LIBS += -lm -lstdc++
 #LIBS := ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
 
 # This is the default target
-# TODO: Move all source code to src/ and call $(MAKE) -C src
-${BIN} : libabin.a
-	$(MAKE) -C WATERMODELS all
-	${FC} ${FFLAGS} abin.o -L. -labin -LWATERMODELS/ -lwater ${LIBS} -o $@
-
-# Used for building Unit Tests
-libabin.a: compile_info.o
-	ar cru libabin.a ${C_OBJS} $(F_OBJS) compile_info.o && ranlib libabin.a
-
-# compile_info.F90 must be always recompiled to get the current date/time and git commit
-compile_info.o: compile_info.F90 ${C_OBJS} ${F_OBJS} abin.o
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DCOMPILE_DATE="'${DATE}'" -DGIT_COMMIT="'${COMMIT}'" -c $<
-
+${BIN} :
+	$(MAKE) -C water_potentials all
+	$(MAKE) -C src $(BIN)
 
 # Build and run Unit tests
 unittest: ${BIN}
@@ -107,8 +90,8 @@ unittest: ${BIN}
 	$(MAKE) -C unit_tests test
 
 clean:
-	$(MAKE) -C WATERMODELS clean
-	/bin/rm -f *.o *.mod *.gcno *gcda libabin.a $(BIN)
+	$(MAKE) -C water_potentials clean
+	$(MAKE) -C src clean
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests clean
 endif
@@ -118,26 +101,15 @@ test: ${BIN}
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) unittest
 endif
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUMED} ${CP2K} test
+	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUMED} ${CP2K} test
 
 # Clean all test folders.
 testclean:
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} clean
+	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} clean
 
 # This will automatically generate new reference data for tests
 makeref:
-	/bin/bash TESTS/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} makeref
+	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} makeref
 
 
 .PHONY: clean test testclean makeref unittest
-
-%.o: %.F90
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
-
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(DFLAGS) -c $<
-
-# TODO: Use only .F90
-%.o: %.f90
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
-

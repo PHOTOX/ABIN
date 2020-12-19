@@ -46,9 +46,10 @@ You can test the installation by:
 
 `$ make test`
 
-If you modify the source code and want to recompile, you should always clean up by:
+If you modify the source code and want to recompile,
+you should always clean up before the recompilation:
 
-`$ make clean`
+`$ make clean && make`
 
 -------------------------------
 3. STRUCTURE OF THE SOURCE CODE
