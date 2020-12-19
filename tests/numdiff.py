@@ -31,8 +31,8 @@ except:
 
 print("Comparing numerical differences in file "+inpfile)
 
-def failed(reference, test):
-   delta = float(reference) - float(test)
+def failed(test, reference):
+   delta = abs(float(reference) - float(test))
    # Let's just not report small differences at all,
    # It just creates a noise
    # TODO: Testing only 2 steps should allow to tighten this up significantly
