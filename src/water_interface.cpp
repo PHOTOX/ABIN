@@ -22,11 +22,11 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "WATERMODELS/ttm2f.h"
-#include "WATERMODELS/ttm3f.h"
-#include "WATERMODELS/ttm4f.h"
+#include "../WATERMODELS/ttm2f.h"
+#include "../WATERMODELS/ttm3f.h"
+#include "../WATERMODELS/ttm4f.h"
 
-#include "WATERMODELS/qtip4pf.h"
+#include "../WATERMODELS/qtip4pf.h"
 
 extern"C" {
 #ifdef CP2K
