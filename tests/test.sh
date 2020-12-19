@@ -1,9 +1,8 @@
 #!/bin/bash
-
-set -uo pipefail
+set -euo pipefail
 
 # Parameters passed from Makefile
-ABINEXE="$PWD/$1 -x mini.dat"
+ABINEXE="$PWD/src/$1 -x mini.dat"
 
 # verify that the number of parameters is correct!
 if [[ $# -ne 7 ]]; then
@@ -27,7 +26,14 @@ if [[ $MPI = "TRUE" && -z ${MPI_PATH:-} ]];then
   exit 1
 fi
 
-cd TESTS || exit 1
+if [[ $ACTION = "makeref" ]];then
+  echo "ERROR: You should not call makeref on all tests at once."
+  echo "Specify a concrete test which you want to modify, e.g."
+  echo "make test TEST=CMD"
+  exit 1
+fi
+
+cd $(dirname $0)
 TESTDIR=$PWD
 
 function dif_files {
@@ -41,16 +47,24 @@ for f in $files   # $*
 do
    file=$(basename $f .ref)
    if [[ -e $file.ref ]];then  # this should now be always true
-      diff $file $file.ref > $file.diff
-      if [[ $? -ge 1 ]];then
+      error_code=0
+      diff -q $file $file.ref || error_code=$?
+      if [[ $error_code -eq 2 ]];then
+        # This means the $file does not exist.
+        # Something is seriously wrong, ABIN probably crashed prematurely.
+        # No need for further checks, exit NOW.
+        return $error_code
+
+      elif [[ $error_code -ne 0 ]];then
+         # The reference file is different, but maybe it's just numerical noise?
+         error_code=0
          diff -y -W 500  $file $file.ref | egrep -e '|' -e '<' -e '>' > $file.diff
-         ../numdiff.py $file.diff
-         if [[ $? -ne 0 ]];then
-            status=1
+         ../numdiff.py $file.diff || error_code=$?
+         if [[ $error_code -ne 0 ]];then
+            # The changes were bigger that the thresholds specified in numdiff.py
+            status=$error_code
             echo "File $file differs from the reference."
          fi
-      else
-         rm $file.diff
       fi
    fi
 done
@@ -67,9 +81,6 @@ do
    file=$(basename $f .ref)
    if [[ -f $file.ref ]];then
       mv $file $file.ref
-   else
-      echo "ERROR: Something horrible happened during makeref"
-      exit 1
    fi
 done
 }
@@ -143,7 +154,7 @@ do
       exit 1
    fi
    echo "Entering directory $dir"
-   cd $dir || exit 1
+   cd $dir
 
    # Always clean test directory
    # before runnning the test
@@ -157,7 +168,7 @@ do
    # we skip the the actual test here
    if [[ $ACTION = "clean" ]];then
       echo "Cleaning files in directory $dir"
-      cd $TESTDIR || exit 1
+      cd $TESTDIR
       continue
    fi
 
@@ -168,18 +179,18 @@ do
    if [[ -f "test.sh" ]];then
 
       #./test.sh $ABINEXE 2> /dev/null
-      ./test.sh $ABINEXE
+      ./test.sh $ABINEXE || true
 
    else
       if [[ -f "velocities.in" ]];then
-         $ABINEXE -v "velocities.in" > output
+         $ABINEXE -v "velocities.in" > output || true
       else
-         $ABINEXE > output
+         $ABINEXE > output || true
       fi
 
       #for testing restart
       if [[ -e input.in2 ]];then
-         $ABINEXE -i input.in2 >> output
+         $ABINEXE -i input.in2 >> output || true
       fi
    fi
 
@@ -189,24 +200,27 @@ do
 
    else
 
-      dif_files ${files[@]}
-
+      # Since we're running in the -e mode,
+      # we need to "hide" this possibly failing command
+      # https://stackoverflow.com/a/11231970/3682277
+      current_error=0
+      dif_files ${files[@]} || current_error=$?
+      if [[ $current_error -ne 0 ]];then
+        global_error=1
+        echo "$dir FAILED"
+      else
+        echo "PASSED"
+      fi
    fi
 
-   if [[ $? -ne "0" ]];then
-      err=1
-      echo "$dir FAILED"
-      echo "======================="
-   else
-      echo "PASSED"
-      echo "======================="
-   fi
-   cd $TESTDIR || exit 1
+   echo "======================="
+
+   cd $TESTDIR
 done
 
 echo " "
 
-if [[ $err -ne "0" ]];then
+if [[ ${global_error-0} -ne 0 ]];then
    echo "Some tests DID NOT PASS."
 else
    echo "All tests PASSED."

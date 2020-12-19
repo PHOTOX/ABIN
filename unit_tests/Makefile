@@ -12,7 +12,7 @@ ifneq ($(strip $(PFUNIT_PATH)),)
   # TODO: Here we rewrite FFLAGS, but we should be reusing it
   # Need to figure out how to do test coverage separately
   FFLAGS = $(PFUNIT_EXTRA_FFLAGS) -Wall -O0 -ffpe-trap=invalid,zero,overflow,denormal
-  FFLAGS += -I../
+  FFLAGS += -I../src/
 endif
 
 # NOTE: $(LIBS) are defined in the root Makefile
@@ -20,7 +20,7 @@ endif
 utils_TESTS := test_utils.pf
 utils_REGISTRY :=
 utils_OTHER_SOURCES :=
-utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../" -labin -L"../WATERMODELS/" -lwater ${LIBS}
+utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
 utils_OTHER_INCS :=
 
 $(eval $(call make_pfunit_test,utils))
