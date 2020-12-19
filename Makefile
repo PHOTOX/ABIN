@@ -43,10 +43,10 @@ ifeq ($(shell git --version | cut -b -3),git)
   endif
 endif
 
-F_OBJS := modules.o utils.o fortran_interfaces.o io.o random.o arrays.o qmmm.o fftw_interface.o \
+F_OBJS := modules.o fortran_interfaces.o utils.o io.o random.o arrays.o qmmm.o fftw_interface.o \
           shake.o nosehoover.o gle.o transform.o potentials.o estimators.o ekin.o vinit.o plumed.o \
           remd.o force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
-          force_mm.o force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o density.o analysis.o \
+          force_mm.o force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o geom_analysis.o analysis.o \
           minimizer.o mdstep.o forces.o read_cmdline.o init.o
 
 C_OBJS := water_interface.o

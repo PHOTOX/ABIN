@@ -31,19 +31,6 @@ anal_ext=0,		! do we call user-defined function analyze_ext?
 natom=3,		!number of atoms
 /
 
-&system
-nbin=2000,		! number of bins for densities
-ndist=2,		! number of bonds for which we calculate density
-dist1=1,1		! first atoms for binning
-dist2=2,3		! second atoms for binning (i.e. bond between natfirst[1] and natsecond[1])
-xmin=0.5,		! minimum values for analyzed bonds 
-xmax=2.0,		! maximum values for analyzed bonds
-nang=1,			! number of analyzed angles
-ang1=3,
-ang2=1,
-ang3=2,         ! angle definition: third atoms
-/
-
 &nhcopt
 inose=2,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
 temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]

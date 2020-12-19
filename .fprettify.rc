@@ -1,8 +1,18 @@
 indent=3
-line-length=120
+line-length=100
 strict-indent=true
 whitespace-print=False
 whitespace-logical=False
 whitespace-relational=False
 whitespace-comma=True
 whitespace-type=False
+enable-replacements=True
+c-relations=True
+whitespace-print=False
+disable-fypp=True
+whitespace-decl=True
+
+# Change case of intrisics, currently
+# does not work in this file, per:
+# https://github.com/pseewald/fprettify/issues/94 
+case=1,1,1,2

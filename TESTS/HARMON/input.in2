@@ -33,7 +33,6 @@ k1=0.01
 ndist=1
 dist1=1
 dist2=1
-xmin=-5.0
 /
 
 &nhcopt

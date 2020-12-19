@@ -243,18 +243,19 @@ contains
    end if
    close(122)
 
+   ! WARNING: gA is rewritten here
+   ! TODO: do not overwrite gA
    call compute_propagator(gA, gC, gT, gS, dt)
 
-
-   ! then, we must initialize the auxiliary vectors. we keep general - as we might be 
-   ! using non-diagonal C to break detailed balance - and we use cholesky decomposition
-   ! of C. again, since one would like to initialize correctly the velocities in 
-   ! case of generic C, we use an extra slot for gp for the physical momentum, as we 
-   ! could then use it to initialize the momentum in the calling code
+   ! Initialize the auxiliary vectors. 
+   ! we keep general - as we might be using non-diagonal C
+   ! to break detailed balance - and we use cholesky decomposition of C
+   ! since one would like to initialize correctly the velocities in 
 
    ! DH: ps rewritten in init.f90 if irest.eq.1
-   ! always initialize, maybe rewritten in restart
 
+   ! TODO: Do not overwrite gA
+   ! TODO: Move this inside initialize_momenta
    gA = gC   
    call cholesky(gA, gC, ns+1)
 
@@ -286,9 +287,9 @@ contains
    end subroutine gle_init
 
    subroutine initialize_momenta(C, iw)
-   !use mod_arrays,  only: px, py, pz
+   !use mod_arrays,  only: px, py, pz, vx, vy, vz, amt
    use mod_general, only: natom
-   use mod_utils,   only: abinerror
+   use mod_utils,   only: abinerror, print_xyz_arrays
    real(DP), intent(in) :: C(:,:)
    integer, intent(in)  :: iw
    real(DP),allocatable :: gr(:)
@@ -301,14 +302,27 @@ contains
 
    allocate(gr(ns+1))
 
-   do j=1,natom*3
+   do j = 1, natom * 3
       call gautrg(gr, ns + 1)
-      ! TODO, actually pass this to initialize momenta
       gp(j,:) = matmul(C, gr)
    end do
 
-   do j=1,natom*3
-      do i=1,ns
+   ! TODO, actually pass this to initialize momenta
+   ! case of generic C, we use an extra slot for gp for the physical momentum
+   !do i = 1, natom
+   !   px(i,iw) = gp(i,1)           
+   !   py(i,iw) = gp(i + natom,1)     
+   !   pz(i,iw) = gp(i + 2*natom,1)   
+   !end do
+   !vx = px / amt
+   !vy = py / amt
+   !vz = pz / amt
+
+   !call print_xyz_arrays(px, py, pz)
+   !call print_xyz_arrays(vx, vy, vz)
+
+   do j = 1, natom*3
+      do i = 1, ns
          ps(j,i,iw) = gp(j,i+1)
       enddo
    enddo
@@ -330,17 +344,18 @@ contains
    end subroutine finalize_gle
 
 
+   ! Matrix A is rewritten on output
    subroutine compute_propagator(A, C, T, S, dt)
-      ! Matrix A is rewritten on output
    real(DP), intent(inout) :: A(:,:) 
    real(DP), intent(in)    :: C(:,:)
    real(DP), intent(out)   :: T(:,:), S(:,:)
    real(DP), intent(in)    :: dt
 
-   ! the deterministic part of the propagator is obtained in a second
+   ! the deterministic part of the propagator
    call matrix_exp(-dt*A, ns+1, 15, 15, T)
     
-   ! the stochastic part is just as easy. we use gA as a temporary array
+   ! the stochastic part, we use A as a temporary array
+   ! TODO: Do not overwrite A, makes things confusing
    A = C - matmul(T, matmul(C, transpose(T)) )
    call cholesky(A, S, ns+1)
 
@@ -477,8 +492,8 @@ contains
     enddo
   end subroutine matrix_exp
   
-  ! TODO: replace by more stable procedure from i-Py???
-  ! brute-force "stabilized" cholesky decomposition.
+  ! TODO: replace by more stable procedure from i-Py.
+  ! Brute-force "stabilized" cholesky decomposition.
   ! in practice, we compute LDL^T decomposition, and force
   ! to zero negative eigenvalues.
   subroutine cholesky(SST, S, n)

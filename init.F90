@@ -29,9 +29,9 @@ subroutine init(dt)
    use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
    use mod_splined_grid, only: initialize_spline
-   use mod_utils
+   use mod_utils, only: lowertoupper, uppertolower, file_exists_or_exit
    use mod_vinit
-   use mod_density
+   use mod_analyze_geometry
    use mod_shake
    use mod_minimize, only: gamm, gammthr
    use mod_analysis, only: restin
@@ -62,7 +62,7 @@ subroutine init(dt)
    character(len=60)   :: chdivider
    character(len=60)   :: mdtype
    LOGICAL :: file_exists
-   logical        :: rem_comvel, rem_comrot
+   logical :: rem_comvel, rem_comrot
 !  real(DP) :: wnw=5.0d-5
    ! Used for MPI calls
    integer :: ierr
@@ -84,8 +84,8 @@ subroutine init(dt)
    namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,nrespnose,nyosh,      &
                      scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol,rem_comrot,rem_comvel
 
-   namelist /system/ masses,massnames,nbin,nbin_ang,ndist,dist1,dist2,xmin,xmax,disterror, &
-                     nang,ang1,ang2,ang3,ndih,dih1,dih2,dih3,dih4,shiftdihed, &
+   namelist /system/ masses,massnames,ndist,dist1,dist2, &
+                     nang,ang1,ang2,ang3, ndih,dih1,dih2,dih3,dih4,shiftdihed, &
                      k,r0,k1,k2,k3,De,a,D0_dw,lambda_dw,k_dw, r0_dw, &
                      Nshake,ishake1,ishake2,shake_tol
 
@@ -505,11 +505,11 @@ subroutine init(dt)
 
       if (my_rank.eq.0)then
          if (temp0.gt.0)then
-            write(*,*)'Initial temperature in Kelvins =', temp0
+            write(*,*)'Initial temperature [K] =', temp0
          else
-            write(*,*)'Initial temperature in Kelvins =', temp
+            write(*,*)'Initial temperature [K] =', temp
          end if
-         if (inose.ne.0) write(*,*)'Target temperature in Kelvins =', temp
+         if (inose.ne.0) write(*,*)'Target temperature [K] =', temp
       end if
 
       ! conversion of temperature from K to au
@@ -529,8 +529,6 @@ subroutine init(dt)
          end if
          call shake_init(x,y,z)
       endif
-
-      call dist_init() !zeroing distribution arrays
 
       if (pot.eq.'mmwater'.or.pot_ref.eq.'mmwater') call check_water(natom, names)
 
@@ -574,10 +572,11 @@ subroutine init(dt)
 
 !     SETTING initial velocities according to the Maxwell-Boltzmann distribution
       if(irest.eq.0.and.chveloc.eq.'')then
+         ! TODO: GLE thermostat, initialize momenta in gle_init
          if (temp0.ge.0)then
-            call vinit(TEMP0, am, vx, vy, vz)
+            call vinit(temp0, am, vx, vy, vz)
          else
-            call vinit(TEMP, am, vx, vy, vz)
+            call vinit(temp, am, vx, vy, vz)
          end if
       end if
 
@@ -624,12 +623,11 @@ subroutine init(dt)
       ! Otherwise, just print the temperature.
       call ScaleVelocities(vx, vy, vz)
 
-       
-!-----some stuff for spherical boundary onditions
+      ! Initialize spherical boundary onditions
       if(isbc.eq.1) call sbc_init(x,y,z)
 
-!-----inames initialization for the MM part. 
-!-----We do this also because string comparison is very costly
+      ! inames initialization for the MM part. 
+      ! We do this also because string comparison is very costly
       if(iqmmm.eq.3.or.pot.eq.'mm') allocate( inames(natom) )
 
       if(iqmmm.eq.3.or.pot.eq.'mm')then 
@@ -667,7 +665,7 @@ subroutine init(dt)
 
    ! Open files for writing
    ! TODO: It's strange that we're passing these random params here...
-   call files_init(isbc, phase)
+   call files_init(isbc, phase, ndist, nang, ndist)
 
    call flush(6)
 
@@ -725,15 +723,21 @@ subroutine init(dt)
        error=1
       endif
       if(ndist.ge.ndistmax)then
-       write(*,*)'Maximum number of bonds for binning is:'
+       write(*,*)'Maximum number of bonds for printing is:'
        write(*,*)ndistmax
        write(*,*)'Adjust variable ndistmax in modules.f90'
        error=1
       endif
-      if(nbin.gt.nbinmax)then
-       write(*,*)'Maximum number of bins for densities is:'
-       write(*,*)nbinmax
-       write(*,*)'Adjust variable nbinmax in modules.f90'
+      if(nang.ge.ndistmax)then
+       write(*,*)'Maximum number of angles (nang) for printing is:'
+       write(*,*)ndistmax
+       write(*,*)'Adjust variable ndistmax in modules.f90'
+       error=1
+      endif
+      if(ndih.ge.ndistmax)then
+       write(*,*)'Maximum number of dihedral angles (ndih) for printing is:'
+       write(*,*)ndistmax
+       write(*,*)'Adjust variable ndistmax in modules.f90'
        error=1
       endif
 !----------HERE we check for errors in input.      

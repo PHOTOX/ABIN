@@ -100,7 +100,7 @@ program abin_dyn
 
 !  End of transformations
 
-!-----Note that amt equals am if staging is off
+   ! Note that 'amt' equals 'am' for non-PI simulations
    px = amt * vx
    py = amt * vy
    pz = amt * vz

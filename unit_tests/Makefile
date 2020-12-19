@@ -11,7 +11,7 @@ ifneq ($(strip $(PFUNIT_PATH)),)
   include $(LATEST_PFUNIT_DIR)/include/PFUNIT.mk
   # TODO: Here we rewrite FFLAGS, but we should be reusing it
   # Need to figure out how to do test coverage separately
-  FFLAGS = $(PFUNIT_EXTRA_FFLAGS)
+  FFLAGS = $(PFUNIT_EXTRA_FFLAGS) -Wall -O0 -ffpe-trap=invalid,zero,overflow,denormal
   FFLAGS += -I../
 endif
 

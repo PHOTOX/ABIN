@@ -24,7 +24,6 @@ natom=159,		!number of atoms
 /
 
 &system
-nbin=2000,		! number of bins for densities
 ndist=6,		! of bonds for which we calculate density
 dist1=1,1,4,4,7,7		! first atoms for binning
 dist2=2,3,5,6,8,9		! second atoms for binning (i.e. bond between natfirst[1] and natsecond[1])
@@ -37,8 +36,6 @@ dih1=1
 dih2=2
 dih3=3
 dih4=4
-xmin=0.5,			! 
-xmax=2.5,		!
 nshake=8,		! Number of bond constrains
 shake_tol=0.0001	! Shake tolerance
 ishake1=1,1,4,4,8,8,11,11,		! list of bond constraints

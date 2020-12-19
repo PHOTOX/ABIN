@@ -1,3 +1,4 @@
+" ABIN SETUP
 filetype plugin on
 :let fortran_free_source=1
 syntax on
@@ -5,5 +6,7 @@ syntax on
 filetype indent on
 filetype indent plugin on
 
-" use gqG to autoformat the whole open file
+" use gqG to autoformat the whole open file with fprettify
+" TODO: Figure out how to autoformat on save
 autocmd Filetype fortran setlocal formatprg=fprettify\ --silent
+" END OF ABIN SETUP

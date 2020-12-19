@@ -404,14 +404,14 @@ subroutine connect_terachem( itera )
 
    end if
 
-   write(6,'(2a)') 'Establishing connection to TeraChem port: ', trim(port_name)
+   write(6,'(a)') 'Establishing connection to TeraChem...'
    ! ----------------------------------------
    ! Establish new communicator via port name
    ! ----------------------------------------
    call flush(6)
    call MPI_COMM_CONNECT(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
    call handle_mpi_error(ierr)
-   write(6,'(a,i0)') 'Established new communicator:', newcomm
+   write(6,'(a,i0)') 'Established a new communicator:', newcomm
 
    newcomms(itera) = newcomm
 
