@@ -172,9 +172,8 @@ module mod_lz
       do ist1=ibeg, iend
          if (ist1.eq.ist) cycle
          probc=probc+prob2(ist1)/sum(prob2) !1 if only one state considerable
-         if(hop_rdnum2.lt.probc)then
+         if(hop_rdnum2.lt.probc.and.ihop.eq.0)then
              ihop = ist1
-             exit
          else if(prob2(ist1).gt.0)then
              write (fmt_in,'(I2.2)') ist1
              write(*,*)"NO hop on state ", trim(fmt_in),", Random n2:",hop_rdnum2
