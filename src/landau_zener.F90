@@ -168,18 +168,19 @@ module mod_lz
    ! Determine on which state (weighted sampling of all probable hops)
    call vranf(ran, 1)
    hop_rdnum2 = ran(1)
-   do ist1=ibeg, iend
-      if (ist1.eq.ist) cycle
-      probc=probc+prob2(ist1)/sum(prob2) !0 if none, 1 if one
-      if(hop_rdnum2.lt.probc)then
-          ihop = ist1
-          exit
-      else if(prob2(ist1).gt.0)then
-          write (fmt_in,'(I2.2)') ist1
-          write(*,*)"NO hop on state ", trim(fmt_in),", Random n2:",hop_rdnum2
-      end if
-
-   end do
+   if(sum(prob2).ne.0.0d0)then
+      do ist1=ibeg, iend
+         if (ist1.eq.ist) cycle
+         probc=probc+prob2(ist1)/sum(prob2) !1 if only one state considerable
+         if(hop_rdnum2.lt.probc)then
+             ihop = ist1
+             exit
+         else if(prob2(ist1).gt.0)then
+             write (fmt_in,'(I2.2)') ist1
+             write(*,*)"NO hop on state ", trim(fmt_in),", Random n2:",hop_rdnum2
+         end if
+      end do
+   end if
 
    if(ihop.ne.0)then
     Ekin = ekin_v(vx,vy,vz)
