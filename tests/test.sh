@@ -150,6 +150,9 @@ if [[ $TESTS = "all" ]];then
    if [[ $PLUMED = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=PLUMED
+   else
+      let index=${#folders[@]}+1
+      folders[index]=WITHOUT_PLUMED
    fi
 
 else

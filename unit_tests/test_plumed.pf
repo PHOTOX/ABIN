@@ -1,0 +1,331 @@
+! Testing functions from mod_plumed,
+! defined in plumed.F90
+module test_plumed
+   use funit
+   use mod_const, only: DP
+   use mod_plumed
+   implicit none
+   integer, parameter :: NATOMS = 2, NBEADS = 1
+   real(DP) :: x(NATOMS, NBEADS), y(NATOMS, NBEADS), z(NATOMS, NBEADS)
+   real(DP) :: fx(NATOMS, NBEADS), fy(NATOMS, NBEADS), fz(NATOMS, NBEADS)
+   ! Passed to the PLUMED constructor so that it doesn't print extra info.
+   logical, parameter :: SILENT = .true.
+   integer :: iunit
+   save
+
+contains
+
+#ifdef USE_PLUMED
+
+   ! This routine is called automatically before each test.
+   @before
+   subroutine setup()
+      use mod_general, only: natom, nwalk, dt0, it
+      use mod_system, only: am
+      use mod_nhc, only: temp
+
+      it = 0
+      natom = NATOMS
+      nwalk = NBEADS
+      dt0 = 1.0D0
+      temp = 0.001D0
+
+      allocate (am(2))
+      am = 1823.0D0
+
+      x = 0.0D0; y = 0.0D0; z = 0.0D0
+      fx = 1.0D0; fy = 1.0D0; fz = 1.0D0
+
+      ! Create a dummy empty PLUMED input file
+      ! In actual tests, we will pass input lines via cmd('readInputLine', INPUT_LINE)
+      open (newunit=iunit, file=plumedfile, access='sequential')
+      close (unit=iunit)
+
+      ! NOTE: Some tests might need to call plumed_init() again,
+      ! e.g. if they need to re-define the time step.
+      ! It seems it's okay to call it multiple times though.
+      ! Because we need to be able to setup initial variables before each test.
+      call plumed_init(SILENT)
+   end subroutine setup
+
+   ! This routine is called automatically after each test.
+   @after
+   subroutine teardown()
+      use mod_system, only: am
+      deallocate (am)
+      ! Delete auxiliary PLUMED input file.
+      open (newunit=iunit, file=plumedfile)
+      close (iunit, status='delete')
+
+      open (newunit=iunit, file=PLUMED_OUTPUT_FILE)
+      close (iunit, status='delete')
+      ! NOTE: Some tests need to call finalize_plumed() earlier
+      ! to flush the PLUMED output files.
+      ! It's okay to call it multiple times though, see how it is
+      ! defined in src/plumed.F90.
+      call finalize_plumed()
+   end subroutine teardown
+
+
+   ! Here we just test we can initialize and finalize PLUMED without dying,
+   ! no assertions here.
+   @test(ifdef=USE_PLUMED)
+   subroutine test_plumed_init_and_finalize()
+      character(len=*), parameter :: test_action = 'd: DISTANCE ATOMS=1,2'//char(0)
+      call plumed_f_gcmd('readInputLine'//char(0), test_action)
+   end subroutine test_plumed_init_and_finalize
+
+   ! Check that we pass the time step to PLUMED correctly.
+   ! We'll tell PLUMED to print colvar to file plumed_colvar.dat
+   ! and then read time from the first column and assert its value.
+   @test(ifdef=USE_PLUMED)
+   subroutine test_time()
+      use mod_const, only: AUTOFS
+      use mod_general, only: it, dt0
+      character(len=*), parameter :: PLUMED_COLVAR_OUTPUT_FILE = 'plumed_colvar.dat'
+      character(len=*), parameter :: DISTANCE_ACTION = 'd: DISTANCE ATOMS=1,2'//char(0)
+      character(len=*), parameter :: PRINT_ACTION = 'PRINT ARG=d STRIDE=1 FILE=' &
+                                                    & //PLUMED_COLVAR_OUTPUT_FILE//char(0)
+      real(DP) :: time_from_plumed, distance_from_plumed
+      real(DP) :: eclas = 1.0D0
+
+      x(1, 1) = 0.0D0
+      x(2, 1) = 1.0D0
+
+      ! One picosecond in atomic units
+      dt0 = 1.0D3 / AUTOFS
+
+      ! Need to call plumed_init() again since we redefined dt
+      call plumed_init(SILENT)
+      call plumed_f_gcmd('readInputLine'//char(0), DISTANCE_ACTION)
+      call plumed_f_gcmd('readInputLine'//char(0), PRINT_ACTION)
+
+      it = 0
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+      it = 1
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+      call finalize_plumed()
+
+      open (iunit, file=PLUMED_COLVAR_OUTPUT_FILE, status='old')
+      read (iunit, *)
+
+      read (iunit, *) time_from_plumed, distance_from_plumed
+      @assertEqual(0.0D0, time_from_plumed, "0 ps passed to PLUMED")
+
+      read (iunit, *) time_from_plumed, distance_from_plumed
+      @assertEqual(1.0D0, time_from_plumed, "1 ps passed to PLUMED")
+
+      close (iunit, status='delete')
+   end subroutine test_time
+
+   ! Check that we pass coordinates to PLUMED correctly.
+   ! We'll tell PLUMED to print atom distances to plumed_colvar.dat
+   ! and then read them from the second column and assert their values.
+   @test(ifdef=USE_PLUMED)
+   subroutine test_coords()
+      use mod_const, only: ANG
+      use mod_general, only: it
+      character(len=*), parameter :: PLUMED_COLVAR_OUTPUT_FILE = 'plumed_colvar.dat'
+      character(len=*), parameter :: DISTANCE_ACTION = 'd: DISTANCE ATOMS=1,2'//char(0)
+      character(len=*), parameter :: PRINT_ACTION = 'PRINT ARG=d STRIDE=1 FILE=' &
+                                                   & //PLUMED_COLVAR_OUTPUT_FILE//char(0)
+      real(DP) :: time_from_plumed, distance_from_plumed
+      real(DP) :: eclas = 1.0D0
+      ! 1 nanometer and 2 nanometers in Bohrs
+      real(DP), parameter :: DX = 1.0D1 * ANG, DY = 2.0D1 * ANG
+
+      x = 0.0D0; y = 0.0D0; z = 0.0D0
+      x(2, 1) = DX
+
+      call plumed_f_gcmd('readInputLine'//char(0), DISTANCE_ACTION)
+      call plumed_f_gcmd('readInputLine'//char(0), PRINT_ACTION)
+
+      it = 0
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+
+      y(2, 1) = DY
+      z(2, 1) = DY
+
+      it = 1
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+      call finalize_plumed()
+
+      open (iunit, file=PLUMED_COLVAR_OUTPUT_FILE, status='old')
+      read (iunit, *)
+
+      read (iunit, *) time_from_plumed, distance_from_plumed
+      @assertEqual(1.0D0, distance_from_plumed, "1 nm from PLUMED")
+
+      read (iunit, *) time_from_plumed, distance_from_plumed
+      @assertEqual(3.0D0, distance_from_plumed, "3 nm from PLUMED")
+
+      close (iunit, status='delete')
+   end subroutine test_coords
+
+   ! Check that we pass the energy to PLUMED correctly.
+   ! We'll tell PLUMED to print energy to file plumed_energies.dat
+   ! and then read it and assert its value.
+   @test(ifdef=USE_PLUMED)
+   subroutine test_energy()
+      use mod_const, only: AUTOJ, AVOGADRO
+      character(len=*), parameter :: PLUMED_ENERGY_OUTPUT_FILE = 'plumed_energies.dat'
+      character(len=*), parameter :: ENERGY_ACTION = 'ene: ENERGY'//char(0)
+      character(len=*), parameter :: PRINT_ACTION = 'PRINT ARG=ene STRIDE=1 FILE='// &
+                                                    & PLUMED_ENERGY_OUTPUT_FILE//char(0)
+
+      ! 1 kJ / mol in atomic units
+      real(DP), parameter :: eclas = 1.0D3 / AVOGADRO / AUTOJ
+      real(DP) :: time_from_plumed, energy_from_plumed
+
+      call plumed_f_gcmd('readInputLine'//char(0), ENERGY_ACTION)
+      call plumed_f_gcmd('readInputLine'//char(0), PRINT_ACTION)
+
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+      call finalize_plumed()
+
+      open (iunit, file=PLUMED_ENERGY_OUTPUT_FILE, status='old')
+      read (iunit, *)
+      read (iunit, *) time_from_plumed, energy_from_plumed
+
+      @assertEqual(1.0D0, energy_from_plumed, "1 kJ/mol from PLUMED")
+
+      close (iunit, status='delete')
+   end subroutine test_energy
+
+   ! Check that we pass the masses to PLUMED correctly.
+   ! We'll tell PLUMED to print masses to file plumed_masses.dat
+   ! and then read it and assert their values.
+   @test(ifdef=USE_PLUMED)
+   subroutine test_masses()
+      use mod_const, only: AMU
+      use mod_system, only: am
+      character(len=*), parameter :: PLUMED_MASS_OUTPUT_FILE = 'plumed_masses.dat'
+      character(len=*), parameter :: DUMP_MASSES = &
+         & 'DUMPMASSCHARGE ONLY_MASSES FILE='//PLUMED_MASS_OUTPUT_FILE//char(0)
+      real(DP) :: mass_from_plumed
+      real(DP) :: eclas
+      integer :: i
+
+      eclas = 1.0D0
+      ! 1 amu in a.u.
+      am(1) = 1.0D0 * AMU
+      am(2) = 2.0D0 * AMU
+
+      call plumed_f_gcmd('readInputLine'//char(0), DUMP_MASSES)
+
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+      call finalize_plumed()
+
+      open (iunit, file=PLUMED_MASS_OUTPUT_FILE, status='old')
+      read (iunit, *)
+
+      read (iunit, *) i, mass_from_plumed
+      @assertEqual(1.0D0, mass_from_plumed, message="2 AMU from PLUMED", tolerance=1D-15)
+
+      read (iunit, *) i, mass_from_plumed
+      @assertEqual(2.0D0, mass_from_plumed, message="2 AMU from PLUMED")
+
+      close (iunit, status='delete')
+   end subroutine test_masses
+
+   ! Check that PLUMED does not modify forces
+   ! if there is not Action specified.
+   @test(ifdef=USE_PLUMED)
+   subroutine test_zero_force()
+      use mod_general, only: it
+      real(DP) :: eclas
+
+      it = 0
+      fx = 1.0D0; fy = 1.0D0; fz = 1.0D0
+      eclas = 1.0D0
+
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+
+      @assertEqual(1.0D0, fx, "fx unchanged")
+      @assertEqual(1.0D0, fy, "fy unchanged")
+      @assertEqual(1.0D0, fz, "fz unchanged")
+   end subroutine test_zero_force
+
+   ! Here we test that PLUMED returns correct forces
+   ! from a single Gaussian from Meta Dynamics Action.
+   @test(ifdef=USE_PLUMED)
+   subroutine test_force_metad()
+      use mod_const, only: AUTOJ, AVOGADRO, ANG
+      use mod_general, only: it
+      character(len=*), parameter :: PLUMED_HILLS_FILE = 'plumed_hills.dat'
+      ! PLUMED uses kJ / mol as energy unit
+      real(DP), parameter :: HEIGHT_PLUMED_UNITS = 4.0D0
+      real(DP), parameter :: HEIGHT_ABIN_UNITS = HEIGHT_PLUMED_UNITS / AUTOJ / AVOGADRO / 1.0D-3
+      ! PLUMED uses nanometers as length unit
+      real(DP), parameter :: SIGMA_PLUMED_UNITS = 0.5D0
+      real(DP), parameter :: SIGMA_ABIN_UNITS = SIGMA_PLUMED_UNITS * ANG * 1.0D1
+      character(len=*), parameter :: DISTANCE_ACTION = 'dist: DISTANCE ATOMS=1,2'//char(0)
+      character(len=100) :: metad_action
+      real(DP) :: eclas
+      real(DP) :: dx, dfx
+
+      write (metad_action, '(A, F3.1, A, F3.1, A1)') 'metad: METAD ARG=dist PACE=1'// &
+                                          &' FILE='//PLUMED_HILLS_FILE// &
+                                          &' HEIGHT=', HEIGHT_PLUMED_UNITS, &
+                                          &' SIGMA=', SIGMA_PLUMED_UNITS, char(0)
+
+      eclas = 1.0D0
+      y = 0.0D0; z = 0.0D0
+      fx = 1.0D0; fy = 1.0D0; fz = 1.0D0
+
+      x(1, 1) = 0.0D0
+      x(2, 1) = 1.0D0
+
+      call plumed_f_gcmd('readInputLine'//char(0), distance_action)
+      call plumed_f_gcmd('readInputLine'//char(0), metad_action)
+
+      it = 0
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+
+      ! First Gaussian is placed in this call.
+      ! However, since we're sitting at the center of it,
+      ! it shouldn't affect forces.
+      it = 1
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+
+      @assertEqual(1.0D0, fx, "fx unchanged")
+      @assertEqual(1.0D0, fy, "fy unnchanged")
+      @assertEqual(1.0D0, fz, "fz unchanged")
+
+      ! Let's move one atom a bit in the x direction
+      ! so fx should now be different, but fy and fz should stay the same
+
+      ! Our MetaDynamics Gaussian looks like this:
+      ! h = height = 4.0D0
+      ! sigma = 2.0D0
+      ! s = x1 - x2 (atomic distance)
+      !
+      ! G(s) = height * exp[-(s-s0)^2/(2*sigma^2)]
+      !
+      ! where s0 is the atomic distance where the Gaussian was deposited
+      ! See: https://www.plumed.org/doc-v2.7/user-doc/html/_m_e_t_a_d.html
+
+      ! The derivative is:
+      ! G'(s) =  - (s-s0) * height * exp[-(s-s0)^2/(2*sigma^2)] / sigma^2
+
+      ! We'll chose the displacement so that the argument to the exponential is -1
+      dx = dsqrt(2.0D0) * SIGMA_ABIN_UNITS
+      x(2, 1) = x(2, 1) + dx
+      it = 2
+
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+
+      !dfx = dx * HEIGHT_ABIN_UNITS * exp(-(dx**2) / 2.0D0 / SIGMA_ABIN_UNITS**2) / SIGMA_ABIN_UNITS**2
+      dfx = dx * HEIGHT_ABIN_UNITS * exp(-1.0D0) / (SIGMA_ABIN_UNITS**2)
+
+      @assertEqual(1.0D0 - dfx, fx(1, 1), "fx(1) changed")
+      @assertEqual(1.0D0 + dfx, fx(2, 1), "fx(2) changed")
+      @assertEqual(1.0D0, fy, "fy unchanged")
+      @assertEqual(1.0D0, fz, "fz unchanged")
+
+      open (iunit, file=PLUMED_HILLS_FILE)
+      close (iunit, status='delete')
+   end subroutine test_force_metad
+
+#endif
+end module test_plumed

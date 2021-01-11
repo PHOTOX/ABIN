@@ -335,16 +335,7 @@ subroutine init(dt)
    if(ipimd.eq.4) call allocate_ehrenfest(natom, nstate)
 
    if(iplumed.eq.1) then
-
-#ifdef USE_PLUMED
-      call plumed_init(dt)
-      write(*,*) 'PLUMED is on'
-      write(*,*) 'PLUMEDfile is ', trim(plumedfile)
-#else
-      write(*,*)'FATAL ERROR: ABIN was not compiled with PLUMED.'
-      stop 1
-#endif
-
+      call plumed_init()
    endif
 
 
@@ -1172,9 +1163,7 @@ subroutine finish(error_code)
    use mod_cp2k,   only: finalize_cp2k
 #endif
 
-#ifdef USE_PLUMED
-   use mod_plumed
-#endif
+   use mod_plumed, only: iplumed, finalize_plumed
 
 #ifdef USE_MPI
    use mod_terampi, only: finalize_terachem
@@ -1236,11 +1225,9 @@ subroutine finish(error_code)
       call finalize_gle()
    end if
 
-#ifdef USE_PLUMED
-    if (iplumed.eq.1) then
-      call plumed_f_gfinalize()
-    end if
-#endif
+   if (iplumed.eq.1) then
+      call finalize_plumed()
+   end if
 
    ! Cleanup Landau-Zener
    if(ipimd.eq.5)then

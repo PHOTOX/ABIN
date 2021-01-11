@@ -1,18 +1,32 @@
-indent=3
-line-length=100
-strict-indent=true
-whitespace-print=False
-whitespace-logical=False
-whitespace-relational=False
-whitespace-comma=True
-whitespace-type=False
+# Replace FORTRAN style relational operators with C-style
+# to make our code more readable for non-FORTRAN programmers
+# .e.g '.lt.' -> '<'
 enable-replacements=True
 c-relations=True
+
+# White space settings
+indent=3
+line-length=100
+strict-indent=True
+whitespace-relational=True
+whitespace-logical=True
+whitespace-plusminus=True
+whitespace-multdiv=True
+whitespace-comma=True
+whitespace-intrinsics=True
 whitespace-print=False
-disable-fypp=True
+whitespace-type=False
+
+# Control whitespace around '::' declarations
 whitespace-decl=True
+enable-decl=True
+
+# Don't indent pre-processor statements
+disable-fypp=True
 
 # Change case of intrisics, currently
 # does not work in this file, per:
 # https://github.com/pseewald/fprettify/issues/94 
-case=1,1,1,2
+# For now, we need to pass this as CLI params, e.g.
+# fprettify src/plumed.F90 -c .fprettify.rc --case 1 1 1 2
+# case=1,1,1,2

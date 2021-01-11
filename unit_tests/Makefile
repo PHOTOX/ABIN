@@ -13,6 +13,7 @@ ifneq ($(strip $(PFUNIT_PATH)),)
   # Need to figure out how to do test coverage separately
   FFLAGS = $(PFUNIT_EXTRA_FFLAGS) -Wall -O0 -ffpe-trap=invalid,zero,overflow,denormal
   FFLAGS += -I../src/
+  FFLAGS += $(DFLAGS)
 endif
 
 # NOTE: $(LIBS) are defined in the root Makefile
@@ -22,24 +23,28 @@ utils_REGISTRY :=
 utils_OTHER_SOURCES :=
 utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
 utils_OTHER_INCS :=
-
 $(eval $(call make_pfunit_test,utils))
 
-all : utils
+plumed_TESTS := test_plumed.pf
+plumed_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+$(eval $(call make_pfunit_test,plumed))
+
+
+all : utils plumed
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
 
-test :
+test : clean_plumed_output
 	./utils
+	./plumed
 
-clean :
-	/bin/rm -f *.o *.mod *.inc test_*.F90 utils
+clean : clean_plumed_output
+	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 utils plumed
+
+clean_plumed_output :
+	/bin/rm -f bck.* plumed_*.dat
  
 .PHONY: clean test
 
 .SUFFIXES: .F90
-
-.F90.o:
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
-

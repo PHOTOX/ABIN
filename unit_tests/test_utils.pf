@@ -22,6 +22,16 @@ contains
    end subroutine test_lower_to_upper
 
    @test
+   subroutine test_c_string()
+      character(len=*), parameter :: fstring = " string "
+      @assertEqual("string"//char(0), c_string(fstring), "c_string(' string ')")
+
+      @assertEqual(len(fstring)+1, len(c_string(fstring)), "len(cstring) == len(fstring)+1")
+
+      @assertEqual(6+1, len_trim(c_string(fstring)), "len_trim(c_string) = len(trim(adjustl(fstring)))+1")
+   end subroutine test_c_string
+
+   @test
    subroutine test_get_distance()
       ! Cartesian distance between two atoms
       real(DP) :: x(2,2), y(2,2), z(2,2)
@@ -164,15 +174,17 @@ contains
 
    end subroutine test_shifted_dihedral
 
-   @test(ifdef=SKIPPED_TESTS)
+   @test
+   @disable
    subroutine test_invalid_angle()
       real(DP) :: x(3,1), y(3,1), z(3,1)
-      integer :: iw
       real(DP) :: ang
+      integer :: iw
       x = 0.0d0; y = 0.0d0; z = 0.0d0
-      ! TODO: Test that we fail gracefully if the atom indexes are not unique
+      iw = 1
+      ! TODO: Test that we fail gracefully if the atom indeces are not unique.
       ! We need to replace abinerror in tests
-      ! For now, this test is skipped
+      ! For now, this test is skipped.
       ang = get_angle(x, y, z, 1, 1, 1, iw)
    end subroutine test_invalid_angle
 
