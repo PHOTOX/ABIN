@@ -91,8 +91,6 @@ if [[ -e "restart.xyz.0.ref" ]];then
 fi
 }
 
-err=0
-
 files=( *-RESTART.wfn* cp2k.out bkl.dat phase.dat wfcoef.dat restart_sh.bin restart_sh.bin.old restart_sh.bin.?? nacm_all.dat minimize.dat geom.mini.xyz temper.dat temper.dat radius.dat vel.dat cv.dat cv_dcv.dat  dist.dat angles.dat dihedrals.dat geom.dat.??? geom_mm.dat.??? DYN/OUT* MM/OUT* state.dat stateall.dat stateall_grad.dat ERROR debug.nacm dotprod.dat pop.dat prob.dat PES.dat energies.dat est_energy.dat movie.xyz movie.xyz movie_mini.xyz restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz SOC.dat )
 
 # Run all tests
@@ -144,6 +142,8 @@ fi
 
 echo "Running tests in directories:"
 echo ${folders[@]}
+
+global_error=0
 
 for dir in ${folders[@]}
 do
@@ -218,10 +218,10 @@ done
 
 echo " "
 
-if [[ ${global_error-0} -ne 0 ]];then
+if [[ ${global_error} -ne 0 ]];then
    echo "Some tests DID NOT PASS."
 else
    echo "All tests PASSED."
 fi
 
-exit $err
+exit $global_error
