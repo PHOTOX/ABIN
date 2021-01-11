@@ -1,6 +1,6 @@
 &general
-nstep=2,
-irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+nstep=3,
+irest=1,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
 
 pot='harm'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
 ipimd=0,		!classical simulation 0, quantum simulation 1
@@ -13,15 +13,15 @@ irandom=131313,  	!random seed
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?
-nrest=1,		! how often we print restart files?
+nrest=50,		! how often we print restart files?
 
 iplumed=1,		! turn on PLUMED (metadynamics)
-plumedfile='plumed.in', ! plumed input file
+plumedfile='plumed.in'  ! plumed input file
 /
 
 &system
-r0=5.66917796,          ! [BOHR] = 3.0A
-k=0.05,                 ! Ha*bohr-2 
+r0=5.66917796,                  ! [BOHR] = 3.0A
+k=0.05,                     ! Ha*bohr-2 
 ndist=1,
 dist1=1,
 dist2=2,

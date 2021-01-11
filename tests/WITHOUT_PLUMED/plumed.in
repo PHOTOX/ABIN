@@ -1,0 +1,19 @@
+# set up colvar as a distance between two atoms
+d1: DISTANCE ATOMS=1,2
+#
+# Activate metadynamics in d1
+#
+metad: METAD ARG=d1 PACE=25 HEIGHT=5.0 SIGMA=0.15 FILE=HILLS 
+
+# Print CV value and bis every 50 steps into file COLVAR
+
+PRINT STRIDE=50 ARG=d1,metad.bias FILE=COLVAR
+
+# Print masses (used for testing)
+# Should be in AMU
+# When we support changers, we should print them as well
+DUMPMASSCHARGE FILE=plumed_masses.dat ONLY_MASSES 
+
+# Print energy for testing (should be in kJ/mol)
+ene: ENERGY
+PRINT ARG=ene STRIDE=1 FILE=plumed_energies.dat

@@ -21,4 +21,6 @@ REMD/restart.xyz.??.*
 */ERROR
 SH_BUTCHER/geom.?.?.?
 CP2K*/WATER*
-PLUMED/*
+# PLUMED backup files
+bck.*
+!mini.xyz

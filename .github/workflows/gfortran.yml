@@ -207,7 +207,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         plumed_v: [2.5.3, 2.6.2]
+         plumed_v: [2.5.3, 2.6.2, 2.7.0]
 
     env:
       PLUMED_V: ${{ matrix.plumed_v}}
@@ -229,10 +229,22 @@ jobs:
       if: steps.plumed-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_plumed.sh ${HOME}/plumed ${PLUMED_V}
 
+    - name: pFUnit build Cache
+      id: pfunit-cache
+      uses: actions/cache@v2
+      with:
+        path: ~/pfunit/build/installed
+        key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
+
+    - name: Download and build pFUnit
+      if: steps.pfunit-cache.outputs.cache-hit != 'true'
+      run: ./dev_scripts/install_pfunit.sh ${HOME}/pfunit
+
     - name: build ABIN
       run: |
         export FFLAGS=${ABIN_FFLAGS} &&\
-        ./configure --plumed "${HOME}/plumed/${PLUMED_V}/install" &&\
+        ./configure --plumed "${HOME}/plumed/${PLUMED_V}/install"\
+                    --pfunit ~/pfunit/build/installed/ &&\
         make
     - name: test ABIN
       run: make test

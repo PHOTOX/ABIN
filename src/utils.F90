@@ -104,6 +104,15 @@ module mod_utils
       
    end function SanitizeString
 
+   ! Convert FORTRAN string to zero-terminated C string
+   ! and remove any leading and trailing spaces.
+   function c_string(string)
+      use iso_c_binding, only: C_CHAR, C_NULL_CHAR
+      character(kind=C_CHAR, len=*), intent(in) :: string
+      character(kind=C_CHAR, len=len(string)+1) :: c_string
+      c_string = trim(adjustl(string)) // C_NULL_CHAR
+   end function c_string
+
    function UpperToLower(string) result (return_string)
       character(len=*),intent(in) :: string
       character(len=len(string))  :: return_string
@@ -135,6 +144,12 @@ module mod_utils
          return_string(i:i) = achar(c)
       end do
    end function LowerToUpper
+
+   subroutine not_compiled_with(feature, caller)
+      character(len=*), intent(in) :: feature, caller
+      write(*,*)'ERROR: ABIN was not compiled with ' // feature
+      call abinerror(caller)
+   end subroutine not_compiled_with
 
    ! TODO: Maybe move this into a separate error handling module, 
    ! together with finish(), and move it to a separate file

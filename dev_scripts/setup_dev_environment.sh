@@ -28,6 +28,7 @@ augroup END
 EOF
 
 pip3 install --upgrade fprettify
+cp ../.fprettify.rc /home/$USER/
 
 # TODO: Try to find linter for ab initio BASH interfaces,
 # perhaps build our own linter

@@ -1,0 +1,23 @@
+! Here we just test that we fail early
+! when the binary is not compiled with PLUMED
+&general
+nstep=1,
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+
+pot='harm'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
+ipimd=0,		!classical simulation 0, quantum simulation 1
+dt=20.,			!number of steps and timestep
+irandom=131313,  	!random seed
+
+iplumed=1,		! turn on PLUMED (metadynamics)
+plumedfile='plumed.in', ! plumed input file
+/
+
+&system
+r0=5.66917796,                  ! [BOHR] = 3.0A
+k=0.05,                     ! Ha*bohr-2 
+/
+
+&nhcopt
+inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+/
