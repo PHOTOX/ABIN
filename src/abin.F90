@@ -38,7 +38,7 @@ program abin_dyn
 #endif
    implicit none
    ! TODO: These should probably be defined and stored in some module, not here
-   real(DP)    :: dt=20.0d0, eclas, equant
+   real(DP)    :: dt=20.0d0, eclas=0.0d0, equant=0.0d0
    integer     :: itrj
    LOGICAL     :: file_exists
    integer,dimension(8) :: time_start, time_end
