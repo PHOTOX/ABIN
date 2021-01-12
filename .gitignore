@@ -1,43 +1,6 @@
-*mod
+# See also .gitignore files in doc/, tests/ and src/
 make.vars
-src/libabin.a
-*.o
 *.gcda
 *.gcno
 *.gcov
-*temp
-tests/*/*diff
-tests/*/*dat
-tests/*/*out
-tests/*/*bin
-tests/*/*bin.??
-tests/*/*bin.old
-tests/*/*dat.??
-tests/*/*xyz
-tests/*/*xyz.?
-tests/*/*xyz.??
-tests/*/geom.dat.00*
-tests/*/geom_mm.dat.00*
-tests/REMD/DFTB/OUT*
-tests/*/output
-tests/REMD/restart.xyz.??.*
-tests/*/restart.xyz.old
-tests/*/restart.xyz.0?
-tests/*/restart.xyz.10
-tests/*/restart.xyz.0?.old
-tests/*/debug.nacm
-tests/*/ERROR
-tests/SH_BUTCHER/geom.?.?.?
-tests/CP2K*/WATER*
-tests/PLUMED/*
-docs/*.log
-docs/*.bbl
-docs/*.aux
-docs/*.blg
-docs/*.toc
-docs/*out
-# Default binary name
-src/abin
-src/abin.*
-# Include mini.dat, needed for tests
-!mini.dat
+*.mod

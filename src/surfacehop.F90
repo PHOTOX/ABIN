@@ -758,6 +758,8 @@ do itrj=1,ntraj
             write(chist,*)ist
             write(chihop,*)ihop
             write(chit,*)it
+            ! TODO: Rename this file to something more specific,
+            ! e.g. geom_hop.from.to.timestep.xyz
             formt='geom.'//trim(adjustl(chist))//'.'//trim(adjustl(chihop))//'.'//adjustl(chit)
             open(500,file=trim(formt))
             write(500,*)natom

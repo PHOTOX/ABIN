@@ -1,0 +1,5 @@
+*mod
+libabin.a
+*.o
+# Default binary name
+abin
