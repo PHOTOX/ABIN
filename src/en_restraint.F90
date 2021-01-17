@@ -182,6 +182,9 @@ else if(en_restraint.eq.2)then
          pz(iat,iw) = pz(iat,iw) + dt0 * en_kk * deltaE * (fzes(iat) - fzgs(iat))
       end do
 
+      ! TODO:
+      eclas = eclas ! + quadratic_restraint_energy
+
    !---  Printing info
    write(*,*)'deltaE',deltaE
    write(*,*)'Force constant:',en_kk

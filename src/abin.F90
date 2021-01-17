@@ -34,7 +34,7 @@ program abin_dyn
    use mod_terampi_sh, only: move_new2old_terash
    use mod_remd
 #ifdef USE_MPI
-   use mpi
+   use mpi, only: MPI_COMM_WORLD, MPI_Barrier
 #endif
    implicit none
    ! TODO: These should probably be defined and stored in some module, not here
@@ -73,32 +73,11 @@ program abin_dyn
       write(*,*)''
    end if
 
-   ! TODO: Move this bit to a helper function
-!  Staging transformation for Path Integrals
-!  Masses, velocities and positions are transformed here into a new set of u variables
-!  See Tuckermann's article in "Quantum Simulations of Complex Many Body Systems'. 
-   if(istage.eq.1)then
-      call XtoQ(x,y,z,transx,transy,transz)
-      x = transx
-      y = transy
-      z = transz
-      call XtoQ(vx,vy,vz,transxv,transyv,transzv)
-      vx = transxv
-      vy = transyv
-      vz = transzv
-!  NORMAL MODE TRANSFORMATION
-   else if(inormalmodes.gt.0)then
-      call XtoU(x,y,z,transx,transy,transz)
-      x = transx
-      y = transy
-      z = transz
-      call XtoU(vx,vy,vz,transxv,transyv,transzv)
-      vx = transxv
-      vy = transyv
-      vz = transzv
+   ! Transform coordinates and velocities Path Integral MD
+   ! (staging or normal modes)
+   if(istage.eq.1.or.inormalmodes.gt.0)then
+      call initialize_pi_transforms(x, y, z, vx, vy, vz)
    endif
-
-!  End of transformations
 
    ! Note that 'amt' equals 'am' for non-PI simulations
    px = amt * vx
@@ -263,19 +242,19 @@ program abin_dyn
             call QtoX(vx,vy,vz,transxv,transyv,transzv)
             call QtoX(x,y,z,transx,transy,transz)
             call FQtoFX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
-            call analysis (transx,transy,transz,transxv,transyv,transzv,  &
-                         transfxc,transfyc,transfzc,amt,eclas,equant)
+            call analysis(transx, transy, transz, transxv, transyv, transzv,  &
+                 &       transfxc, transfyc, transfzc, eclas, equant)
 
          else if(inormalmodes.gt.0)then
 
             call UtoX(x,y,z,transx,transy,transz)
             call UtoX(vx,vy,vz,transxv,transyv,transzv)
             call UtoX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
-            call analysis (transx,transy,transz,transxv,transyv,transzv,  &
-                         transfxc,transfyc,transfzc,amt,eclas,equant)
+            call analysis(transx, transy, transz, transxv, transyv, transzv,  &
+                 &        transfxc, transfyc, transfzc, eclas, equant)
          else
       
-            call analysis (x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant)
+            call analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas, equant)
 
          endif
          

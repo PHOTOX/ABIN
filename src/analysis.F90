@@ -1,7 +1,6 @@
-!----Initial version                    by Daniel Hollas,9.2.2012
-!- This module contains some routines that do analyses and I/O operations.
-!- It also contains routines performing restart.
-
+! This module contains some routines that do analyses and I/O operations.
+! It also contains routines performing restart.
+! TODO: Separate restart to its own module
 module mod_analysis
    use mod_const, only: DP
    use mod_files
@@ -17,7 +16,7 @@ module mod_analysis
    CONTAINS
 
 !  Contains all analysis stuff
-   SUBROUTINE analysis(x,y,z,vx,vy,vz,fxc,fyc,fzc,amt,eclas,equant)
+   subroutine analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas, equant)
    use mod_analyze_ext, only: analyze_ext
    use mod_estimators , only: estimators
    use mod_general,     only: it, ipimd, icv,nwrite, nwritef, nwritev, &
@@ -31,7 +30,6 @@ module mod_analysis
    real(DP),intent(inout) :: x(:,:),   y(:,:),   z(:,:)
    real(DP),intent(in)    :: fxc(:,:), fyc(:,:), fzc(:,:)
    real(DP),intent(inout)    :: vx(:,:),  vy(:,:),  vz(:,:)
-   real(DP),intent(in)    :: amt(:,:)
    real(DP),intent(in)    :: eclas, equant
    real(DP) :: energy
 
@@ -79,7 +77,8 @@ module mod_analysis
    endif
 
    if (anal_ext.eq.1)then
-      call analyze_ext(x, y, z, vx, vy, vz, amt)
+      ! Custom analysis function, see analyze_ext_template.F90
+      call analyze_ext()
    endif
 
    end subroutine analysis
@@ -121,7 +120,7 @@ module mod_analysis
    end subroutine trajout
 
    subroutine forceout(x, y, z, fx,fy,fz,fUNIT)
-   use mod_general, only: nwalk, natom, it
+   use mod_general, only: nwalk, natom !, it
    use mod_system, ONLY: names
    real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(in) :: fx(:,:),fy(:,:),fz(:,:)
@@ -204,7 +203,7 @@ module mod_analysis
    real(DP),intent(in)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(in)  :: vx(:,:),vy(:,:),vz(:,:)
    integer,intent(in) :: time_step
-   integer :: iat,iw,inh,itrj,is,ist
+   integer :: iat,iw,inh,itrj,is
    LOGICAL :: file_exists
    character(len=200)    :: chout, chsystem, chformat
 
@@ -339,7 +338,7 @@ module mod_analysis
    use mod_estimators
    use mod_kinetic,  only: entot_cumul, est_temp_cumul
    use mod_sh_integ, only: sh_read_wf
-   use mod_sh,       only: write_nacmrest,ntraj,istate,istate_init
+   use mod_sh,       only: write_nacmrest, ntraj, istate
    use mod_lz,       only: lz_restin
    use mod_gle
    use mod_random
@@ -347,7 +346,7 @@ module mod_analysis
    real(DP),intent(out)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(out)  :: vx(:,:),vy(:,:),vz(:,:)
    integer,intent(out)   :: it
-   integer :: iat,iw,inh,itrj,is,ist
+   integer :: iat, iw, inh, itrj, is
    character(len=100) :: chtemp
    character(len=200) :: chformat
    logical :: prngread

@@ -1,9 +1,13 @@
 module mod_cp2k
    use iso_c_binding
    use mod_const,    only: DP
+#ifndef USE_CP2K
+   use mod_utils, only: not_compiled_with
+#endif
    implicit none
 
-! We are actually connecting to C-interface, hence this mess
+! We are actually connecting to C interface,
+! even though CP2K is written in Fortran
 INTERFACE 
    SUBROUTINE CP2K_SET_POSITIONS(env_id, new_pos, sz)
       IMPORT :: C_DOUBLE
@@ -40,34 +44,37 @@ INTERFACE
 
 END INTERFACE
 
-  public
-  private :: pos, force, f_env_id
+  private
+  public :: init_cp2k, finalize_cp2k, force_cp2k
+  public :: cp2k_mpi_beads
+  logical :: cp2k_mpi_beads = .false.
+#ifdef USE_CP2K
   integer :: f_env_id
-  integer :: cp2k_mpicomm, cp2k_rank, cp2k_mastercomm
-  logical :: cp2k_mpi_beads=.false.
+#ifdef USE_MPI
+  integer :: cp2k_rank, cp2k_mastercomm
+#endif
   real(C_DOUBLE), dimension(:), pointer :: pos, force 
+#endif
   save
 
 CONTAINS
 
-#ifdef CP2K
+#ifdef USE_CP2K
+
 subroutine init_cp2k()
-    use mod_general, only: natom, idebug, nwalk, my_rank, mpi_world_size
+    use mod_general, only: natom, nwalk, my_rank, mpi_world_size
     use mod_utils, only: abinerror
     use iso_c_binding, only: C_CHAR,c_null_char
 #ifdef USE_MPI
     use mpi
-#endif
-    integer :: ierr, bead
-    integer :: new_size, new_rank
-    integer :: group_range(100)
-    integer :: cp2k_mpicomm, temp_comm
-    integer :: cp2k_mpigroups(100), world_group
-    integer :: iw, i, stride
-    character(len=200, KIND=C_CHAR) :: cp2k_input_file='cp2k.inp'
-    character(len=200, KIND=C_CHAR) :: cp2k_output_file='cp2k.out'
+    integer :: bead, new_size
+    integer :: cp2k_mpicomm
     character(len=300)  :: chsed
     character(len=4)    :: chbead
+#endif
+    integer :: ierr
+    character(len=200, KIND=C_CHAR) :: cp2k_input_file='cp2k.inp'
+    character(len=200, KIND=C_CHAR) :: cp2k_output_file='cp2k.out'
 
 #ifdef USE_MPI
    CALL cp2k_init()
@@ -125,8 +132,10 @@ subroutine init_cp2k()
       CALL cp2k_create_force_env(f_env_id, cp2k_input_file, cp2k_output_file)
    
    end if
+! Without MPI
 #else
 
+    ! TODO: Use the new c_string function
     cp2k_output_file = trim(cp2k_output_file)//c_null_char
     cp2k_input_file = trim(cp2k_input_file)//c_null_char
 
@@ -154,11 +163,9 @@ subroutine finalize_cp2k()
 
 end subroutine finalize_cp2k
 
-! CP2K endif
-#endif
 
 subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
-   use mod_general,  only: natom, iqmmm, idebug, my_rank, mpi_world_size, nwalk
+   use mod_general,  only: natom, iqmmm, idebug, nwalk ! , my_rank, mpi_world_size
    use mod_utils,    only: abinerror
    use mod_interfaces, only: oniom
    use mod_utils,    only: abinerror
@@ -170,15 +177,20 @@ subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
    real(DP),intent(out)   :: fx(:,:), fy(:,:), fz(:,:)
    real(DP),intent(out)   :: eclas
    integer, intent(in)    :: walkmax
-   real(DP)  :: e0, eclas_mpi
-   integer :: iat, iw, ind, ierr, irank
+   real(DP) :: e0, eclas_mpi
+   integer :: iat, iw, ind
+   integer  :: cp2k_mastersize, cp2k_masterrank
+#ifdef USE_MPI
+   integer :: ierr, irank
    real(DP) :: fx_mpi(size(fx,1), size(fx, 2) )
    real(DP) :: fy_mpi(size(fx,1), size(fx, 2) )
    real(DP) :: fz_mpi(size(fx,1), size(fx, 2) )
-   integer  :: cp2k_mastersize, cp2k_masterrank
+#endif
 
    eclas = 0.0d0
    eclas_mpi = 0.0d0
+   ! Auxiliary variable, initializing here to squash compiler warning
+   e0 = 0.0d0
 
 !   bead = modulo(my_rank, walkmax)
    cp2k_masterrank = 0
@@ -210,7 +222,6 @@ subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
          ind=ind+3
       end do
 
-#ifdef CP2K
       if (idebug.gt.0) write(*,*)'Setting positions into CP2K engine.', f_env_id
       call cp2k_set_positions(f_env_id, pos, natom*3) 
 
@@ -220,7 +231,6 @@ subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
       call cp2k_get_potential_energy(f_env_id, e0)
 
       call cp2k_get_forces(f_env_id, force, natom*3)
-#endif
 
       eclas = eclas + e0 / walkmax
 
@@ -279,6 +289,32 @@ subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
 
 end subroutine force_cp2k
 
+! CP2K endif
+#else
+   ! Dummy functions for compilation without CP2K
+   subroutine init_cp2k()
+      use mod_utils, only: abinerror
+      write(*,*)'ERROR: ABIN was not compiled with CP2K interface.'
+      call not_compiled_with('internal CP2K interface', 'init_cp2k')
+   end subroutine init_cp2k
+
+   subroutine finalize_cp2k()
+   end subroutine finalize_cp2k
+
+   subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
+      use mod_utils, only: abinerror
+      real(DP) :: x(:,:),  y(:,:),  z(:,:)
+      real(DP) :: fx(:,:), fy(:,:), fz(:,:)
+      real(DP) :: eclas
+      integer  :: walkmax
+      ! Just to squash compiler warnings :-(
+      x = fx; y = fy; z = fz
+      eclas = 0.0D0
+      walkmax = 0
+
+      call not_compiled_with('internal CP2K interface', 'force_cp2k')
+   end subroutine force_cp2k
+
+#endif
+
 end module mod_cp2k
-
-

@@ -185,12 +185,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz,  e_pot, chpot, walkmax)
    SELECT CASE (chpot)
       case ("mm")
          call force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas)
-#ifndef CP2K
-! With CP2K interface there is a problem with underscoring
-! so we don't support water force fields (which are not combineable with CP2K anyway
       case ("mmwater")
          call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
-#endif
       case ("splined_grid")
          ! Only 1D spline grid supported at the moment
          call force_splined_grid(x, fx, eclas)

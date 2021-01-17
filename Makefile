@@ -57,7 +57,7 @@ ifeq ($(strip $(FFTW)),TRUE)
 endif
 
 ifeq ($(strip $(CP2K)),TRUE)
-  DFLAGS += -DCP2K 
+  DFLAGS += -DUSE_CP2K
   # OpenMP does not work with -fno-underscoring
   FFLAGS += -fno-underscoring -fno-openmp
   # The following variables should be the same that were used to compile CP2K.

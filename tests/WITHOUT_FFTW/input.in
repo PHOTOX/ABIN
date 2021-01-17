@@ -1,0 +1,19 @@
+&general
+pot='mmwater',
+ipimd=1,
+nwalk=4,
+inormalmodes=1,
+
+nstep=1,
+dt=20.,
+irandom=131313,
+nwrite=10,
+nwritex=10,
+nrest=10,
+/
+
+&nhcopt
+inose=3,      ! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, Langevin 3
+temp=298.15,
+tau0=0.001
+/

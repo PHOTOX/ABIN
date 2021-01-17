@@ -1,21 +1,92 @@
-!---mod_transform                  P.Slavicek and D.Hollas, 9.2.2012
-!---Transformation routines for PIMD and PI+GLE.
-!---Various staging transformation subroutines are placed here.
-!---NORMAL MODE TRANSFORMATION added during March 2013
-
+! Transformation routines for PIMD and PI+GLE.
+! We currently support staging (istage=1)
+! and normal mode (inormalmodes=1) coordinates
 module mod_transform
+   use, intrinsic :: iso_c_binding
    use mod_const, only: DP
    use mod_general, only:natom, nwalk
    use mod_utils, only: abinerror
    implicit none
    private
    public :: UtoX, XtoU, QtoX, XtoQ, FXtoFQ, FQtoFX
-   public :: init_mass
+   public :: init_mass, initialize_pi_transforms
    public :: equant_nm
-   contains
+   public :: finalize_normalmodes
+   real(C_DOUBLE), dimension(:), allocatable :: x_in, y_in, z_in
+   complex(C_DOUBLE_COMPLEX), dimension(:), allocatable :: cx, cy, cz
+
+contains
+
+   ! Staging/normal mode transformations for Path Integrals
+   ! Masses, velocities and positions are transformed here into a new set of u variables
+   ! See Tuckermann's article in "Quantum Simulations of Complex Many Body Systems'. 
+   subroutine initialize_pi_transforms(x, y, z, vx, vy, vz)
+      use mod_arrays, only: transx, transy, transz
+      use mod_general, only: istage, inormalmodes
+      real(DP),intent(inout) :: x(:,:), y(:,:), z(:,:)
+      real(DP),intent(inout) :: vx(:,:), vy(:,:), vz(:,:)
+
+      ! Staging transform
+      if(istage.eq.1)then
+         call XtoQ(x, y, z, transx, transy, transz)
+         x = transx
+         y = transy
+         z = transz
+         call XtoQ(vx, vy, vz, transx, transy, transz)
+         vx = transx
+         vy = transy
+         vz = transz
+      ! Normal mode transform
+      else if(inormalmodes.gt.0)then
+         call initialize_normalmodes()
+
+         call XtoU(x, y, z, transx, transy, transz)
+         x = transx
+         y = transy
+         z = transz
+         call XtoU(vx, vy, vz, transx, transy, transz)
+         vx = transx
+         vy = transy
+         vz = transz
+      else
+         print *, 'ERROR: Invalid call to initialize_pi_transforms'
+         call abinerror('initialize_pi_transforms')
+      endif
+   end subroutine initialize_pi_transforms
+
+   ! Allocate auxiliary arrays and FFTW library
+   subroutine initialize_normalmodes()
+      use mod_general, only: nwalk
+      use mod_fftw3, only: fftw_normalmodes_init
+
+      ! Initialize FFTW library
+      call fftw_normalmodes_init(nwalk)
+
+      ! TODO: Why are we initializing for nwalk+1?
+      allocate( x_in(nwalk+1) )
+      allocate( y_in(nwalk+1) )
+      allocate( z_in(nwalk+1) )
+
+      allocate( cx(nwalk+1) )
+      allocate( cy(nwalk+1) )
+      allocate( cz(nwalk+1) )
+   end subroutine initialize_normalmodes
+
+   subroutine finalize_normalmodes()
+      use mod_fftw3, only: fftw_normalmodes_finalize
+      if (allocated(x_in)) then
+         deallocate(x_in)
+         deallocate(y_in)
+         deallocate(z_in)
+         deallocate(cx)
+         deallocate(cy)
+         deallocate(cz)
+      end if
+      call fftw_normalmodes_finalize()
+   end subroutine finalize_normalmodes
 
 !  This routine transforms staging coordinates to cartesian coordinates, which are stored
-!  in trans matrices,values in x,y and z matrices are NOT modified!!      
+!  in trans matrices, values in x, y and z matrices are NOT modified!!      
    subroutine QtoX(x,y,z,transx,transy,transz)
    real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(out)    :: transx(:,:),transy(:,:),transz(:,:)
@@ -46,8 +117,8 @@ module mod_transform
 
    end subroutine QtoX
 
-!     This routine transforms cartesian to staging coordinates, which are stored
-!     in trans matrices,values in x,y and z matrices are NOT modified!!      
+   ! This routine transforms cartesian to staging coordinates, which are stored
+   ! in trans matrices,values in x,y and z matrices are NOT modified!!      
    subroutine XtoQ(x,y,z,transx,transy,transz)
    real(DP),intent(inout)  :: x(:,:),y(:,:),z(:,:)
    real(DP),intent(out) :: transx(:,:),transy(:,:),transz(:,:)
@@ -115,7 +186,7 @@ module mod_transform
    endif
 
 !--SETTING MASSES FOR NORMAL MODES----------- 
-!--Mass rescaling for CMD, not tested yet--!
+!--Mass rescaling for Centroid MD, not tested yet--!
    if(inormalmodes.eq.2)then ! this one apparently does not work
       do iat=1,natom
          lambda(1)=0
@@ -240,13 +311,12 @@ module mod_transform
    end subroutine FXtoFQ
 
 
-!     This routine transforms normal mode coordinates to cartesian coordinates, which are stored
-!     in trans matrices,values in x,y and z matrices are NOT modified!!      
-!     masses are also modified
+   ! This routine transforms normal mode coordinates to cartesian coordinates,
+   ! which are stored in trans matrices.
+   ! Original arrays x, y, z are NOT modified.
+   ! Masses are also modified.
    subroutine UtoX(x,y,z,transx,transy,transz)
-#ifdef USE_FFTW
-      use mod_fftw3
-#endif
+      use mod_fftw3, only: dft_normalmode2cart
    use mod_general, only: nwalk, inormalmodes
    real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
    real(DP), intent(out)   :: transx(:,:), transy(:,:), transz(:,:)
@@ -264,7 +334,6 @@ module mod_transform
 
    call equant_nm(x, y, z, equant)
 
-#ifdef USE_FFTW
    do iat = 1, natom
 
       cx(1) = complex(x(iat,1),0)
@@ -281,9 +350,9 @@ module mod_transform
          cz(nmodes+1) = complex(z(iat,nmodes+1),0)
       end if
 
-      call fftw_execute_dft_c2r(plan_utox, cx, x_in)
-      call fftw_execute_dft_c2r(plan_utox, cy, y_in)
-      call fftw_execute_dft_c2r(plan_utox, cz, z_in)
+      call dft_normalmode2cart(cx, x_in)
+      call dft_normalmode2cart(cy, y_in)
+      call dft_normalmode2cart(cz, z_in)
 
       do iw=1,nwalk
          transx(iat,iw) = x_in(iw) / dnwalk
@@ -294,25 +363,16 @@ module mod_transform
    enddo
 
    call equant_cart(transx, transy, transz, equant)
-
-#else
-   write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
-   write(*,*)'Normal mode transformations cannot be performed.'
-   call abinerror('UtoX')
-#endif
-
    end subroutine UtoX
 
-!  This routine transforms cartesian to normal coordinates, which are stored
-!  in trans matrices,values in x,y and z matrices are NOT modified!!
-!  see https://github.com/i-pi/i-pi/blob/2a09a6d652b1ffe5f485c4c078c1085db6fcf63a/ipi/utils/nmtransform.py
+   ! This routine transforms cartesian to normal coordinates, which are stored
+   ! in trans matrices, values in x,y and z matrices are NOT modified!!
+   ! see https://github.com/i-pi/i-pi/blob/2a09a6d652b1ffe5f485c4c078c1085db6fcf63a/ipi/utils/nmtransform.py
    subroutine XtoU(x,y,z,transx,transy,transz)
-#ifdef USE_FFTW
-   use mod_fftw3
-#endif
-   use mod_general, only: idebug, inormalmodes
-   real(DP) :: x(:,:), y(:,:), z(:,:)
-   real(DP) :: transx(:,:), transy(:,:), transz(:,:)
+   use mod_fftw3, only: dft_cart2normalmode
+   use mod_general, only: inormalmodes
+   real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
+   real(DP), intent(out) :: transx(:,:), transy(:,:), transz(:,:)
    integer  :: iat, iw
    real(DP) :: dnwalk, fac
    integer  :: nmodes, odd
@@ -327,23 +387,17 @@ module mod_transform
 
 !   call equant_cart(x, y, z, equant)
 
-#ifdef USE_FFTW
    do iat = 1, natom
       do iw = 1, nwalk
          x_in(iw) = x(iat,iw)
          y_in(iw) = y(iat,iw)
          z_in(iw) = z(iat,iw)
       enddo
-      call fftw_execute_dft_r2c(plan_xtou,x_in,cx)
-      call fftw_execute_dft_r2c(plan_xtou,y_in,cy)
-      call fftw_execute_dft_r2c(plan_xtou,z_in,cz)
 
-if(idebug.gt.1)then
-      write(*,*)'complex coefficients'
-      write(*,*)(cx(iw),iw=1,nwalk)
-      write(*,*)(cy(iw),iw=1,nwalk)
-      write(*,*)(cz(iw),iw=1,nwalk)
-endif
+      call dft_cart2normalmode(x_in, cx)
+      call dft_cart2normalmode(y_in, cy)
+      call dft_cart2normalmode(z_in, cz)
+
       transx(iat,1) = realpart(cx(1))
       transy(iat,1) = realpart(cy(1))
       transz(iat,1) = realpart(cz(1))
@@ -368,18 +422,10 @@ endif
    transy = transy / dnwalk
    transz = transz / dnwalk
 
-!  write(*,*)'original cartesian to normal modes'
-!  call print_xyz_arrays(x/ang,y/ang,z/ang)
-!  write(*,*)'transformed coordinates to normal modes'
-!  call print_xyz_arrays(transx/ang,transy/ang,transz/ang)
-
-#else
-   write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
-   write(*,*)'Normal mode transformations cannot be performed.'
-   call abinerror('XtoU')
-#endif
-
-
+   ! write(*,*)'original cartesian to normal modes'
+   ! call print_xyz_arrays(x/ang,y/ang,z/ang)
+   ! write(*,*)'transformed coordinates to normal modes'
+   ! call print_xyz_arrays(transx/ang,transy/ang,transz/ang)
    end subroutine XtoU
 
    subroutine equant_cart(x, y, z, equant)
@@ -482,4 +528,3 @@ endif
    end subroutine equant_nm
 
 end module mod_transform
-

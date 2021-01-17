@@ -29,7 +29,7 @@
 #include "../water_potentials/qtip4pf.h"
 
 extern"C" {
-#ifdef CP2K
+#ifdef USE_CP2K
   void force_water(
 #else
   void force_water_(

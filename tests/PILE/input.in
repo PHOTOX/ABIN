@@ -1,29 +1,21 @@
 &general
+pot='mmwater',
+ipimd=1,
+nwalk=4,
+inormalmodes=1,
+
 nstep=10,
-irest=0,		
-idebug=0
-pot='mmwater'		!
-ipimd=1,		!
-nwalk=4,		!number of random walkers 
-imini=0,		!
-istage=0,		!
-inormalmodes=1
+dt=20.,
+irandom=131313,
 
-dt=20.,			!number of steps and timestep
-irandom=131313,  	!random seed
-
-nwrite=1,		! how often some output should be printed (estimators etc.)
-nwritex=1,		! how often should we print coordinates?
-nrest=1,		! how often we print restart files?
-
-natom=3,		!number of atoms
+nwrite=1,
+nwritex=1,
+nrest=1,
 /
-
 
 &nhcopt
 inose=3,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
-temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+temp=298.15,
 tau0=0.001
 rem_comrot=.false.
 /
-

@@ -256,7 +256,8 @@ module mod_random
       real(DP), intent(out) :: ranv(nran)
       integer, intent(in) :: nran
       integer, intent(in), optional :: iseed
-      integer, parameter :: nratio=np/nq, nexec=4, mroll=4, zero=0.d0, one=1.d0
+      integer, parameter :: nratio=np/nq, nexec=4, mroll=4
+      real(DP), parameter :: zero = 0.0D0, one = 1.0D0
       real(DP) :: x1, x2, x3, x4
       integer :: i, j, k, left, loop, limit
 
