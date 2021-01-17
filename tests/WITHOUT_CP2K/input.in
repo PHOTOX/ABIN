@@ -1,0 +1,18 @@
+# Testing that ABIN crashes early if it is not compiled
+# with the internal CP2K interface.
+&general
+pot='_cp2k_',
+ipimd=0,
+nstep=1,
+dt=20.,
+irandom=131313,
+
+nwrite=10,		! how often some output should be printed (estimators etc.)
+nwritex=10,		! how often should we print coordinates?
+nrest=10,		! how often we print restart files?
+/
+
+&nhcopt
+inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+temp=200.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+/

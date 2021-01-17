@@ -1,0 +1,18 @@
+# TESTING External analysis
+&general
+anal_ext=1,
+nstep=5,
+pot='mmwater',
+mdtype='MD',
+dt=20.,
+irandom=3467323,
+
+nwrite=2,     ! how often some output should be printed (estimators etc.)
+nwritex=10,
+nrest=10,
+/
+
+&nhcopt
+temp=200.
+inose=1
+/

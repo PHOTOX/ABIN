@@ -2,27 +2,27 @@
 ! Currently utilized for normal mode transformation in Path Integral simulations
 module mod_fftw3
    use, intrinsic :: iso_c_binding
+#ifndef USE_FFTW
+   use mod_utils, only: not_compiled_with
+#endif
    private
-#ifdef USE_FFTW
-   public :: fftw_init, fftw_end, plan_utox, plan_xtou
-   ! TODO: Not sure that these arrays should be public and live here,
-   ! They should probably we allocated where they are used in transform.F90
-   public :: x_in, y_in, z_in, cx, cy, cz
-   public :: fftw_execute_dft_r2c, fftw_execute_dft_c2r 
+   public :: fftw_normalmodes_init, fftw_normalmodes_finalize
+   public :: dft_normalmode2cart, dft_cart2normalmode
    ! TODO: Is there a better way to do this in newer FFTW versions?
-   include 'fftw3.f90'
-   type(C_PTR) :: plan_utox,plan_xtou
-   real(C_DOUBLE), dimension(:), allocatable :: x_in, y_in, z_in
-   complex(C_DOUBLE_COMPLEX), dimension(:), allocatable :: cx, cy, cz
+#ifdef USE_FFTW
+   include 'fftw3.F90'
+   type(C_PTR) :: plan_utox, plan_xtou
+#endif
    save
-   contains
+contains
 
-   ! TODO: This should be named more specifically, maybe
-   ! fftw_normalmodes_init()
-   subroutine fftw_init(nwalk)
+#ifdef USE_FFTW
+   subroutine fftw_normalmodes_init(nwalk)
       use mod_const, only: DP
       use mod_utils, only: abinerror
-      integer :: nwalk
+      integer, intent(in) :: nwalk
+      real(C_DOUBLE), dimension(:), allocatable :: x_tmp
+      complex(C_DOUBLE_COMPLEX), dimension(:), allocatable :: cx_tmp
 
       if(DP.ne.C_DOUBLE)then
          write(*,*)'WARNING: Kind DP is not equal kind C_DOUBLE'
@@ -31,33 +31,70 @@ module mod_fftw3
          if (iknow.ne.1) call abinerror('fftw_init')
       end if
 
-      allocate( x_in(nwalk+1) )
-      allocate( y_in(nwalk+1) )
-      allocate( z_in(nwalk+1) )
+      allocate( x_tmp(nwalk+1) )
+      allocate( cx_tmp(nwalk+1) )
 
-      allocate( cx(nwalk+1) )
-      allocate( cy(nwalk+1) )
-      allocate( cz(nwalk+1) )
+      plan_xtou = fftw_plan_dft_r2c_1d(nwalk,x_tmp,cx_tmp, FFTW_MEASURE)
+      plan_utox = fftw_plan_dft_c2r_1d(nwalk,cx_tmp,x_tmp, FFTW_MEASURE)
 
-      plan_xtou=fftw_plan_dft_r2c_1d(nwalk,x_in,cx, FFTW_MEASURE)
-      plan_utox=fftw_plan_dft_c2r_1d(nwalk,cx,x_in, FFTW_MEASURE)
-
+      deallocate(x_tmp)
+      deallocate(cx_tmp)
    end subroutine
 
-   subroutine fftw_end()
-      if(allocated(x_in))then
-         deallocate( x_in )
-         deallocate( y_in )
-         deallocate( z_in )
-         deallocate( cx )
-         deallocate( cy )
-         deallocate( cz )
-         call fftw_destroy_plan(plan_xtou)
-         call fftw_destroy_plan(plan_utox)
-      endif
-   end subroutine fftw_end
+   ! Simple wrapper functions around the FFTW interface.
+   subroutine dft_normalmode2cart(nm, cart)
+      complex(C_DOUBLE_COMPLEX), dimension(:), intent(inout) :: nm
+      real(C_DOUBLE), dimension(:), intent(out) :: cart
+
+      call fftw_execute_dft_c2r(plan_utox, nm, cart)
+   end subroutine dft_normalmode2cart
+
+   subroutine dft_cart2normalmode(cart, nm)
+      real(C_DOUBLE), dimension(:), intent(inout) :: cart
+      complex(C_DOUBLE_COMPLEX), dimension(:), intent(out) :: nm
+
+      call fftw_execute_dft_r2c(plan_xtou, cart, nm)
+   end subroutine dft_cart2normalmode
+
+   subroutine fftw_normalmodes_finalize()
+      call fftw_destroy_plan(plan_xtou)
+      call fftw_destroy_plan(plan_utox)
+   end subroutine fftw_normalmodes_finalize
+
+#else
+
+   ! Dummy functions when ABIN is not compiled with FFTW
+   subroutine fftw_normalmodes_init(nwalk)
+      use mod_const, only: DP
+      use mod_utils, only: abinerror
+      integer :: nwalk
+      nwalk = 0
+      write(*,*)'ERROR: Normal mode transformations cannot be performed.'
+      call not_compiled_with('FFTW library', 'fftw_normalmodes_init')
+   end subroutine fftw_normalmodes_init
+
+   subroutine dft_normalmode2cart(nm, cart)
+      use mod_utils, only: abinerror
+      complex(C_DOUBLE_COMPLEX), dimension(:) :: nm
+      real(C_DOUBLE), dimension(:) :: cart
+      cart = 0.0D0
+      nm = (0.0D0, 0.0D0)
+      call not_compiled_with('FFTW library', 'dft_normalmode2cart')
+   end subroutine dft_normalmode2cart
+
+   subroutine dft_cart2normalmode(cart, nm)
+      use mod_utils, only: abinerror
+      complex(C_DOUBLE_COMPLEX), dimension(:) :: nm
+      real(C_DOUBLE), dimension(:) :: cart
+      cart = 0.0D0
+      nm = (0.0D0, 0.0D0)
+      call not_compiled_with('FFTW library', 'dft_cart2normalmode')
+   end subroutine dft_cart2normalmode
+
+   ! This must be a no-op and must not call abinerror()
+   ! since it is itself called from abinerror().
+   subroutine fftw_normalmodes_finalize()
+   end subroutine fftw_normalmodes_finalize
 
 #endif
-
 end module mod_fftw3
-

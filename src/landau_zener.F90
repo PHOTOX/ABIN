@@ -80,7 +80,7 @@ module mod_lz
    subroutine lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, chpot)
    use mod_const,    ONLY: ANG, AUTOFS, PI, AUTOEV, AUTOCM
    use mod_files,    ONLY: UPOP,UPROB,UPES
-   use mod_general,  ONLY: natom, pot, nwrite, idebug, it, sim_time
+   use mod_general,  ONLY: natom, pot, nwrite, it, sim_time
    use mod_random,   ONLY: vranf
    use mod_kinetic,  ONLY: ekin_v
    use mod_interfaces,ONLY: force_clas

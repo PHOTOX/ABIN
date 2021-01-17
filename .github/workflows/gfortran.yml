@@ -105,15 +105,21 @@ jobs:
     strategy:
       fail-fast: false
     env:
-      FFLAGS: -O0 -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
+      FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
     steps:
     - uses: actions/checkout@v2
+
     - name: Install FFTW libraries
       run: sudo apt-get install libfftw3-dev
-    - name: build
+
+    - name: ABIN build
       run: ./configure --fftw && make
-    - name: test
+
+    - name: ABIN test
       run: make test
+
+    - name: Codecov upload
+      run:  bash <(curl -s https://codecov.io/bash)
 
   mpich_build:
     runs-on: ubuntu-latest
@@ -199,6 +205,8 @@ jobs:
         make
     - name: test ABIN
       run: make test
+    - name: Codecov upload
+      run:  bash <(curl -s https://codecov.io/bash)
 
 
   plumed_build:

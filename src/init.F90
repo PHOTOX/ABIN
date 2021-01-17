@@ -39,15 +39,12 @@ subroutine init(dt)
    use mod_plumed,   only: iplumed, plumedfile, plumed_init
    use mod_en_restraint
    use mod_transform, only:init_mass
-#ifdef USE_FFTW
-   use mod_fftw3,    only: fftw_init
-#endif
    use mod_cp2k
    use mod_remd
    use mod_terampi
    use mod_terampi_sh
 #ifdef USE_MPI
-   use mpi
+   use mpi, only: MPI_COMM_WORLD, MPI_Init, MPI_Comm_Rank, MPI_Comm_Size, MPI_Barrier
 #endif
    implicit none
    real(DP),intent(out) :: dt
@@ -125,19 +122,13 @@ subroutine init(dt)
 
 
    if(pot.eq."_cp2k_".or.pot_ref.eq."_cp2k_")then
-#ifdef CP2K
       call init_cp2k()
-#else
-      write(*,*)'ERROR: ABIN was not compiled with CP2K interface.'
-      write(*,*)''
-      call abinerror('init')
-#endif
 #ifdef USE_MPI
    else
       call MPI_INIT ( ierr )
       if (ierr.ne.0)then
          write(*,*)'Bad signal from MPI_INIT:', ierr
-         call abinerror('MPI_INIT')
+         stop 1
       end if
 #endif
    end if
@@ -489,11 +480,6 @@ subroutine init(dt)
          write(*, '(A, F6.2)')"with timestep [fs] ", dt * AUtoFS
       end if
 
-#ifdef USE_FFTW
-      if(inormalmodes.gt.0) call fftw_init(nwalk)
-#endif
-
-
       if (my_rank.eq.0)then
          if (temp0.gt.0)then
             write(*,*)'Initial temperature [K] =', temp0
@@ -679,13 +665,6 @@ subroutine init(dt)
 !$       end if
       end if
 
-#ifndef USE_FFTW
-      if(inormalmodes.gt.0)then
-         write(*,*)'FATAL ERROR: The program was not compiled with FFTW libraries.'
-         write(*,*)'Normal mode transformations cannot be performed.'
-         call abinerror('init')
-      end if
-#endif
       if(irest.eq.1.and.chveloc.ne.'')then
       !   write(*,*)'ERROR: Input velocities are not compatible with irest=1.'
          write(*,*)'WARNING: Input velocities from file'//trim(chveloc) //' will be ignored!'
@@ -1154,21 +1133,15 @@ subroutine finish(error_code)
    use mod_estimators, only: h
    use mod_harmon, only: hess
    use mod_lz,     only: lz_finalize
-
-#ifdef USE_FFTW
-   use mod_fftw3,  only: fftw_end
-#endif
-
-#ifdef CP2K
+   use mod_transform, only: finalize_normalmodes
    use mod_cp2k,   only: finalize_cp2k
-#endif
 
    use mod_plumed, only: iplumed, finalize_plumed
 
 #ifdef USE_MPI
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
-   use mpi
+   use mpi, only: MPI_COMM_WORLD, MPI_SUCCESS, MPI_Finalize, MPI_Abort
 #endif
    implicit none
    integer, intent(in) :: error_code
@@ -1210,13 +1183,9 @@ subroutine finish(error_code)
       deallocate ( h )
    end if
 
-#ifdef USE_FFTW
-   ! TODO: Heere we expect we only use FFTW
-   ! for normal modes. Is that true?
    if (inormalmodes.gt.0)then
-      call fftw_end()
+      call finalize_normalmodes()
    end if
-#endif
 
    if(inose.eq.1)then
       call finalize_nhc()
@@ -1234,15 +1203,15 @@ subroutine finish(error_code)
       call lz_finalize()
    end if
 
-#ifdef CP2K
-!  MPI_FINALIZE is called in this routine as well
+   ! MPI_FINALIZE is called in this routine as well
    if(pot.eq.'_cp2k_')then
       call finalize_cp2k()
    end if
-#endif
 
 ! At last, we terminate MPI processes
 ! TODO: We should have an MPI module handling this
+! TODO: We should check whether MPI was initialized with MPI_Init
+! before we attempt to call MPI_Finalize().
 #ifdef USE_MPI
 if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
    if (error_code.eq.0.and.pot.ne."_cp2k_")then

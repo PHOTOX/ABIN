@@ -3,7 +3,6 @@ module mod_remd
   use mod_const, only: DP
   use mod_utils, only: abinerror
 #ifdef USE_MPI
-  use mpi
   implicit none
   private
   public :: remd_init, remd_swap
@@ -17,6 +16,7 @@ CONTAINS
 
    !TODO: make general subroutine check_mpi_error in utils.f90 and check every ierr
    subroutine remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
+   use mpi
    use mod_general, only: my_rank, it
    use mod_random,  only: vranf
    real(DP),intent(inout)   ::  x(:,:), y(:,:), z(:,:)
@@ -99,6 +99,7 @@ CONTAINS
    end subroutine remd_swap
 
    subroutine swap_replicas(x, y, z, px, py, pz, fxc, fyc, fzc, rank1, rank2)
+   use mpi
    use mod_general, only: my_rank 
    real(DP),intent(inout)  ::  x(:,:), y(:,:), z(:,:)
    real(DP),intent(inout)  ::  px(:,:), py(:,:), pz(:,:)
@@ -204,6 +205,7 @@ CONTAINS
    end subroutine swap_replicas
 
    subroutine remd_init(temp, temp0)
+   use mpi
    use mod_const, only: AUTOK
    use mod_general, only: pot, my_rank, ipimd, irest
    real(DP), intent(inout) :: temp, temp0

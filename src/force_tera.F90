@@ -16,9 +16,6 @@ module mod_terampi
 ! Date: September 2014 - September 2015
 ! ----------------------------------------------------------------
    use mod_const, only: DP
-#ifdef USE_MPI
-   use mpi
-#endif
    implicit none
    private
    integer, parameter   :: MAXTERASERVERS=9
@@ -34,6 +31,7 @@ module mod_terampi
    public :: teraport, newcomms, mpi_sleep, nteraservers
    public :: force_tera, natmm_tera
 #ifdef USE_MPI
+   ! TODO: Move handle_mpi_error to a dedicated MPI module
    public :: handle_mpi_error
    public :: finalize_terachem, initialize_terachem, connect_terachem
 #endif
@@ -90,6 +88,7 @@ end subroutine force_tera
 #ifdef USE_MPI
 
 subroutine send_tera(x, y, z, iw, newcomm)
+   use mpi
    use mod_const, only: DP, ANG
    use mod_general, only: idebug, iremd, my_rank
    use mod_system,only: names
@@ -199,6 +198,7 @@ end subroutine send_tera
 
 
 subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
+   use mpi
    use mod_const, only: DP, ANG
    use mod_general, only: idebug
    use mod_qmmm, only: natqm
@@ -320,6 +320,7 @@ end subroutine receive_tera
 
 
 subroutine connect_terachem( itera )
+   use mpi
    use mod_utils, only: abinerror
    use mod_general, only: iremd, my_rank, idebug
    integer, intent(in) :: itera
@@ -418,6 +419,7 @@ subroutine connect_terachem( itera )
    end subroutine connect_terachem
 
    subroutine initialize_terachem()
+   use mpi
    use mod_qmmm,  only: natqm
    use mod_system,only: names
    use mod_utils, only: abinerror
@@ -449,6 +451,7 @@ subroutine connect_terachem( itera )
 
 
    subroutine finalize_terachem(error_code)
+   use mpi
    integer, intent(in) :: error_code
    integer :: ierr, itera
    integer :: empty=0
@@ -471,21 +474,22 @@ subroutine connect_terachem( itera )
    end subroutine finalize_terachem
 
    ! TODO: call this after each MPI call
-   subroutine handle_mpi_error(mpi_err, mpi_status, mpi_datatype, expected_count)
+   subroutine handle_mpi_error(mpi_err, status, datatype, expected_count)
+   use mpi
    use mod_utils,    only: abinerror
    integer, intent(in) :: mpi_err
-   integer, intent(in), optional :: mpi_status(MPI_STATUS_SIZE)
-   integer, intent(in), optional :: mpi_datatype, expected_count
+   integer, intent(in), optional :: status(MPI_STATUS_SIZE)
+   integer, intent(in), optional :: datatype, expected_count
    integer :: received_count, ierr
 
-   if (present(mpi_status).and.mpi_status(MPI_TAG).eq.MPI_TAG_ERROR)then
+   if (present(status).and.status(MPI_TAG).eq.MPI_TAG_ERROR)then
       write(*, *)'TeraChem sent an ERROR TAG. Exiting...'
       call abinerror('TeraChem ERROR')
    end if
 
    if (present(expected_count))then
       ! Compare the length of received message and what we expected
-      call MPI_GET_COUNT(mpi_status, mpi_datatype, received_count, ierr)
+      call MPI_GET_COUNT(status, datatype, received_count, ierr)
       if(received_count.ne.expected_count)then
          write(*,*)'Received message of unexpected size'
          call abinerror('MPI ERROR')

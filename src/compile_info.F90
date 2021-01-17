@@ -13,7 +13,7 @@ subroutine print_compile_info()
 #ifdef USE_FFTW
    write(*,*)'Compiled with FFTW support.'
 #endif
-#ifdef CP2K
+#ifdef USE_CP2K
    write(*,*)'Compiled with in-built CP2K interface.'
 #endif
 #ifdef USE_PLUMED

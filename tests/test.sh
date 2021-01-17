@@ -117,7 +117,8 @@ restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.
 # Run all tests
 if [[ $TESTS = "all" ]];then
    # TODO: Re-enable GLE and PIGLE tests!
-   folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE LZ_SS LZ_ST LZ_ENE PIMD SHAKE HARMON MINI QMMM)
+   folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE LZ_SS LZ_ST LZ_ENE PIMD SHAKE HARMON MINI QMMM \
+            ANALYZE_EXT)
 
    let index=${#folders[@]}+1
    # TODO: Split this test, test OpenMP separately
@@ -134,10 +135,15 @@ if [[ $TESTS = "all" ]];then
    fi
 
    if [[ $CP2K = "TRUE" ]];then
-      # At this point, we do not support MMWATER potential.
-      # with CP2K, which is used in majority of tests.
-      # ABINITIO needs OpenMP, which is not compatible with CP2K interface.
-      folders=(SH_BUTCHER HARMON CP2K CP2K_MPI)
+      let index=${#folders[@]}+1
+      folders[index]=CP2K
+      if [[ $MPI = "TRUE" ]];then
+        let index++
+        folders[index]=CP2K_MPI
+      fi
+   else
+      let index=${#folders[@]}+1
+      folders[index]=WITHOUT_CP2K
    fi
 
    if [[ $FFTW = "TRUE" ]];then
@@ -146,6 +152,9 @@ if [[ $TESTS = "all" ]];then
       #folders[index]=PIGLET
       #let index++
       folders[index]=PILE
+   else
+      let index=${#folders[@]}+1
+      folders[index]=WITHOUT_FFTW
    fi
 
    if [[ $PLUMED = "TRUE" ]];then
