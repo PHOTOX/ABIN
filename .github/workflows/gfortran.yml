@@ -93,19 +93,19 @@ jobs:
   # TODO: We actually need to build our own FFTW for different
   # GFortran versions
   fftw_build:
-    # Temporarily disable
-    if: false
-    # Let's try the latest Ubuntu 20.2
-    # ubuntu-latest is still 18.0 on Github
+    # NOTE: I tried using `ubuntu-20.04` instead of `ubuntu-latest` which still points to Ubuntu 18.
     # https://github.com/actions/virtual-environments#available-environments
-    runs-on: ubuntu-20.04
+    # However, some tests started to fail, with small numerical differences ~1E-15.
+    # Not sure why, since default gfortran on 20.04 is 9.3.0, i.e. the same as we already
+    # test above. I tested this with both -O0 and -O2. 
+    # When Github upgrades it's ubuntu-latest image we might run into problems.
+    # We should regenerate our all our tests with GFortran 7 on Neon before that happens.
+    runs-on: ubuntu-latest
     needs: basic_build
     strategy:
       fail-fast: false
-      matrix:
-         gcc_v: [7, 8, 9]
     env:
-      FFLAGS: -O2 -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
+      FFLAGS: -O0 -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
     steps:
     - uses: actions/checkout@v2
     - name: Install FFTW libraries
