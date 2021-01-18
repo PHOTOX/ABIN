@@ -143,6 +143,8 @@ if [[ $PLUMED = "TRUE" ]];then
 fi
 
 echo "Generating local build configuration for ABIN"
+echo "Compiler info:"
+$FC --version
 echo "Writing config to $VARS"
 
 # Print all vars to make.vars
