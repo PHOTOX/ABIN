@@ -18,7 +18,7 @@ module mod_gle
    use mod_random, only: gautrg
    implicit none
    private
-   public :: readQT, ns, ps, langham
+   public :: readQT, ns, ps, langham, tau0_langevin
    public :: gle_step, pile_step, pile_init, gle_init, finalize_gle,finalize_pile
    real(DP), allocatable :: gS(:,:), gT(:,:)
    real(DP), allocatable :: ps(:,:,:)
@@ -26,14 +26,17 @@ module mod_gle
    real(DP), allocatable :: gS_centroid(:,:), gT_centroid(:,:)
    ! the following are only temporary helper arrays
    real(DP), allocatable :: gp(:,:), ngp(:,:), ran(:)
-   real(DP)         :: langham
+   ! Relaxation time of the white noise Langevin thermostat (PILE)
+   ! In ABIN input, it should be set in picoseconds
+   real(DP)         :: tau0_langevin = -1.0D0
+   real(DP)         :: langham = 0.0D0
    integer          :: ns, ns_centroid, readQT=1
    real(DP), allocatable :: c1(:), c2(:)
    save
 
 contains
-   ! initialize white-noise PILE thermostat.
-   ! can be used both for CMD and PIMD 
+   ! Initialize white-noise PILE thermostat,
+   ! which can be used both for classical MD and PIMD.
    subroutine pile_init(dt, tau0)
    use mod_const,  only: PI, AUtoFS
    use mod_general,only: natom, nwalk, ipimd, inormalmodes
@@ -49,6 +52,11 @@ contains
       call abinerror('pile_init')
    end if
 
+   if (tau0 <= 0.0D0) then
+      write (*, *) 'ERROR: tau0_langevin for PILE thermostat was not set or was negative.'
+      write (*, *) 'Set "tau0_langevin" in picoseconds in the ABIN input in section "nhcopt".'
+      call abinerror('pile_init')
+   end if
 
    langham = 0.d0  ! sets to zero accumulator for langevin 'conserved' quantity
    allocate( ran(natom*3*nwalk) )  !allocating arrays for random numbers produced by gautrg

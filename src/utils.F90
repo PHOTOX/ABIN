@@ -162,7 +162,9 @@ module mod_utils
       use mod_general,  only: my_rank
       character(len=*),intent(in)   :: chcaller
       integer,dimension(8) :: time_end
-      open(unit=500, file='ERROR', action='write', access='sequential')
+      ! When the file ERROR exists (perhaps as a remnant of a previous run),
+      ! we append it. This also helps us with testing multiple failure check within end-to-end tests.
+      open(unit=500, file='ERROR', action='write', access='append')
       write(500,*)'FATAL ERROR encountered in subroutine: ',chcaller
       write(500,*)'Check standard output for further information.'
       close(unit=500)

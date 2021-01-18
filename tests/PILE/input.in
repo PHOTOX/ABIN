@@ -16,6 +16,6 @@ nrest=1,
 &nhcopt
 inose=3,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
 temp=298.15,
-tau0=0.001
+tau0_langevin=0.001,    ! Relaxation time of the Langevin thermostat in picoseconds
 rem_comrot=.false.
 /
