@@ -78,7 +78,7 @@ subroutine init(dt)
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temp_list
 #endif
 
-   namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0,imasst,nrespnose,nyosh,      &
+   namelist /nhcopt/ inose,temp,temp0,nchain,ams,tau0, tau0_langevin, imasst,nrespnose,nyosh,      &
                      scaleveloc,readNHC,readQT,initNHC,nmolt,natmolt,nshakemol,rem_comrot,rem_comvel
 
    namelist /system/ masses,massnames,ndist,dist1,dist2, &
@@ -526,7 +526,7 @@ subroutine init(dt)
      else if (inose.eq.2)then
         call gle_init(dt*0.5/nabin/nstep_ref) !nabin is set to 1 unless ipimd=1
      else if (inose.eq.3)then
-        call pile_init(dt * 0.5, tau0)
+        call pile_init(dt * 0.5, tau0_langevin)
      else if (inose.eq.0)then
         write(*, '(A)')'No thermostat. NVE ensemble.'
      else
