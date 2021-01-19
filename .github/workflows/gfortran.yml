@@ -112,8 +112,19 @@ jobs:
     - name: Install FFTW libraries
       run: sudo apt-get install libfftw3-dev
 
+    - name: pFUnit build Cache
+      id: pfunit-cache
+      uses: actions/cache@v2
+      with:
+        path: ~/pfunit/build/installed
+        key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
+
+    - name: Download and build pFUnit
+      if: steps.pfunit-cache.outputs.cache-hit != 'true'
+      run: ./dev_scripts/install_pfunit.sh ${HOME}/pfunit
+
     - name: ABIN build
-      run: ./configure --fftw && make
+      run: ./configure --pfunit ${HOME}/pfunit/build/installed/ --fftw && make
 
     - name: ABIN test
       run: make test

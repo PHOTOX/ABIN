@@ -1,0 +1,45 @@
+! Testing functions from mod_fftw defined in src/fftw_interface.F90
+module test_fftw
+   use funit
+   use mod_const, only: DP
+   use mod_fftw3
+   implicit none
+   integer, parameter :: NBEADS = 4
+   save
+
+contains
+
+#ifdef USE_FFTW
+
+   ! This routine is called automatically before each test.
+   @before
+   subroutine setup()
+      call fftw_normalmodes_init(NBEADS)
+   end subroutine setup
+
+   ! This routine is called automatically after each test.
+   @after
+   subroutine teardown()
+      call fftw_normalmodes_finalize()
+   end subroutine teardown
+
+
+   ! Here we just test we can initialize and finalize FFTW module 
+   ! without dying, no assertions here.
+   @test(ifdef=USE_FFTW)
+   subroutine test_fftw_init_and_finalize()
+   end subroutine test_fftw_init_and_finalize
+
+   ! TODO
+   @test(ifdef=USE_FFTW)
+   @disable
+   subroutine test_dft_normalmode2cart()
+   end subroutine test_dft_normalmode2cart
+
+   @test(ifdef=USE_FFTW)
+   @disable
+   subroutine test_dft_cart2normalmode()
+   end subroutine test_dft_cart2normalmode
+
+#endif
+end module test_fftw
