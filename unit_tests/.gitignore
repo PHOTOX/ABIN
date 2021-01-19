@@ -8,4 +8,5 @@ bck.*
 utils
 plumed
 plumed.out
+fftw
 plumed_*.dat
