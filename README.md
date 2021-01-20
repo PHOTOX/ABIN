@@ -55,7 +55,7 @@ you should always clean up before the recompilation:
 3. STRUCTURE OF THE SOURCE CODE
 -------------------------------
 
-Short descriptions of key source files.
+Short descriptions of key source files and directories.
 
 | Path     | Description |
 |----------|-------------|
@@ -63,8 +63,8 @@ Short descriptions of key source files.
 | INTERFACES/     | BASH interfaces to common ab initio codes. |
 | UTIL/           | Handy scripts that might be useful in conjuction with the MD code. |
 | abin.F90        | Main routine. |
-| modules.F90     | Modules containing all basic variables. |
-| init.F90        | Big ugly init routine. Reads input parameters, restart files and checks for errors in input. |
+| modules.F90     | Modules containing global variables. |
+| init.F90        | Init routine. Reads input parameters, restart files and checks for errors in input. |
 | mdstep.f90      | Routines for propagation of equations of motion (velocity Verlet and RESPA). |
 | forces.f90      | Main routine for getting forces (force_clas) and quantum forces in PIMD (force_quant). |
 | force_abin.f90  | Routine that calls ab initio BASH interfaces. |
