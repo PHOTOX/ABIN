@@ -31,8 +31,11 @@ A full documentation can be found in the folder DOC.
 ---------------
 2. INSTALLATION
 ---------------
-To compile the code, you need a gfortran and g++ compiler version >=4.3.
-Version 4.6 and higher is recommended.
+To compile the code, you'll need a GFortran and g++ compiler version >=7.0.
+Earlier versions might work, but always run test to verify.
+Intel compiler might work, but there is a know issue with restarting
+GLE based simulations, so this functionality is automatically disabled
+when using ifort.
 
 For some features, you will also need to install the FFTW library.
 It is usually provided with your Linux distribution.
@@ -59,26 +62,10 @@ Short descriptions of key source files.
 
 | Path     | Description |
 |----------|-------------|
-| SAMPLE/         | Sample input files. |
-| INTERFACES/     | BASH interfaces to common ab initio codes. |
-| UTIL/           | Handy scripts that might be useful in conjuction with the MD code. |
-| abin.F90        | Main routine. |
-| modules.F90     | Modules containing all basic variables. |
-| init.F90        | Big ugly init routine. Reads input parameters, restart files and checks for errors in input. |
-| mdstep.f90      | Routines for propagation of equations of motion (velocity Verlet and RESPA). |
-| forces.f90      | Main routine for getting forces (force_clas) and quantum forces in PIMD (force_quant). |
-| force_abin.f90  | Routine that calls ab initio BASH interfaces. |
-| nosehoover.f90  | Nosé-Hoover thermostat. |
-| surfacehop.f90  | Surface Hopping dynamics |
-| sh_integ.f90    | Propagation of electronic wavefunction in SH dynamics | 
-| landau_zener.f90| Landau-Zener dynamics |
-| gle.F90         | Generalized Langevin Equation thermostat |
-| shake.f90       | Constraints using SHAKE algorithm. |
-| analysis.f90    | Driver routine for printing output. |
-| arrays.f90      | Module containing all dynamically allocated arrays.| 
-| random.f90      | Random number generator. |
-| vinit.f90       | Initial velocities. |
-| potentials.f90  | Analytical potentials and hessians for harmonic and Morse oscillators and others. |
-| density.f90     | Evaluates distance, angle and dihedrals distributions during dynamics. | 
-| estimators.f90  | Energy and heat capacity estimators for PIMD. | 
-| transform.F90   | Coordinate transformations for PIMD. |
+| sample_inputs   | Sample input files. |
+| interfaces/     | BASH interfaces to common ab initio codes. |
+| utils/          | Handy scripts that might be useful in conjuction with the MD code. |
+| unit_tests/     | Unit tests, run by `make unittest`
+| tests/          | End-to-End tests, run by `make e2etest`
+| src/            | ABIN source code
+| dev_scripts/    | Setup for ABIN devs + install scripts for optional libraries needed by ABIN

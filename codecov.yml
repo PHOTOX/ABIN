@@ -1,5 +1,17 @@
 codecov:
-  require_ci_to_pass: no
+  require_ci_to_pass: yes
+  notify:
+    # Send report to Github PR only after all CIs
+    # are completed, otherwise we'll temporarily receive
+    # incomplete coverage reports.
+    # Right now, the following builds are collecting coverage data:
+    # Basic Builds - (Gfortran versions 7, 8, 9)
+    # OpenMPI Build
+    # mpich builds (6)
+    # FFTW Build
+    # Plumed Builds (3 total)
+    after_n_builds: 14
+    wait_for_ci: yes
 
 coverage:
   precision: 2
@@ -12,9 +24,6 @@ coverage:
         target: auto
         # Allow coverage drop by x%
         threshold: 0.5%
-        # For now, only report results,
-        # do not fail CI if coverage doesn't meet target
-        informational: true
     patch:
       default:
         target: auto
@@ -32,3 +41,11 @@ comment:
   layout: "reach,diff,flags,tree"
   behavior: default
   require_changes: no
+
+ignore:
+  - "docs/"
+  - "sample_inputs/"
+  - "interfaces/"
+  - "tests/"
+  - "utils/"
+  - "dev_scripts/"

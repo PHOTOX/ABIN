@@ -84,32 +84,37 @@ ${BIN} :
 	$(MAKE) -C water_potentials all
 	$(MAKE) -C src $(BIN)
 
-# Build and run Unit tests
-unittest: ${BIN}
-	$(MAKE) -C unit_tests all
-	$(MAKE) -C unit_tests test
-
 clean:
+	/bin/rm -f *.gcov
 	$(MAKE) -C water_potentials clean
 	$(MAKE) -C src clean
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests clean
 endif
 
-# Run the test suite
-test: ${BIN}
+# Build and run Unit tests (powered by pFUnit library)
+unittest: ${BIN}
 ifneq ($(strip $(PFUNIT_PATH)),)
-	$(MAKE) unittest
+	$(MAKE) -C unit_tests all
+	$(MAKE) -C unit_tests test
+else
+	echo "pFUnit library not available. Skipping unit tests."
 endif
+
+# End-To-End (E2E) tests
+e2etest: ${BIN}
 	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUMED} ${CP2K} test
+
+# Runs both end-to-end and unit tests
+test: unittest e2etest
 
 # Clean all test folders.
 testclean:
 	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} clean
 
-# This will automatically generate new reference data for tests
+# This will automatically generate new reference data for E2E tests
 makeref:
 	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} makeref
 
 
-.PHONY: clean test testclean makeref unittest
+.PHONY: clean test testclean makeref unittest e2etest
