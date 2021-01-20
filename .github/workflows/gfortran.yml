@@ -24,7 +24,8 @@ jobs:
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
-        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
+        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V} \
+        --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_V}
 
     # pFUnit library is used to build and run unit tests
     - name: pFUnit build Cache
@@ -104,8 +105,11 @@ jobs:
     needs: basic_build
     strategy:
       fail-fast: false
+      matrix:
+         gcc_v: [7]
     env:
       FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
+      GCC_V: ${{ matrix.gcc_v}}
     steps:
     - uses: actions/checkout@v2
 
@@ -229,9 +233,11 @@ jobs:
       fail-fast: false
       matrix:
          plumed_v: [2.5.3, 2.6.2, 2.7.0]
+         gcc_v: [7]
 
     env:
       PLUMED_V: ${{ matrix.plumed_v}}
+      GCC_V: ${{ matrix.gcc_v}}
       ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal
       # Speeding up the Plumed build
       CFLAGS: -O0
@@ -244,7 +250,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/plumed/${{ env.PLUMED_V }}/install
-        key: ${{runner.os}}-plumed${{env.PLUMED_V}}-${{hashFiles('dev_scripts/install_plumed.sh')}}
+        key: ${{runner.os}}-plumed${{env.PLUMED_V}}-gcc${{ env.GCC_V }}-${{hashFiles('dev_scripts/install_plumed.sh')}}
 
     - name: Build and Install PLUMED
       if: steps.plumed-cache.outputs.cache-hit != 'true'
