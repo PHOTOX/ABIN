@@ -9,7 +9,7 @@ TEST_OBJ = xyz-water-utils.o io-xyz.o test-ttm.o
 all: libwater.a
 
 libwater.a: $(LIB_OBJ)
-	ar cru libwater.a $(LIB_OBJ) && ranlib libwater.a
+	ar csr libwater.a $(LIB_OBJ)
 
 test-ttm: libwater.a $(TEST_OBJ)
 	$(CXX) -o test-ttm $(TEST_OBJ) libwater.a
