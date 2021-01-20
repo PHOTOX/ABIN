@@ -9,7 +9,7 @@ on:
 jobs:
 
   basic_build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     strategy:
       fail-fast: false
       matrix:
@@ -54,7 +54,7 @@ jobs:
 
 
   optimized_build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
       matrix:
@@ -101,7 +101,7 @@ jobs:
     # test above. I tested this with both -O0 and -O2. 
     # When Github upgrades it's ubuntu-latest image we might run into problems.
     # We should regenerate our all our tests with GFortran 7 on Neon before that happens.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
       fail-fast: false
@@ -137,7 +137,7 @@ jobs:
       run:  bash <(curl -s https://codecov.io/bash)
 
   mpich_build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     needs: openmpi_build
     strategy:
       fail-fast: false
@@ -181,7 +181,7 @@ jobs:
 #      run:  bash <(curl -s https://codecov.io/bash)
 
   openmpi_build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
       fail-fast: false
@@ -227,7 +227,7 @@ jobs:
 
 
   plumed_build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
       fail-fast: false
