@@ -134,14 +134,14 @@ jobs:
 
   mpich_build:
     runs-on: ubuntu-latest
-    needs: basic_build
+    needs: openmpi_build
     strategy:
       fail-fast: false
       matrix:
          gcc_v: [7, 8, 9]
          mpich_v: ["3.1.3", "3.3.2"]
     env:
-      ABIN_FFLAGS: -O2 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal
+      ABIN_FFLAGS: -O2 -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
       # To speed-up MPICH build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
@@ -171,21 +171,23 @@ jobs:
             make
     - name: test ABIN
       run: make test
-    - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash)
+      # We upload to Codecov from the OpenMPI build,
+      # so no need to do that here.
+#    - name: Codecov upload
+#      run:  bash <(curl -s https://codecov.io/bash)
 
   openmpi_build:
     runs-on: ubuntu-latest
     needs: basic_build
     strategy:
       fail-fast: false
+      # Let's just test one GFortran version, we do not really
+      # use OpenMPI with ABIN, and we already test all GCC
+      # versions with MPICH.
       matrix:
-         # Let's just test one version, we do not really
-         # use OpenMPI with ABIN, and we already test all GCC
-         # versions with MPICH
          gcc_v: [7]
     env:
-      ABIN_FFLAGS: -O0 -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
+      ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal
       # To speed-up OpenMPI build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
