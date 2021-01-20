@@ -42,14 +42,17 @@ jobs:
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_pfunit.sh ${HOME}/pfunit
 
-    - name: build ABIN
+    - name: Build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
 
-    - name: test ABIN
-      run: make test
+    - name: Run Unit tests
+      run: make unittest
+
+    - name: Run End-to-End tests
+      run: make e2etest
 
    # TODO: Separate unit test coverage
-    - name: Codecov upload
+    - name: Upload code coverage to Codecov
       run:  bash <(curl -s https://codecov.io/bash)
 
 
@@ -85,8 +88,11 @@ jobs:
     - name: build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
 
-    - name: test ABIN
-      run: make test
+    - name: Run Unit tests
+      run: make unittest
+
+    - name: Run End-to-End tests
+      run: make e2etest
 
   # Consider whether this needs to be a separate job
   # or whether it should be default for all builds
@@ -127,11 +133,14 @@ jobs:
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_pfunit.sh ${HOME}/pfunit
 
-    - name: ABIN build
+    - name: Build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ --fftw && make
 
-    - name: ABIN test
-      run: make test
+    - name: Run Unit tests
+      run: make unittest
+
+    - name: Run End-to-End tests
+      run: make e2etest
 
     - name: Codecov upload
       run:  bash <(curl -s https://codecov.io/bash)
@@ -273,8 +282,12 @@ jobs:
         ./configure --plumed "${HOME}/plumed/${PLUMED_V}/install"\
                     --pfunit ~/pfunit/build/installed/ &&\
         make
-    - name: test ABIN
-      run: make test
+
+    - name: Run Unit tests
+      run: make unittest
+
+    - name: Run End-to-End tests
+      run: make e2etest
 
     - name: Codecov upload
       run:  bash <(curl -s https://codecov.io/bash)
