@@ -5,11 +5,20 @@ on:
     branches: [ master ]
   pull_request:
 
+env:
+  # Options for upload to Codecov
+  # -Z : Fail CI if Codecov upload fails
+  # -v : verbose output
+  # -X : disable unneeded functionality
+  # CURL_OPTS : Extra curl params to avoid timeout issues / for debugging
+  CURL_OPTS:  -S --no-silent
+  CODECOV_OPTIONS: -Z -X coveragepy -X xcode
 
 jobs:
 
   basic_build:
-    runs-on: ubuntu-latest
+    name: Basic build
+    runs-on: ubuntu-18.04
     strategy:
       fail-fast: false
       matrix:
@@ -18,13 +27,17 @@ jobs:
       FC: gfortran
       FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
       GCC_V: ${{ matrix.gcc_v}}
+      CODECOV_NAME: ${{format('{0} GCC{1}', github.job, matrix.gcc_v)}}
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
-        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
+        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V} \
+        --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_V}
 
     # pFUnit library is used to build and run unit tests
     - name: pFUnit build Cache
@@ -41,19 +54,25 @@ jobs:
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_pfunit.sh ${HOME}/pfunit
 
-    - name: build ABIN
+    - name: Build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
 
-    - name: test ABIN
-      run: make test
+    - name: Run Unit tests
+      run: make unittest
 
-   # TODO: Separate unit test coverage
-    - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash)
+    - name: Run End-to-End tests
+      run: make e2etest
+
+    # TODO: Separate unit test coverage
+    - name: Upload code coverage to Codecov
+      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
+      # For debugging purposes, use the locally modified BASH uploader
+      #run:  gcov --version && cd src &&  bash ../.github/codecov_bash_uploader.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
 
 
   optimized_build:
-    runs-on: ubuntu-latest
+    name: Optimized build
+    runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
       matrix:
@@ -65,6 +84,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
@@ -84,8 +105,11 @@ jobs:
     - name: build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
 
-    - name: test ABIN
-      run: make test
+    - name: Run Unit tests
+      run: make unittest
+
+    - name: Run End-to-End tests
+      run: make e2etest
 
   # Consider whether this needs to be a separate job
   # or whether it should be default for all builds
@@ -100,14 +124,21 @@ jobs:
     # test above. I tested this with both -O0 and -O2. 
     # When Github upgrades it's ubuntu-latest image we might run into problems.
     # We should regenerate our all our tests with GFortran 7 on Neon before that happens.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
+    name: FFTW build
     needs: basic_build
     strategy:
       fail-fast: false
+      matrix:
+         gcc_v: [7]
     env:
       FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
+      GCC_V: ${{ matrix.gcc_v}}
+      CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
 
     - name: Install FFTW libraries
       run: sudo apt-get install libfftw3-dev
@@ -123,17 +154,21 @@ jobs:
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_pfunit.sh ${HOME}/pfunit
 
-    - name: ABIN build
+    - name: Build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ --fftw && make
 
-    - name: ABIN test
-      run: make test
+    - name: Run Unit tests
+      run: make unittest
+
+    - name: Run End-to-End tests
+      run: make e2etest
 
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash)
+      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
 
   mpich_build:
-    runs-on: ubuntu-latest
+    name: MPICH build
+    runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
       fail-fast: false
@@ -141,18 +176,22 @@ jobs:
          gcc_v: [7, 8, 9]
          mpich_v: ["3.1.3", "3.3.2"]
     env:
-      ABIN_FFLAGS: -O2 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal
+      ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal
       # To speed-up MPICH build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
       MPICH_V: ${{matrix.mpich_v}}
+      CODECOV_NAME: ${{format('{0} GCC-{1} MPICH-{2}', github.job, matrix.gcc_v, matrix.mpich_v)}}
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
-        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
+        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V} \
+        --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_V}
     - name: MPICH build Cache
       id: mpich-cache
       uses: actions/cache@v2
@@ -171,29 +210,35 @@ jobs:
             make
     - name: test ABIN
       run: make test
+      # We upload to Codecov from the OpenMPI build,
+      # so no need to do that here.
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash)
+      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
 
   openmpi_build:
-    runs-on: ubuntu-latest
+    name: OpenMPI build
+    runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
       fail-fast: false
+      # Let's just test one GFortran version, we do not really
+      # use OpenMPI with ABIN, and we already test all GCC
+      # versions with MPICH.
       matrix:
-         # Let's just test one version, we do not really
-         # use OpenMPI with ABIN, and we already test all GCC
-         # versions with MPICH
          gcc_v: [7]
     env:
-      ABIN_FFLAGS: -O0 -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
+      ABIN_FFLAGS: -O0 --coverage -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
       # To speed-up OpenMPI build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
+      CODECOV_NAME: ${{format('{0} GCC-{1} OpenMPI-4.0', github.job, matrix.gcc_v)}}
       OPENMPI_V: "4.0"
       OPENMPI_PATCH: "0"
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
@@ -217,32 +262,38 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash)
+      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
 
 
   plumed_build:
-    runs-on: ubuntu-latest
+    name: PLUMED build
+    runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
       fail-fast: false
       matrix:
          plumed_v: [2.5.3, 2.6.2, 2.7.0]
+         gcc_v: [7]
 
     env:
       PLUMED_V: ${{ matrix.plumed_v}}
+      GCC_V: ${{ matrix.gcc_v}}
       ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal
       # Speeding up the Plumed build
       CFLAGS: -O0
       CXXLAGS: -O0
+      CODECOV_NAME: ${{format('{0} GCC-{1} PLUMED-{2}', github.job, matrix.gcc_v, matrix.plumed_v)}}
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - name: Plumed build cache
       id: plumed-cache
       uses: actions/cache@v2
       with:
         path: ~/plumed/${{ env.PLUMED_V }}/install
-        key: ${{runner.os}}-plumed${{env.PLUMED_V}}-${{hashFiles('dev_scripts/install_plumed.sh')}}
+        key: ${{runner.os}}-plumed${{env.PLUMED_V}}-gcc${{ env.GCC_V }}-${{hashFiles('dev_scripts/install_plumed.sh')}}
 
     - name: Build and Install PLUMED
       if: steps.plumed-cache.outputs.cache-hit != 'true'
@@ -265,8 +316,12 @@ jobs:
         ./configure --plumed "${HOME}/plumed/${PLUMED_V}/install"\
                     --pfunit ~/pfunit/build/installed/ &&\
         make
-    - name: test ABIN
-      run: make test
+
+    - name: Run Unit tests
+      run: make unittest
+
+    - name: Run End-to-End tests
+      run: make e2etest
 
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash)
+      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"

@@ -12,14 +12,14 @@ ${BIN} : libabin.a
 
 # Used for building Unit Tests
 libabin.a: compile_info.o
-	ar cru libabin.a ${C_OBJS} $(F_OBJS) compile_info.o && ranlib libabin.a
+	ar rcs libabin.a ${C_OBJS} $(F_OBJS) compile_info.o
 
 # compile_info.F90 must be always recompiled to get the current date/time and git commit
 compile_info.o: compile_info.F90 ${C_OBJS} ${F_OBJS} abin.o
 	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DCOMPILE_DATE="'${DATE}'" -DGIT_COMMIT="'${COMMIT}'" -c $<
 
 clean:
-	/bin/rm -f *.o *.mod *.gcno *gcda libabin.a $(BIN)
+	/bin/rm -f *.o *.mod *.gcno *.gcda *.gcov libabin.a $(BIN)
 
 .PHONY: clean
 
