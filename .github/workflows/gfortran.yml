@@ -191,7 +191,6 @@ jobs:
       run:  bash <(curl -s https://codecov.io/bash)
 
   openmpi_build:
-    if: false
     runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
@@ -202,7 +201,7 @@ jobs:
       matrix:
          gcc_v: [7]
     env:
-      ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal
+      ABIN_FFLAGS: -O0 -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
       # To speed-up OpenMPI build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
@@ -233,8 +232,8 @@ jobs:
         make
     - name: test ABIN
       run: make test
-    - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash)
+#    - name: Codecov upload
+#      run:  bash <(curl -s https://codecov.io/bash)
 
 
   plumed_build:
