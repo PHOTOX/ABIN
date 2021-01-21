@@ -10,7 +10,7 @@ env:
   # -v : verbose output
   # -X : disable unneeded functionality
   # -U : Curl params to avoid timeout issues
-  CODECOV_OPTIONS: '-Z -X coveragepy -X xcode' # -U "--retry 5 --connect-timeout 5"' #-v 
+  CODECOV_OPTIONS: -Z -X coveragepy -X xcode -U "--connect-timeout 5" #-v 
 
 jobs:
 
