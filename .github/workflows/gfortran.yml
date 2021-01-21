@@ -153,7 +153,6 @@ jobs:
       run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS
 
   mpich_build:
-    if: false
     runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
