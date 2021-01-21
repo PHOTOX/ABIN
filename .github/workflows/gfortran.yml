@@ -5,8 +5,15 @@ on:
     branches: [ master ]
   pull_request:
 
+env:
+  # -Z : Fail CI if Codecov upload encounters issues
+  # -v : verbose output
+  # -X : disable unneeded functionality
+  #    : Curl params to avoid timeout issues
+  CODECOV_OPTIONS: "-v -Z -X coveragepy -X xcode -U --retry 5 --connect-timeout 5"
 
 jobs:
+
 
   basic_build:
     runs-on: ubuntu-18.04
@@ -53,7 +60,7 @@ jobs:
 
    # TODO: Separate unit test coverage
     - name: Upload code coverage to Codecov
-      run:  bash <(curl -s https://codecov.io/bash)
+      run:  bash <(curl -s https://codecov.io/bash) -v -X coveragepy -X xcode -Z
 
 
   optimized_build:
@@ -143,9 +150,10 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash)
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS
 
   mpich_build:
+    if: false
     runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
