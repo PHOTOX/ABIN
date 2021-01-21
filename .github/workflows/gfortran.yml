@@ -190,7 +190,6 @@ jobs:
 #      run:  bash <(curl -s https://codecov.io/bash)
 
   openmpi_build:
-    if: false
     runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
