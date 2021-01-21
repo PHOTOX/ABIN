@@ -10,7 +10,7 @@ env:
   # -v : verbose output
   # -X : disable unneeded functionality
   # -U : Curl params to avoid timeout issues
-  CODECOV_OPTIONS: "-Z -X coveragepy -X xcode -U" #-v --retry 5 --connect-timeout 5"
+  CODECOV_OPTIONS: '-Z -X coveragepy -X xcode -U "--retry 5 --connect-timeout 5"' #-v 
 
 jobs:
 
@@ -208,7 +208,7 @@ jobs:
       matrix:
          gcc_v: [7]
     env:
-      ABIN_FFLAGS: -O0 -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
+      ABIN_FFLAGS: -O0 --coverage -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
       # To speed-up OpenMPI build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
@@ -239,8 +239,8 @@ jobs:
         make
     - name: test ABIN
       run: make test
-#    - name: Codecov upload
-#      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS
+    - name: Codecov upload
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS
 
 
   plumed_build:
