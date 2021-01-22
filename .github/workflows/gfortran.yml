@@ -129,6 +129,8 @@ jobs:
       GCC_V: ${{ matrix.gcc_v}}
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
 
     - name: Install FFTW libraries
       run: sudo apt-get install libfftw3-dev
@@ -157,6 +159,7 @@ jobs:
       run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
 
   mpich_build:
+    if: false
     runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
@@ -173,6 +176,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
@@ -221,6 +226,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
@@ -266,6 +273,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
     - name: Plumed build cache
       id: plumed-cache
       uses: actions/cache@v2
