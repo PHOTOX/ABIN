@@ -154,7 +154,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
 
   mpich_build:
     runs-on: ubuntu-18.04
@@ -199,7 +199,7 @@ jobs:
       # We upload to Codecov from the OpenMPI build,
       # so no need to do that here.
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
 
   openmpi_build:
     runs-on: ubuntu-18.04
@@ -244,7 +244,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
 
 
   plumed_build:
@@ -302,4 +302,4 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
