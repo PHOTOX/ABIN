@@ -7,9 +7,10 @@ codecov:
     # Right now, the following builds are collecting coverage data:
     # Basic Builds - (Gfortran versions 7, 8, 9)
     # OpenMPI Build
+    # mpich builds (6)
     # FFTW Build
     # Plumed Builds (3 total)
-    after_n_builds: 8
+    after_n_builds: 13
     wait_for_ci: yes
 
 coverage:
