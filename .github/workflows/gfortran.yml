@@ -62,7 +62,7 @@ jobs:
 
    # TODO: Separate unit test coverage
     - name: Upload code coverage to Codecov
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
 
   optimized_build:
@@ -156,7 +156,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
   mpich_build:
     if: false
@@ -204,7 +204,7 @@ jobs:
       # We upload to Codecov from the OpenMPI build,
       # so no need to do that here.
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
   openmpi_build:
     runs-on: ubuntu-18.04
@@ -251,7 +251,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
 
   plumed_build:
@@ -311,4 +311,4 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "--retry 5 --connect-timeout 5"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"

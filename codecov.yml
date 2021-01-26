@@ -43,3 +43,11 @@ comment:
   layout: "reach,diff,flags,tree"
   behavior: default
   require_changes: no
+
+ignore:
+  - "docs/"
+  - "sample_inputs/"
+  - "interfaces/"
+  - "tests/"
+  - "utils/"
+  - "dev_scripts/"
