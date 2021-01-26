@@ -62,7 +62,11 @@ jobs:
 
    # TODO: Separate unit test coverage
     - name: Upload code coverage to Codecov
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
+      run: |
+        # DH DEBUG: Adding a file to git which will then be listed in the Codecov report
+        touch BUILD_BASIC_GCC${GCC_V} && git add
+        bash codecov_bash.sh $CODECOV_OPTIONS -U "-S --no-silent"
+        bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
 
   optimized_build:
