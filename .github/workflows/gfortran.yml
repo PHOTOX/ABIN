@@ -10,7 +10,7 @@ env:
   # -v : verbose output
   # -X : disable unneeded functionality
   # -U : Curl params to avoid timeout issues
-  CODECOV_OPTIONS: -Z -X "coveragepy" -X xcode    #-U "--connect-timeout 5" #-v 
+  CODECOV_OPTIONS: -Z -X coveragepy -X xcode -U "--connect-timeout 5" 
 
 jobs:
 
@@ -160,7 +160,9 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
+      run: |
+        touch BUILD_FFTW_GCC${GCC_V} && git add BUILD_*
+        bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
   mpich_build:
     if: false
@@ -208,7 +210,9 @@ jobs:
       # We upload to Codecov from the OpenMPI build,
       # so no need to do that here.
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
+      run: |
+        touch BUILD_MPICH${MPICH_V}_GCC${GCC_V} && git add BUILD_*
+        bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
   openmpi_build:
     runs-on: ubuntu-18.04
@@ -255,7 +259,9 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
+      run: |
+        touch BUILD_OPENMPI${OPENMPI_V}_GCC${GCC_V} && git add BUILD_*
+        bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
 
   plumed_build:
@@ -315,4 +321,6 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
+      run: |
+        touch BUILD_PLUMED${PLUMED_V}_GCC${GCC_V} && git add BUILD_*
+        bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
