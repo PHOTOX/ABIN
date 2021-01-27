@@ -406,6 +406,7 @@ $OPTARG"
         ;;
       "U")
         curlargs="$OPTARG"
+        echo "curlargs: $curlargs"
         ;;
       "v")
         set -x
@@ -1785,6 +1786,10 @@ else
         exit 0
       else
         say "    ${r}X>${x} Failed to upload"
+        # DH DEBUG: Shouldn't we exit with an error here?
+        echo "res: $res"
+        echo "s3: $s3"
+        echo "s3target: $s3target"
       fi
     elif [ "$status" = "400" ];
     then
@@ -1792,6 +1797,7 @@ else
         say "${r}${res}${x}"
         exit ${exit_with}
     else
+        # TODO: Shouldn't we exit here?
         say "${r}${res}${x}"
     fi
   fi
