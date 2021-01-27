@@ -28,7 +28,7 @@ jobs:
       FC: gfortran
       FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
       GCC_V: ${{ matrix.gcc_v}}
-      CODECOV_NAME: ${{format('{0}\ GCC{1}', github.job, matrix.gcc_v)}}
+      CODECOV_NAME: ${{format('{0} GCC{1}', github.job, matrix.gcc_v)}}
 
     steps:
     - uses: actions/checkout@v2
@@ -67,7 +67,7 @@ jobs:
    # TODO: Separate unit test coverage
     - name: Upload code coverage to Codecov
       run: |
-        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS" -n ${JOB_NAME}
+        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
         #bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
 

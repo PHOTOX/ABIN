@@ -358,6 +358,7 @@ $OPTARG"
         ;;
       "n")
         name="$OPTARG"
+        echo "JOB NAME: $name"
         ;;
       "p")
         proj_root="$OPTARG"
@@ -1783,6 +1784,7 @@ else
       if [ "$s3" != "" ];
       then
         say "    ${g}->${x} View reports at ${b}$(echo "$res" | sed -n 1p)${x}"
+        echo $res
         exit 0
       else
         say "    ${r}X>${x} Failed to upload"
