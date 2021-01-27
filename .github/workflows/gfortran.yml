@@ -10,7 +10,7 @@ env:
   # -v : verbose output
   # -X : disable unneeded functionality
   # -U : Curl params to avoid timeout issues
-  CURL_OPTS: -S --no-silent
+  CURL_OPTS:  ${{ '"-S --no-silent"'}}
   CODECOV_OPTIONS: -Z -X coveragepy -X xcode
 
 jobs:
