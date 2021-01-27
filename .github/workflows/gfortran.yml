@@ -10,13 +10,14 @@ env:
   # -v : verbose output
   # -X : disable unneeded functionality
   # -U : Curl params to avoid timeout issues
-  CURL_OPTS:  ${{ '"-S --no-silent"'}}
+  CURL_OPTS:  ${{ '-S --no-silent'}}
   CODECOV_OPTIONS: -Z -X coveragepy -X xcode
 
 jobs:
 
 
   basic_build:
+    name: Basic build
     runs-on: ubuntu-18.04
     strategy:
       fail-fast: false
@@ -66,7 +67,7 @@ jobs:
       run: |
         # DH DEBUG: Adding a file to git which will then be listed in the Codecov report
         touch BUILD_BASIC_GCC${GCC_V} && git add BUILD_*
-        bash codecov_bash.sh $CODECOV_OPTIONS -U $CURL_OPTS -n BASIC_BUILD_GCC${GCC_V}
+        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS" -n BASIC_BUILD_GCC${GCC_V}
         #bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
 
