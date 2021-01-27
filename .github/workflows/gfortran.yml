@@ -7,15 +7,14 @@ on:
 
 env:
   # Options for upload to Codecov
-  # -Z : Fail CI if Codecov upload encounters issues
+  # -Z : Fail CI if Codecov upload fails
   # -v : verbose output
   # -X : disable unneeded functionality
-  # -U : Curl params to avoid timeout issues
+  # CURL_OPTS : Extra curl params to avoid timeout issues / for debugging
   CURL_OPTS:  -S --no-silent
   CODECOV_OPTIONS: -Z -X coveragepy -X xcode -X network -v
 
 jobs:
-
 
   basic_build:
     name: Basic build
@@ -33,7 +32,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        fetch-depth: 0
+        fetch-depth: 2
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
@@ -66,9 +65,7 @@ jobs:
 
    # TODO: Separate unit test coverage
     - name: Upload code coverage to Codecov
-      run: |
-        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
-        #bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
 
 
   optimized_build:
@@ -165,8 +162,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      run: |
-        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
 
   mpich_build:
     name: MPICH build
@@ -215,8 +211,7 @@ jobs:
       # We upload to Codecov from the OpenMPI build,
       # so no need to do that here.
     - name: Codecov upload
-      run: |
-        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
 
   openmpi_build:
     name: OpenMPI build
@@ -265,8 +260,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      run: |
-        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
 
 
   plumed_build:
@@ -328,5 +322,4 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      run: |
-        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
+      run:  bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
