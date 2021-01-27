@@ -28,7 +28,7 @@ jobs:
       FC: gfortran
       FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
       GCC_V: ${{ matrix.gcc_v}}
-      JOB_NAME: ${{format('{0}\ GCC-{1}', github.job, matrix.gcc_v)}}
+      CODECOV_NAME: ${{format('{0}\ GCC{1}', github.job, matrix.gcc_v)}}
 
     steps:
     - uses: actions/checkout@v2
@@ -72,6 +72,7 @@ jobs:
 
 
   optimized_build:
+    name: Optimized build
     runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
@@ -134,7 +135,7 @@ jobs:
     env:
       FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
       GCC_V: ${{ matrix.gcc_v}}
-      CODECOV_NAME: ${{format('{0}GCC-{1}', github.job, matrix.gcc_v)}}
+      CODECOV_NAME: ${{format('{0} GCC{1}', github.job, matrix.gcc_v)}}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -168,6 +169,7 @@ jobs:
         bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
 
   mpich_build:
+    name: MPICH build
     runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
@@ -181,7 +183,7 @@ jobs:
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
       MPICH_V: ${{matrix.mpich_v}}
-      CODECOV_NAME: ${{format('{0}GCC-{1}MPICH{2}', github.job, matrix.gcc_v, matrix.mpich_v)}}
+      CODECOV_NAME: ${{format('{0} GCC{1} MPICH{2}', github.job, matrix.gcc_v, matrix.mpich_v)}}
 
     steps:
     - uses: actions/checkout@v2
@@ -217,6 +219,7 @@ jobs:
         bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
 
   openmpi_build:
+    name: OpenMPI build
     runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
@@ -231,7 +234,7 @@ jobs:
       # To speed-up OpenMPI build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
-      CODECOV_NAME: ${{format('{0}GCC-{1}OpenMPI', github.job, matrix.gcc_v)}}
+      CODECOV_NAME: ${{format('{0} GCC{1} OpenMPI 4.0', github.job, matrix.gcc_v)}}
       OPENMPI_V: "4.0"
       OPENMPI_PATCH: "0"
 
@@ -267,6 +270,7 @@ jobs:
 
 
   plumed_build:
+    name: PLUMED build
     runs-on: ubuntu-18.04
     needs: basic_build
     strategy:
@@ -282,7 +286,7 @@ jobs:
       # Speeding up the Plumed build
       CFLAGS: -O0
       CXXLAGS: -O0
-      CODECOV_NAME: ${{format('{0}GCC-{1}PLUMED{2}', github.job, matrix.gcc_v, matrix.plumed_v)}}
+      CODECOV_NAME: ${{format('{0} GCC{1} PLUMED{2}', github.job, matrix.gcc_v, matrix.plumed_v)}}
 
     steps:
     - uses: actions/checkout@v2
