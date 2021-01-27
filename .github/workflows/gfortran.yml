@@ -6,11 +6,12 @@ on:
   pull_request:
 
 env:
+  # Options for upload to Codecov
   # -Z : Fail CI if Codecov upload encounters issues
   # -v : verbose output
   # -X : disable unneeded functionality
   # -U : Curl params to avoid timeout issues
-  CURL_OPTS:  ${{ '-S --no-silent'}}
+  CURL_OPTS:  -S --no-silent
   CODECOV_OPTIONS: -Z -X coveragepy -X xcode
 
 jobs:
@@ -27,6 +28,7 @@ jobs:
       FC: gfortran
       FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
       GCC_V: ${{ matrix.gcc_v}}
+      JOB_NAME: ${{format('{0}\ GCC-{1}', github.job, matrix.gcc_v)}}
 
     steps:
     - uses: actions/checkout@v2
@@ -65,9 +67,7 @@ jobs:
    # TODO: Separate unit test coverage
     - name: Upload code coverage to Codecov
       run: |
-        # DH DEBUG: Adding a file to git which will then be listed in the Codecov report
-        touch BUILD_BASIC_GCC${GCC_V} && git add BUILD_*
-        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS" -n BASIC_BUILD_GCC${GCC_V}
+        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS" -n ${JOB_NAME}
         #bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
 
 
@@ -125,6 +125,7 @@ jobs:
     # When Github upgrades it's ubuntu-latest image we might run into problems.
     # We should regenerate our all our tests with GFortran 7 on Neon before that happens.
     runs-on: ubuntu-18.04
+    name: FFTW build
     needs: basic_build
     strategy:
       fail-fast: false
@@ -133,6 +134,7 @@ jobs:
     env:
       FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
       GCC_V: ${{ matrix.gcc_v}}
+      CODECOV_NAME: ${{format('{0}GCC-{1}', github.job, matrix.gcc_v)}}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -163,8 +165,7 @@ jobs:
 
     - name: Codecov upload
       run: |
-        touch BUILD_FFTW_GCC${GCC_V} && git add BUILD_*
-        bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent" -n FFTW_BUILD_GCC${GCC_V}
+        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
 
   mpich_build:
     runs-on: ubuntu-18.04
@@ -180,6 +181,7 @@ jobs:
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
       MPICH_V: ${{matrix.mpich_v}}
+      CODECOV_NAME: ${{format('{0}GCC-{1}MPICH{2}', github.job, matrix.gcc_v, matrix.mpich_v)}}
 
     steps:
     - uses: actions/checkout@v2
@@ -212,8 +214,7 @@ jobs:
       # so no need to do that here.
     - name: Codecov upload
       run: |
-        touch BUILD_MPICH${MPICH_V}_GCC${GCC_V} && git add BUILD_*
-        bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
+        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
 
   openmpi_build:
     runs-on: ubuntu-18.04
@@ -230,6 +231,7 @@ jobs:
       # To speed-up OpenMPI build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
+      CODECOV_NAME: ${{format('{0}GCC-{1}OpenMPI', github.job, matrix.gcc_v)}}
       OPENMPI_V: "4.0"
       OPENMPI_PATCH: "0"
 
@@ -261,8 +263,7 @@ jobs:
       run: make test
     - name: Codecov upload
       run: |
-        touch BUILD_OPENMPI${OPENMPI_V}_GCC${GCC_V} && git add BUILD_*
-        bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
+        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
 
 
   plumed_build:
@@ -281,6 +282,7 @@ jobs:
       # Speeding up the Plumed build
       CFLAGS: -O0
       CXXLAGS: -O0
+      CODECOV_NAME: ${{format('{0}GCC-{1}PLUMED{2}', github.job, matrix.gcc_v, matrix.plumed_v)}}
 
     steps:
     - uses: actions/checkout@v2
@@ -323,5 +325,4 @@ jobs:
 
     - name: Codecov upload
       run: |
-        touch BUILD_PLUMED${PLUMED_V}_GCC${GCC_V} && git add BUILD_*
-        bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "-S --no-silent"
+        bash codecov_bash.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
