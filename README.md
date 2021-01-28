@@ -31,8 +31,8 @@ A full documentation can be found in the folder DOC.
 ---------------
 2. INSTALLATION
 ---------------
-To compile the code, you need a gfortran and g++ compiler version >=4.3.
-Version 4.6 and higher is recommended.
+To compile the code, you need a gfortran and g++ compiler version >=7.0.
+Earlier versions might work, but are not recommended.
 
 For some features, you will also need to install the FFTW library.
 It is usually provided with your Linux distribution.
