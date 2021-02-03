@@ -58,7 +58,7 @@ $MPIRUN $ABIN_CMD > $ABINOUT 2>&1 &
 abinpid=$!
 
 function cleanup {
-  kill -9 $tcpid $abinpid > /dev/null || true
+  kill -9 $tcpid $abinpid > /dev/null 2>&1 || true
   exit 1
 }
 
