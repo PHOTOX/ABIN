@@ -350,7 +350,8 @@ subroutine connect_terachem( itera )
    ! (to die immedietally upon error), unless idebug is > 1.
    ! This I think is much safer.
    call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
-   call handle_mpi_error(ierr)
+   ! DH TEST
+   !call handle_mpi_error(ierr)
 
    write(chtera,'(I1)')itera
 
