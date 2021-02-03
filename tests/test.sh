@@ -130,7 +130,7 @@ if [[ $TESTS = "all" ]];then
       let index=${#folders[@]}+1
       folders[index]=REMD
       let index++
-      #folders[index]=TERAPI
+      folders[index]=TERAPI
       # TODO: Test SH-MPI interface with TC
    fi
 
