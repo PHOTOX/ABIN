@@ -129,9 +129,9 @@ if [[ $TESTS = "all" ]];then
    if [[ $MPI = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=REMD
-      # TODO: Test MPI interface with TC
+      let index++
+      folders[index]=TERAPI
       # TODO: Test SH-MPI interface with TC
-      # folders[index]=TERAPI # does not yet work
    fi
 
    if [[ $CP2K = "TRUE" ]];then

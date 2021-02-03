@@ -32,11 +32,11 @@ cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MP
 # If you're building MPI for general use, not only for ABIN,
 # you might want to change the configure options:
 # --enable-fortran=yes Compile all versions of Fortran interfaces
-#                     This option is needed for GitHub Actions build, I don't know why
+#                      This option is needed for GitHub Actions build, I don't know why
 # --with-hydra-pm=pmiserv --with-namepublisher=pmi
 #                     Needed for MPI interface with TeraChem
 ./configure FC=gfortran CC=gcc \
-  --enable-fortran=all --disable-cxx \
+  --enable-fortran=all \
   --with-hydra-pm=pmiserv --with-namepublisher=pmi \
   --enable-static --disable-shared \
   --prefix=${INSTALL_DIR} 2>&1 |\

@@ -23,4 +23,5 @@ SH_BUTCHER/geom.?.?.?
 CP2K*/WATER*
 # PLUMED backup files
 bck.*
+tc_server
 !mini.xyz
