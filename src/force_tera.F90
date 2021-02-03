@@ -478,10 +478,22 @@ subroutine connect_terachem( itera )
    end subroutine finalize_terachem
 
    ! TODO: call this after each MPI call
-   subroutine handle_mpi_error(mpi_err, status, datatype, expected_count)
+   subroutine handle_mpi_error(mpi_err)
    use mpi
-   use mod_utils,    only: abinerror
+   use mod_utils, only: abinerror
    integer, intent(in) :: mpi_err
+   integer :: ierr
+   ! TODO: Get MPI error string
+   if(mpi_err.ne.0)then
+      write(*,*)'Unspecified MPI Error, code:', ierr
+      call abinerror('MPI ERROR')
+   end if
+   end subroutine handle_mpi_error
+
+   ! TODO: Actually use and test this routine, and move to MPI module.
+   subroutine check_mpi_status(status, datatype, expected_count)
+   use mpi
+   use mod_utils, only: abinerror
    integer, intent(in), optional :: status(MPI_STATUS_SIZE)
    integer, intent(in), optional :: datatype, expected_count
    integer :: received_count, ierr
@@ -499,13 +511,7 @@ subroutine connect_terachem( itera )
          call abinerror('MPI ERROR')
       end if
    end if
-
-   if(mpi_err.ne.0)then
-      write(*,*)'Unspecified MPI Error, code:', ierr
-      call abinerror('MPI ERROR')
-   end if
-   end subroutine handle_mpi_error
+   end subroutine check_mpi_status
 #endif
 
 end module mod_terampi
-
