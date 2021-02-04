@@ -26,7 +26,7 @@ module mod_terampi
 !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
    integer  ::  natmm_tera=0
    integer  :: nteraservers = 1
-   real(DP), allocatable :: mmcharges(:)
+   !real(DP), allocatable :: mmcharges(:)
    real(DP)  :: mpi_sleep = 0.05
    public :: teraport, newcomms, mpi_sleep, nteraservers
    public :: force_tera, natmm_tera
@@ -58,7 +58,6 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
       write(*,*)'ERROR: Parameter "nwalk" must be divisible by "nteraservers"!'
       call abinerror("force_tera")
    end if
-
 
    itera = 1
 
@@ -94,7 +93,6 @@ subroutine send_tera(x, y, z, iw, newcomm)
    use mod_system,only: names
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
-   use mod_interfaces, only: oniom
    real(DP),intent(in)     ::  x(:,:),y(:,:),z(:,:)
    integer,intent(in)      ::  iw, newcomm
    real(DP) :: coords(3, size(x,1) )
@@ -128,8 +126,8 @@ subroutine send_tera(x, y, z, iw, newcomm)
       write(*,*)(names_qm(iat), iat=1,natqm)
       call flush(6)
    end if
-   ! DH WARNING: this will not work for iw>199
-   ! not really tested for iw>99
+   ! DH WARNING: this will not work for iw > 199
+   ! not really tested for iw > 99
    ! TODO: refactor this mess
    write(names_qm(natqm+1),'(A2)')'++'
    write(names_qm(natqm+2),'(A2)')'sc'
@@ -163,8 +161,24 @@ subroutine send_tera(x, y, z, iw, newcomm)
    call MPI_Send( coords, natqm*3, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
    call handle_mpi_error(ierr)
 
-if(natmm_tera.gt.0)then
+   ! NOT IMPLEMETED !
+   !if (natmm_tera > 0) then
+   !   call send_mm_data(x, y, z, iw, newcomm)
+   !end if
+end subroutine send_tera
 
+! QM/MM via TC-MPI interface is currently not
+! Implemented so exclude this code from compilation.
+#if 0
+subroutine send_mm_data(x, y, z, iw, comm)
+   use mod_const, only: DP, ANG
+   use mod_general, only: idebug
+   use mod_qmmm, only: natqm
+   real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
+   integer,intent(in) :: iw, comm
+   real(DP) :: coords(3, size(x,1) )
+   integer  :: ierr, iat
+   real(DP),intent(in) :: coords(:,:)
    do iat=1,natmm_tera
       coords(1,iat) = x(iat+natqm,iw)/ANG
       coords(2,iat) = y(iat+natqm,iw)/ANG
@@ -172,30 +186,26 @@ if(natmm_tera.gt.0)then
    end do
 
    ! Send natmm and the charge of each atom
-   if ( idebug > 1 ) then
+   if (idebug > 1) then
       write(6,'(a, i0)') 'Sending natmm = ', natmm_tera
-      call flush(6)
    end if
-   call MPI_Send( natmm_tera, 1, MPI_INTEGER, 0, 2, newcomm, ierr ) 
+   call MPI_Send(natmm_tera, 1, MPI_INTEGER, 0, 2, comm, ierr)
    call handle_mpi_error(ierr)
 
-   if ( idebug > 1 ) then
+   if (idebug > 1) then
       write(6,'(a)') 'Sending charges: '
    end if
-   call MPI_Send( mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call MPI_Send(mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, comm, ierr)
    call handle_mpi_error(ierr)
 
    ! Send MM point charge coordinate array
    if ( idebug > 1 ) then
       write(6,'(a)') 'Sending charges coords: '
    end if
-
-   call MPI_Send( coords, 3*natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
+   call MPI_Send(coords, 3*natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, comm, ierr)
    call handle_mpi_error(ierr)
-end if
-
-end subroutine send_tera
-
+end subroutine send_mm_data
+#endif
 
 subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    use mpi
@@ -350,8 +360,7 @@ subroutine connect_terachem( itera )
    ! (to die immedietally upon error), unless idebug is > 1.
    ! This I think is much safer.
    call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
-   ! DH TEST
-   !call handle_mpi_error(ierr)
+   call handle_mpi_error(ierr)
 
    write(chtera,'(I1)')itera
 
@@ -429,9 +438,10 @@ subroutine connect_terachem( itera )
    use mod_utils, only: abinerror
    integer :: ierr, itera
 
-   if (natmm_tera.gt.0)then
-      allocate(mmcharges(natmm_tera))
-   end if
+   ! NOT IMPLEMENTED
+!   if (natmm_tera.gt.0)then
+!      allocate(mmcharges(natmm_tera))
+!   end if
 
    do itera=1, nteraservers
       write(*,*)'Sending initial number of QM atoms to TeraChem.'
@@ -489,29 +499,7 @@ subroutine connect_terachem( itera )
       call abinerror('MPI ERROR')
    end if
    end subroutine handle_mpi_error
-
-   ! TODO: Actually use and test this routine, and move to MPI module.
-   subroutine check_mpi_status(status, datatype, expected_count)
-   use mpi
-   use mod_utils, only: abinerror
-   integer, intent(in), optional :: status(MPI_STATUS_SIZE)
-   integer, intent(in), optional :: datatype, expected_count
-   integer :: received_count, ierr
-
-   if (present(status).and.status(MPI_TAG).eq.MPI_TAG_ERROR)then
-      write(*, *)'TeraChem sent an ERROR TAG. Exiting...'
-      call abinerror('TeraChem ERROR')
-   end if
-
-   if (present(expected_count))then
-      ! Compare the length of received message and what we expected
-      call MPI_GET_COUNT(status, datatype, received_count, ierr)
-      if(received_count.ne.expected_count)then
-         write(*,*)'Received message of unexpected size'
-         call abinerror('MPI ERROR')
-      end if
-   end if
-   end subroutine check_mpi_status
+! USE_MPI
 #endif
 
 end module mod_terampi
