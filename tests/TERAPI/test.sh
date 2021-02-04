@@ -1,13 +1,14 @@
 #/bin/bash
 set -euo pipefail
 # Useful for debugging
-#set -x
+# TODO: Comment this out before merging
+set -x
 
 ABINEXE=$1
 ABINOUT=abin.out
 ABININ=input.in
 ABINGEOM=mini.xyz
-TCSRC=tc_mpi_api.cpp
+TCSRC="../tc_mpi_api.cpp tc_server.cpp"
 TCEXE=tc_server
 TCOUT=tc.out
 
@@ -23,7 +24,7 @@ fi
 
 rm -f restart.xyz movie.xyz $TCEXE
 if [[ "${1-}" = "clean" ]];then
-   rm -f $TCOUT $ABINOUT *dat *diff restart.xyz*
+   rm -f $TCOUT $ABINOUT *dat *diff restart.xyz.old
    exit 0
 fi
 
@@ -31,6 +32,10 @@ if [[ -f "${MPI_PATH-}/bin/orterun" ]];then
   # TeraChem is compiled with MPICH so there's no
   # point in trying to make this work with OpenMPI.
   # We'll skip this test by faking it was successfull.
+  # Here are some pointers if we ever want to make it work:
+  # https://techdiagnosys.blogspot.com/2016/12/openmpi-working-nameserver-publish.html
+  # https://www.open-mpi.org/doc/v4.1/man1/ompi-server.1.php
+  # https://www.open-mpi.org/doc/v4.1/man1/mpirun.1.php#sect6 (search for ompi-server)
   echo "Skipping TERAPI test with OpenMPI"
   # TODO: Is there a less hacky way to fake passing this test?
   # Or should we skip it altogether already in tests/test.sh?
@@ -66,7 +71,7 @@ abinpid=$!
 
 function cleanup {
   kill -9 $tcpid $abinpid > /dev/null 2>&1 || true
-  exit 1
+  exit 0
 }
 
 trap cleanup INT ABRT TERM EXIT
