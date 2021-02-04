@@ -8,9 +8,7 @@ module mod_terampi_sh
    use mod_const, only: DP
    implicit none
    private
-#ifdef USE_MPI
    public :: init_terash
-#endif
    public :: force_terash, finalize_terash
    public :: write_wfn, read_wfn, move_new2old_terash, move_old2new_terash
    real(DP), allocatable :: CIvecs(:,:), MO(:,:), blob(:), NAC(:)
@@ -21,6 +19,7 @@ module mod_terampi_sh
 
 CONTAINS
 
+#ifdef USE_MPI
 subroutine force_terash(x, y, z, fx, fy, fz, eclas)
    use mod_const, only: DP
    use mod_terampi, only: newcomms
@@ -30,19 +29,10 @@ subroutine force_terash(x, y, z, fx, fy, fz, eclas)
 
    ! for SH, we use only one TC server...
    ! might be changes if we ever implement more elaborate SH schemes
-#ifdef USE_MPI
    call send_terash(x, y, z, fx, fy, fz, newcomms(1))
 
    call receive_terash(fx, fy, fz, eclas, newcomms(1))
-#else
-   write(*,*) "FATAL ERROR: ABIN not compiled with MPI, cannot connect to TeraChem"
-   stop 1
-#endif
-
 end subroutine force_terash
-
-
-#ifdef USE_MPI
 
 subroutine receive_terash(fx, fy, fz, eclas, newcomm)
    use mod_const, only: DP, ANG
@@ -409,6 +399,7 @@ subroutine init_terash(x, y, z)
 
 end subroutine init_terash
 
+! USE_MPI
 #endif
 
 subroutine finalize_terash()
@@ -530,6 +521,25 @@ subroutine move_old2new_terash
    blob = blob_old
 end subroutine move_old2new_terash
 
+#ifndef USE_MPI
+   subroutine init_terash(x, y, z)
+      use mod_utils, only: not_compiled_with
+      real(DP),intent(inout) ::  x(:,:), y(:,:), z(:,:)
+      ! Just to squash compiler warnings
+      x = 0.0D0; y = 0.0D0; z = 0.0D0
+      call not_compiled_with('MPI', 'init_terash')
+   end subroutine init_terash
 
+   subroutine force_terash(x, y, z, fx, fy, fz, eclas)
+      use mod_const, only: DP
+      use mod_utils, only: not_compiled_with
+      real(DP),intent(in) ::  x(:,:),y(:,:),z(:,:)
+      real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
+      real(DP),intent(inout) :: eclas
+      ! Just to squash compiler warnings
+      fx = x; fy = y; fz = z
+      eclas = 0.0d0
+      call not_compiled_with('MPI', 'force_terash')
+   end subroutine force_terash
+#endif
 end module mod_terampi_sh
-

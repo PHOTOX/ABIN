@@ -161,14 +161,14 @@ subroutine send_tera(x, y, z, iw, newcomm)
    call MPI_Send( coords, natqm*3, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
    call handle_mpi_error(ierr)
 
-   ! NOT IMPLEMETED !
+   ! NOT IMPLEMENTED !
    !if (natmm_tera > 0) then
    !   call send_mm_data(x, y, z, iw, newcomm)
    !end if
 end subroutine send_tera
 
 ! QM/MM via TC-MPI interface is currently not
-! Implemented so exclude this code from compilation.
+! implemented so excluding this code from compilation.
 #if 0
 subroutine send_mm_data(x, y, z, iw, comm)
    use mod_const, only: DP, ANG
