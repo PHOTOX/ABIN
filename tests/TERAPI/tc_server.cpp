@@ -26,13 +26,33 @@ int main(int argc, char* argv[])
   // Will go through this loop until MPI client gives an exit signal.
   while (true) {
 
-    int status = tc.receive();
+    int status = tc.receive_begin_loop();
     // TODO: Call receive individually and validate received data.
     if (status == MPI_TAG_EXIT) {
       break;
     }
 
-    tc.send(loop_counter);
+    // TODO: Validate received data?
+    // Should be hardcode what we expect to receive?
+    tc.receiveAtomTypesAndScrdir();
+    tc.receiveCoordinates();
+
+    //tc.send(loop_counter);
+
+    // TODO: Maybe we could link this to the water force field
+    // in waterpotentials/ and get real energies and forces?
+    double SCFEnergy = 1.0 + loop_counter;
+    int MPI_SCF_DIE = 0;
+    tc.send_scf_energy(SCFEnergy, MPI_SCF_DIE);
+ 
+    tc.send_qm_charges();
+ 
+    tc.send_qm_dipole_moments();
+
+    // NOTE: In the real TC interface, gradients are sent
+    // conditionally only if they are requested.
+    // But we always request them in ABIN (see tc.receive).
+    tc.send_qm_gradients();
       
     // This is just a precaution, we don't want endless loop!
     loop_counter++;

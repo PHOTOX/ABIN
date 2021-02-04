@@ -55,6 +55,7 @@ void TCServerMock::receiveAtomTypes() {
 }
 
 void TCServerMock::receiveAtomTypesAndScrdir() {
+  // TODO: Check that we get same atom types every iteration!
   printf("Receiving atom types and scrdir...\n");
   fflush(stdout);
   MPI_Recv(bufchars, MAX_DATA, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpi_status);
@@ -81,7 +82,7 @@ void TCServerMock::receiveCoordinates() {
 
 // Receive number of QM atoms, QM atom types, QM atom coordinates
 // This is called repeatedly in the MD loop.
-int TCServerMock::receive() {
+int TCServerMock::receive_begin_loop() {
   printf("\nReceiving new QM data.\n");
   fflush(stdout);
   MPI_Recv(bufints, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpi_status);
@@ -102,21 +103,24 @@ int TCServerMock::receive() {
     printf("Expected %d, got %d\n", totNumAtoms, bufints[0]);
     throw "Invalid number of atoms received";
   }
+  return tag;
+}
 
-  // TODO: Check that we get same atom types
-  // every iteration!
+// This is what we expect from ABIN every MD iteration
+// for classical MD and PIMD.
+// For Surface Hopping see receive_sh()
+int TCServerMock::receive() {
+  int tag = receive_begin_loop();
+  if (tag == MPI_TAG_EXIT) {
+    return tag;
+  }
   receiveAtomTypesAndScrdir();
-
   receiveCoordinates();
   return tag;
 }
 
-// TODO: Break this down further to individual functions
-// which should take data as input parameters.
-void TCServerMock::send(int loop_counter) {
-  double SCFEnergy = 1.0 + loop_counter;
-  bufdoubles[0] = SCFEnergy;
-  int MPI_SCF_DIE = 0;
+void TCServerMock::send_scf_energy(double energy, int MPI_SCF_DIE) {
+  bufdoubles[0] = energy;
   if (MPI_SCF_DIE) {
     // TODO: Actually test this scenario!
     printf("SCF did not converge. Setting MPI_TAG_OK = %d.\n", MPI_TAG_SCF_DIED);
@@ -124,19 +128,26 @@ void TCServerMock::send(int loop_counter) {
     MPI_SCF_DIE = 0; // reset the flag for the next loop
   }
  
-  printf("Sending QM energy, QM population charges, and dipoles (QM, MM and total) via MPI.\n");
-  printf("QM energy = %.8f \n" , SCFEnergy);
-  // Send the energy
-  MPI_Send(bufdoubles, 1, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client );
-  // Compute the population charges 
+  printf("QM energy = %.8f\n" , energy);
+  MPI_Send(bufdoubles, 1, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
+}
+
+void TCServerMock::send_qm_charges() {
+  // TODO: We should move this computation elsewhere
+  // and accept charges as inputs here.
+  //
+  // Compute fake population charges
   for(int atom = 0; atom < totNumAtoms; atom++) {
     bufdoubles[atom] = -1 - atom; 
   }
   MPI_Send(bufdoubles, totNumAtoms, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
+}
+
+void TCServerMock::send_qm_dipole_moments() {
   // QM dipole moment
-  double Dx = -0.01 + loop_counter;
-  double Dy = -0.02 + loop_counter;
-  double Dz = -0.03 + loop_counter;
+  double Dx = -0.01;
+  double Dy = -0.02;
+  double Dz = -0.03;
   double DTotal = sqrt(Dx*Dx + Dy*Dy + Dz*Dz);
   bufdoubles[0] = Dx;
   bufdoubles[1] = Dy;
@@ -144,17 +155,34 @@ void TCServerMock::send(int loop_counter) {
   bufdoubles[3] = DTotal;
   printf("QM DIPOLE: %lf %lf %lf %lf\n", Dx, Dy, Dz, DTotal);
   MPI_Send(bufdoubles, 4, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
- 
-  // NOTE: In the real TC interface, gradients are sent
-  // conditionally only if they are requested.
-  // But we always request them in ABIN (see tc.receive).
-  // TODO: Maybe we could link this to the water force field
-  // in waterpotentials/ and get real forces.
+}
+
+void TCServerMock::send_qm_gradients() {
   printf("Sending gradients via MPI. \n");
   for(int i = 0; i < (totNumAtoms); i ++) {
     bufdoubles[3*i]   = 0.001+0.0001*(3*i);
     bufdoubles[3*i+1] = 0.001+0.0001*(3*i+1);
     bufdoubles[3*i+2] = 0.001+0.0001*(3*i+2);
+    printf("%lf %lf %lf\n", bufdoubles[3*i], bufdoubles[3*i+1], bufdoubles[3*i+2]);
   }
   MPI_Send(bufdoubles, 3*totNumAtoms, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
+}
+
+void TCServerMock::send(int loop_counter) {
+  printf("Sending QM energy, QM population charges, QM dipoles and QN gradients via MPI.\n");
+
+  // TODO: Maybe we could link this to the water force field
+  // in waterpotentials/ and get real energies and forces?
+  double SCFEnergy = 1.0 + loop_counter;
+  int MPI_SCF_DIE = 0;
+  send_scf_energy(SCFEnergy, MPI_SCF_DIE);
+
+  send_qm_charges();
+
+  send_qm_dipole_moments();
+
+  // NOTE: In the real TC interface, gradients are sent
+  // conditionally only if they are requested.
+  // But we always request them in ABIN (see tc.receive).
+  send_qm_gradients();
 }

@@ -47,17 +47,21 @@ class TCServerMock {
 
     int receiveNumAtoms();
     void receiveAtomTypes();
-    // TODO: Validated this!
     void receiveAtomTypesAndScrdir();
     void receiveCoordinates();
 
-    // Receive number of QM atoms, QM atom types, QM atom coordinates
-    // This is called repeatedly in the MD loop.
+    int receive_begin_loop();
+    // This combines all expected receive
+    // methods in their order. But the tc_server
+    // implementation can also call them individually
+    // for better granurality.
     int receive();
-    int receive_sh();
 
     void send(int loop_counter);
-    void send_sh(int loop_counter);
+    void send_scf_energy(double, int);
+    void send_qm_charges();
+    void send_qm_dipole_moments();
+    void send_qm_gradients();
 
   private:
     char terachem_port_name[1024];
