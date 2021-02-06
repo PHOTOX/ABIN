@@ -1,7 +1,7 @@
 ! -----------------------------------------------------------------
 !  ABIN: Multipurpose ab initio MD program.
 !  The potential is calculated on-the-fly by an external program.
-!------------------------------------------------------------------  
+!------------------------------------------------------------------
 !  Copyright (C) 2014             D.Hollas, M.Oncak, O.Svoboda and P.Slavicek
 !
 !  This program is free software: you can redistribute it and/or modify
@@ -16,13 +16,13 @@
 !
 !  You should have received a copy of the GNU General Public License
 !  along with this program in the file LICENSE. If not, see <http://www.gnu.org/licenses/>.
-program abin_dyn
+program abin
    use mod_const, only: DP, AUtoFS
    use mod_arrays
    use mod_general
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
-   use mod_kinetic, ONLY: temperature
+   use mod_kinetic, only: temperature
    use mod_utils, only: abinerror, archive_file, get_formatted_date_and_time
    use mod_transform
    use mod_mdstep
@@ -38,62 +38,61 @@ program abin_dyn
 #endif
    implicit none
    ! TODO: These should probably be defined and stored in some module, not here
-   real(DP)    :: dt=20.0d0, eclas=0.0d0, equant=0.0d0
-   integer     :: itrj
-   LOGICAL     :: file_exists
-   integer,dimension(8) :: time_start, time_end
+   real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
+   integer :: itrj
+   logical :: file_exists
+   integer, dimension(8) :: time_start, time_end
    real(DP) :: total_cpu_time
-   integer  :: ierr
-!$ integer  :: nthreads,omp_get_max_threads
+   integer :: ierr
+!$ integer :: nthreads, omp_get_max_threads
 
    call date_and_time(VALUES=time_start)
 
-!  INPUT AND INITIALIZATION SECTION
+   ! INPUT AND INITIALIZATION SECTION
    call init(dt)
 
    ! This cannot be in init because of the namelist 'system'
-   if (my_rank.eq.0) call clean_temp_files()
+   if (my_rank == 0) call clean_temp_files()
 
-   if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then
-      call archive_file('restart.xyz',it)
+   if (irest == 1 .and. (my_rank == 0 .or. iremd == 1)) then
+      call archive_file('restart.xyz', it)
    end if
 
-!  Surface hopping initialization
-   if(ipimd.eq.2.or.ipimd.eq.4)then
+   ! Surface hopping initialization
+   if (ipimd == 2 .or. ipimd == 4) then
       call sh_init(x, y, z, vx, vy, vz)
-   else if(ipimd.eq.5.and.pot.eq.'_tera_')then
+   else if (ipimd == 5 .and. pot == '_tera_') then
       call sh_init(x, y, z, vx, vy, vz)
       call lz_rewind(en_array_lz)
-   endif
+   end if
 
 !$ nthreads = omp_get_max_threads()
-   if (my_rank.eq.0)then
-!$    write(*,*)'Number of OpenMP threads used = ', nthreads
-      write(*,'(A)')'Job started at: ' // trim(get_formatted_date_and_time(time_start))
-      write(*,*)''
+   if (my_rank == 0) then
+!$    write (*, *) 'Number of OpenMP threads used = ', nthreads
+      write (*, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
+      write (*, *) ''
    end if
 
    ! Transform coordinates and velocities Path Integral MD
    ! (staging or normal modes)
-   if(istage.eq.1.or.inormalmodes.gt.0)then
+   if (istage == 1 .or. inormalmodes > 0) then
       call initialize_pi_transforms(x, y, z, vx, vy, vz)
-   endif
+   end if
 
    ! Note that 'amt' equals 'am' for non-PI simulations
    px = amt * vx
    py = amt * vy
    pz = amt * vz
 
-
-   if (ipimd.eq.3)then
+   if (ipimd == 3) then
 
       call minimize(x, y, z, fxc, fyc, fzc, eclas)
-       
+
    else
 
-      if (my_rank.eq.0)then
-         write(*,*)
-         write(*,*)'#      Step     Time [fs]'
+      if (my_rank == 0) then
+         write (*, *)
+         write (*, *) '#      Step     Time [fs]'
       end if
 !---------------- PROPAGATION-----------------------------------
 
@@ -103,83 +102,83 @@ program abin_dyn
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
       ! getting initial forces and energies
-      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot) 
-      if (ipimd.eq.1)then
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+      if (ipimd == 1) then
          call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
       end if
 
-      ! Correct energy history for LZ 
-      if(ipimd.eq.5)  call lz_rewind(en_array_lz) 
+      ! Correct energy history for LZ
+      if (ipimd == 5) call lz_rewind(en_array_lz)
 
       ! if we use reference potential with RESPA
-      if(pot_ref.ne.'none')then
+      if (pot_ref /= 'none') then
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
          call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
       end if
-     
-!     setting initial values for SURFACE HOPPING 
-      if(ipimd.eq.2.or.ipimd.eq.4)then
-         do itrj=1, ntraj
-            if (irest.ne.1) call get_nacm(itrj)
+
+      ! setting initial values for SURFACE HOPPING
+      if (ipimd == 2 .or. ipimd == 4) then
+         do itrj = 1, ntraj
+            if (irest /= 1) call get_nacm(itrj)
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
-            if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_') call move_new2old_terash()
+            if (pot == '_tera_' .or. restrain_pot == '_tera_') call move_new2old_terash()
          end do
-      else if(ipimd.eq.5.and.pot.eq.'_tera_')then
+      else if (ipimd == 5 .and. pot == '_tera_') then
          call move_new2old_terash()
       end if
 
-!     LOOP OVER TIME STEPS
-!     "it" variable is set to 0 or read from restart.xyz in subroutine init
-      it=it+1
-      do it=(it),nstep
+      ! LOOP OVER TIME STEPS
+      ! "it" variable is set to 0 or read from restart.xyz in subroutine init
+      it = it + 1
+      do it = (it), nstep
 
          ! TODO: Move this bit to a helper function check_for_exit()
 #ifdef USE_MPI
-!        This is needed, because all ranks need to see fle EXIT
-!        Maybe we should get rid of it for performance reasons
-!        We could still call Abort from rank0, but we would not be sure that we are on
-!        the same timestep. Does it matter??
+         ! This is needed, because all ranks need to see fle EXIT
+         ! Maybe we should get rid of it for performance reasons
+         ! We could still call Abort from rank0, but we would not be sure that we are on
+         ! the same timestep. Does it matter??
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
-         INQUIRE(FILE="EXIT", EXIST=file_exists)
-         if(file_exists)then
-            write(*,*)'Found file EXIT. Exiting...'
-            if (istage.eq.1)then
-               call QtoX(vx,vy,vz,transxv,transyv,transzv)
-               call QtoX(x,y,z,transx,transy,transz)
-               call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
-            else if(inormalmodes.gt.0)then
-               call UtoX(x,y,z,transx,transy,transz)
-               call UtoX(vx,vy,vz,transxv,transyv,transzv)
-               call restout(transx,transy,transz,transxv,transyv,transzv,it-1)
+         inquire (FILE="EXIT", EXIST=file_exists)
+         if (file_exists) then
+            write (*, *) 'Found file EXIT. Exiting...'
+            if (istage == 1) then
+               call QtoX(vx, vy, vz, transxv, transyv, transzv)
+               call QtoX(x, y, z, transx, transy, transz)
+               call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
+            else if (inormalmodes > 0) then
+               call UtoX(x, y, z, transx, transy, transz)
+               call UtoX(vx, vy, vz, transxv, transyv, transzv)
+               call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
             else
-               call restout(x,y,z,vx,vy,vz,it-1)
-            endif
+               call restout(x, y, z, vx, vy, vz, it - 1)
+            end if
 
 #ifdef USE_MPI
             call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
-            if (my_rank.eq.0)then
+            if (my_rank == 0) then
                call system('rm EXIT')
             end if
 
-            exit                                          !break from time loop
+            exit ! break from time loop
 
-         endif
-       
-!        CALL the integrator, propagate through one time step
-         SELECT CASE (md)
-            case (1)
-               call respastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-            case (2)
-               call verletstep(x,y,z,px,py,pz,amt,dt,eclas,fxc,fyc,fzc) 
-               ! include entire Ehrenfest step, in first step, we start from pure initial state so at first step we dont
-               ! need NAMCE and take forces just as a grad E 
-            case (3)
-               call respashake(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-            case (4)
-               call doublerespastep(x,y,z,px,py,pz,amt,amg,dt,equant,eclas,fxc,fyc,fzc,fxq,fyq,fzq)
-         END SELECT
+         end if
+
+         ! CALL the integrator, propagate through one time step
+         select case (md)
+         case (1)
+            call respastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
+         case (2)
+            call verletstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
+            ! include entire Ehrenfest step, in first step, we start from pure initial state so at first step we dont
+            ! need NAMCE and take forces just as a grad E
+         case (3)
+            call respashake(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
+         case (4)
+            call doublerespastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
+         end select
 
          sim_time = sim_time + dt
 
@@ -187,9 +186,9 @@ program abin_dyn
          vy = py / amt
          vz = pz / amt
 
-!        SURFACE HOPPING SECTION
-!        SH is called here, Ehrenfest inside the Verlet MD step
-         if(ipimd.eq.2)then
+         ! SURFACE HOPPING SECTION
+         ! SH is called here, Ehrenfest inside the Verlet MD step
+         if (ipimd == 2) then
 
             call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
 
@@ -198,25 +197,25 @@ program abin_dyn
             pz = amt * vz
 
             ! TODO: this should be in the surfacehop routine
-            if(pot.eq.'_tera_')then
+            if (pot == '_tera_') then
                call move_new2old_terash()
             end if
 
-         endif
+         end if
 
-!        LANDAU ZENER HOPPING
-         if(ipimd.eq.5)then
+         ! LANDAU ZENER HOPPING
+         if (ipimd == 5) then
             call lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, pot)
             px = amt * vx
             py = amt * vy
             pz = amt * vz
 
-            if(pot.eq.'_tera_') call move_new2old_terash()
-         endif
+            if (pot == '_tera_') call move_new2old_terash()
+         end if
 
 #ifdef USE_MPI
-!        SWAP REMD REPLICAS
-         if (iremd.eq.1.and.modulo(it,nswap).eq.0)then
+         ! SWAP REMD REPLICAS
+         if (iremd == 1 .and. modulo(it, nswap) == 0) then
             call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
          end if
 #endif
@@ -229,91 +228,85 @@ program abin_dyn
          ! maybe we should visit this section only when my_rank.eq.0
          ! this would not be the case for REMD
 
-
-         if (modulo(it,ncalc).ne.0)then
+         if (modulo(it, ncalc) /= 0) then
             cycle
          end if
-      
+
          ! TODO: Move this call inside analysis() subroutine
          call temperature(px, py, pz, amt, eclas)
 
-         if(istage.eq.1)then     
+         if (istage == 1) then
 
-            call QtoX(vx,vy,vz,transxv,transyv,transzv)
-            call QtoX(x,y,z,transx,transy,transz)
-            call FQtoFX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
+            call QtoX(vx, vy, vz, transxv, transyv, transzv)
+            call QtoX(x, y, z, transx, transy, transz)
+            call FQtoFX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
             call analysis(transx, transy, transz, transxv, transyv, transzv,  &
                  &       transfxc, transfyc, transfzc, eclas, equant)
 
-         else if(inormalmodes.gt.0)then
+         else if (inormalmodes > 0) then
 
-            call UtoX(x,y,z,transx,transy,transz)
-            call UtoX(vx,vy,vz,transxv,transyv,transzv)
-            call UtoX(fxc,fyc,fzc,transfxc,transfyc,transfzc)
+            call UtoX(x, y, z, transx, transy, transz)
+            call UtoX(vx, vy, vz, transxv, transyv, transzv)
+            call UtoX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
             call analysis(transx, transy, transz, transxv, transyv, transzv,  &
                  &        transfxc, transfyc, transfzc, eclas, equant)
          else
-      
+
             call analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas, equant)
 
-         endif
-         
-      
-         if(modulo(it,nwrite).eq.0.and.my_rank.eq.0)then
-            write(*,'(I20,F15.2)')it, sim_time * AUtoFS
-            call flush(6)
-         endif
+         end if
 
+         if (modulo(it, nwrite) == 0 .and. my_rank == 0) then
+            write (*, '(I20,F15.2)') it, sim_time * AUtoFS
+            call flush (6)
+         end if
 
-!     Time step loop      
-      enddo
- 
-!     DUMP restart file at the end of a run
-!     Because NCALC might be >1, we have to perform transformation to get the most
-!     recent coordinates and velocities
-      it = it - 1 
+         ! Time step loop
+      end do
 
-      if (istage.eq.1)then
-         call QtoX(vx,vy,vz,transxv,transyv,transzv)
-         call QtoX(x,y,z,transx,transy,transz)
-         call restout(transx,transy,transz,transxv,transyv,transzv,it)
-      else if(inormalmodes.gt.0)then
-         call UtoX(x,y,z,transx,transy,transz)
-         call UtoX(vx,vy,vz,transxv,transyv,transzv)
-         call restout(transx,transy,transz,transxv,transyv,transzv,it)
+      ! DUMP restart file at the end of a run
+      ! Because NCALC might be >1, we have to perform transformation to get the most
+      ! recent coordinates and velocities
+      it = it - 1
+
+      if (istage == 1) then
+         call QtoX(vx, vy, vz, transxv, transyv, transzv)
+         call QtoX(x, y, z, transx, transy, transz)
+         call restout(transx, transy, transz, transxv, transyv, transzv, it)
+      else if (inormalmodes > 0) then
+         call UtoX(x, y, z, transx, transy, transz)
+         call UtoX(vx, vy, vz, transxv, transyv, transzv)
+         call restout(transx, transy, transz, transxv, transyv, transzv, it)
       else
-         call restout(x,y,z,vx,vy,vz,it)
-      endif
+         call restout(x, y, z, vx, vy, vz, it)
+      end if
 
-!  MINIMIZATION endif
-   endif
-   
-   call finish(0)
-
-!  FINAL TIMING
-!  TODO: Maybe we should print some statistics more often
-!  i.e. hours per picosecond or sth like that
-   if (my_rank.eq.0)then
-      call cpu_time(total_cpu_time)
-      write(*,'(A)')'Total cpu time [s] (does not include ab initio calculations)'
-      write(*,*)total_cpu_time
-      write(*,'(A)')'Total cpu time [hours] (does not include ab initio calculations)'
-      write(*,*)total_cpu_time / 3600.
- 
-      write(*,'(A)')'Job started at:  ' // trim(get_formatted_date_and_time(time_start))
-      call date_and_time(VALUES=time_end)
-      write(*,'(A)')'Job finished at: ' // trim(get_formatted_date_and_time(time_end))
+      ! MINIMIZATION endif
    end if
 
-end 
+   call finish(0)
 
-subroutine clean_temp_files
-!use mod_system, only: clean_prop_tempfiles
+   ! FINAL TIMING
+   ! TODO: Maybe we should print some statistics more often
+   ! i.e. hours per picosecond or sth like that
+   if (my_rank == 0) then
+      call cpu_time(total_cpu_time)
+      write (*, '(A)') 'Total cpu time [s] (does not include ab initio calculations)'
+      write (*, *) total_cpu_time
+      write (*, '(A)') 'Total cpu time [hours] (does not include ab initio calculations)'
+      write (*, *) total_cpu_time / 3600.
 
-   ! TODO: Implement "clean" bash function in abin interfaces
-   ! that should be called here (and only if irest=0)
-   call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
-!   call clean_prop_tempfiles()
+      write (*, '(A)') 'Job started at:  '//trim(get_formatted_date_and_time(time_start))
+      call date_and_time(VALUES=time_end)
+      write (*, '(A)') 'Job finished at: '//trim(get_formatted_date_and_time(time_end))
+   end if
 
-end subroutine clean_temp_files
+contains
 
+   subroutine clean_temp_files()
+      ! TODO: Implement "clean" bash function in abin interfaces
+      ! that should be called here (and only if irest=0)
+      call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+   end subroutine clean_temp_files
+
+end program abin
