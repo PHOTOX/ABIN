@@ -2,9 +2,7 @@
 [![CI](https://github.com/PHOTOX/ABIN/workflows/GFortran%20CI/badge.svg?branch=master&event=push)](https://github.com/PHOTOX/ABIN/actions?query=workflow%3A%22GFortran+CI%22)
 [![codecov](https://codecov.io/gh/PHOTOX/ABIN/branch/master/graph/badge.svg)](https://codecov.io/gh/PHOTOX/ABIN)
 
-----------------
-1. What is ABIN?
-----------------
+## What is ABIN?
 
 ABIN is a program for performing ab initio molecular dynamics.
 It was designed specifically to deal with quantum nuclear effects.
@@ -28,9 +26,8 @@ A full text of the license can be found in the file LICENCE.
 
 A full documentation can be found in the folder DOC.
 
----------------
-2. INSTALLATION
----------------
+## Installation
+
 To compile the code, you'll need a GFortran and g++ compiler version >=7.0.
 Earlier versions might work, but always run test to verify.
 Intel compiler might work, but there is a know issue with restarting
@@ -54,18 +51,32 @@ you should always clean up before the recompilation:
 
 `$ make clean && make`
 
--------------------------------
-3. STRUCTURE OF THE SOURCE CODE
--------------------------------
 
-Short descriptions of key source files.
+## Optional dependencies
 
-| Path     | Description |
-|----------|-------------|
-| sample_inputs   | Sample input files. |
-| interfaces/     | BASH interfaces to common ab initio codes. |
-| utils/          | Handy scripts that might be useful in conjuction with the MD code. |
-| unit_tests/     | Unit tests, run by `make unittest`
-| tests/          | End-to-End tests, run by `make e2etest`
-| src/            | ABIN source code
-| dev_scripts/    | Setup for ABIN devs + install scripts for optional libraries needed by ABIN
+Some functionality relies on external libraries. These are optional,
+and the code automatically recognizes which feature is supported for a given build.
+Run `configure -h` to see all the options and how to configure them.
+
+To install the libraries, you can use the install scripts in `dev_scripts/`.
+We use these in our Continuous Integration testing suite on Github using the Ubuntu 18.04 image
+so they are guaranteed to work, though you might need to tweak them a bit for your system.
+
+The optional libraries are:
+ - [MPICH](https://www.mpich.org/): An MPI implementation used for Replica Exchange MD and MPI interface with TeraChem.
+      - If you just need REMD you can also use other MPI libraries such as OpenMPI.
+ - [FFTW](http://www.fftw.org/): Fast Fourier Transform library used for normal mode transformation in Path Integral MD.
+ - [PLUMED](https://www.plumed.org/): A collection of very useful tools for free energy calculations (MetaDynamics, Umbrella Sampling etc).
+
+
+## Structure of the repository
+
+| Path             | Description                                  |
+|------------------|----------------------------------------------|
+| src/             | ABIN source code
+| sample\_inputs   | Sample input files.
+| interfaces/      | BASH interfaces to common _ab initio_ codes.
+| utils/           | Handy scripts that might be useful in conjuction with the MD code.
+| unit\_tests/     | Unit tests; run by `make unittest`
+| tests/           | End-to-End tests; run by `make e2etest`
+| dev\_scripts/    | Setup for ABIN devs and install scripts for optional libraries.

@@ -1,21 +1,18 @@
 #!/bin/bash
 
-# A hook script to verify what is about to be pushed.  Called by "git
-# push" after it has checked the remote status, but before anything has been
-# pushed.  If this script exits with a non-zero status nothing will be pushed.
+# A hook script to verify what is about to be pushed.
+# Called by "git push" after it has checked the remote status,
+# but before anything has been pushed.
+# If this script exits with a non-zero status nothing will be pushed.
+# You can always skip the hook by `git push --no-verify`
 
 # To install this hook:
 # cp pre-push.hook .git/hooks/pre-push;chmod +x .git/hooks/pre-push
 
-# This hook is called with the following parameters:
-#
-# $1 -- Name of the remote to which the push is being done
-# $2 -- URL to which the push is being done
-
 remote="$1"
 url="$2"
 
-# Do a fresh build, and then run tests before commiting to GitHub
+# Do a fresh build, and then run tests before commiting to GitHub.
 
 if [[ $url =~ github\.com ]];then
    echo "Pushing to GitHub. Veryfying the build and tests first."
