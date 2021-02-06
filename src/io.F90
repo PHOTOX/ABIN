@@ -1,21 +1,26 @@
-! Various small functions and subroutines, that may be used throughout the program.
-! Daniel Hollas         2014
 module mod_io
    use mod_const, only: DP
    implicit none
-   character(len=50) :: formats(10)
+   ! TODO: Use more descriptive names for these
    character(len=50) :: format1='(1I8)', format2='(1E12.4)', format3='(3E12.4)'
    character(len=50) :: format4='(1F8.4)', format5='(I8,I3)'
    contains
 
+   ! TODO: Create a ElectronicStructure type
+   ! and add reading and printint routines as type-bound procedures.
+   ! The instance of this type should be an array
+   ! corresponding to the number of beads.
    subroutine print_charges(charges, iw_ist)
    use mod_files, only: UCHARGES
    use mod_general, only: natom, it
    use mod_const, only: DP
+   ! Index iw_ist is either indexing PI beads
+   ! or electronic state in Surface Hopping.
    integer, intent(in)  :: iw_ist
    real(KIND=DP),intent(in) :: charges(:)
    integer :: iat
 
+   ! TODO: Print time in fs, not time step
    write(UCHARGES, format5, advance='no')it, iw_ist
    do iat=1,natom
       write(UCHARGES,format4, advance='no')charges(iat)
@@ -32,8 +37,11 @@ module mod_io
    real(KIND=DP) :: total_dip
    integer :: ind
 
-   write(UDIP,format1,advance='no')it, iw
+   ! TODO: Print time in fs, not time step
+   write(UDIP,format5,advance='no')it, iw
 
+   ! TODO: Why the heck are we printing total dipmom fist?
+   ! Most QM program print Dx, Dy, Dz components first.
    do ind=1,3*nstates,3
       total_dip = dipoles(ind)**2 + dipoles(ind+1)**2 + dipoles(ind+2)**2
       total_dip = dsqrt(total_dip)
@@ -76,10 +84,10 @@ module mod_io
    integer, intent(in) :: iw, funit, num_atom
    integer :: iat, iost
 
+   iost = 0
    ! For SH or EH, when we did not calculate forces...
    ! Needs to be rewritten anyway...
    if (iw.lt.1)then
-      iost = 0
       return
    end if
 

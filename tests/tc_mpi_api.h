@@ -6,8 +6,8 @@
 #define MAX_DATA 200
 
 // When we get an error tag from client, we exit at any time
-#define Check_MPI_Recv(stat) \
-    if (stat.MPI_TAG == MPI_TAG_ERROR) {\
+#define checkRecvTag(mpi_status) \
+    if (mpi_status.MPI_TAG == MPI_TAG_ERROR) {\
     throw "Client sent an error tag.";}
 
 #define MPI_TAG_EXIT 0
@@ -23,24 +23,7 @@
 
 class TCServerMock {
   public:
-    TCServerMock(char *portname) {
-      strcpy(terachem_port_name, portname);
-      // Initialize MPI in the constructor
-      // TODO: Check for errors.
-      MPI_Init(0, NULL);
-
-      // Check that we're only running one MPI process
-      // i.e. that we've been invoked by `mpirun -n 1`
-      int mpi_comm_size;
-      MPI_Comm_size(MPI_COMM_WORLD, &mpi_comm_size);
-      printf("MPI_Comm_size = %d\n", mpi_comm_size);
-      if (mpi_comm_size != 1) {
-        printf("ERROR: Comm_size != 1!\n");
-        printf("Please execute this program with mpirun -n 1\n");
-      throw "Incorrect mpirun invocation";
-      }
-    }
-
+    TCServerMock(char *);
     ~TCServerMock(void);
 
     void initializeCommunication();
@@ -50,7 +33,7 @@ class TCServerMock {
     void receiveAtomTypesAndScrdir();
     void receiveCoordinates();
 
-    int receive_begin_loop();
+    int receiveBeginLoop();
     // This combines all expected receive
     // methods in their order. But the tc_server
     // implementation can also call them individually
@@ -58,20 +41,27 @@ class TCServerMock {
     int receive();
 
     void send(int loop_counter);
-    void send_scf_energy(double, int);
-    void send_qm_charges();
-    void send_qm_dipole_moments();
-    void send_qm_gradients();
+    void sendSCFEnergy(double, int);
+    void sendQMCharges();
+    void sendQMDipoleMoments();
+    void sendQMGradients();
 
   private:
-    char terachem_port_name[1024];
-    char port_name[MPI_MAX_PORT_NAME];
+    // This one will be published via MPI_Publish
+    // ABIN will be looking for this one via hydra_nameserver
+    char terachemPortName[1024];
+    // This is the name of the actual port from MPI_Open_port()
+    char mpiPortName[MPI_MAX_PORT_NAME];
     // Buffers for MPI_Recv and MPI_Send calls
     char   bufchars[MAX_DATA];
     double bufdoubles[MAX_DATA];
     int    bufints[MAX_DATA];
 
     MPI_Comm abin_client;
-    MPI_Status mpi_status;
+    MPI_Status mpiStatus;
+
     int totNumAtoms;
+    char *atomTypes[MAX_DATA];
+
+    void checkRecvCount(MPI_Status*, MPI_Datatype, int);
 };

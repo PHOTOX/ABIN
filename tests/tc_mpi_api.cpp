@@ -2,39 +2,70 @@
 
 using namespace std;
 
+TCServerMock::TCServerMock(char *portname) {
+  strcpy(terachemPortName, portname);
+  // Initialize MPI in the constructor
+  MPI_Init(0, NULL);
+
+  // Check that we're only running one MPI process
+  // i.e. that we've been invoked by `mpirun -n 1`
+  int commSize;
+  MPI_Comm_size(MPI_COMM_WORLD, &commSize);
+  printf("MPI_Comm_size = %d\n", commSize);
+  if (commSize != 1) {
+    printf("ERROR: Comm_size != 1!\n");
+    printf("Please execute this program with 'mpirun -n 1'\n");
+    throw "Incorrect mpirun invocation";
+  }
+}
+
 TCServerMock::~TCServerMock(void) {
   printf("Freeing and finalizing MPI.\n");
   MPI_Comm_free(&abin_client);
-  MPI_Close_port(port_name);
+  MPI_Close_port(mpiPortName);
   MPI_Finalize();
+}
+
+void TCServerMock::checkRecvCount(MPI_Status *mpiStatus,
+                                  MPI_Datatype datatype,
+                                  int expected_count) {
+  int recvCount;
+  MPI_Get_count(mpiStatus, datatype, &recvCount);
+  if (recvCount != expected_count) {
+    printf("Unexpected received count\n");
+    printf("Expected %d, got %d\n", expected_count, recvCount);
+    throw "Unexpected received count";
+  }
 }
 
 void TCServerMock::initializeCommunication() {
   // MPI_INFO_NULL are the implementation defaults. 
-  MPI_Open_port(MPI_INFO_NULL, port_name);
+  MPI_Open_port(MPI_INFO_NULL, mpiPortName);
   // establishes a port at which the server may be contacted.
-  printf("\nTerachem server available at port_name: %s\n", port_name);
-  printf("Will publish this port_name to '%s'.\n", terachem_port_name);
+  printf("Terachem server available at port name: %s\n", mpiPortName);
+  printf("Will publish this port under name '%s' to hydra_nameserver.\n", terachemPortName);
   
   // Publish the port name 
-  MPI_Publish_name(terachem_port_name, MPI_INFO_NULL, port_name);
+  MPI_Publish_name(terachemPortName, MPI_INFO_NULL, mpiPortName);
   printf("Waiting to accept MPI communication from ABIN client.\n");
   fflush(stdout);
 
-  MPI_Comm_accept(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, &abin_client);
+  MPI_Comm_accept(mpiPortName, MPI_INFO_NULL, 0, MPI_COMM_SELF, &abin_client);
   printf("MPI communication accepted.\n");
 
   // It's important to Unpublish the port_name early, otherwise
   // we could get conflicts when other server tried to use the same name.
-  MPI_Unpublish_name(terachem_port_name, MPI_INFO_NULL, port_name);
+  MPI_Unpublish_name(terachemPortName, MPI_INFO_NULL, mpiPortName);
 }
 
 // This is called only once at the beginning.
 int TCServerMock::receiveNumAtoms() {
   printf("Receiving number of atoms...\n");
   fflush(stdout);
-  MPI_Recv(bufints, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpi_status);
-  Check_MPI_Recv(mpi_status);
+  int recvCount = 1;
+  MPI_Recv(bufints, recvCount, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
+  checkRecvTag(mpiStatus);
+  checkRecvCount(&mpiStatus, MPI_INT, recvCount);
   totNumAtoms = bufints[0];
   if (totNumAtoms < 1) {
     printf("ERROR: Invalid number of atoms. Expected positive number, got: %d", totNumAtoms);
@@ -49,8 +80,10 @@ int TCServerMock::receiveNumAtoms() {
 void TCServerMock::receiveAtomTypes() {
   printf("Receiving atom types...\n");
   fflush(stdout);
-  MPI_Recv(bufchars, totNumAtoms*2, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpi_status);
-  Check_MPI_Recv(mpi_status);
+  int recvCount = totNumAtoms * 2;
+  MPI_Recv(bufchars, recvCount, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
+  checkRecvTag(mpiStatus);
+  checkRecvCount(&mpiStatus, MPI_CHAR, recvCount);
   puts(bufchars);
 }
 
@@ -58,8 +91,8 @@ void TCServerMock::receiveAtomTypesAndScrdir() {
   // TODO: Check that we get same atom types every iteration!
   printf("Receiving atom types and scrdir...\n");
   fflush(stdout);
-  MPI_Recv(bufchars, MAX_DATA, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpi_status);
-  Check_MPI_Recv(mpi_status);
+  MPI_Recv(bufchars, MAX_DATA, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
+  checkRecvTag(mpiStatus);
   // TODO: parse and validate scrdir name.
   // This is a horrible hack in TC
   // so that ABIN can change scratch directories for different beads in PIMD,
@@ -71,9 +104,11 @@ void TCServerMock::receiveCoordinates() {
   // Receive QM coordinates from ABIN
   // TODO: Separate this to a function.
   printf("Receiving QM coordinates...\n");
-  MPI_Recv(bufdoubles, totNumAtoms * 3, MPI_DOUBLE, MPI_ANY_SOURCE, 
-          MPI_ANY_TAG, abin_client, &mpi_status);
-  Check_MPI_Recv(mpi_status);
+  int recvCount = totNumAtoms * 3;
+  MPI_Recv(bufdoubles, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE,
+          MPI_ANY_TAG, abin_client, &mpiStatus);
+  checkRecvTag(mpiStatus);
+  checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
   for (int i = 0; i < totNumAtoms * 3; i++) {
     printf("%g ", bufdoubles[i]);
   }
@@ -82,13 +117,16 @@ void TCServerMock::receiveCoordinates() {
 
 // Receive number of QM atoms, QM atom types, QM atom coordinates
 // This is called repeatedly in the MD loop.
-int TCServerMock::receive_begin_loop() {
+int TCServerMock::receiveBeginLoop() {
   printf("\nReceiving new QM data.\n");
   fflush(stdout);
-  MPI_Recv(bufints, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpi_status);
-  Check_MPI_Recv(mpi_status);
-
-  int tag = mpi_status.MPI_TAG;
+  int recvCount = 1;
+  MPI_Recv(bufints, recvCount, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
+  checkRecvTag(mpiStatus);
+  // When ABIN sends it's exit tag, we want to allow it
+  // to send zero data.
+  //checkRecvCount(&mpiStatus, MPI_INT, recvCount);
+  int tag = mpiStatus.MPI_TAG;
 
   if (tag == MPI_TAG_EXIT) {
     printf("Got an EXIT tag from client. \n");
@@ -110,7 +148,7 @@ int TCServerMock::receive_begin_loop() {
 // for classical MD and PIMD.
 // For Surface Hopping see receive_sh()
 int TCServerMock::receive() {
-  int tag = receive_begin_loop();
+  int tag = receiveBeginLoop();
   if (tag == MPI_TAG_EXIT) {
     return tag;
   }
@@ -119,7 +157,7 @@ int TCServerMock::receive() {
   return tag;
 }
 
-void TCServerMock::send_scf_energy(double energy, int MPI_SCF_DIE) {
+void TCServerMock::sendSCFEnergy(double energy, int MPI_SCF_DIE) {
   bufdoubles[0] = energy;
   if (MPI_SCF_DIE) {
     // TODO: Actually test this scenario!
@@ -132,7 +170,7 @@ void TCServerMock::send_scf_energy(double energy, int MPI_SCF_DIE) {
   MPI_Send(bufdoubles, 1, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
 
-void TCServerMock::send_qm_charges() {
+void TCServerMock::sendQMCharges() {
   // TODO: We should move this computation elsewhere
   // and accept charges as inputs here.
   //
@@ -143,7 +181,7 @@ void TCServerMock::send_qm_charges() {
   MPI_Send(bufdoubles, totNumAtoms, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
 
-void TCServerMock::send_qm_dipole_moments() {
+void TCServerMock::sendQMDipoleMoments() {
   // QM dipole moment
   double Dx = -0.01;
   double Dy = -0.02;
@@ -157,7 +195,7 @@ void TCServerMock::send_qm_dipole_moments() {
   MPI_Send(bufdoubles, 4, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
 
-void TCServerMock::send_qm_gradients() {
+void TCServerMock::sendQMGradients() {
   printf("Sending gradients via MPI. \n");
   for(int i = 0; i < (totNumAtoms); i ++) {
     bufdoubles[3*i]   = 0.001+0.0001*(3*i);
@@ -175,14 +213,14 @@ void TCServerMock::send(int loop_counter) {
   // in waterpotentials/ and get real energies and forces?
   double SCFEnergy = 1.0 + loop_counter;
   int MPI_SCF_DIE = 0;
-  send_scf_energy(SCFEnergy, MPI_SCF_DIE);
+  sendSCFEnergy(SCFEnergy, MPI_SCF_DIE);
 
-  send_qm_charges();
+  sendQMCharges();
 
-  send_qm_dipole_moments();
+  sendQMDipoleMoments();
 
   // NOTE: In the real TC interface, gradients are sent
   // conditionally only if they are requested.
   // But we always request them in ABIN (see tc.receive).
-  send_qm_gradients();
+  sendQMGradients();
 }

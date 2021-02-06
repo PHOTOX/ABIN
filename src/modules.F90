@@ -593,7 +593,7 @@ module mod_files
       if(pot.eq.'_tera_')then
          open(UCHARGES,file=chfiles(UCHARGES),access=chaccess,action='write')
          write(UCHARGES,*)'# Atomic charges from current electronic state'
-         write(UCHARGES,*)'# Time  st ',(names(i),i=1,natom)
+         write(UCHARGES,*)'# Time_step  state_ind ',(names(i),i=1,natom)
          open(UDOTPRODCI,file=chfiles(UDOTPRODCI),access=chaccess,action='write')
          write(UDOTPRODCI,*)'# Dot products between current and previous CI vectors.'
          write(UDOTPRODCI,*)'# Time  cidotprod1  cidotprod2 ... '
@@ -603,6 +603,15 @@ module mod_files
          write(UTDIP,*)'# Time  st  tdip_tot.1 tdip_tot.2 ... tdip_x.1 tdip_y.1 tdip_z.1 tdip_x.2 tdip_y.2 tdip_z.2.'
       end if
    endif
+
+   if (ipimd /= 2 .and. pot == '_tera_')then
+      open(UCHARGES,file=chfiles(UCHARGES),access=chaccess,action='write')
+      write(UCHARGES,*)'# Atomic Mulliken charges from current electronic state'
+      write(UCHARGES,*)'# Time_step Bead_index ', (names(i),i=1,natom)
+
+      open(UDIP,file=chfiles(UDIP),access=chaccess,action='write')
+      write(UDIP,*)'# Time  |D| Dx Dy Dz'
+   end if
 
    if(isbc.eq.1)then
       open(URADIUS,file=chfiles(URADIUS),access=chaccess,action='write')

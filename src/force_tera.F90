@@ -210,13 +210,14 @@ end subroutine send_mm_data
 subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    use mpi
    use mod_const, only: DP, ANG
-   use mod_general, only: idebug
+   use mod_general, only: idebug, it, nwrite
+   use mod_io, only: print_charges, print_dipoles
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
    real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)  ::  eclas
    integer,intent(in)      ::  iw, walkmax, newcomm
-   ! TODO: make qmcharges global variable
+   ! TODO: actually print these charge vio mod_io::print_charges()
    real(DP) :: qmcharges( size(fx,1) )
    real(DP) :: dxyz_all(3, size(fx,1) )
    real(DP) :: escf                 ! SCF energy
@@ -269,12 +270,8 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    end if
    call MPI_Recv( qmcharges(:), natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
    call handle_mpi_error(ierr)
-   if ( idebug > 2 ) then
-      write(6,'(a)') 'Received the following charges from server:'
-      do iat=1, natqm
-         write(6,*) 'Atom ',iat, ': ', qmcharges(iat)
-      end do
-      call flush(6)
+   if (modulo(it, nwrite) == 0) then
+      call print_charges(qmcharges, iw)
    end if
 
    ! Dipole moment
@@ -288,6 +285,10 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
       write(6,'(a,4es15.6)') 'Received QM  dipole moment from server:', dipmom(:,1)
       call flush(6)
    end if
+   if (modulo(it, nwrite) == 0) then
+      call print_dipoles(dipmom(:,1), iw, 1)
+   end if
+
    ! MM dipole moment, disabled for now
 !   call MPI_Recv( dipmom(:,2), 4, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
 !   if ( idebug > 1 ) then
@@ -358,7 +359,15 @@ subroutine connect_terachem( itera )
    ! This allows us to retry failed MPI_LOOKUP_NAME() call
    ! TODO: After we connect, I think we should set the error handler back
    ! (to die immedietally upon error), unless idebug is > 1.
-   ! This I think is much safer.
+   ! This I think is much safer. The default handler should be MPI_ERRORS_ARE_FATAL.
+   ! https://www.netlib.org/utk/papers/mpi-book/node177.html#SECTION00841000000000000000
+
+   ! It might also be a good idea to write our own error handler by MPI_Errorhandler_Create()
+   ! https://www.open-mpi.org/doc/current/man3/MPI_Comm_create_errhandler.3.php
+   ! so that we don't have to call handle_mpi_error() after each MPI call.
+   ! This error handler should call abinerror() and if possible should try send
+   ! the error shutdown MPI_Send to TC (though we'd need to make sure we don't
+   ! enter some weird endless loop!).
    call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
    call handle_mpi_error(ierr)
 
@@ -468,17 +477,17 @@ subroutine connect_terachem( itera )
    use mpi
    integer, intent(in) :: error_code
    integer :: ierr, itera
-   integer :: empty=0
+   integer :: empty(1)
 
    do itera=1, nteraservers
 
       write(*,*)'Shutting down TeraChem server; id=',itera
       if (error_code.eq.0)then
-         call MPI_Send( empty, 1, MPI_INTEGER, 0, MPI_TAG_EXIT, newcomms(itera), ierr )
+         call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_EXIT, newcomms(itera), ierr)
       else
-         call MPI_Send( empty, 1, MPI_INTEGER, 0, MPI_TAG_ERROR, newcomms(itera), ierr )
+         call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_ERROR, newcomms(itera), ierr)
       end if
-      if (ierr.ne.0)then
+      if (ierr.ne.MPI_SUCCESS)then
          write(*,*)'I got a MPI Error when I tried to shutdown TeraChem server id =', itera
          write(*,*)'Please, verify manually that the TeraChem server was terminated.'
          write(*,*)'The error code was:', ierr
@@ -494,7 +503,7 @@ subroutine connect_terachem( itera )
    integer, intent(in) :: mpi_err
    integer :: ierr
    ! TODO: Get MPI error string
-   if(mpi_err.ne.0)then
+   if(mpi_err.ne.MPI_SUCCESS)then
       write(*,*)'Unspecified MPI Error, code:', ierr
       call abinerror('MPI ERROR')
    end if
