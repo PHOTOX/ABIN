@@ -386,7 +386,7 @@ contains
    end function read_nacm
 
    subroutine calc_nacm(itrj, nac_accu)
-      use mod_utils, only: LowerToUpper
+      use mod_utils, only: toupper
       use mod_general, only: it, pot
       integer, intent(in) :: itrj, nac_accu
       integer :: ist1, ist2
@@ -403,7 +403,7 @@ contains
       end do
       close (510)
 
-      chsystem = './'//trim(LowerToUpper(pot))//'/r.'//trim(pot)//'.nacm '
+      chsystem = './'//trim(toupper(pot))//'/r.'//trim(pot)//'.nacm '
       ! TODO: move the following line somwhere else
 !   write(*,*)'WARNING: Some NACMs not computed. Trying with decreased accuracy...'
 !   write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu

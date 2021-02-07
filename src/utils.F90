@@ -87,12 +87,11 @@ contains
       return
    end function get_dihedral
 
-   function SanitizeString(string) result(return_string)
+   function sanitize_string(string) result(return_string)
       character(len=*), intent(in) :: string
       character(len=len(string)) :: return_string
       integer :: c, i
 
-      ! TODO: Not sure whether this is handling non-ASCII cases correctly
       return_string = adjustl(string)
       do i = 1, len(trim(return_string))
          c = iachar(return_string(i:i))
@@ -102,11 +101,11 @@ contains
             write (*, *) 'Suspicious character found in one of the input strings: '//string
             write (*, *) 'ASCII index:', c, ' Position in the string:', i
             write (*, *) 'Please check your input files. Exiting...'
-            call abinerror('SanitizeString')
+            call abinerror('sanitize_string')
          end if
       end do
 
-   end function SanitizeString
+   end function sanitize_string
 
    ! Convert FORTRAN string to zero-terminated C string
    ! and remove any leading and trailing spaces.
@@ -117,29 +116,71 @@ contains
       c_string = trim(adjustl(string))//C_NULL_CHAR
    end function c_string
 
-   function UpperToLower(string) result(return_string)
+   function validate_atom_name(atom_name) result(adjustl_name)
+      character(len=*), intent(in) :: atom_name
+      character(len=len(atom_name)) :: adjustl_name
+      ! Note that sanitize_string does adjustl() on the string.
+      ! This is quite confusing, maybe we should change that.
+      adjustl_name = sanitize_string(atom_name)
+      if (len_trim(adjustl_name) > 2) then
+         write (*, *) 'ERROR: Incorrect atom name: '//atom_name
+         call abinerror('validate_atom_name')
+      end if
+   end function validate_atom_name
+
+   character(len=2) function normalize_atom_name(atom_name) result(atname)
+      character(len=*), intent(in) :: atom_name
+      atname = validate_atom_name(atom_name)
+      atname(1:1) = toupper(atname(1:1))
+      ! Lower the second character of atom name,
+      ! this looks niced in the output, and is also needed by TeraChem.
+      if (len_trim(atname) == 2) then
+         atname(2:2) = tolower(atname(2:2))
+      else
+         ! Not sure if this is neccessary?
+         atname(2:2) = ' '
+      end if
+   end function normalize_atom_name
+
+   integer function count_atoms_by_name(names, atom_name, natom) result(atom_count)
+      character(len=2), intent(in) :: names(:)
+      character(len=*), intent(in) :: atom_name
+      integer, intent(in) :: natom
+      character(len=2) :: norm_name
+      integer :: iat
+      atom_count = 0
+      norm_name = normalize_atom_name(atom_name)
+      ! We suppose that the names array is already normalized!
+      do iat = 1, natom
+         if (names(iat) == norm_name) then
+            atom_count = atom_count + 1
+         end if
+      end do
+   end function count_atoms_by_name
+
+   function tolower(string) result(return_string)
       character(len=*), intent(in) :: string
       character(len=len(string)) :: return_string
       integer, parameter :: UPPER_A = iachar('A'), UPPER_Z = iachar('Z')
       integer, parameter :: DELTA_LOWER_UPPER = iachar('a') - iachar('A')
       integer :: c, i
 
-      return_string = SanitizeString(string)
+      return_string = sanitize_string(string)
       do i = 1, len(trim(return_string))
          c = iachar(return_string(i:i))
          if (c >= UPPER_A .and. c <= UPPER_Z) c = c + DELTA_LOWER_UPPER
          return_string(i:i) = achar(c)
       end do
-   end function UpperToLower
+   end function tolower
 
-   function LowerToUpper(string) result(return_string)
+   function toupper(string) result(return_string)
       character(len=*), intent(in) :: string
       character(len=len(string)) :: return_string
       integer, parameter :: LOWER_A = iachar('a'), LOWER_Z = iachar('z')
       integer, parameter :: DELTA_UPPER_LOWER = iachar('A') - iachar('a')
       integer :: c, i
 
-      return_string = SanitizeString(string)
+      return_string = sanitize_string(string)
 
       do i = 1, len(trim(return_string))
          c = iachar(return_string(i:i))
@@ -147,7 +188,7 @@ contains
          if (c >= LOWER_A .and. c <= LOWER_Z) c = c + DELTA_UPPER_LOWER
          return_string(i:i) = achar(c)
       end do
-   end function LowerToUpper
+   end function toupper
 
    subroutine not_compiled_with(feature, caller)
       character(len=*), intent(in) :: feature, caller

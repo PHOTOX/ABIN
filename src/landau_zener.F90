@@ -362,7 +362,7 @@ contains
    end subroutine lz_hop
 
    subroutine lz_getsoc(soc_matrix, chpot)
-      use mod_utils, only: abinerror, lowertoupper
+      use mod_utils, only: abinerror, toupper
       use mod_files, only: MAXUNITS
 
       real(DP), intent(inout) :: soc_matrix(:, :)
@@ -374,7 +374,7 @@ contains
       logical :: file_exists
 
       !Perform SOC matrix computation
-      chsystem = './'//trim(LowerToUpper(chpot))//'/r.'//trim(chpot)//'.soc' !r.pot.soc
+      chsystem = './'//trim(toupper(chpot))//'/r.'//trim(chpot)//'.soc' !r.pot.soc
 
       inquire (FILE=chsystem, EXIST=file_exists)
       if (.not. file_exists) then
@@ -390,7 +390,7 @@ contains
       if (ISTATUS /= 0 .and. ISTATUS /= 256) then
          write (*, *) 'ERROR: Something went wrong during the execution of the ab initio external program.'
          write (*, *) 'See the approprite output files in&
-         & folder '//trim(LowerToUpper(chpot))//"/"
+         & folder '//trim(toupper(chpot))//"/"
          write (*, *) 'CALL:', chsystem
          call abinerror('force_abin')
       end if
