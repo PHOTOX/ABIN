@@ -1,0 +1,14 @@
+# Checking whether we fail gracefully when a wrong water potential is requested.
+&general
+watpot=5 ! only 1 - 4 are supported
+
+pot='mmwater'		
+nstep=1,
+mdtype='MD',
+dt=20.,
+/
+
+&nhcopt
+inose=0,
+temp=0.0,
+/

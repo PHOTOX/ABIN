@@ -21,7 +21,7 @@ contains
       use mod_const, only: ANG
       use mod_general, only: natom
       use mod_system, only: names
-      use mod_utils, only: get_distance
+      use mod_utils, only: get_distance, count_atoms_by_name
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(out) :: num_shake
       real(DP) :: r, hbond_len_thr
@@ -31,7 +31,7 @@ contains
       ! Or determine bonds in a better way
       hbond_len_thr = 2.0 * ANG
       ! Here we assume that each H atom has a single bond
-      num_shake = count_atoms_by_name('H')
+      num_shake = count_atoms_by_name(names, 'H', natom)
       ! TODO: Not sure about this, but shake does not
       ! work with PIMD anyway at this point
       iw = 1
@@ -77,20 +77,6 @@ contains
       end do
 
    end subroutine find_hbonds
-
-   ! TODO: Maybe move this to utils
-   integer function count_atoms_by_name(atom_name)
-      use mod_general, only: natom
-      use mod_system, only: names
-      character(len=*), intent(in) :: atom_name
-      integer :: nat, iat
-      nat = 0
-      do iat = 1, natom
-         if (names(iat) == atom_name) nat = nat + 1
-      end do
-      count_atoms_by_name = nat
-      return
-   end function count_atoms_by_name
 
    subroutine shake_init(x, y, z)
       real(DP) x(:, :), y(:, :), z(:, :)

@@ -197,182 +197,183 @@ contains
       allocate (am(natom))
       am = -1.0D0
       do i = 1, natom
-         if (names(i) == 'H') then
+         select case(names(i))
+         case ('H')
             am(i) = 1.008D0
-         else if (names(i) == 'H1') then
+         case ('H1')
             am(i) = 1.00782503207D0
-         else if (names(i) == 'H2' .or. names(i) == 'D') then
+         case ('H2', 'D')
             am(i) = 2.01410177785D0
-         else if (names(i) == 'O') then
+         case ('O')
             am(i) = 15.999D0
-         else if (names(i) == 'S') then
+         case ('S')
             am(i) = 32.06D0
-         else if (names(i) == 'SE') then
+         case ('Se')
             am(i) = 78.971D0
-         else if (names(i) == 'TE') then
+         case ('Te')
             am(i) = 127.60D0
-         else if (names(i) == 'N') then
+         case ('N')
             am(i) = 14.007D0
-         else if (names(i) == 'P') then
+         case ('P')
             am(i) = 30.973761998D0
-         else if (names(i) == 'AS') then
+         case ('As')
             am(i) = 74.921595D0
-         else if (names(i) == 'SB') then
+         case ('Sb')
             am(i) = 121.760D0
-         else if (names(i) == 'BI') then
+         case ('Bi')
             am(i) = 208.98040D0
-         else if (names(i) == 'F') then
+         case ('F')
             am(i) = 18.998403163D0
-         else if (names(i) == 'CL') then
+         case ('Cl')
             am(i) = 35.45D0
-         else if (names(i) == 'BR') then
+         case ('Br')
             am(i) = 79.904D0
-         else if (names(i) == 'I') then
+         case ('I')
             am(i) = 126.90447D0
-         else if (names(i) == 'LI') then
+         case ('Li')
             am(i) = 6.94D0
-         else if (names(i) == 'NA') then
+         case ('Na')
             am(i) = 22.98976928D0
-         else if (names(i) == 'K') then
+         case ('K')
             am(i) = 39.0983D0
-         else if (names(i) == 'BE') then
+         case ('Be')
             am(i) = 9.0121831D0
-         else if (names(i) == 'MG') then
+         case ('Mg')
             am(i) = 24.305D0
-         else if (names(i) == 'CA') then
+         case ('Ca')
             am(i) = 40.078D0
-         else if (names(i) == 'B') then
+         case ('B')
             am(i) = 10.81D0
-         else if (names(i) == 'AL') then
+         case ('Al')
             am(i) = 26.9815385D0
-         else if (names(i) == 'C') then
+         case ('C')
             am(i) = 12.0110D0
-         else if (names(i) == 'SI') then
+         case ('Si')
             am(i) = 28.085D0
-         else if (names(i) == 'GE') then
+         case ('Ge')
             am(i) = 72.630D0
-         else if (names(i) == 'SN') then
+         case ('Sn')
             am(i) = 118.710D0
-         else if (names(i) == 'PB') then
+         case ('Pb')
             am(i) = 207.2D0
-         else if (names(i) == 'HE') then
+         case ('He')
             am(i) = 4.002602D0
-         else if (names(i) == 'NE') then
+         case ('Ne')
             am(i) = 20.1797D0
-         else if (names(i) == 'AR') then
+         case ('Ar')
             am(i) = 39.948D0
-         else if (names(i) == 'KR') then
+         case ('Kr')
             am(i) = 83.798D0
-         else if (names(i) == 'XE') then
+         case ('Xe')
             am(i) = 131.293D0
-         else if (names(i) == 'FE') then
+         case ('Fe')
             am(i) = 55.845D0
-         else if (names(i) == 'TI') then
+         case ('Ti')
             am(i) = 47.867D0
-         else if (names(i) == 'V') then
+         case ('V')
             am(i) = 50.9415D0
-         else if (names(i) == 'CR') then
+         case ('Cr')
             am(i) = 51.9961D0
-         else if (names(i) == 'MN') then
+         case ('Mn')
             am(i) = 54.938044D0
-         else if (names(i) == 'CO') then
+         case ('Co')
             am(i) = 58.933194D0
-         else if (names(i) == 'NI') then
+         case ('Ni')
             am(i) = 58.6934D0
-         else if (names(i) == 'CU') then
+         case ('Cu')
             am(i) = 63.546D0
-         else if (names(i) == 'ZN') then
+         case ('Zn')
             am(i) = 65.38D0
-         else if (names(i) == 'AG') then
+         case ('Ag')
             am(i) = 107.8682D0
-         else if (names(i) == 'AU') then
+         case ('Au')
             am(i) = 196.966569D0
-         else if (names(i) == 'PT') then
+         case ('Pt')
             am(i) = 195.084D0
-         else if (names(i) == 'CD') then
+         case ('Cd')
             am(i) = 112.414D0
-         else if (names(i) == 'HG') then
+         case ('Hg')
             am(i) = 200.592D0
-         else if (names(i) == 'U') then
+         case ('U')
             am(i) = 238.02891D0
-         else if (names(i) == 'TL') then
+         case ('Tl')
             am(i) = 204.38D0
-         else if (names(i) == 'BA') then
+         case ('Ba')
             am(i) = 137.327D0
-         else if (names(i) == 'CE') then
+         case ('Ce')
             am(i) = 140.116D0
-         else if (names(i) == 'CS') then
+         case ('Cs')
             am(i) = 132.90545196D0
-         else if (names(i) == 'DY') then
+         case ('Dy')
             am(i) = 162.500D0
-         else if (names(i) == 'ER') then
+         case ('Er')
             am(i) = 167.259D0
-         else if (names(i) == 'EU') then
+         case ('Eu')
             am(i) = 151.964D0
-         else if (names(i) == 'GD') then
+         case ('Gd')
             am(i) = 157.25D0
-         else if (names(i) == 'GA') then
+         case ('Ga')
             am(i) = 69.723D0
-         else if (names(i) == 'HF') then
+         case ('Hf')
             am(i) = 178.49D0
-         else if (names(i) == 'HO') then
+         case ('Ho')
             am(i) = 164.93033D0
-         else if (names(i) == 'IN') then
+         case ('In')
             am(i) = 114.818D0
-         else if (names(i) == 'IR') then
+         case ('Ir')
             am(i) = 192.217D0
-         else if (names(i) == 'LA') then
+         case ('La')
             am(i) = 138.90547D0
-         else if (names(i) == 'LU') then
+         case ('Lu')
             am(i) = 174.9668D0
-         else if (names(i) == 'MO') then
+         case ('Mo')
             am(i) = 95.95D0
-         else if (names(i) == 'ND') then
+         case ('Nd')
             am(i) = 144.242D0
-         else if (names(i) == 'NB') then
+         case ('Nb')
             am(i) = 92.90637D0
-         else if (names(i) == 'OS') then
+         case ('Os')
             am(i) = 190.23D0
-         else if (names(i) == 'PD') then
+         case ('Pd')
             am(i) = 106.42D0
-         else if (names(i) == 'PR') then
+         case ('Pr')
             am(i) = 140.90766D0
-         else if (names(i) == 'PA') then
+         case ('Pa')
             am(i) = 231.03588D0
-         else if (names(i) == 'RE') then
+         case ('Re')
             am(i) = 186.207D0
-         else if (names(i) == 'RH') then
+         case ('Rh')
             am(i) = 102.90550D0
-         else if (names(i) == 'RB') then
+         case ('Rb')
             am(i) = 85.4678D0
-         else if (names(i) == 'RU') then
+         case ('Ru')
             am(i) = 101.07D0
-         else if (names(i) == 'SM') then
+         case ('Sm')
             am(i) = 150.36D0
-         else if (names(i) == 'SC') then
+         case ('Sc')
             am(i) = 44.955908D0
-         else if (names(i) == 'SR') then
+         case ('Sr')
             am(i) = 87.62D0
-         else if (names(i) == 'TA') then
+         case ('Ta')
             am(i) = 180.94788D0
-         else if (names(i) == 'TB') then
+         case ('Tb')
             am(i) = 158.92535D0
-         else if (names(i) == 'TH') then
+         case ('Th')
             am(i) = 232.0377D0
-         else if (names(i) == 'TM') then
+         case ('Tm')
             am(i) = 168.93422D0
-         else if (names(i) == 'W') then
+         case ('W')
             am(i) = 183.84D0
-         else if (names(i) == 'YB') then
+         case ('Yb')
             am(i) = 173.054D0
-         else if (names(i) == 'Y') then
+         case ('Y')
             am(i) = 88.90584D0
-         else if (names(i) == 'ZR') then
+         case ('Zr')
             am(i) = 91.224D0
-         else
+         case DEFAULT
             print*,'Atom name ', names(i), ' was not found in the library.'
             print*,'I hope you specified the mass in namelist "system"'
-         end if
+         end select
       end do
 
       call init_usermass()
@@ -408,10 +409,13 @@ contains
          do i = 1, size(massnames)
             do j = i + 1, size(massnames)
                if (massnames(i) == massnames(j)) then
+                  ! This is a very confusing if, I think we should just
+                  ! call abinerror unconditionally here.
                   if ((masses(i) > 0 .or. masses(j) > 0)) then
                      write (*, *) 'ERROR: ambiguous user input for masses.'
                      write (*, *) 'Please, take a hard look at the input arrays "masses" and "massnames"'
                      call finish(1)
+                     ! TODO: I think we should stop here?
                   end if
                end if
             end do

@@ -8,7 +8,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_sh, only: tocalc, en_array, istate
    use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
    use mod_qmmm, only: natqm
-   use mod_utils, only: abinerror, lowertoupper
+   use mod_utils, only: abinerror, toupper
    use mod_io, only: read_forces
    use mod_interfaces, only: oniom
    implicit none
@@ -96,7 +96,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 
 !     HERE we decide which program we use to obtain gradients and energies
 !     e.g. ./G09/r.g09
-      chsystem = './'//trim(LowerToUpper(chpot))//'/r.'//chpot
+      chsystem = './'//trim(toupper(chpot))//'/r.'//chpot
 
       inquire (FILE=chsystem, EXIST=file_exists)
       if (.not. file_exists) then
@@ -130,7 +130,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       if (ISTATUS /= 0 .and. ISTATUS /= 256) then
          write (*, '(A)') 'ERROR during the execution of the ab initio external program.'
          write (*, '(A)') 'Please inspect the output files in&
-         & folder '//trim(LowerToUpper(chpot))//"/"
+         & folder '//trim(toupper(chpot))//"/"
          call abinerror('force_abin')
       end if
 
@@ -157,7 +157,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          write (*, *) 'Fortran ERROR = ', iost
          write (*, *) 'This usually means, that the ab initio program failed to converge.'
          write (*, *) 'See the appropriate output files from the external program in folder '
-         write (*, *) trim(LowerToUpper(chpot))
+         write (*, *) trim(toupper(chpot))
          call abinerror('force_abin')
       end if
 !$OMP ATOMIC
@@ -207,7 +207,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          write (*, *) 'Fortran ERROR = ', iost
          write (*, *) 'This usually means, that the ab initio program failed.'
          write (*, *) 'See the appropriate output files from external program in folder ' &
-            //trim(LowerToUpper(chpot))//"/."
+            //trim(toupper(chpot))//"/."
          call abinerror('force_abin')
       end if
 

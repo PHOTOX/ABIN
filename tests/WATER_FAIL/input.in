@@ -1,0 +1,14 @@
+# Testing whether we detect a problem
+# with our mini.xyz when we request pure water force field.
+&general
+nstep=1,
+pot='mmwater'		
+mdtype='MD',
+watpot=1
+dt=20.
+/
+
+&nhcopt
+inose=0
+temp=100
+/
