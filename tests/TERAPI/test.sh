@@ -14,11 +14,11 @@ TCOUT=tc.out
 hydrapid=
 function launch_hydra_nameserver {
   # Make sure hydra_nameserver is running
-  HYDRAEXE=$1
+  CMD=$1
   hydra=$(ps -C hydra_nameserver -o pid= || true)
   if [[ -z ${hydra-} ]];then
     echo "Launching hydra nameserver for MPI_Lookup"
-    $HYDRA_EXE &
+    $CMD &
     hydrapid=$!
   fi
 }
