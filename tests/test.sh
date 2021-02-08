@@ -131,6 +131,8 @@ if [[ $TESTS = "all" ]];then
       folders[index]=REMD
       let index++
       folders[index]=TERAPI
+      let index++
+      folders[index]=TERAPI-PI
       # TODO: Test SH-MPI interface with TC
    fi
 

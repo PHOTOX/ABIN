@@ -3,7 +3,13 @@
 using namespace std;
 
 TCServerMock::TCServerMock(char *serverName) {
-  strcpy(tcServerName, serverName);
+
+  tcServerName = NULL;
+  if (serverName) {
+    tcServerName = new char[1024];
+    strcpy(tcServerName, serverName);
+  }
+
   // Initialize MPI in the constructor
   MPI_Init(0, NULL);
 
@@ -54,9 +60,11 @@ void TCServerMock::initializeCommunication() {
   // Establishes a port at which the server may be contacted.
   printf("Fake TeraChem server available at port name: %s\n", mpiPortName);
   
-  // Publish the port name 
-  MPI_Publish_name(tcServerName, MPI_INFO_NULL, mpiPortName);
-  printf("Port published under server name '%s'\n", tcServerName);
+  // Publish the port name, but only if tcServerName was passed to constructor.
+  if (tcServerName) {
+    MPI_Publish_name(tcServerName, MPI_INFO_NULL, mpiPortName);
+    printf("Port published under server name '%s'\n", tcServerName);
+  }
   printf("Waiting to accept MPI communication from ABIN client.\n");
   fflush(stdout);
 
@@ -65,10 +73,14 @@ void TCServerMock::initializeCommunication() {
 
   // It's important to unpublish the port_name early, otherwise
   // we could get conflicts when other server tried to use the same name.
-  // WARNING: It seems that if more then one tc_server is running,
-  // concurrent calls are crashing the hydra_nameserver.
+  // WARNING: If more then one tc_server is running,
+  // concurrent calls MPI_Unpublish_name are crashing the hydra_nameserver.
   // https://github.com/pmodels/mpich/issues/5058
-  MPI_Unpublish_name(tcServerName, MPI_INFO_NULL, mpiPortName);
+  if (tcServerName) {
+    MPI_Unpublish_name(tcServerName, MPI_INFO_NULL, mpiPortName);
+  }
+
+  delete[] tcServerName;
 }
 
 // This is called only once at the beginning.

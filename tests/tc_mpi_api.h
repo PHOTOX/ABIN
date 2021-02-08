@@ -51,7 +51,7 @@ class TCServerMock {
   private:
     // This one will be published via MPI_Publish
     // ABIN will be looking for this one via hydra_nameserver
-    char tcServerName[1024];
+    char *tcServerName;
     // This is the name of the actual port from MPI_Open_port()
     char mpiPortName[MPI_MAX_PORT_NAME];
     // Buffers for MPI_Recv and MPI_Send calls
