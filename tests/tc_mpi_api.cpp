@@ -2,8 +2,8 @@
 
 using namespace std;
 
-TCServerMock::TCServerMock(char *portname) {
-  strcpy(terachemPortName, portname);
+TCServerMock::TCServerMock(char *serverName) {
+  strcpy(tcServerName, serverName);
   // Initialize MPI in the constructor
   MPI_Init(0, NULL);
 
@@ -15,7 +15,7 @@ TCServerMock::TCServerMock(char *portname) {
   if (commSize != 1) {
     printf("ERROR: Comm_size != 1!\n");
     printf("Please execute this program with 'mpirun -n 1'\n");
-    throw "Incorrect mpirun invocation";
+    throw std::runtime_error("Incorrect mpirun invocation");
   }
 }
 
@@ -24,6 +24,9 @@ TCServerMock::~TCServerMock(void) {
   MPI_Comm_free(&abin_client);
   MPI_Close_port(mpiPortName);
   MPI_Finalize();
+  // TODO: this is not safe if they were not allocated yet!
+  delete[] gradients;
+  delete[] coordinates;
 }
 
 void TCServerMock::checkRecvCount(MPI_Status *mpiStatus,
@@ -34,28 +37,38 @@ void TCServerMock::checkRecvCount(MPI_Status *mpiStatus,
   if (recvCount != expected_count) {
     printf("Unexpected received count\n");
     printf("Expected %d, got %d\n", expected_count, recvCount);
-    throw "Unexpected received count";
+    throw std::runtime_error("Unexpected received count");
+  }
+}
+
+// When we get an error tag from client we exit immediately.
+void TCServerMock::checkRecvTag(MPI_Status &mpiStatus) {
+  if (mpiStatus.MPI_TAG == MPI_TAG_ERROR) {
+    throw std::runtime_error("Client sent an error tag.");
   }
 }
 
 void TCServerMock::initializeCommunication() {
   // MPI_INFO_NULL are the implementation defaults. 
   MPI_Open_port(MPI_INFO_NULL, mpiPortName);
-  // establishes a port at which the server may be contacted.
-  printf("Terachem server available at port name: %s\n", mpiPortName);
-  printf("Will publish this port under name '%s' to hydra_nameserver.\n", terachemPortName);
+  // Establishes a port at which the server may be contacted.
+  printf("Fake TeraChem server available at port name: %s\n", mpiPortName);
   
   // Publish the port name 
-  MPI_Publish_name(terachemPortName, MPI_INFO_NULL, mpiPortName);
+  MPI_Publish_name(tcServerName, MPI_INFO_NULL, mpiPortName);
+  printf("Port published under server name '%s'\n", tcServerName);
   printf("Waiting to accept MPI communication from ABIN client.\n");
   fflush(stdout);
 
   MPI_Comm_accept(mpiPortName, MPI_INFO_NULL, 0, MPI_COMM_SELF, &abin_client);
   printf("MPI communication accepted.\n");
 
-  // It's important to Unpublish the port_name early, otherwise
+  // It's important to unpublish the port_name early, otherwise
   // we could get conflicts when other server tried to use the same name.
-  MPI_Unpublish_name(terachemPortName, MPI_INFO_NULL, mpiPortName);
+  // WARNING: It seems that if more then one tc_server is running,
+  // concurrent calls are crashing the hydra_nameserver.
+  // https://github.com/pmodels/mpich/issues/5058
+  MPI_Unpublish_name(tcServerName, MPI_INFO_NULL, mpiPortName);
 }
 
 // This is called only once at the beginning.
@@ -69,9 +82,13 @@ int TCServerMock::receiveNumAtoms() {
   totNumAtoms = bufints[0];
   if (totNumAtoms < 1) {
     printf("ERROR: Invalid number of atoms. Expected positive number, got: %d", totNumAtoms);
-    throw "Invalid number of atoms";
+    throw std::runtime_error("Invalid number of atoms");
   }
   printf("totNumAtoms=%d\n", totNumAtoms);
+
+  // Allocate buffers for gradients and coordinates
+  gradients = new double[totNumAtoms * 3];
+  coordinates = new double[totNumAtoms * 3];
   return totNumAtoms;
 }
 
@@ -95,8 +112,9 @@ void TCServerMock::receiveAtomTypesAndScrdir() {
   checkRecvTag(mpiStatus);
   // TODO: parse and validate scrdir name.
   // This is a horrible hack in TC
-  // so that ABIN can change scratch directories for different beads in PIMD,
-  // while retaining the existing Amber interface.
+  // ABIN misuses the atom type array to set scratch directories
+  // (useful e.g. for different beads in PIMD)
+  // This was done this way to preserve the existing Amber interface.
   puts(bufchars);
 }
 
@@ -110,6 +128,7 @@ void TCServerMock::receiveCoordinates() {
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
   for (int i = 0; i < totNumAtoms * 3; i++) {
+    coordinates[i] = bufdoubles[i];
     printf("%g ", bufdoubles[i]);
   }
   printf("\n");
@@ -133,13 +152,13 @@ int TCServerMock::receiveBeginLoop() {
     return tag;
   } else if (tag != MPI_TAG_GRADIENT) {
     printf("ERROR: Expected mpi_tag=%d, got %d", MPI_TAG_GRADIENT, tag);
-    throw "Invalid MPI TAG received";
+    throw std::runtime_error("Invalid MPI TAG received");
   }
   
   if (totNumAtoms != bufints[0]) {
     printf("ERROR: Unexpected number of atoms.\n");
     printf("Expected %d, got %d\n", totNumAtoms, bufints[0]);
-    throw "Invalid number of atoms received";
+    throw std::runtime_error("Invalid number of atoms received");
   }
   return tag;
 }
@@ -197,23 +216,22 @@ void TCServerMock::sendQMDipoleMoments() {
 
 void TCServerMock::sendQMGradients() {
   printf("Sending gradients via MPI. \n");
-  for(int i = 0; i < (totNumAtoms); i ++) {
-    bufdoubles[3*i]   = 0.001+0.0001*(3*i);
-    bufdoubles[3*i+1] = 0.001+0.0001*(3*i+1);
-    bufdoubles[3*i+2] = 0.001+0.0001*(3*i+2);
+  for(int i = 0; i < totNumAtoms; i++) {
+    bufdoubles[3*i]   = gradients[3*i];
+    bufdoubles[3*i+1] = gradients[3*i+1];
+    bufdoubles[3*i+2] = gradients[3*i+2];
     printf("%lf %lf %lf\n", bufdoubles[3*i], bufdoubles[3*i+1], bufdoubles[3*i+2]);
   }
-  MPI_Send(bufdoubles, 3*totNumAtoms, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
+  MPI_Send(bufdoubles, 3 * totNumAtoms, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
 
-void TCServerMock::send(int loop_counter) {
+void TCServerMock::send() {
   printf("Sending QM energy, QM population charges, QM dipoles and QN gradients via MPI.\n");
 
-  // TODO: Maybe we could link this to the water force field
-  // in waterpotentials/ and get real energies and forces?
-  double SCFEnergy = 1.0 + loop_counter;
+  double energy = getWaterGradients();
   int MPI_SCF_DIE = 0;
-  sendSCFEnergy(SCFEnergy, MPI_SCF_DIE);
+
+  sendSCFEnergy(energy, MPI_SCF_DIE);
 
   sendQMCharges();
 
@@ -223,4 +241,39 @@ void TCServerMock::send(int loop_counter) {
   // conditionally only if they are requested.
   // But we always request them in ABIN (see tc.receive).
   sendQMGradients();
+}
+
+// Gradients stored internally for now,
+// returns energy in atomic units.
+double TCServerMock::getWaterGradients() {
+  // conversion constants
+  const double ANG = 1.889726132873;
+  const double AUTOKCAL = 627.50946943;
+  const double FORCE_FAC = 1 / ANG / AUTOKCAL;
+
+  double *converted_coords = new double[3 * totNumAtoms];
+
+  if (totNumAtoms % 3 != 0) {
+    throw std::runtime_error("Number of atoms not divisible by 3");
+  }
+  int nwater = totNumAtoms / 3;
+
+  double E = 0.0;
+  for (int i = 0; i < totNumAtoms * 3; i++) {
+    converted_coords[i] = coordinates[i] / ANG;
+    gradients[i] = 0;
+  }
+
+  h2o::qtip4pf water_potential;
+  E = water_potential(nwater, coordinates, gradients);
+
+  // Convert energy and gradients to atomic units
+  E /= AUTOKCAL;
+  for (int i = 0; i < totNumAtoms * 3; i++) {
+     gradients[i] *= FORCE_FAC;
+  }
+
+  delete[] converted_coords;
+
+  return E;
 }

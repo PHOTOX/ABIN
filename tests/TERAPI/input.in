@@ -1,4 +1,12 @@
+NOTE: The reference files were actually created with
+pot='mmwater'
+TCServerMock uses the same qTIP4P potential,
+so now we are sure that all data are passed correctly.
+(Except for charges and dipoles, which are currently randomly
+assigned in tc_mpi_api.cpp)
+
 &general
+!pot='mmwater'
 pot='_tera_'
 watpot=1
 ipimd=0,
@@ -15,6 +23,6 @@ idebug=3
 /
 
 &nhcopt
-inose=1,
-temp=100.15,
+inose=0,
+temp=0.0d0
 /

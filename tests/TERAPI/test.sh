@@ -1,14 +1,13 @@
 #/bin/bash
 set -euo pipefail
 # Useful for debugging
-# TODO: Comment this out before merging
-set -x
+#set -x
 
 ABINEXE=$1
 ABINOUT=abin.out
 ABININ=input.in
 ABINGEOM=mini.xyz
-TCSRC="../tc_mpi_api.cpp tc_server.cpp"
+TCSRC="../tc_mpi_api.cpp ../../water_potentials/qtip4pf.cpp tc_server.cpp"
 TCEXE=tc_server
 TCOUT=tc.out
 
@@ -22,9 +21,9 @@ else
   MPICH_HYDRA=$MPI_PATH/bin/hydra_nameserver
 fi
 
-rm -f restart.xyz movie.xyz $TCEXE
+rm -f restart.xyz movie.xyz $TCEXE $TCOUT $ABINOUT
 if [[ "${1-}" = "clean" ]];then
-   rm -f $TCOUT $ABINOUT *dat *diff restart.xyz.old
+   rm -f $TCOUT $ABINOUT *dat *diff restart.xyz.old velocities.xyz forces.xyz
    exit 0
 fi
 
@@ -37,8 +36,6 @@ if [[ -f "${MPI_PATH-}/bin/orterun" ]];then
   # https://www.open-mpi.org/doc/v4.1/man1/ompi-server.1.php
   # https://www.open-mpi.org/doc/v4.1/man1/mpirun.1.php#sect6 (search for ompi-server)
   echo "Skipping TERAPI test with OpenMPI"
-  # TODO: Is there a less hacky way to fake passing this test?
-  # Or should we skip it altogether already in tests/test.sh?
   for f in `ls *ref`;do
     cp $f `basename $f .ref`
   done
@@ -74,6 +71,19 @@ function cleanup {
   exit 0
 }
 
+tc_stopped=
+abin_stopped=
+
+function check_tc {
+  tc_stopped=
+  ps -p $tcpid > /dev/null || tc_stopped=1
+}
+
+function check_abin {
+  abin_stopped=
+  ps -p $abinpid > /dev/null || abin_stopped=1
+}
+
 trap cleanup INT ABRT TERM EXIT
 
 # The MPI interface is prone to deadlocks, where
@@ -82,30 +92,32 @@ trap cleanup INT ABRT TERM EXIT
 MAX_TIME=6
 seconds=1
 while true;do
-  ps -p $tcpid > /dev/null || tc_stopped=1
-  ps -p $abinpid > /dev/null || abin_stopped=1
+  check_abin
+  check_tc
   if [[ -n ${tc_stopped:-} && -n ${abin_stopped:-} ]];then
-    # Both TC and ABIN stopped, hopefully succesfully
+    # Both TC and ABIN stopped.
     break
   elif [[ -n ${tc_stopped:-} || -n ${abin_stopped:-} ]];then
     # TC or ABIN ended, give the other time to finish.
     sleep 1
-    if ! ps -o pid= -p $tcpid;then
+    check_abin
+    check_tc
+    if [[ -n ${tc_stopped:-} && -n ${abin_stopped:-} ]];then
+      # Both TC and ABIN stopped.
+      break
+    elif [[ -n ${tc_stopped:-} ]];then
       echo "Fake TeraChem died. Killing ABIN."
-      cat $TCOUT
-      cleanup
-    elif ! ps -o pid= -p $abinpid;then
-      echo "ABIN died. Killing fake TeraChem."
-      cat $ABINOUT
+      echo "Printing TC and ABIN outputs"
+      cat $TCOUT $ABINOUT
       cleanup
     else
-      # Normal exit
-      break
+      echo "ABIN died. Killing fake TeraChem."
+      echo "Printing TC and ABIN outputs"
+      cat $TCOUT $ABINOUT
+      cleanup
     fi
   fi
-  # Maybe add longer sleep interval to make this less flaky
-  # (i.e. TC and ABIN do not end at the exact same time")
-  # Alternatively, we can always return 0 from cleanup
+
   sleep 1
   let ++seconds
   if [[ $seconds -gt $MAX_TIME ]];then

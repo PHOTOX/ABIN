@@ -1,14 +1,12 @@
 #include <cstdlib>
 #include <math.h>
 #include <cstring>
+#include <stdexcept>
 #include "mpi.h"
 
-#define MAX_DATA 200
+#include "../water_potentials/qtip4pf.h"
 
-// When we get an error tag from client, we exit at any time
-#define checkRecvTag(mpi_status) \
-    if (mpi_status.MPI_TAG == MPI_TAG_ERROR) {\
-    throw "Client sent an error tag.";}
+#define MAX_DATA 200
 
 #define MPI_TAG_EXIT 0
 #define MPI_TAG_GRADIENT 2
@@ -40,7 +38,11 @@ class TCServerMock {
     // for better granurality.
     int receive();
 
-    void send(int loop_counter);
+    // Using qTIP4PF, same as in ABIN and used in all other tests
+    // returns potential energy
+    double getWaterGradients();
+
+    void send();
     void sendSCFEnergy(double, int);
     void sendQMCharges();
     void sendQMDipoleMoments();
@@ -49,13 +51,16 @@ class TCServerMock {
   private:
     // This one will be published via MPI_Publish
     // ABIN will be looking for this one via hydra_nameserver
-    char terachemPortName[1024];
+    char tcServerName[1024];
     // This is the name of the actual port from MPI_Open_port()
     char mpiPortName[MPI_MAX_PORT_NAME];
     // Buffers for MPI_Recv and MPI_Send calls
     char   bufchars[MAX_DATA];
     double bufdoubles[MAX_DATA];
     int    bufints[MAX_DATA];
+
+    double *gradients;
+    double *coordinates;
 
     MPI_Comm abin_client;
     MPI_Status mpiStatus;
@@ -64,4 +69,5 @@ class TCServerMock {
     char *atomTypes[MAX_DATA];
 
     void checkRecvCount(MPI_Status*, MPI_Datatype, int);
+    void checkRecvTag(MPI_Status&);
 };

@@ -7,14 +7,16 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-  char terachem_port_name[1024]; 
+  char server_name[1024];
 
-  strcpy(terachem_port_name, "terachem_port.1");
-  if (argc > 1) {
-    strcpy(terachem_port_name,argv[1]);
+  if (argc != 2) {
+    printf("I need exactly one cmdline argument <server_name>");
+    throw std::runtime_error("Incorrect invocation");
   }
 
-  TCServerMock tc = TCServerMock(terachem_port_name);
+  strcpy(server_name, argv[1]);
+
+  TCServerMock tc = TCServerMock(server_name);
 
   tc.initializeCommunication();
 
@@ -27,23 +29,18 @@ int main(int argc, char* argv[])
   while (true) {
 
     int status = tc.receiveBeginLoop();
-    // TODO: Call receive individually and validate received data.
     if (status == MPI_TAG_EXIT) {
       break;
     }
 
-    // TODO: Validate received data?
-    // Should be hardcode what we expect to receive?
     tc.receiveAtomTypesAndScrdir();
     tc.receiveCoordinates();
 
-    //tc.send(loop_counter);
+    // Energies and gradients from qTIP4PF potential
+    double energy = tc.getWaterGradients();
 
-    // TODO: Maybe we could link this to the water force field
-    // in waterpotentials/ and get real energies and forces?
-    double SCFEnergy = 1.0 + loop_counter;
     int MPI_SCF_DIE = 0;
-    tc.sendSCFEnergy(SCFEnergy, MPI_SCF_DIE);
+    tc.sendSCFEnergy(energy, MPI_SCF_DIE);
  
     tc.sendQMCharges();
  
