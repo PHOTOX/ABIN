@@ -44,7 +44,7 @@ cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MP
 #--disable-fast --enable-g-option=all \
 ./configure FC=gfortran CC=gcc \
   --enable-fortran=all \
-  --with-pm=hydra --with-device=ch3:nemesis \
+  --with-pm=hydra --with-device=ch3 \
   --with-namepublisher=pmi \
   --enable-static --disable-shared \
   --prefix=${INSTALL_DIR} 2>&1 |\
