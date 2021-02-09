@@ -1,7 +1,7 @@
 module mod_terampi
 ! ----------------------------------------------------------------
 ! Interface for TeraChem based QM and QM/MM MD.
-! Perform MPI communications with terachem. Requires MPI 2.0 or above to use.
+! Perform MPI communications with terachem. Requires MPI 2.0 or above to use
 ! So far, I was not able to make it work with OpenMPI.
 ! (but now that we use file based tera_port, it should work as well)
 !
@@ -63,8 +63,8 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
 
    itera = 1
 
-   ! Parallelization accross TeraChem servers
-   !$OMP PARALLEL DO PRIVATE(itera)
+! NOTE: Parallelization accross TeraChem servers
+!$OMP PARALLEL DO PRIVATE(itera)
    do iw=1, walkmax
 
       ! map OMP thread to TC server
@@ -130,8 +130,8 @@ subroutine send_tera(x, y, z, iw, newcomm)
       write(*,*)(names_qm(iat), iat=1,natqm)
       call flush(6)
    end if
-   ! DH WARNING: this will not work for iw > 199
-   ! not really tested for iw > 99
+   ! DH WARNING: this will not work for iw>199
+   ! not really tested for iw>99
    ! TODO: refactor this mess
    write(names_qm(natqm+1),'(A2)')'++'
    write(names_qm(natqm+2),'(A2)')'sc'
@@ -174,7 +174,7 @@ end subroutine send_tera
 ! QM/MM via TC-MPI interface is currently not
 ! implemented so excluding this code from compilation.
 #if 0
-subroutine send_mm_data(x, y, z, iw, comm)
+subroutine send_mm_data(x, y, z, iw, newcomm)
    use mod_const, only: DP, ANG
    use mod_general, only: idebug
    use mod_qmmm, only: natqm
@@ -190,23 +190,25 @@ subroutine send_mm_data(x, y, z, iw, comm)
    end do
 
    ! Send natmm and the charge of each atom
-   if (idebug > 1) then
+   if ( idebug > 1 ) then
       write(6,'(a, i0)') 'Sending natmm = ', natmm_tera
+      call flush(6)
    end if
-   call MPI_Send(natmm_tera, 1, MPI_INTEGER, 0, 2, comm, ierr)
+   call MPI_Send( natmm_tera, 1, MPI_INTEGER, 0, 2, newcomm, ierr ) 
    call handle_mpi_error(ierr)
 
-   if (idebug > 1) then
+   if ( idebug > 1 ) then
       write(6,'(a)') 'Sending charges: '
    end if
-   call MPI_Send(mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, comm, ierr)
+   call MPI_Send( mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
    call handle_mpi_error(ierr)
 
    ! Send MM point charge coordinate array
    if ( idebug > 1 ) then
       write(6,'(a)') 'Sending charges coords: '
    end if
-   call MPI_Send(coords, 3*natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, comm, ierr)
+
+   call MPI_Send( coords, 3*natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr ) 
    call handle_mpi_error(ierr)
 end subroutine send_mm_data
 #endif
@@ -382,12 +384,12 @@ subroutine connect_terachem( itera )
    if (iremd.eq.1) write(chtera,'(I1)')my_rank + 1
    if (teraport.ne.'')then 
       server_name = trim(teraport)//'.'//trim(chtera)
-      write(6,'(2a)') 'Looking up TeraChem server under name: ', trim(server_name)
+      write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
       call flush(6)
 
       do
 
-         call MPI_Lookup_name(trim(server_name), MPI_INFO_NULL, port_name, ierr)
+         call MPI_LOOKUP_NAME(trim(server_name), MPI_INFO_NULL, port_name, ierr)
          if (ierr == MPI_SUCCESS) then
             ! This sometimes happens, I have no idea why.
             if(len_trim(port_name).eq.0)then
@@ -418,7 +420,7 @@ subroutine connect_terachem( itera )
       write(6,'(A)') 'Reading TeraChem port name from file '//trim(portfile)
       call system('sync')    ! flush HDD buffer, not sure how portable this is
       open(500, file=portfile, action="read", status="old", iostat=iost)
-      if (iost.ne.0) then
+      if (iost.ne.0)then
          write(*,*)'WARNING: Cannot open file '//trim(portfile)
          write(*,*)'Will wait for 10s and try again...'
          call system('sleep 10')
@@ -435,7 +437,6 @@ subroutine connect_terachem( itera )
 
    write(6,'(2a)') 'Found port: ', trim(port_name)
    write(6,'(a)') 'Establishing connection to TeraChem...'
-   call flush(6)
    ! ----------------------------------------
    ! Establish new communicator via port name
    ! ----------------------------------------
@@ -481,6 +482,7 @@ subroutine connect_terachem( itera )
 
   end subroutine initialize_terachem
 
+
    subroutine finalize_terachem(abin_error_code)
    use mpi
    integer, intent(in) :: abin_error_code
@@ -513,7 +515,7 @@ subroutine connect_terachem( itera )
 
    subroutine handle_mpi_error(mpi_err)
    use mpi
-   use mod_utils, only: abinerror
+   use mod_utils,    only: abinerror
    integer, intent(in) :: mpi_err
    character(len=MPI_MAX_ERROR_STRING) :: error_string
    integer :: result_len, ierr
