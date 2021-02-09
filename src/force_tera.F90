@@ -273,7 +273,7 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    end if
    call MPI_Recv( qmcharges(:), natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr )
    call handle_mpi_error(ierr)
-   if (modulo(it, nwrite) == 0) then
+   if (modulo(it, nwrite) == 0 .and. nteraservers == 1) then
       call print_charges(qmcharges, iw)
    end if
 
@@ -289,9 +289,9 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
       call flush(6)
    end if
    ! TODO: Attach dipoles to global electronic structure type
-   ! and print them elswhere. Right now when we run concurrent
+   ! and print them elsewhere. Right now when we run concurrent
    ! TC servers, the printing is not deterministic.
-   if (modulo(it, nwrite) == 0) then
+   if (modulo(it, nwrite) == 0 .and. nteraservers == 1) then
       call print_dipoles(dipmom(:,1), iw, 1)
    end if
 
@@ -329,6 +329,7 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
       fz(iat,iw) = -dxyz_all(3,iat)
    end do
 
+   ! TODO: Divide by walkmax in forces.xyz
 !$OMP ATOMIC
    eclas = eclas + escf / walkmax
 
@@ -447,6 +448,7 @@ subroutine connect_terachem( itera )
 
    end subroutine connect_terachem
 
+   ! TODO: Paralelize this over OpenMP
    subroutine initialize_terachem()
    use mpi
    use mod_qmmm,  only: natqm
@@ -479,12 +481,11 @@ subroutine connect_terachem( itera )
 
   end subroutine initialize_terachem
 
-
    subroutine finalize_terachem(error_code)
    use mpi
    integer, intent(in) :: error_code
    integer :: ierr, itera
-   integer :: empty(1)
+   integer :: empty
 
    do itera=1, nteraservers
 
