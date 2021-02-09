@@ -136,6 +136,9 @@ if [[ $TESTS = "all" ]];then
       let index++
       folders[index]=TERAPI-FAILS
       # TODO: Test SH-MPI interface with TC
+   else
+      let index=${#folders[@]}+1
+      folders[index]=WITHOUT_MPI
    fi
 
    if [[ $CP2K = "TRUE" ]];then
