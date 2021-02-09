@@ -132,7 +132,9 @@ if [[ $TESTS = "all" ]];then
       let index++
       folders[index]=TERAPI
       let index++
-      folders[index]=TERAPI-PI
+      folders[index]=TERAPI-PIMD
+      let index++
+      folders[index]=TERAPI-FAILS
       # TODO: Test SH-MPI interface with TC
    fi
 

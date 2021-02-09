@@ -191,8 +191,7 @@ int TCServerMock::receive() {
 void TCServerMock::sendSCFEnergy(double energy, int MPI_SCF_DIE) {
   bufdoubles[0] = energy;
   if (MPI_SCF_DIE) {
-    // TODO: Actually test this scenario!
-    printf("SCF did not converge. Setting MPI_TAG_OK = %d.\n", MPI_TAG_SCF_DIED);
+    printf("SCF did not converge. Setting MPI_TAG = %d.\n", MPI_TAG_SCF_DIED);
     MPI_Send(bufdoubles, 1, MPI_DOUBLE, 0, MPI_TAG_SCF_DIED, abin_client);
     MPI_SCF_DIE = 0; // reset the flag for the next loop
   }

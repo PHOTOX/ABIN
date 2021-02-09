@@ -4,60 +4,20 @@ set -euo pipefail
 #set -x
 
 ABINEXE=$1
-ABINOUT=abin.out
-ABININ=input.in
-ABINGEOM=mini.xyz
-TCSRC="../tc_mpi_api.cpp ../../water_potentials/qtip4pf.cpp tc_server.cpp"
-TCEXE=tc_server
-TCOUT=tc.out
-
-hydrapid=
-function launch_hydra_nameserver {
-  # Make sure hydra_nameserver is running
-  CMD=$1
-  hydra=$(ps -C hydra_nameserver -o pid= || true)
-  if [[ -z ${hydra-} ]];then
-    echo "Launching hydra nameserver for MPI_Lookup"
-    $CMD &
-    hydrapid=$!
-  fi
-}
+source ../test_tc_server_utils.sh
 
 # TODO: Determine this from ABIN input!
 N_TERA_SERVERS=4  # Use more TC servers for PIMD or REMD
 
-if [[ -z ${MPI_PATH-} ]];then
-  MPIRUN=mpirun
-  MPICXX=mpicxx
-  MPICH_HYDRA=hydra_nameserver
-else
-  MPIRUN=$MPI_PATH/bin/mpirun
-  MPICXX=$MPI_PATH/bin/mpicxx
-  MPICH_HYDRA=$MPI_PATH/bin/hydra_nameserver
-fi
-
-rm -f restart.xyz movie.xyz $TCEXE $ABINOUT $TCOUT.? port.txt.*
-if [[ "${1-}" = "clean" ]];then
-   rm -f $TCOUT $ABINOUT *dat *diff restart.xyz.old velocities.xyz forces.xyz
-   exit 0
-fi
-
-if [[ -f "${MPI_PATH-}/bin/orterun" ]];then
-  # TeraChem is compiled with MPICH so there's no
-  # point in trying to make this work with OpenMPI.
-  # We'll skip this test by faking it was successfull.
-  # Here are some pointers if we ever want to make it work:
-  # https://techdiagnosys.blogspot.com/2016/12/openmpi-working-nameserver-publish.html
-  # https://www.open-mpi.org/doc/v4.1/man1/ompi-server.1.php
-  # https://www.open-mpi.org/doc/v4.1/man1/mpirun.1.php#sect6 (search for ompi-server)
-  echo "Skipping TERAPI test with OpenMPI"
-  # TODO: Is there a less hacky way to fake passing this test?
-  # Or should we skip it altogether already in tests/test.sh?
-  for f in `ls *ref`;do
-    cp $f `basename $f .ref`
-  done
+set_default_vars
+set_mpich_vars
+# If $1 = "clean"; exit early.
+if ! clean_output_files $1; then
   exit 0
 fi
+
+# Exit early for OpenMPI build.
+check_for_openmpi
 
 # Compiled the fake TC server
 $MPICXX $TCSRC -Wall -o $TCEXE
@@ -103,7 +63,7 @@ trap cleanup INT ABRT TERM EXIT
 # The MPI interface is prone to deadlocks, where
 # both server and client are waiting on MPI_Recv.
 # We need to kill both processes if that happens.
-MAX_TIME=10
+MAX_TIME=100
 seconds=1
 # CHECK WHETHER ABIN AND TC ARE RUNNING
 function join_by { local IFS="$1"; shift; echo "$*"; }
@@ -125,7 +85,7 @@ while true;do
     cleanup
   fi
 
-  sleep 1
+  sleep 0.2
   let ++seconds
   if [[ $seconds -gt $MAX_TIME ]];then
     echo "Maximum time exceeded."
