@@ -481,43 +481,53 @@ subroutine connect_terachem( itera )
 
   end subroutine initialize_terachem
 
-   subroutine finalize_terachem(error_code)
+   subroutine finalize_terachem(abin_error_code)
    use mpi
-   integer, intent(in) :: error_code
-   integer :: ierr, itera
+   integer, intent(in) :: abin_error_code
+   character(len=MPI_MAX_ERROR_STRING) :: error_string
+   integer :: itera
+   integer :: result_len, ierr, ierr2
    integer :: empty
 
+   ! TODO: Set error handler to MPI_ERRORS_RETURN
+   ! we really don't want to abort here.
    do itera=1, nteraservers
 
-      write(*,*)'Shutting down TeraChem server; id=',itera
-      if (error_code.eq.0)then
+      write(*, '(A,I0)')'Shutting down TeraChem server id=', itera
+      if (abin_error_code == 0) then
          call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_EXIT, newcomms(itera), ierr)
       else
          call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_ERROR, newcomms(itera), ierr)
       end if
-      if (ierr.ne.MPI_SUCCESS)then
-         write(*,*)'I got a MPI Error when I tried to shutdown TeraChem server id =', itera
-         write(*,*)'Please, verify manually that the TeraChem server was terminated.'
-         write(*,*)'The error code was:', ierr
+      if (ierr /= MPI_SUCCESS) then
+         write(*,'(A,I0)')'I got a MPI Error when I tried to shutdown TeraChem server id=', itera
+         write(*,'(A)')'Please, verify manually that the TeraChem server was terminated.'
+         call MPI_Error_string(ierr, error_string, result_len, ierr2)
+         if (ierr == MPI_SUCCESS) then
+            write (*, *) error_string
+         end if
       end if
 
    end do
    end subroutine finalize_terachem
 
-   ! TODO: call this after each MPI call
    subroutine handle_mpi_error(mpi_err)
    use mpi
    use mod_utils, only: abinerror
    integer, intent(in) :: mpi_err
    character(len=MPI_MAX_ERROR_STRING) :: error_string
    integer :: result_len, ierr
-   ! TODO: Get MPI error string
-   if(mpi_err.ne.MPI_SUCCESS)then
+   if (mpi_err /= MPI_SUCCESS) then
       call MPI_Error_string(mpi_err, error_string, result_len, ierr)
-      write (*, *) error_string
+      if (ierr == MPI_SUCCESS) then
+         write (*, '(A)') error_string
+      end if
+      ! Maybe it would be safer call MPI_Abort
+      ! instead of abinerror()
       call abinerror('MPI ERROR')
    end if
    end subroutine handle_mpi_error
+
 ! USE_MPI
 #endif
 

@@ -81,3 +81,44 @@ clean_output_files() {
   rm -f $TCEXE $TCOUT* $ABINOUT $TC_PORT_FILE.* $TC_ERROR_FILE $ABIN_ERROR_FILE
   return $return_code
 }
+
+# Helper function for building a regex expression
+join_by() {
+  local IFS="$1"
+  shift
+  echo "$*"
+}
+
+# TODO; Test this and use in all scripts
+check_running_processes() {
+  # The MPI interface is prone to deadlocks, where
+  # both server and client are waiting on MPI_Recv.
+  # We need to kill both processes if that happens.
+  MAX_TIME=100
+  seconds=1
+  regex=`join_by \| $*`
+  while true;do
+    njobs=$(ps -eo pid|grep -E "$regex"|wc -l)
+    if [[ $njobs -eq 0 ]];then
+      echo "Both ABIN and TeraChem servers stopped"
+      break
+    elif [[ $njobs -lt $NUM_JOBS ]];then
+      # Give the others time to finish 
+      sleep 1
+      njobs=$(ps -eo pid|grep -E "$regex"|wc -l)
+      if [[ $njobs -eq 0 ]];then
+        echo "Both ABIN and TeraChem servers stopped"
+        break
+      fi
+      echo "One of the TC servers or ABIN died. Killing the rest."
+      cleanup
+    fi
+ 
+    sleep 0.2
+    let ++seconds
+    if [[ $seconds -gt $MAX_TIME ]];then
+      echo "Maximum time exceeded."
+      cleanup
+    fi
+  done
+}

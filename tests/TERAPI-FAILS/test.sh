@@ -48,3 +48,15 @@ export -f grep_tc_error
 
 ./test1.sh
 ./test2.sh
+
+# TODO: Check how ABIN handles MPI error
+# (we'll need to build faulty tc_server.
+
+# Check how tc_server handles bad input
+# (again, we'll need a modified version)
+# Basically we should test every assertion
+# in the TCServerMock code.
+
+# Check handling of port.txt file in ABIN.
+# (without launching the tc_server)
+
