@@ -1,7 +1,7 @@
 module mod_terampi
 ! ----------------------------------------------------------------
 ! Interface for TeraChem based QM and QM/MM MD.
-! Perform MPI communications with terachem. Requires MPI 2.0 or above to use
+! Perform MPI communications with terachem. Requires MPI 2.0 or above to use.
 ! So far, I was not able to make it work with OpenMPI.
 ! (but now that we use file based tera_port, it should work as well)
 !
@@ -21,9 +21,11 @@ module mod_terampi
    integer, parameter   :: MAXTERASERVERS=9
    integer, parameter :: MPI_TAG_ERROR = 13, MPI_TAG_EXIT = 0
    ! By default, take port name from a file
+   ! TODO: Rename teraport to tc_server_name
    character(len=1024) :: teraport = ''
-   integer     ::  newcomms(MAXTERASERVERS) ! Communicator, initialized in mpi_init subroutine
-!  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
+   ! TODO: Rename newcomms to tera_comms
+   integer     ::  newcomms(MAXTERASERVERS)
+   !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
    integer  ::  natmm_tera=0
    integer  :: nteraservers = 1
    !real(DP), allocatable :: mmcharges(:)
@@ -61,8 +63,8 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
 
    itera = 1
 
-! NOTE: Parallelization accross TeraChem servers
-!$OMP PARALLEL DO PRIVATE(itera)
+   ! Parallelization accross TeraChem servers
+   !$OMP PARALLEL DO PRIVATE(itera)
    do iw=1, walkmax
 
       ! map OMP thread to TC server
@@ -76,7 +78,9 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
 #endif
 
       ! ONIOM was not yet tested!!
-      if (iqmmm.eq.1) call oniom(x, y, z, fx, fy, fz, eclas, iw)
+      if (iqmmm.eq.1) then
+         call oniom(x, y, z, fx, fy, fz, eclas, iw)
+      end if
 
    end do
 !$OMP END PARALLEL DO
@@ -217,7 +221,6 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
    real(DP),intent(inout)  ::  eclas
    integer,intent(in)      ::  iw, walkmax, newcomm
-   ! TODO: actually print these charge vio mod_io::print_charges()
    real(DP) :: qmcharges( size(fx,1) )
    real(DP) :: dxyz_all(3, size(fx,1) )
    real(DP) :: escf                 ! SCF energy
@@ -285,6 +288,9 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
       write(6,'(a,4es15.6)') 'Received QM  dipole moment from server:', dipmom(:,1)
       call flush(6)
    end if
+   ! TODO: Attach dipoles to global electronic structure type
+   ! and print them elswhere. Right now when we run concurrent
+   ! TC servers, the printing is not deterministic.
    if (modulo(it, nwrite) == 0) then
       call print_dipoles(dipmom(:,1), iw, 1)
    end if
@@ -316,13 +322,12 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
       end do
       call flush(6)
    end if
-!!$OMP CRITICAL
+
    do iat=1,natqm+natmm_tera
       fx(iat,iw) = -dxyz_all(1,iat)
       fy(iat,iw) = -dxyz_all(2,iat)
       fz(iat,iw) = -dxyz_all(3,iat)
    end do
-!!$OMP END CRITICAL
 
 !$OMP ATOMIC
    eclas = eclas + escf / walkmax
@@ -376,20 +381,18 @@ subroutine connect_terachem( itera )
    if (iremd.eq.1) write(chtera,'(I1)')my_rank + 1
    if (teraport.ne.'')then 
       server_name = trim(teraport)//'.'//trim(chtera)
-      write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
+      write(6,'(2a)') 'Looking up TeraChem server under name: ', trim(server_name)
       call flush(6)
 
       do
 
-         call MPI_LOOKUP_NAME(trim(server_name), MPI_INFO_NULL, port_name, ierr)
+         call MPI_Lookup_name(trim(server_name), MPI_INFO_NULL, port_name, ierr)
          if (ierr == MPI_SUCCESS) then
             ! This sometimes happens, I have no idea why.
             if(len_trim(port_name).eq.0)then
                write(6,'(a)') 'Found empty port, retrying...'
                call system('sleep 1')
             else
-               write(6,'(2a)') 'Found port: ', trim(port_name)
-               call flush(6)
                exit
             end if
          else
@@ -408,11 +411,13 @@ subroutine connect_terachem( itera )
 
    else
 
+      ! TODO: Make this to separate function.
+      ! TODO: Make portfilename stub a constant, maybe rename to tc_port.txt
       portfile='port.txt.'//chtera
       write(6,'(A)') 'Reading TeraChem port name from file '//trim(portfile)
       call system('sync')    ! flush HDD buffer, not sure how portable this is
       open(500, file=portfile, action="read", status="old", iostat=iost)
-      if (iost.ne.0)then
+      if (iost.ne.0) then
          write(*,*)'WARNING: Cannot open file '//trim(portfile)
          write(*,*)'Will wait for 10s and try again...'
          call system('sleep 10')
@@ -427,14 +432,16 @@ subroutine connect_terachem( itera )
 
    end if
 
+   write(6,'(2a)') 'Found port: ', trim(port_name)
    write(6,'(a)') 'Establishing connection to TeraChem...'
+   call flush(6)
    ! ----------------------------------------
    ! Establish new communicator via port name
    ! ----------------------------------------
    call flush(6)
-   call MPI_COMM_CONNECT(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
+   call MPI_Comm_connect(trim(port_name), MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
    call handle_mpi_error(ierr)
-   write(6,'(a,i0)') 'Established a new communicator:', newcomm
+   write(6,'(a)') 'Connection established!'
 
    newcomms(itera) = newcomm
 
@@ -501,10 +508,12 @@ subroutine connect_terachem( itera )
    use mpi
    use mod_utils, only: abinerror
    integer, intent(in) :: mpi_err
-   integer :: ierr
+   character(len=MPI_MAX_ERROR_STRING) :: error_string
+   integer :: result_len, ierr
    ! TODO: Get MPI error string
    if(mpi_err.ne.MPI_SUCCESS)then
-      write(*,*)'Unspecified MPI Error, code:', ierr
+      call MPI_Error_string(mpi_err, error_string, result_len, ierr)
+      write (*, *) error_string
       call abinerror('MPI ERROR')
    end if
    end subroutine handle_mpi_error
