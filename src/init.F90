@@ -44,14 +44,14 @@ subroutine init(dt)
    use mod_terampi
    use mod_terampi_sh
 #ifdef USE_MPI
-   use mpi, only: MPI_COMM_WORLD, MPI_Init, MPI_Comm_Rank, MPI_Comm_Size, MPI_Barrier
+   use mpi
 #endif
    implicit none
    real(DP),intent(out) :: dt
    real(DP) :: masses(MAXTYPES)
    real(DP)  :: rans(10)
    integer :: iw, iat, natom_xyz, imol, shiftdihed = 1, iost
-   integer :: error, getpid, nproc=1, ipom
+   integer :: error, getpid, nproc=1, ipom, i
    character(len=2)    :: massnames(MAXTYPES), atom
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
@@ -60,12 +60,8 @@ subroutine init(dt)
    character(len=60)   :: mdtype
    LOGICAL :: file_exists
    logical :: rem_comvel, rem_comrot
-!  real(DP) :: wnw=5.0d-5
-   ! Used for MPI calls
    integer :: ierr
    integer :: irand
-!$ integer :: nthreads, omp_get_max_threads
-!  wnw "optimal" frequency for langevin (inose=3) 
 
    namelist /general/ natom, pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
             nwrite,nwritex,nwritev, nwritef, dt,irandom,nabin,irest,nrest,anal_ext,  &
@@ -125,13 +121,37 @@ subroutine init(dt)
       call init_cp2k()
 #ifdef USE_MPI
    else
-      call MPI_INIT ( ierr )
+      if (pot == "_tera_" .and. nteraservers > 1) then
+         ! We will be calling TS servers concurently
+         ! via OpenMP parallelization, hence we need MPI_Init_thread().
+         ! https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report/node303.htm
+         call MPI_Init_thread(MPI_THREAD_MULTIPLE, i, ierr)
+         if (i /= MPI_THREAD_MULTIPLE) then
+            write (*, *) 'Provided safety level is not MPI_THREAD_MULTIPLE'
+            write (*, '(A,I1,A,I1)') 'Requested ', MPI_THREAD_MULTIPLE, 'got:', i
+            call abinerror('init')
+         end if
+         ! nproc is used to initialize OpenMP threads below.
+         if (nproc /= nteraservers) then
+            nproc = nteraservers
+         end if
+      else
+         call MPI_Init(ierr)
+      end if
       if (ierr.ne.0)then
          write(*,*)'Bad signal from MPI_INIT:', ierr
          stop 1
       end if
 #endif
    end if
+
+! Set OpenMP parallelization!
+! Currently only used in PIMD for trivial
+! parallelization over PI beads.
+! Note that scaling is actually not so great
+! since SCF timings will vary for different beads,
+! which decreases the thread utilization.
+!$ call OMP_set_num_threads(nproc)
 
 ! We need to connect to TeraChem as soon as possible,
 ! because we want to shut down TeraChem nicely in case something goes wrong.
@@ -149,15 +169,12 @@ subroutine init(dt)
 & the TeraChem input file'
       end if
       write(*,*)'Number of TeraChem servers = ', nteraservers
-      do ipom=1, nteraservers
-         call connect_terachem(ipom)
+      ! Connect to all TC servers concurrently.
+      !$OMP PARALLEL DO
+      do i=1, nteraservers
+         call connect_terachem(i)
       end do
-      
-      if(nproc.ne.nteraservers)then
-         write(*,*)'WARNING: parameter "nproc" must equal "nteraservers"'
-         write(*,*)'Setting nproc = ', nteraservers
-         nproc = nteraservers
-      end if
+      !$OMP END PARALLEL DO
    end if
 
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
@@ -429,8 +446,6 @@ subroutine init(dt)
       close(150)
 !--END OF READING INPUT---------------
 
-!$ call OMP_set_num_threads(nproc)
-!$ nthreads = omp_get_max_threads()
 
 #ifdef USE_MPI
    if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
@@ -636,8 +651,9 @@ subroutine init(dt)
 #ifdef USE_MPI
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
-   pid=GetPID()
-   if(my_rank.eq.0) write(*,*)'Pid of the current proccess is:',pid
+   pid = GetPID()
+   ! TODO: Print pid together with my_rank, need to be part of a single write statement
+   write (*, '(A,I0)') 'Pid of the current proccess is: ', pid
 
 
    ! Open files for writing
@@ -650,8 +666,10 @@ subroutine init(dt)
 
    subroutine check_inputsanity()
    use mod_chars, only: chknow
+!$ integer :: nthreads, omp_get_max_threads
 
    !  We should exclude all non-abinitio options, but whatever....
+!$    nthreads = omp_get_max_threads()
 !$    if(nthreads.gt.1.and.(ipimd.ne.1.and.pot.ne.'_cp2k_'))then
 !$     write(*,*)'Number of threads is ', nthreads
 !$     write(*,*)'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
