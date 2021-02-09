@@ -593,7 +593,7 @@ module mod_files
       if(pot.eq.'_tera_')then
          open(UCHARGES,file=chfiles(UCHARGES),access=chaccess,action='write')
          write(UCHARGES,*)'# Atomic charges from current electronic state'
-         write(UCHARGES,*)'# Time_step  state_ind ',(names(i),i=1,natom)
+         write(UCHARGES,*)'# Time  st ',(names(i),i=1,natom)
          open(UDOTPRODCI,file=chfiles(UDOTPRODCI),access=chaccess,action='write')
          write(UDOTPRODCI,*)'# Dot products between current and previous CI vectors.'
          write(UDOTPRODCI,*)'# Time  cidotprod1  cidotprod2 ... '

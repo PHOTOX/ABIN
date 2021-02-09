@@ -537,8 +537,7 @@ end subroutine move_old2new_terash
       real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
       real(DP),intent(inout) :: eclas
       ! Just to squash compiler warnings
-      fx = x; fy = y; fz = z
-      eclas = 0.0d0
+      fx = x; fy = y; fz = z; eclas = 0.0d0
       call not_compiled_with('MPI', 'force_terash')
    end subroutine force_terash
 #endif

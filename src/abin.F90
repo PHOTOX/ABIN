@@ -68,7 +68,7 @@ program abin_dyn
 
 !$ nthreads = omp_get_max_threads()
    if (my_rank.eq.0)then
-!$    write(*,*)'Number of OpenMP threads used = ', nthreads
+!$    write (*, '(A,I0)') 'Number of OpenMP threads: ', nthreads
       write(*,'(A)')'Job started at: ' // trim(get_formatted_date_and_time(time_start))
       write(*,*)''
    end if
