@@ -503,7 +503,7 @@ subroutine connect_terachem( itera )
    character(len=MPI_MAX_ERROR_STRING) :: error_string
    integer :: itera
    integer :: result_len, ierr, ierr2
-   integer :: empty = 0
+   integer :: empty
 
    ! Make sure we send MPI_TAG_EXIT to all servers.
    call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
@@ -513,7 +513,7 @@ subroutine connect_terachem( itera )
       if (abin_error_code == 0) then
          call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_EXIT, newcomms(itera), ierr)
       else
-         call MPI_Send(empty, 1, MPI_INTEGER, 0, MPI_TAG_ERROR, newcomms(itera), ierr)
+         call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_ERROR, newcomms(itera), ierr)
       end if
       if (ierr /= MPI_SUCCESS) then
          write(*,'(A,I0)')'I got a MPI Error when I tried to shutdown TeraChem server id=', itera
