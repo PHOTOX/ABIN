@@ -17,6 +17,8 @@ TCEXE=tc_server1
 # Compile fake TC server
 $MPICXX $TCSRC -Wall -o $TCEXE
 
+launch_hydra_nameserver $MPICH_HYDRA
+
 hostname=$HOSTNAME
 MPIRUN="$MPIRUN -nameserver $hostname -n 1"
 

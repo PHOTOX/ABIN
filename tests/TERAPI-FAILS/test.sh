@@ -27,7 +27,9 @@ fi
 # Exit early for OpenMPI build.
 check_for_openmpi
 
-launch_hydra_nameserver $MPICH_HYDRA
+# We relaunch the nameserver in each subtest
+# due to the bug in hydra_nameserver
+#launch_hydra_nameserver $MPICH_HYDRA
 
 # Compile default TC server
 $MPICXX $TCSRC -Wall -o $TCEXE

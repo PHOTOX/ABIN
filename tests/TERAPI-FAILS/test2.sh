@@ -12,6 +12,7 @@ ABININ=input.in2
 ABINOUT=${ABINOUT}2
 TCOUT=${TCOUT}2
 
+launch_hydra_nameserver $MPICH_HYDRA
 hostname=$HOSTNAME
 MPIRUN="$MPIRUN -nameserver $hostname -n 1"
 
