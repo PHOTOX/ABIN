@@ -39,14 +39,13 @@ cleanup() {
 
 trap cleanup INT ABRT TERM EXIT
 
+echo "########### SUBTEST 1 ###################"
 ./test1.sh
-cat abin.out1 tc.out1
-
-./test2.sh
+echo "########### SUBTEST 2 ###################"
+./test2.sh || true
+cat abin.out2 tc.out2
+echo "########### SUBTEST 3 ###################"
 ./test3.sh
-echo "########### TEST 3 ###################"
-cat abin.out3 tc.out3.1
-
 # TODO: Check how ABIN handles MPI error
 # (we'll need to build faulty tc_server.
 
