@@ -7,7 +7,7 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-  char *server_name;
+  char *serverName = NULL;
 
   // Due to a bug in hydra_nameserver, it crashes
   // when multiple TC servers call `MPI_Unpublish_name()`
@@ -16,22 +16,22 @@ int main(int argc, char* argv[])
   // where it could be grepped and passed via file to ABIN,
   // and it will never call MPI_Publish_name/MPI_Unpublish_name
   // NOTE: This behaviour is different from real TC,
-  // which has default server_name and will always try to publish it.
-  server_name = NULL;
+  // which has default serverName and will always try to publish it.
   if (argc > 2) {
-    printf("Only one cmdline argument supported, <server_name>, but you provided more!");
+    printf("Only one cmdline argument supported, <serverName>, but you provided more!");
     throw std::runtime_error("Incorrect invocation");
   }
 
   if (argc == 2) {
-    server_name = new char[1024];
-    printf("Passed argument: %s\n", argv[1]);
-    strcpy(server_name, argv[1]);
-    printf("Server name: %s\n", argv[1]);
-    delete[] server_name;
+    serverName = new char[1024];
+    strcpy(serverName, argv[1]);
   }
 
-  TCServerMock tc = TCServerMock(server_name);
+  TCServerMock tc = TCServerMock(serverName);
+
+  if (serverName) {
+    delete[] serverName;
+  }
 
   tc.initializeCommunication();
 

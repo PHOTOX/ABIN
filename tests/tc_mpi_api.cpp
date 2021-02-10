@@ -6,8 +6,12 @@ TCServerMock::TCServerMock(char *serverName) {
 
   tcServerName = NULL;
   if (serverName) {
+    printf("Constructor argument: %s Len=%lu\n", serverName, strlen(serverName));
     tcServerName = new char[1024];
     strcpy(tcServerName, serverName);
+    //DEBUG PRINT
+    printf("Constructor copy: %s Len=%lu\n", tcServerName, strlen(tcServerName));
+    fflush(stdout);
   }
 
   // Initialize MPI in the constructor

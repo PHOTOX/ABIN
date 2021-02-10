@@ -45,7 +45,6 @@ echo "########### SUBTEST 1 ###################"
 ./test1.sh
 echo "########### SUBTEST 2 ###################"
 ./test2.sh || true
-cat abin.out2 tc.out2
 echo "########### SUBTEST 3 ###################"
 ./test3.sh
 # TODO: Check how ABIN handles MPI error

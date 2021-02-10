@@ -20,10 +20,10 @@ TC_PORT="test2.$$"
 ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM -M $TC_PORT"
 TC_CMD="./$TCEXE $TC_PORT.1"
 
-$MPIRUN $TC_CMD 2>&1 || true &
+$MPIRUN $TC_CMD > $TCOUT 2>&1 || true &
 tcpid=$!
 
-$MPIRUN $ABIN_CMD 2>&1 || true &
+$MPIRUN $ABIN_CMD > $ABINOUT 2>&1 || true &
 abinpid=$!
 
 function cleanup {
