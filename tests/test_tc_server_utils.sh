@@ -12,13 +12,19 @@ export TC_PORT_FILE=port.txt
 hydrapid=
 launch_hydra_nameserver() {
   # Make sure hydra_nameserver is running
+  # NOTE: Currently we will always restart the server
+  # to workaround the existing bug in it.
+  # https://github.com/pmodels/mpich/issues/5058
   CMD=$1
   hydra=$(ps -C hydra_nameserver -o pid= || true)
-  if [[ -z ${hydra-} ]];then
-    #echo "Launching hydra nameserver for MPI_Lookup"
-    $CMD &
-    hydrapid=$!
+  if [[ -n ${hydra} ]];then
+    kill_processes $hydra
   fi
+  #if [[ -z ${hydra-} ]];then
+    #echo "Launching hydra nameserver for MPI_Lookup"
+  #fi
+  $CMD &
+  hydrapid=$!
 }
 
 check_for_openmpi() {
