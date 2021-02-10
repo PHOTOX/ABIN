@@ -120,7 +120,7 @@ check_running_processes() {
   pids="$*"
   num_jobs=$#
   regex=$(join_by \| $pids)
-  MAX_ITER=200
+  MAX_ITER=100
   iter=1
   while true;do
     running=$(ps -eo pid|grep -E "$regex"|wc -l)
