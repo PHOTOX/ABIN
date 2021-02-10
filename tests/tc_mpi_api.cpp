@@ -64,7 +64,11 @@ void TCServerMock::initializeCommunication() {
   if (tcServerName) {
     MPI_Publish_name(tcServerName, MPI_INFO_NULL, mpiPortName);
     printf("Port published under server name '%s'\n", tcServerName);
+  } else {
+    printf("Server name not specified, nothing to publish\n");
+    printf("Pass the port name manually.\n");
   }
+
   printf("Waiting to accept MPI communication from ABIN client.\n");
   fflush(stdout);
 
