@@ -25,7 +25,9 @@ int main(int argc, char* argv[])
 
   if (argc == 2) {
     server_name = new char[1024];
+    printf("Passed argument: %s\n", argv[1]);
     strcpy(server_name, argv[1]);
+    printf("Server name: %s\n", argv[1]);
     delete[] server_name;
   }
 
