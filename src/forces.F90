@@ -84,7 +84,7 @@ subroutine force_clas(fx,fy,fz,x,y,z,energy,chpot)
    if(iplumed.eq.1) call force_plumed(transx,transy,transz,fxab,fyab,fzab,eclas)
 
 !  For reference potential and ring-polymer contraction
-   if(pot_ref.ne.'none'.and.chpot.eq.pot)then
+   if(pot_ref.ne.'_none_'.and.chpot.eq.pot)then
       ! fxab now holds the full potential,
       ! but we need the difference force on the output
       fx = fxab; fy = fyab; fz = fzab

@@ -112,7 +112,7 @@ program abin_dyn
       if(ipimd.eq.5)  call lz_rewind(en_array_lz) 
 
       ! if we use reference potential with RESPA
-      if(pot_ref.ne.'none')then
+      if(pot_ref.ne.'_none_')then
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
          call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
       end if

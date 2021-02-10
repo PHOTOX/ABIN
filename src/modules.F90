@@ -68,9 +68,9 @@ module mod_general
    ! PIMD parameters, staging transformation, number of beads, NM transform
    integer :: istage=0, nwalk=1, inormalmodes=0
    ! Ab-initio potential
-   character(len=15) :: pot='none'
+   character(len=15) :: pot='_none_'
    ! Ab initio potential for a reference in Multile time step propagator
-   character(len=15) :: pot_ref='none'
+   character(len=15) :: pot_ref='_none_'
    ! imini keyword is mostly deprecated
    integer :: imini = 0
    ! number of time steps (length of simulation)

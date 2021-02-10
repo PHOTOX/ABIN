@@ -486,7 +486,7 @@ subroutine init(dt)
          md = 3
       end if
 
-      if(pot_ref.ne.'none')then
+      if(pot_ref.ne.'_none_')then
          md = 4
          write(*, '(A)')'Using Multiple Time-Step RESPA integrator!'
          write(*, '(A)')"Reference (cheap) potential is "//trim(pot_ref)
@@ -740,11 +740,12 @@ subroutine init(dt)
             error=1
          end if
          if (modulo(nwalk,nproc).ne.0)then
-            write(*,*)'ERROR: Nwalk is not divisible by nproc. This is not a wise usage of your computer time.'
+            write(*,*)'ERROR: Nwalk is not divisible by the number of OpenMP threads.'
+            write(*,*)'This is not a wise usage of your computer time.'
             error=1
          end if
       end if
-      if(pot.eq.'none')then
+      if(pot.eq.'_none_')then
        write(*,*)'FATAL: Variable "pot" not specified.Exiting now...'
        error=1
       endif

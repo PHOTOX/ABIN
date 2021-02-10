@@ -106,7 +106,7 @@ module mod_arrays
       fxc=0.0d0;  fyc=fxc; fzc=fxc
       fxq=fxc;    fyq=fxc; fzq=fxc
       transfxc=fxc;  transfyc=fxc;  transfzc=fxc
-      if(pot_ref.ne.'none')then
+      if(pot_ref.ne.'_none_')then
          allocate( fxc_diff(natomalloc, nwalkalloc) )
          allocate( fyc_diff(natomalloc, nwalkalloc) )
          allocate( fzc_diff(natomalloc, nwalkalloc) )
