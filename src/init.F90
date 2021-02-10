@@ -1223,7 +1223,7 @@ subroutine finish(error_code)
 ! before we attempt to call MPI_Finalize().
 #ifdef USE_MPI
 if(iremd.eq.1.or.pot.eq.'_tera_'.or.pot.eq.'_cp2k_')then
-   if (error_code.eq.0.and.pot.ne."_cp2k_")then
+   if (error_code.eq.0.and.pot.ne."_cp2k_".or.pot.eq.'_tera_')then
       call MPI_Finalize(ierr)
       if (ierr.ne.MPI_SUCCESS)then
          write(*,'(A)')'Bad signal from MPI_FINALIZE: ', ierr
