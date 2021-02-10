@@ -41,11 +41,13 @@ class TCServerMock {
     // Using qTIP4PF, same as in ABIN and used in all other tests
     // returns potential energy
     double getWaterGradients();
+    void computeFakeQMDipoleMoment(double&, double&, double&, double&);
+    void computeFakeQMCharges(double*);
 
     void send();
     void sendSCFEnergy(double, int);
     void sendQMCharges();
-    void sendQMDipoleMoments();
+    void sendQMDipoleMoment();
     void sendQMGradients();
 
   private:
@@ -66,7 +68,7 @@ class TCServerMock {
     MPI_Status mpiStatus;
 
     int totNumAtoms;
-    char *atomTypes[MAX_DATA];
+    char *atomTypes;
 
     void checkRecvCount(MPI_Status*, MPI_Datatype, int);
     void checkRecvTag(MPI_Status&);

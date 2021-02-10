@@ -5,13 +5,10 @@ using namespace std;
 TCServerMock::TCServerMock(char *serverName) {
 
   tcServerName = NULL;
+  gradients = coordinates = NULL;
   if (serverName) {
-    printf("Constructor argument: %s Len=%lu\n", serverName, strlen(serverName));
     tcServerName = new char[1024];
     strcpy(tcServerName, serverName);
-    //DEBUG PRINT
-    printf("Constructor copy: %s Len=%lu\n", tcServerName, strlen(tcServerName));
-    fflush(stdout);
   }
 
   // Initialize MPI in the constructor
@@ -34,9 +31,12 @@ TCServerMock::~TCServerMock(void) {
   MPI_Comm_free(&abin_client);
   MPI_Close_port(mpiPortName);
   MPI_Finalize();
-  // TODO: this is not safe if they were not allocated yet!
-  delete[] gradients;
-  delete[] coordinates;
+  if (gradients) {
+    delete[] gradients;
+  }
+  if (coordinates) {
+    delete[] coordinates;
+  }
 }
 
 void TCServerMock::checkRecvCount(MPI_Status *mpiStatus,
@@ -125,7 +125,7 @@ void TCServerMock::receiveAtomTypes() {
 }
 
 void TCServerMock::receiveAtomTypesAndScrdir() {
-  // TODO: Check that we get same atom types every iteration!
+  // TODO: Check that we get the same atom types every iteration!
   printf("Receiving atom types and scrdir...\n");
   fflush(stdout);
   MPI_Recv(bufchars, MAX_DATA, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
@@ -140,7 +140,6 @@ void TCServerMock::receiveAtomTypesAndScrdir() {
 
 void TCServerMock::receiveCoordinates() {
   // Receive QM coordinates from ABIN
-  // TODO: Separate this to a function.
   printf("Receiving QM coordinates...\n");
   int recvCount = totNumAtoms * 3;
   MPI_Recv(bufdoubles, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE,
@@ -154,7 +153,7 @@ void TCServerMock::receiveCoordinates() {
   printf("\n");
 }
 
-// Receive number of QM atoms, QM atom types, QM atom coordinates
+// Receive number of QM atoms, QM atom types, QM atom coordinates.
 // This is called repeatedly in the MD loop.
 int TCServerMock::receiveBeginLoop() {
   printf("\nReceiving new QM data.\n");
@@ -162,8 +161,8 @@ int TCServerMock::receiveBeginLoop() {
   int recvCount = 1;
   MPI_Recv(bufints, recvCount, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
-  // When ABIN sends it's exit tag, we want to allow it
-  // to send zero data.
+  // When ABIN sends it's exit tag,
+  // we want to allow it to send zero data.
   //checkRecvCount(&mpiStatus, MPI_INT, recvCount);
   int tag = mpiStatus.MPI_TAG;
 
@@ -208,28 +207,31 @@ void TCServerMock::sendSCFEnergy(double energy, int MPI_SCF_DIE) {
   MPI_Send(bufdoubles, 1, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
 
-void TCServerMock::sendQMCharges() {
-  // TODO: We should move this computation elsewhere
-  // and accept charges as inputs here.
-  //
-  // Compute fake population charges
-  for(int atom = 0; atom < totNumAtoms; atom++) {
-    bufdoubles[atom] = -1 - atom; 
+// Compute fake Mulliken charges.
+void TCServerMock::computeFakeQMCharges(double *charges) {
+  for (int atom = 0; atom < totNumAtoms; atom++) {
+    charges[atom] = -1 - atom; 
   }
+}
+
+void TCServerMock::sendQMCharges() {
+  // TODO: We could move this computation elsewhere
+  // and accept charges as inputs here.
+  computeFakeQMCharges(bufdoubles);
   MPI_Send(bufdoubles, totNumAtoms, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
 
-void TCServerMock::sendQMDipoleMoments() {
-  // QM dipole moment
-  double Dx = -0.01;
-  double Dy = -0.02;
-  double Dz = -0.03;
-  double DTotal = sqrt(Dx*Dx + Dy*Dy + Dz*Dz);
-  bufdoubles[0] = Dx;
-  bufdoubles[1] = Dy;
-  bufdoubles[2] = Dz;
-  bufdoubles[3] = DTotal;
+// Compute fake dipole moments.
+void TCServerMock::computeFakeQMDipoleMoment(double &Dx, double &Dy, double &Dz, double &DTotal) {
+  Dx = -0.01;
+  Dy = -0.02;
+  Dz = -0.03;
+  DTotal = sqrt(Dx*Dx + Dy*Dy + Dz*Dz);
   printf("QM DIPOLE: %lf %lf %lf %lf\n", Dx, Dy, Dz, DTotal);
+}
+
+void TCServerMock::sendQMDipoleMoment() {
+  computeFakeQMDipoleMoment(bufdoubles[0], bufdoubles[1], bufdoubles[2], bufdoubles[3]);
   MPI_Send(bufdoubles, 4, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
 
@@ -254,7 +256,7 @@ void TCServerMock::send() {
 
   sendQMCharges();
 
-  sendQMDipoleMoments();
+  sendQMDipoleMoment();
 
   // NOTE: In the real TC interface, gradients are sent
   // conditionally only if they are requested.
