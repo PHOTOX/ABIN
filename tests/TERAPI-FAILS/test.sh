@@ -40,8 +40,8 @@ cleanup() {
 trap cleanup INT ABRT TERM EXIT
 
 ./test1.sh
-./test2.sh
-./test3.sh
+#./test2.sh
+#./test3.sh
 
 # TODO: Check how ABIN handles MPI error
 # (we'll need to build faulty tc_server.
