@@ -11,7 +11,7 @@
 */geom.dat.00*
 */geom_mm.dat.00*
 REMD/DFTB/OUT*
-*/abin.out
+*/abin.out*
 REMD/restart.xyz.??.*
 */restart.xyz.old
 */restart.xyz.0?
@@ -29,6 +29,6 @@ bck.*
 tc_server
 tc.out*
 port.txt*
-TC_ERRORS
+TC_ERROR*
 
 !mini.xyz
