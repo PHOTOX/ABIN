@@ -26,6 +26,7 @@ CP2K*/WATER*
 bck.*
 
 # Files from TERAPI* tests
+tc_server?
 tc_server
 tc.out*
 port.txt*
