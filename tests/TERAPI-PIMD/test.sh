@@ -46,7 +46,7 @@ for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
 sleep 1
 # Grep port names from TC output, pass to ABIN via a file.
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
-  grep 'port name' tc.out.$itera | awk -F"port name: " '{print $2;exit}' > port.txt.$itera
+  grep 'port name' $TCOUT.$itera | awk -F"port name: " '{print $2;exit}' > $TC_PORT_FILE.$itera
 }
 
 $MPIRUN $ABIN_CMD > $ABINOUT 2>&1 &
@@ -58,36 +58,4 @@ function cleanup {
 }
 
 trap cleanup INT ABRT TERM EXIT
-
-# The MPI interface is prone to deadlocks, where
-# both server and client are waiting on MPI_Recv.
-# We need to kill both processes if that happens.
-MAX_TIME=100
-seconds=1
-# CHECK WHETHER ABIN AND TC ARE RUNNING
-function join_by { local IFS="$1"; shift; echo "$*"; }
-regex=`join_by \| ${job_pids[@]}`
-while true;do
-  njobs=$(ps -eo pid|grep -E "$regex"|wc -l)
-  if [[ $njobs -eq 0 ]];then
-    echo "Both ABIN and TeraChem servers stopped"
-    break
-  elif [[ $njobs -lt $NUM_JOBS ]];then
-    # Give the others time to finish 
-    sleep 1
-    njobs=$(ps -eo pid|grep -E "$regex"|wc -l)
-    if [[ $njobs -eq 0 ]];then
-      echo "Both ABIN and TeraChem servers stopped"
-      break
-    fi
-    echo "One of the TC servers or ABIN died. Killing the rest."
-    cleanup
-  fi
-
-  sleep 0.2
-  let ++seconds
-  if [[ $seconds -gt $MAX_TIME ]];then
-    echo "Maximum time exceeded."
-    cleanup
-  fi
-done
+check_running_processes ${job_pids[@]}

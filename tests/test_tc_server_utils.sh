@@ -8,8 +8,6 @@
 set -euo pipefail
 
 export TC_PORT_FILE=port.txt
-export TC_ERROR_FILE=TC_ERRORS
-export ABIN_ERROR_FILE=ERROR
 
 hydrapid=
 launch_hydra_nameserver() {
@@ -78,8 +76,25 @@ clean_output_files() {
   rm -f $* 
   rm -f *dat *diff
   rm -f restart.xyz velocities.xyz forces.xyz movie.xyz restart.xyz.old
-  rm -f $TCEXE $TCOUT* $ABINOUT $TC_PORT_FILE.* $TC_ERROR_FILE $ABIN_ERROR_FILE
+  rm -f $TCEXE $TCOUT* $ABINOUT $TC_PORT_FILE.* ERROR
   return $return_code
+}
+
+
+# Sillently kill all processes whose PIDs
+# are passed as parameters. Note that some of
+# them could have already ended sucessfully.
+kill_processes() {
+  kill -9 $* > /dev/null 2>&1 || true
+}
+
+# Not that it is hard in general to know
+# whether we ended successfully or not,
+# so we always return 0. Validation is then
+# always done on the output files.
+cleanup() {
+  kill_processeses $*
+  exit 0
 }
 
 # Helper function for building a regex expression
@@ -89,36 +104,40 @@ join_by() {
   echo "$*"
 }
 
-# TODO; Test this and use in all scripts
+# This function accepts PIDs of ABIN and all TC servers
+# end periodically checks whether they are still running.
+# If only some of them stopped, it kills the rest.
 check_running_processes() {
   # The MPI interface is prone to deadlocks, where
   # both server and client are waiting on MPI_Recv.
   # We need to kill both processes if that happens.
-  MAX_TIME=100
-  seconds=1
-  regex=`join_by \| $*`
+  pids="$*"
+  num_jobs=$#
+  regex=$(join_by \| $pids)
+  MAX_ITER=100
+  iter=1
   while true;do
-    njobs=$(ps -eo pid|grep -E "$regex"|wc -l)
-    if [[ $njobs -eq 0 ]];then
-      echo "Both ABIN and TeraChem servers stopped"
+    running=$(ps -eo pid|grep -E "$regex"|wc -l)
+    if [[ $running -eq 0 ]];then
+      #echo "Both ABIN and TeraChem servers stopped"
       break
-    elif [[ $njobs -lt $NUM_JOBS ]];then
+    elif [[ $running -lt $num_jobs ]];then
       # Give the others time to finish 
       sleep 1
-      njobs=$(ps -eo pid|grep -E "$regex"|wc -l)
-      if [[ $njobs -eq 0 ]];then
-        echo "Both ABIN and TeraChem servers stopped"
-        break
+      running=$(ps -eo pid|grep -E "$regex"|wc -l)
+      if [[ $running -ne 0 ]];then
+        echo "One of the TC servers or ABIN died. Killing the rest."
       fi
-      echo "One of the TC servers or ABIN died. Killing the rest."
-      cleanup
+      break
     fi
  
     sleep 0.2
-    let ++seconds
-    if [[ $seconds -gt $MAX_TIME ]];then
+    let ++iter
+    if [[ $iter -gt $MAX_ITER ]];then
       echo "Maximum time exceeded."
-      cleanup
+      break
     fi
   done
+  # ALWAYS call cleanup
+  cleanup $pids
 }

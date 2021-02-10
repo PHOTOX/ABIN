@@ -1,9 +1,6 @@
 Intentionally invalid ABIN input
 (requires PIMD without thermostat)
 
-Here we test that ABIN sends TC error tag early
-So that the TC server exits gracefully.
-
 &general
 !pot='mmwater'
 pot='_tera_'
