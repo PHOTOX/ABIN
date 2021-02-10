@@ -18,13 +18,12 @@ module mod_terampi
    use mod_const, only: DP
    implicit none
    private
-   integer, parameter   :: MAXTERASERVERS=9
    integer, parameter :: MPI_TAG_ERROR = 13, MPI_TAG_EXIT = 0
    ! By default, take port name from a file
    ! TODO: Rename teraport to tc_server_name
    character(len=1024) :: teraport = ''
-   ! TODO: Rename newcomms to tera_comms
-   integer     ::  newcomms(MAXTERASERVERS)
+   ! TODO: Rename newcomms to tc_comms
+   integer, allocatable ::  newcomms(:)
    !  DH WARNING, initial hack, we do not support TeraChem-based QM/MM yet
    integer  ::  natmm_tera=0
    integer  :: nteraservers = 1
@@ -35,7 +34,7 @@ module mod_terampi
 #ifdef USE_MPI
    ! TODO: Move handle_mpi_error to a dedicated MPI module
    public :: handle_mpi_error
-   public :: finalize_terachem, initialize_terachem, connect_terachem
+   public :: finalize_terachem, initialize_terachem, initialize_terachem_interface
 #endif
    save
 
@@ -230,7 +229,7 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    real(DP) :: dipmom(4,3)          ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
    integer  :: status(MPI_STATUS_SIZE)
    integer  :: ierr, iat
-   logical  :: ltest
+   logical  :: recv_ready
    character*50 :: chsys_sleep
    ! -----------------------------------
    ! Begin receiving data from terachem
@@ -245,10 +244,10 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
    ! Based according to an answer here:
    ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
 
-   ltest = .false.
+   recv_ready = .false.
    write(chsys_sleep,'(A6, F10.4)')'sleep ', mpi_sleep
-   do while(.not.ltest)
-      call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, ltest, status, ierr)
+   do while(.not.recv_ready)
+      call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, recv_ready, status, ierr)
       call handle_mpi_error(ierr)
       call system(chsys_sleep)
    end do
@@ -338,6 +337,26 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, newcomm)
 
 end subroutine receive_tera
 
+   subroutine initialize_terachem_interface()
+      use mod_general, only: nwalk
+      integer :: i
+
+      if (nwalk > 1) then
+         write (*, *) 'WARNING: You are using PIMD with direct TeraChem interface.'
+         write (*, *) 'You should have "integrator regular" in the TeraChem input file'
+      end if
+      write(*,*)'Number of TeraChem servers = ', nteraservers
+
+      allocate (newcomms(nteraservers))
+
+      ! Connect to all TC servers concurrently.
+      !$OMP PARALLEL DO
+      do i = 1, nteraservers
+         call connect_terachem(i)
+      end do
+      !$OMP END PARALLEL DO
+
+   end subroutine initialize_terachem_interface
 
 subroutine connect_terachem( itera )
    use mpi
@@ -350,22 +369,8 @@ subroutine connect_terachem( itera )
    character(len=1024) :: server_name, portfile
    character(len=1) :: chtera
 
-   ! -----------------------------------
-   ! Look for server_name, get port name
-   ! After 60 seconds, exit if not found
-   ! -----------------------------------
    port_name = ''
-
-   if(itera.gt.MAXTERASERVERS)then
-      write(*,*)'ERROR: We currently support only ',MAXTERASERVERS, 'TC servers!'
-      write(*,*)'Shutting down...'
-      write(*,*)'Running TC servers might not be shutdown properly!'
-      call abinerror('force_tera')
-   end if
-
-   timer = MPI_WTIME()
-
-   ! This allows us to retry failed MPI_LOOKUP_NAME() call
+   ! MPI_ERRORS_RETURN allows us to retry failed MPI_LOOKUP_NAME() call.
    ! TODO: After we connect, I think we should set the error handler back
    ! (to die immedietally upon error), unless idebug is > 1.
    ! This I think is much safer. The default handler should be MPI_ERRORS_ARE_FATAL.
@@ -380,13 +385,21 @@ subroutine connect_terachem( itera )
    call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
    call handle_mpi_error(ierr)
 
+   ! TODO: Create a utility function for converting
+   ! integers to characters.
    write(chtera,'(I1)')itera
 
    if (iremd.eq.1) write(chtera,'(I1)')my_rank + 1
    if (teraport.ne.'')then 
+      ! -----------------------------------
+      ! Look for server_name, get port name
+      ! After 60 seconds, exit if not found
+      ! -----------------------------------
       server_name = trim(teraport)//'.'//trim(chtera)
       write(6,'(2a)') 'Looking up TeraChem server under name:', trim(server_name)
       call flush(6)
+
+      timer = MPI_WTIME()
 
       do
 
@@ -496,7 +509,7 @@ subroutine connect_terachem( itera )
    ! we really don't want to abort here.
    do itera=1, nteraservers
 
-      write(*, '(A,I0)')'Shutting down TeraChem server id=', itera
+      write (*, '(A,I0)') 'Shutting down TeraChem server id=', itera
       if (abin_error_code == 0) then
          call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_EXIT, newcomms(itera), ierr)
       else
@@ -506,12 +519,13 @@ subroutine connect_terachem( itera )
          write(*,'(A,I0)')'I got a MPI Error when I tried to shutdown TeraChem server id=', itera
          write(*,'(A)')'Please, verify manually that the TeraChem server was terminated.'
          call MPI_Error_string(ierr, error_string, result_len, ierr2)
-         if (ierr == MPI_SUCCESS) then
+         if (ierr2 == MPI_SUCCESS) then
             write (*, *) error_string
          end if
       end if
 
    end do
+   deallocate (newcomms)
    end subroutine finalize_terachem
 
    subroutine handle_mpi_error(mpi_err)

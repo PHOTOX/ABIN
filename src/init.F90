@@ -116,6 +116,13 @@ subroutine init(dt)
       call initialize_spline()
    end if
 
+! Set OpenMP parallelization
+! Currently only used in PIMD for trivial
+! parallelization over PI beads.
+! Note that scaling is actually not so great
+! since SCF timings will vary for different beads,
+! which decreases thread utilization.
+!$ call OMP_set_num_threads(nproc)
 
    if(pot.eq."_cp2k_".or.pot_ref.eq."_cp2k_")then
       call init_cp2k()
@@ -145,38 +152,21 @@ subroutine init(dt)
 #endif
    end if
 
-! Set OpenMP parallelization!
-! Currently only used in PIMD for trivial
-! parallelization over PI beads.
-! Note that scaling is actually not so great
-! since SCF timings will vary for different beads,
-! which decreases the thread utilization.
-!$ call OMP_set_num_threads(nproc)
-
 ! We need to connect to TeraChem as soon as possible,
 ! because we want to shut down TeraChem nicely in case something goes wrong.
 #ifdef USE_MPI
-   ! TODO: Add explicit checks for ierr for all MPI calls!
+   ! TODO: Move this to an mpi_wrapper module
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
    call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
+   ! TODO: allow mpi_world_size > 1 only for REMD
    if (my_rank.eq.0.and.mpi_world_size.gt.1)then
       write(*,'(A,I3)')'Number of MPI processes = ', mpi_world_size
    end if
    if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
-      if (nwalk.gt.1)then
-         write(*,*)'WARNING: You are using PIMD with direct TeraChem interface.'
-         write(*,*)'You should have "integrator regular" in &
-& the TeraChem input file'
-      end if
-      write(*,*)'Number of TeraChem servers = ', nteraservers
-      ! Connect to all TC servers concurrently.
-      !$OMP PARALLEL DO
-      do i=1, nteraservers
-         call connect_terachem(i)
-      end do
-      !$OMP END PARALLEL DO
+      call initialize_terachem_interface()
    end if
 
+   ! TODO: Why do we need a barrier here?
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 
 #else
