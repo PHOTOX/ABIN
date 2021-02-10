@@ -342,10 +342,10 @@ end subroutine receive_tera
       integer :: i
 
       if (nwalk > 1) then
-         write (*, *) 'WARNING: You are using PIMD with direct TeraChem interface.'
-         write (*, *) 'You should have "integrator regular" in the TeraChem input file'
+         write (*, '(A)') 'WARNING: You are using PIMD with direct TeraChem interface.'
+         write (*, '(A)') 'You should have "integrator regular" in the TeraChem input file'
       end if
-      write(*,*)'Number of TeraChem servers = ', nteraservers
+      write (*, '(A,I0)') 'Number of TeraChem servers: ', nteraservers
 
       allocate (newcomms(nteraservers))
 
