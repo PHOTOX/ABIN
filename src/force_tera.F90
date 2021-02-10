@@ -61,6 +61,7 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
       call abinerror("force_tera")
    end if
 
+
    itera = 1
 
 ! NOTE: Parallelization accross TeraChem servers

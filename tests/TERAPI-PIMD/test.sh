@@ -6,15 +6,14 @@ set -euo pipefail
 ABINEXE=$1
 source ../test_tc_server_utils.sh
 
-# TODO: Determine this from ABIN input!
-N_TERA_SERVERS=4  # Use more TC servers for PIMD or REMD
-
 set_default_vars
 set_mpich_vars
 # If $1 = "clean"; exit early.
 if ! clean_output_files $1; then
   exit 0
 fi
+
+N_TERA_SERVERS=$(egrep --only-matching 'nteraservers\s*=\s*[0-9]' $ABININ | egrep -o [0-9])
 
 # Exit early for OpenMPI build.
 check_for_openmpi
