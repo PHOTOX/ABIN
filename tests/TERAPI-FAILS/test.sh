@@ -31,7 +31,7 @@ check_for_openmpi
 launch_hydra_nameserver $MPICH_HYDRA
 
 cleanup() {
-  kill -9 $hydrapid > /dev/null 2>&1 || true
+  #kill -9 $hydrapid > /dev/null 2>&1 || true
   exit 0
 }
 
