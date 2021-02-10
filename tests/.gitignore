@@ -21,7 +21,14 @@ REMD/restart.xyz.??.*
 */ERROR
 SH_BUTCHER/geom.?.?.?
 CP2K*/WATER*
+
 # PLUMED backup files
 bck.*
+
+# Files from TERAPI* tests
 tc_server
+tc.out*
+port.txt*
+TC_ERRORS
+
 !mini.xyz
