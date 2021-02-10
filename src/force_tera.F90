@@ -505,8 +505,8 @@ subroutine connect_terachem( itera )
    integer :: result_len, ierr, ierr2
    integer :: empty
 
-   ! TODO: Set error handler to MPI_ERRORS_RETURN
-   ! we really don't want to abort here.
+   ! Make sure we send MPI_TAG_EXIT to all servers.
+   call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
    do itera=1, nteraservers
 
       write (*, '(A,I0)') 'Shutting down TeraChem server id=', itera
@@ -517,7 +517,15 @@ subroutine connect_terachem( itera )
       end if
       if (ierr /= MPI_SUCCESS) then
          write(*,'(A,I0)')'I got a MPI Error when I tried to shutdown TeraChem server id=', itera
-         write(*,'(A)')'Please, verify manually that the TeraChem server was terminated.'
+         write(*,'(A)')'Verify manually that the TeraChem server was terminated.'
+         call MPI_Error_string(ierr, error_string, result_len, ierr2)
+         if (ierr2 == MPI_SUCCESS) then
+            write (*, *) error_string
+         end if
+      end if
+
+      call MPI_Comm_free(newcomms(itera), ierr)
+      if (ierr /= MPI_SUCCESS) then
          call MPI_Error_string(ierr, error_string, result_len, ierr2)
          if (ierr2 == MPI_SUCCESS) then
             write (*, *) error_string
@@ -525,7 +533,9 @@ subroutine connect_terachem( itera )
       end if
 
    end do
+
    deallocate (newcomms)
+
    end subroutine finalize_terachem
 
    subroutine handle_mpi_error(mpi_err)
