@@ -40,6 +40,8 @@ cleanup() {
 trap cleanup INT ABRT TERM EXIT
 
 ./test1.sh
+cat abin.out1 tc.out1
+
 #./test2.sh
 #./test3.sh
 
