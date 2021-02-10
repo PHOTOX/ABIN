@@ -114,7 +114,7 @@ check_running_processes() {
   pids="$*"
   num_jobs=$#
   regex=$(join_by \| $pids)
-  MAX_ITER=100
+  MAX_ITER=200
   iter=1
   while true;do
     running=$(ps -eo pid|grep -E "$regex"|wc -l)
@@ -127,6 +127,7 @@ check_running_processes() {
       running=$(ps -eo pid|grep -E "$regex"|wc -l)
       if [[ $running -ne 0 ]];then
         echo "One of the TC servers or ABIN died. Killing the rest."
+        cat $ABINOUT $TCOUT
       fi
       break
     fi

@@ -12,6 +12,7 @@ ABININ=input.in1
 ABINOUT=${ABINOUT}1
 TCOUT=${TCOUT}1
 TCSRC="../tc_mpi_api.cpp ../../water_potentials/qtip4pf.cpp tc_server1.cpp"
+TCEXE=tc_server1
 
 # Compile fake TC server
 $MPICXX $TCSRC -Wall -o $TCEXE

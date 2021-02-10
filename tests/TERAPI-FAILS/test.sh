@@ -29,6 +29,9 @@ check_for_openmpi
 
 launch_hydra_nameserver $MPICH_HYDRA
 
+# Compile default TC server
+$MPICXX $TCSRC -Wall -o $TCEXE
+
 cleanup() {
   #kill -9 $hydrapid > /dev/null 2>&1 || true
   exit 0

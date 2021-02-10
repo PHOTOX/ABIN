@@ -12,9 +12,6 @@ ABININ=input.in2
 ABINOUT=${ABINOUT}2
 TCOUT=${TCOUT}2
 
-# Compile fake TC server
-$MPICXX $TCSRC -Wall -o $TCEXE
-
 hostname=$HOSTNAME
 MPIRUN="$MPIRUN -nameserver $hostname -n 1"
 

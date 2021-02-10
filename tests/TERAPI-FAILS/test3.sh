@@ -10,8 +10,6 @@ ABINOUT=${ABINOUT}3
 TCOUT=${TCOUT}3
 N_TERA_SERVERS=$(egrep --only-matching 'nteraservers\s*=\s*[0-9]' $ABININ | egrep -o [0-9])
 
-$MPICXX $TCSRC -Wall -o $TCEXE
-
 MPIRUN="$MPIRUN -n 1"
 ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM"
 
