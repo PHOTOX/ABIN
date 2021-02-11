@@ -30,6 +30,6 @@ tc_server?
 tc_server
 tc.out*
 port.txt*
-TC_ERROR*
+TC_ERROR.?
 
 !mini.xyz

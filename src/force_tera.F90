@@ -548,7 +548,7 @@ subroutine connect_terachem( itera )
 
       if (mpi_err /= MPI_SUCCESS) then
          call print_mpi_error(mpi_err)
-         call abinerror('MPI ERROR')
+         call abinerror('handle_mpi_error')
       end if
    end subroutine handle_mpi_error
 

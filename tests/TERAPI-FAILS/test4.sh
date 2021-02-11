@@ -1,19 +1,23 @@
 #/bin/bash
 
-# Test that ABIN sends TC error tag early
-# when it fails during parsing its own input,
-# so that the TC server exits gracefully.
+# Test how ABIN handles MPI error.
 
 set -euo pipefail
 
 source ../test_tc_server_utils.sh
 
-IDX=2
+IDX=4
 ABININ=input.in$IDX
 ABINOUT=${ABINOUT}$IDX
 TCOUT=${TCOUT}$IDX
+TCSRC="../tc_mpi_api.cpp ../../water_potentials/qtip4pf.cpp tc_server$IDX.cpp"
+TCEXE=tc_server$IDX
+
+# Compile fake TC server
+$MPICXX $TCSRC -Wall -o $TCEXE
 
 launch_hydra_nameserver $MPICH_HYDRA
+
 hostname=$HOSTNAME
 MPIRUN="$MPIRUN -nameserver $hostname -n 1"
 

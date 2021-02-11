@@ -1,12 +1,16 @@
-Intentionally invalid ABIN input
-(requires PIMD without thermostat)
-
 &general
 pot='_tera_'
-ipimd=1,
+watpot=1
+ipimd=0,
 nstep=1,
-dt=20.,
+dt=40.,
 irandom=13131313,
+
+nwrite=1,
+nwritef=1,
+nwritev=1,
+nwritex=1,
+nrest=1,
 idebug=3
 /
 

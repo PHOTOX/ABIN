@@ -116,14 +116,6 @@ subroutine init(dt)
       call initialize_spline()
    end if
 
-! Set OpenMP parallelization
-! Currently only used in PIMD for trivial
-! parallelization over PI beads.
-! Note that scaling is actually not so great
-! since SCF timings will vary for different beads,
-! which decreases thread utilization.
-!$ call OMP_set_num_threads(nproc)
-
    if(pot.eq."_cp2k_".or.pot_ref.eq."_cp2k_")then
       call init_cp2k()
 #ifdef USE_MPI
@@ -143,6 +135,8 @@ subroutine init(dt)
             nproc = nteraservers
          end if
       else
+         ! TODO: Check whether MPI is already initialized
+         ! This can happen when using internal CP2K interface.
          call MPI_Init(ierr)
       end if
       if (ierr.ne.0)then
@@ -151,6 +145,14 @@ subroutine init(dt)
       end if
 #endif
    end if
+
+   ! Set OpenMP parallelization
+   ! Currently only used in PIMD for trivial
+   ! parallelization over PI beads.
+   ! Note that scaling is actually not so great
+   ! since SCF timings will vary for different beads,
+   ! which decreases thread utilization.
+!$ call OMP_set_num_threads(nproc)
 
 ! We need to connect to TeraChem as soon as possible,
 ! because we want to shut down TeraChem nicely in case something goes wrong.
@@ -166,7 +168,7 @@ subroutine init(dt)
       call initialize_terachem_interface()
    end if
 
-   ! TODO: Why do we need a barrier here?
+   ! TODO: Do we need a barrier here?
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
 
 #else

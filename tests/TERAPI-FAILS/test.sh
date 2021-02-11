@@ -19,7 +19,7 @@ set_default_vars
 set_mpich_vars
 
 # If $1 = "clean"; exit early.
-rm -f TC_ERROR? ${TCOUT}* ${ABINOUT}*
+rm -f TC_ERROR? ABIN_ERROR? ${TCOUT}* ${ABINOUT}*
 if ! clean_output_files $1; then
   exit 0
 fi
@@ -47,8 +47,8 @@ echo "########### SUBTEST 2 ###################"
 ./test2.sh || true
 echo "########### SUBTEST 3 ###################"
 ./test3.sh
-# TODO: Check how ABIN handles MPI error
-# (we'll need to build faulty tc_server.
+echo "########### SUBTEST 4 ###################"
+./test4.sh
 
 # Check how tc_server handles bad input
 # (again, we'll need a modified version)

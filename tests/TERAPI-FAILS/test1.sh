@@ -8,11 +8,12 @@ set -euo pipefail
 
 source ../test_tc_server_utils.sh
 
-ABININ=input.in1
-ABINOUT=${ABINOUT}1
-TCOUT=${TCOUT}1
-TCSRC="../tc_mpi_api.cpp ../../water_potentials/qtip4pf.cpp tc_server1.cpp"
-TCEXE=tc_server1
+IDX=1
+ABININ=input.in$IDX
+ABINOUT=${ABINOUT}$IDX
+TCOUT=${TCOUT}$IDX
+TCSRC="../tc_mpi_api.cpp ../../water_potentials/qtip4pf.cpp tc_server$IDX.cpp"
+TCEXE=tc_server$IDX
 
 # Compile fake TC server
 $MPICXX $TCSRC -Wall -o $TCEXE
@@ -34,7 +35,10 @@ abinpid=$!
 
 function cleanup {
   kill -9 $tcpid $abinpid > /dev/null 2>&1 || true
-  grep 'what()' $TCOUT > TC_ERROR1
+  grep 'what()' $TCOUT > TC_ERROR$IDX
+  if [[ -f ERROR ]];then
+    mv ERROR ABIN_ERROR$IDX
+  fi
   exit 0
 }
 

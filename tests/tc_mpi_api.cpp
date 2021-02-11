@@ -30,7 +30,9 @@ TCServerMock::TCServerMock(char *serverName) {
 TCServerMock::~TCServerMock(void) {
   printf("Freeing and finalizing MPI.\n");
   MPI_Comm_free(&abin_client);
-  MPI_Close_port(mpiPortName);
+  if (mpiPortName) {
+    MPI_Close_port(mpiPortName);
+  }
   MPI_Finalize();
   if (gradients) {
     delete[] gradients;
@@ -65,6 +67,10 @@ void TCServerMock::printMPIError(int error_code) {
     if (new_error_code == MPI_SUCCESS) {
       printf("%s\n", bufchars);
     }
+}
+
+MPI_Comm* TCServerMock::getABINCommunicator() {
+  return &abin_client;
 }
 
 // Publish server name, but only if tcServerName was passed to constructor.
