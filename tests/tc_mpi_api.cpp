@@ -1,3 +1,4 @@
+#include<unistd.h>
 #include "tc_mpi_api.h"
 
 using namespace std;
@@ -7,7 +8,7 @@ TCServerMock::TCServerMock(char *serverName) {
   tcServerName = NULL;
   gradients = coordinates = NULL;
   if (serverName) {
-    tcServerName = new char[1024];
+    tcServerName = new char[strlen(serverName)+1];
     strcpy(tcServerName, serverName);
   }
 
@@ -58,24 +59,61 @@ void TCServerMock::checkRecvTag(MPI_Status &mpiStatus) {
   }
 }
 
-void TCServerMock::initializeCommunication() {
-  // MPI_INFO_NULL are the implementation defaults. 
-  MPI_Open_port(MPI_INFO_NULL, mpiPortName);
-  // Establishes a port at which the server may be contacted.
-  printf("Fake TeraChem server available at port name: %s\n", mpiPortName);
-  
-  // Publish the port name, but only if tcServerName was passed to constructor.
-  if (tcServerName) {
-    MPI_Publish_name(tcServerName, MPI_INFO_NULL, mpiPortName);
-    printf("Port published under server name '%s'\n", tcServerName);
-  } else {
+void TCServerMock::printMPIError(int error_code) {
+    int *resultLen = NULL;
+    int new_error_code = MPI_Error_string(error_code, bufchars, resultLen);
+    if (new_error_code == MPI_SUCCESS) {
+      printf("%s\n", bufchars);
+    }
+}
+
+// Publish server name, but only if tcServerName was passed to constructor.
+void TCServerMock::publishServerName(char *serverName, char *portName) {
+  if (!serverName) {
     printf("Server name not specified, nothing to publish\n");
     printf("Pass the port name manually.\n");
+    return;
   }
+  MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+
+  // In seconds
+  double sleepTime = 0.2;
+  double maxTime = 50;
+  double elapsedTime = 0;
+
+  // Retry if hydra_nameserver isn't ready.
+  int ierr = MPI_Publish_name(serverName, MPI_INFO_NULL, portName);
+  while (ierr != MPI_SUCCESS) {
+    if (elapsedTime > maxTime) {
+      printMPIError(ierr);
+      throw std::runtime_error("could not publish server name");
+    }
+    sleep(sleepTime);
+    elapsedTime += sleepTime;
+    ierr = MPI_Publish_name(serverName, MPI_INFO_NULL, portName);
+  }
+
+  printf("Port published under server name '%s'\n", tcServerName);
+
+  ierr = MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+  if (ierr != MPI_SUCCESS) {
+    printMPIError(ierr);
+    throw std::runtime_error("could not set error handler");
+  }
+}
+
+void TCServerMock::initializeCommunication() {
+  // Establishes a port at which the server may be contacted.
+  // MPI_INFO_NULL are the implementation defaults. 
+  MPI_Open_port(MPI_INFO_NULL, mpiPortName);
+
+  printf("Fake TeraChem server available at port name: %s\n", mpiPortName);
+  fflush(stdout);
+
+  publishServerName(tcServerName, mpiPortName);
 
   printf("Waiting to accept MPI communication from ABIN client.\n");
   fflush(stdout);
-
   MPI_Comm_accept(mpiPortName, MPI_INFO_NULL, 0, MPI_COMM_SELF, &abin_client);
   printf("MPI communication accepted.\n");
 
@@ -86,9 +124,8 @@ void TCServerMock::initializeCommunication() {
   // https://github.com/pmodels/mpich/issues/5058
   if (tcServerName) {
     MPI_Unpublish_name(tcServerName, MPI_INFO_NULL, mpiPortName);
+    delete[] tcServerName;
   }
-
-  delete[] tcServerName;
 }
 
 // This is called only once at the beginning.

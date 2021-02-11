@@ -500,10 +500,7 @@ subroutine connect_terachem( itera )
    subroutine finalize_terachem(abin_error_code)
    use mpi
    integer, intent(in) :: abin_error_code
-   character(len=MPI_MAX_ERROR_STRING) :: error_string
-   integer :: itera
-   integer :: result_len, ierr, ierr2
-   integer :: empty
+   integer :: itera, ierr, empty
 
    ! Make sure we send MPI_TAG_EXIT to all servers.
    call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
@@ -518,18 +515,12 @@ subroutine connect_terachem( itera )
       if (ierr /= MPI_SUCCESS) then
          write(*,'(A,I0)')'I got a MPI Error when I tried to shutdown TeraChem server id=', itera
          write(*,'(A)')'Verify manually that the TeraChem server was terminated.'
-         call MPI_Error_string(ierr, error_string, result_len, ierr2)
-         if (ierr2 == MPI_SUCCESS) then
-            write (*, *) error_string
-         end if
+         call print_mpi_error(ierr)
       end if
 
       call MPI_Comm_free(newcomms(itera), ierr)
       if (ierr /= MPI_SUCCESS) then
-         call MPI_Error_string(ierr, error_string, result_len, ierr2)
-         if (ierr2 == MPI_SUCCESS) then
-            write (*, *) error_string
-         end if
+         call print_mpi_error(ierr)
       end if
 
    end do
@@ -538,21 +529,27 @@ subroutine connect_terachem( itera )
 
    end subroutine finalize_terachem
 
-   subroutine handle_mpi_error(mpi_err)
-   use mpi
-   use mod_utils,    only: abinerror
-   integer, intent(in) :: mpi_err
-   character(len=MPI_MAX_ERROR_STRING) :: error_string
-   integer :: result_len, ierr
-   if (mpi_err /= MPI_SUCCESS) then
+   subroutine print_mpi_error(mpi_err)
+      use mpi
+      character(len=MPI_MAX_ERROR_STRING) :: error_string
+      integer, intent(in) :: mpi_err
+      integer :: ierr, result_len
+
       call MPI_Error_string(mpi_err, error_string, result_len, ierr)
       if (ierr == MPI_SUCCESS) then
          write (*, '(A)') error_string
       end if
-      ! Maybe it would be safer call MPI_Abort
-      ! instead of abinerror()
-      call abinerror('MPI ERROR')
-   end if
+   end subroutine print_mpi_error
+
+   subroutine handle_mpi_error(mpi_err)
+      use mpi
+      use mod_utils, only: abinerror
+      integer, intent(in) :: mpi_err
+
+      if (mpi_err /= MPI_SUCCESS) then
+         call print_mpi_error(mpi_err)
+         call abinerror('MPI ERROR')
+      end if
    end subroutine handle_mpi_error
 
 ! USE_MPI

@@ -70,6 +70,8 @@ class TCServerMock {
     int totNumAtoms;
     char *atomTypes;
 
+    void publishServerName(char*, char*);
+    void printMPIError(int);
     void checkRecvCount(MPI_Status*, MPI_Datatype, int);
     void checkRecvTag(MPI_Status&);
 };

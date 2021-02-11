@@ -9,16 +9,31 @@
 
 int main(int argc, char* argv[])
 {
-  char server_name[1024];
+  char *serverName = NULL;
 
-  if (argc != 2) {
-    printf("I need exactly one cmdline argument <server_name>");
+  // Due to a bug in hydra_nameserver, it crashes
+  // when multiple TC servers call `MPI_Unpublish_name()`
+  // Hence, we want to allow invoking without this parameter,
+  // in which case TC server will just print the port to stdin,
+  // where it could be grepped and passed via file to ABIN,
+  // and it will never call MPI_Publish_name/MPI_Unpublish_name
+  // NOTE: This behaviour is different from real TC,
+  // which has default serverName and will always try to publish it.
+  if (argc > 2) {
+    printf("Only one cmdline argument supported, <serverName>, but you provided more!");
     throw std::runtime_error("Incorrect invocation");
   }
 
-  strcpy(server_name, argv[1]);
+  if (argc == 2) {
+    serverName = new char[1024];
+    strcpy(serverName, argv[1]);
+  }
 
-  TCServerMock tc = TCServerMock(server_name);
+  TCServerMock tc = TCServerMock(serverName);
+
+  if (serverName) {
+    delete[] serverName;
+  }
 
   tc.initializeCommunication();
 
@@ -47,7 +62,7 @@ int main(int argc, char* argv[])
  
     tc.sendQMCharges();
  
-    tc.sendQMDipoleMoments();
+    tc.sendQMDipoleMoment();
 
     // NOTE: In the real TC interface, gradients are sent
     // conditionally only if they are requested.
