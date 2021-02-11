@@ -51,7 +51,7 @@ subroutine init(dt)
    real(DP) :: masses(MAXTYPES)
    real(DP)  :: rans(10)
    integer :: iw, iat, natom_xyz, imol, shiftdihed = 1, iost
-   integer :: error, getpid, nproc=1, ipom, i
+   integer :: error, getpid, nproc=1, ipom
    character(len=2)    :: massnames(MAXTYPES), atom
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
@@ -124,10 +124,10 @@ subroutine init(dt)
          ! We will be calling TS servers concurently
          ! via OpenMP parallelization, hence we need MPI_Init_thread().
          ! https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report/node303.htm
-         call MPI_Init_thread(MPI_THREAD_MULTIPLE, i, ierr)
-         if (i /= MPI_THREAD_MULTIPLE) then
+         call MPI_Init_thread(MPI_THREAD_MULTIPLE, ipom, ierr)
+         if (ipom /= MPI_THREAD_MULTIPLE) then
             write (*, *) 'Provided safety level is not MPI_THREAD_MULTIPLE'
-            write (*, '(A,I1,A,I1)') 'Requested ', MPI_THREAD_MULTIPLE, 'got:', i
+            write (*, '(A,I1,A,I1)') 'Requested ', MPI_THREAD_MULTIPLE, 'got:', ipom
             call abinerror('init')
          end if
          ! nproc is used to initialize OpenMP threads below.
