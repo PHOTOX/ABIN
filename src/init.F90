@@ -68,7 +68,7 @@ subroutine init(dt)
             isbc,rb_sbc,kb_sbc,gamm,gammthr,conatom,mpi_sleep,narchive,xyz_units, &
             dime,ncalc,idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
             en_restraint, en_diff, en_kk, restrain_pot, &
-            pot_ref, nstep_ref, nteraservers, cp2k_mpi_beads
+            pot_ref, nstep_ref, nteraservers, max_wait_time, cp2k_mpi_beads
 
 #ifdef USE_MPI
    namelist /remd/   nswap, nreplica, deltaT, Tmax, temp_list
@@ -83,7 +83,7 @@ subroutine init(dt)
                      Nshake,ishake1,ishake2,shake_tol
 
    namelist /sh/     istate_init,nstate,substep,deltae,integ,inac,nohop,phase,decoh_alpha,popthr,ignore_state, &
-                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, natmm_tera, &
+                     nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
                      dE_S0S1_thr, correct_decoherence
              
    namelist /lz/     initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz 
@@ -101,7 +101,7 @@ subroutine init(dt)
 
    chdivider = "######################################################"
 
-   call get_cmdline(chinput, chcoords, chveloc, teraport)
+   call get_cmdline(chinput, chcoords, chveloc, tc_server_name)
 
    ! READING MAIN INPUT
    open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ")
@@ -441,8 +441,10 @@ subroutine init(dt)
 
 #ifdef USE_MPI
    if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
-      call initialize_terachem()
-      if (ipimd.eq.2.or.ipimd.eq.4.or.ipimd.eq.5) call init_terash(x, y, z)
+      call initialize_tc_servers()
+      if (ipimd.eq.2.or.ipimd.eq.4.or.ipimd.eq.5)then
+         call init_terash(x, y, z)
+      end if
    end if
 #endif
 

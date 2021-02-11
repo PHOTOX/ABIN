@@ -38,8 +38,8 @@ class TCServerMock {
     // for better granurality.
     int receive();
 
-    // Using qTIP4PF, same as in ABIN and used in all other tests
-    // returns potential energy
+    // Using qTIP4PF, same as in ABIN and used in all other tests.
+    // Returns potential energy.
     double getWaterGradients();
 
     void send();

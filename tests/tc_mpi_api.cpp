@@ -27,6 +27,7 @@ TCServerMock::TCServerMock(char *serverName) {
   }
 }
 
+
 TCServerMock::~TCServerMock(void) {
   printf("Freeing and finalizing MPI.\n");
   MPI_Comm_free(&abin_client);
@@ -42,6 +43,7 @@ TCServerMock::~TCServerMock(void) {
   }
 }
 
+
 void TCServerMock::checkRecvCount(MPI_Status *mpiStatus,
                                   MPI_Datatype datatype,
                                   int expected_count) {
@@ -54,12 +56,14 @@ void TCServerMock::checkRecvCount(MPI_Status *mpiStatus,
   }
 }
 
+
 // When we get an error tag from client we exit immediately.
 void TCServerMock::checkRecvTag(MPI_Status &mpiStatus) {
   if (mpiStatus.MPI_TAG == MPI_TAG_ERROR) {
     throw std::runtime_error("Client sent an error tag.");
   }
 }
+
 
 void TCServerMock::printMPIError(int error_code) {
     int *resultLen = NULL;
@@ -69,9 +73,11 @@ void TCServerMock::printMPIError(int error_code) {
     }
 }
 
+
 MPI_Comm* TCServerMock::getABINCommunicator() {
   return &abin_client;
 }
+
 
 // Publish server name, but only if tcServerName was passed to constructor.
 void TCServerMock::publishServerName(char *serverName, char *portName) {
@@ -108,6 +114,7 @@ void TCServerMock::publishServerName(char *serverName, char *portName) {
   }
 }
 
+
 void TCServerMock::initializeCommunication() {
   // Establishes a port at which the server may be contacted.
   // MPI_INFO_NULL are the implementation defaults. 
@@ -134,6 +141,7 @@ void TCServerMock::initializeCommunication() {
   }
 }
 
+
 // This is called only once at the beginning.
 int TCServerMock::receiveNumAtoms() {
   printf("Receiving number of atoms...\n");
@@ -155,6 +163,7 @@ int TCServerMock::receiveNumAtoms() {
   return totNumAtoms;
 }
 
+
 // TODO: Each receive function should actually return 
 // the data it received so that they can be validated.
 void TCServerMock::receiveAtomTypes() {
@@ -166,6 +175,7 @@ void TCServerMock::receiveAtomTypes() {
   checkRecvCount(&mpiStatus, MPI_CHAR, recvCount);
   puts(bufchars);
 }
+
 
 void TCServerMock::receiveAtomTypesAndScrdir() {
   // TODO: Check that we get the same atom types every iteration!
@@ -181,6 +191,7 @@ void TCServerMock::receiveAtomTypesAndScrdir() {
   puts(bufchars);
 }
 
+
 void TCServerMock::receiveCoordinates() {
   // Receive QM coordinates from ABIN
   printf("Receiving QM coordinates...\n");
@@ -195,6 +206,7 @@ void TCServerMock::receiveCoordinates() {
   }
   printf("\n");
 }
+
 
 // Receive number of QM atoms, QM atom types, QM atom coordinates.
 // This is called repeatedly in the MD loop.
@@ -225,6 +237,7 @@ int TCServerMock::receiveBeginLoop() {
   return tag;
 }
 
+
 // This is what we expect from ABIN every MD iteration
 // for classical MD and PIMD.
 // For Surface Hopping see receive_sh()
@@ -238,6 +251,7 @@ int TCServerMock::receive() {
   return tag;
 }
 
+
 void TCServerMock::sendSCFEnergy(double energy, int MPI_SCF_DIE) {
   bufdoubles[0] = energy;
   if (MPI_SCF_DIE) {
@@ -250,6 +264,7 @@ void TCServerMock::sendSCFEnergy(double energy, int MPI_SCF_DIE) {
   MPI_Send(bufdoubles, 1, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
 
+
 // Compute fake Mulliken charges.
 void TCServerMock::computeFakeQMCharges(double *charges) {
   for (int atom = 0; atom < totNumAtoms; atom++) {
@@ -257,12 +272,14 @@ void TCServerMock::computeFakeQMCharges(double *charges) {
   }
 }
 
+
 void TCServerMock::sendQMCharges() {
   // TODO: We could move this computation elsewhere
   // and accept charges as inputs here.
   computeFakeQMCharges(bufdoubles);
   MPI_Send(bufdoubles, totNumAtoms, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
+
 
 // Compute fake dipole moments.
 void TCServerMock::computeFakeQMDipoleMoment(double &Dx, double &Dy, double &Dz, double &DTotal) {
@@ -273,10 +290,12 @@ void TCServerMock::computeFakeQMDipoleMoment(double &Dx, double &Dy, double &Dz,
   printf("QM DIPOLE: %lf %lf %lf %lf\n", Dx, Dy, Dz, DTotal);
 }
 
+
 void TCServerMock::sendQMDipoleMoment() {
   computeFakeQMDipoleMoment(bufdoubles[0], bufdoubles[1], bufdoubles[2], bufdoubles[3]);
   MPI_Send(bufdoubles, 4, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
+
 
 void TCServerMock::sendQMGradients() {
   printf("Sending gradients via MPI. \n");
@@ -288,6 +307,7 @@ void TCServerMock::sendQMGradients() {
   }
   MPI_Send(bufdoubles, 3 * totNumAtoms, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
 }
+
 
 void TCServerMock::send() {
   printf("Sending QM energy, QM population charges, QM dipoles and QN gradients via MPI.\n");
@@ -306,6 +326,7 @@ void TCServerMock::send() {
   // But we always request them in ABIN (see tc.receive).
   sendQMGradients();
 }
+
 
 // Gradients stored internally for now,
 // returns energy in atomic units.

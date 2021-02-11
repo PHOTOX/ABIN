@@ -49,6 +49,12 @@ echo "########### SUBTEST 3 ###################"
 ./test3.sh
 echo "########### SUBTEST 4 ###################"
 ./test4.sh
+echo "########### SUBTEST 5 ###################"
+./test5.sh
+echo "########### SUBTEST 6 ###################"
+./test6.sh
+echo "########### SUBTEST 7 ###################"
+./test7.sh
 
 # Check how tc_server handles bad input
 # (again, we'll need a modified version)
