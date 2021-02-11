@@ -232,9 +232,9 @@ subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm)
    ! Begin receiving data from terachem
    ! -----------------------------------
 
-   ! DH TODO: we need to somehow make sure that we don't wait forever if
-   ! terachem crashes
-   ! At this moment, this is ensured at the bash script level
+   ! TODO: we need to somehow make sure that
+   ! we don't wait forever if terachem crashes
+   ! At this moment, this is ensured at the BASH script level.
 
    ! DH reduce cpu usage comming from MPI_Recv() via system call to 'sleep'.
    ! Not elegant, but MPICH apparently does not currently provide better solution.

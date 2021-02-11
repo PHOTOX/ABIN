@@ -1,4 +1,6 @@
 &general
+mpi_sleep=-1
+
 pot='_tera_'
 watpot=1
 ipimd=0,
