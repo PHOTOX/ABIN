@@ -210,7 +210,7 @@ jobs:
     - name: build ABIN
       run:  ./configure --mpi ${HOME}/mpich/${MPICH_V}/install && make
       env:
-        FFLAGS: ${{ env.ABIN_FFLAGS }}
+        FFLAGS: ${{ env.ABIN_FFLAGS }} -g
     - name: test ABIN
       run: make test
       # We upload to Codecov from the OpenMPI build,
