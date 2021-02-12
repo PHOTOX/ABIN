@@ -274,7 +274,9 @@ subroutine init(dt)
 
    ! This line is super important,
    ! cause we actually use natqm in many parts of the code
-   if(iqmmm.eq.0.and.pot.ne.'mm') natqm = natom
+   if (iqmmm == 0 .and. pot /= 'mm') then
+      natqm = natom
+   end if
 
    if(irest.eq.1)then
     readnhc=1   !readnhc has precedence before initNHC

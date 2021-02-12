@@ -76,7 +76,7 @@ CONTAINS
       ! Connect to all TC servers concurrently.
       !$OMP PARALLEL DO
       do i = 1, nteraservers
-         call connect_tc_server(tc_server_name, i)
+         call connect_tc_server(trim(tc_server_name), i)
       end do
       !$OMP END PARALLEL DO
    end subroutine initialize_terachem_interface

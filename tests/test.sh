@@ -117,8 +117,10 @@ restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.
 # Run all tests
 if [[ $TESTS = "all" ]];then
    # TODO: Re-enable GLE and PIGLE tests!
-   folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE LZ_SS LZ_ST LZ_ENE PIMD SHAKE HARMON MINI QMMM \
-            ANALYZE_EXT)
+   folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
+            LZ_SS LZ_ST LZ_ENE \
+            PIMD SHAKE HARMON MINI QMMM \
+            ANALYZE_EXT CMDLINE)
 
    let index=${#folders[@]}+1
    # TODO: Split this test, test OpenMP separately
