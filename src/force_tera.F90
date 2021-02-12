@@ -22,12 +22,11 @@ module mod_force_tera
    public :: force_tera
    save
 
-CONTAINS
+contains
 
-subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
-   use mod_const,    only: DP, ANG
-   use mod_utils,    only: abinerror
-   use mod_general,  only: iqmmm
+   subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
+   use mod_utils, only: abinerror
+   use mod_general, only: iqmmm
    use mod_interfaces, only: oniom
    real(DP),intent(in)     ::  x(:,:),y(:,:),z(:,:)
    real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
@@ -44,7 +43,6 @@ subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
       write(*,*)'ERROR: Parameter "nwalk" must be divisible by "nteraservers"!'
       call abinerror("force_tera")
    end if
-
 
    itc = 1
 
@@ -76,79 +74,17 @@ end subroutine force_tera
 #ifdef USE_MPI
 
 subroutine send_tera(x, y, z, iw, tc_comm)
-   use mod_const, only: DP, ANG
-   use mod_general, only: idebug, iremd, my_rank
    use mod_system,only: names
    use mod_qmmm, only: natqm
-   use mod_utils, only: abinerror
-   real(DP),intent(in) ::  x(:,:), y(:,:), z(:,:)
+   real(DP), intent(in) :: x(:,:), y(:,:), z(:,:)
    integer,intent(in) ::  iw, tc_comm
-   real(DP) :: coords(3, size(x,1) )
-   character(len=2) :: names_qm(size(x,1)+6)
-   integer  :: ierr, iat
-
-   do iat=1,natqm
-      coords(1,iat) = x(iat,iw)/ANG
-      coords(2,iat) = y(iat,iw)/ANG
-      coords(3,iat) = z(iat,iw)/ANG
-   end do
 
    ! We send these data to TC each step
-   !call send_natom(natqm)
-   !call send_atom_types_and_scrdir(names)
-   !call send_coordinates(x, y, z)
+   call send_natom(natqm, tc_comm)
 
+   call send_atom_types_and_scrdir(names, natqm, iw, tc_comm, .true.)
 
-   ! Send natqm and the type of each qmatom
-   if (idebug.gt.1) then
-      write(6,'(/, a, i0)') 'Sending natqm = ', natqm
-      call flush(6)
-   end if
-   call MPI_Send( natqm, 1, MPI_INTEGER, 0, 2, tc_comm, ierr )
-   call handle_mpi_error(ierr)
-
-   do iat=1,natqm
-      names_qm(iat) = names(iat)
-   end do
-   if ( idebug.gt.1 ) then
-      write(6,'(/,a)') 'Sending QM atom types: '
-      write(*,*)(names_qm(iat), iat=1,natqm)
-      call flush(6)
-   end if
-   ! DH WARNING: this will not work for iw>199
-   ! not really tested for iw>99
-   ! TODO: refactor this mess
-   write(names_qm(natqm+1),'(A2)')'++'
-   write(names_qm(natqm+2),'(A2)')'sc'
-   if(iw.gt.99)then
-      write(names_qm(natqm+3),'(A1,I1)')'r',1
-      write(names_qm(natqm+4),'(I2.2)')iw-100
-   else
-      write(names_qm(natqm+3),'(A1,I1)')'r',0
-      write(names_qm(natqm+4),'(I2.2)')iw
-   end if
-
-   ! REMD HACK
-   if (iremd.eq.1)then
-      write(names_qm(natqm+5),'(I2.2)')my_rank
-      write(names_qm(natqm+6),'(A2)')'++'
-   else
-      write(names_qm(natqm+5),'(A2)')'++'
-   end if
-
-   call MPI_Send( names_qm, 2*natqm+12, MPI_CHARACTER, 0, 2, tc_comm, ierr )
-   call handle_mpi_error(ierr)
-
-   ! Send QM coordinate array
-   if ( idebug > 1 ) then
-      write(6,'(a)') 'Sending QM coords: '
-      do iat=1, natqm
-         write(6,*) 'Atom ',iat,': ',coords(:,iat)
-         call flush(6)
-      end do 
-   end if
-   call MPI_Send( coords, natqm*3, MPI_DOUBLE_PRECISION, 0, 2, tc_comm, ierr ) 
-   call handle_mpi_error(ierr)
+   call send_coordinates(x, y, z, natqm, iw, tc_comm)
 
    ! NOT IMPLEMENTED !
    !if (natmm_tera > 0) then
@@ -161,7 +97,7 @@ end subroutine send_tera
 ! implemented so excluding this code from compilation.
 #if 0
 subroutine send_mm_data(x, y, z, iw, tc_comm)
-   use mod_const, only: DP, ANG
+   use mod_const, only: ANG
    use mod_general, only: idebug
    use mod_qmmm, only: natqm
    real(DP),intent(in) :: x(:,:),y(:,:),z(:,:)
@@ -175,7 +111,7 @@ subroutine send_mm_data(x, y, z, iw, tc_comm)
    if (idebug > 1) then
       write (6, '(a)') 'Sending charges: '
    end if
-   call MPI_Send(mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, tc_comm, ierr)
+   call MPI_Send(mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
    call handle_mpi_error(ierr)
 
    ! Send MM point charge coordinate array
@@ -187,63 +123,46 @@ subroutine send_mm_data(x, y, z, iw, tc_comm)
       coords(2,iat) = y(iat+natqm,iw) / ANG
       coords(3,iat) = z(iat+natqm,iw) / ANG
    end do
-   call MPI_Send(coords, 3 * natmm_tera, MPI_DOUBLE_PRECISION, 0, 2, tc_comm, ierr)
+   call MPI_Send(coords, 3 * natmm_tera, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
    call handle_mpi_error(ierr)
-end subroutine send_mm_data
+   end subroutine send_mm_data
 #endif
 
-subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm)
-   use mod_const, only: DP, ANG
+   subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm)
+   use mod_const, only: ANG
    use mod_general, only: idebug, it, nwrite
    use mod_io, only: print_charges, print_dipoles
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
-   real(DP),intent(inout)  ::  fx(:,:),fy(:,:),fz(:,:)
-   real(DP),intent(inout)  ::  eclas
-   integer,intent(in)      ::  iw, walkmax, tc_comm
+   real(DP), intent(inout) :: fx(:,:), fy(:,:), fz(:,:)
+   real(DP), intent(inout) :: eclas
+   integer, intent(in) :: iw, walkmax
+   integer, intent(in) :: tc_comm
    real(DP) :: qmcharges( size(fx,1) )
    real(DP) :: dxyz_all(3, size(fx,1) )
    real(DP) :: escf                 ! SCF energy
    real(DP) :: dipmom(4,3)          ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
-   integer  :: status(MPI_STATUS_SIZE)
-   integer  :: ierr, iat
-   logical  :: recv_ready
-   character*50 :: chsys_sleep
-   ! -----------------------------------
-   ! Begin receiving data from terachem
-   ! -----------------------------------
+   integer :: status(MPI_STATUS_SIZE)
+   integer :: ierr, iat
 
-   ! TODO: we need to somehow make sure that
-   ! we don't wait forever if terachem crashes
-   ! At this moment, this is ensured at the BASH script level.
+   call wait_for_terachem(tc_comm)
 
-   ! DH reduce cpu usage comming from MPI_Recv() via system call to 'sleep'.
-   ! Not elegant, but MPICH apparently does not currently provide better solution.
-   ! Based according to an answer here:
-   ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
-
-   recv_ready = .false.
-   write(chsys_sleep,'(A6, F10.4)')'sleep ', mpi_sleep
-   do while(.not.recv_ready)
-      call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, recv_ready, status, ierr)
-      call handle_mpi_error(ierr)
-      call system(chsys_sleep)
-   end do
+   ! Begin receiving data from TeraChem
 
    ! Energy
    if (idebug > 2) then
-      write(6,'(a)') 'Waiting to receive scf energy from TeraChem...'
+      write(6,'(a)') 'Waiting to receive energy from TeraChem...'
       call flush(6)
    end if
    call MPI_Recv( escf, 1, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
    ! Checking for TAG=1, which means that SCF did not converge
-   if (status(MPI_TAG).eq.1)then
-      write(*,*)'GOT TAG 1 from TeraChem: SCF probably did not converge.'
+   if (status(MPI_TAG) == 1)then
+      write (*, *) 'Got TAG 1 from TeraChem: SCF probably did not converge.'
       call abinerror('force_tera')
    end if
    if ( idebug > 1 ) then
-      write(6,'(a,es15.6)') 'Received scf energy from server:', escf
+      write(6, '(A,ES15.6)') 'Received SCF energy from server:', escf
       call flush(6)
    end if
 

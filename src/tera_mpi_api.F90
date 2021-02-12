@@ -1,28 +1,18 @@
+! Common subroutines for MPI interface with TeraChem
 module mod_terampi
-! ----------------------------------------------------------------
-! Interface for TeraChem based QM and QM/MM MD.
-! Perform MPI communications with terachem.
-!
-! Currently supports:
-! pure QM and ONIOM
-! Adapted from Sander (Amber14)
-!
-! Original Author: Andreas Goetz (agoetz@sdsc.edu)
-!
-! Date: November 2010
-! Modified by Daniel Hollas hollas@vscht.cz
-! ----------------------------------------------------------------
    use mod_const, only: DP
 #ifdef USE_MPI
    use mpi
 #endif
    implicit none
    private
-   integer, parameter :: MPI_TAG_ERROR = 13, MPI_TAG_EXIT = 0
+   integer, parameter :: MPI_TAG_EXIT = 0
+   integer, parameter :: MPI_TAG_ERROR = 13
+   integer, parameter :: MPI_TAG_GRADIENT = 2
+   ! Default tag that we send to TC
+   integer, parameter :: TC_TAG = MPI_TAG_GRADIENT
    ! By default, take port name from a file
    character(len=*), parameter :: TC_PORT_FILE_NAME = 'port.txt.'
-   character(len=1024) :: tc_server_name = ''
-   integer, allocatable ::  tc_comms(:)
 
    integer :: nteraservers = 1
    ! How long do we wait for TC port [seconds]
@@ -30,23 +20,29 @@ module mod_terampi
    ! Sleep interval while waiting for TC calculation to finish.
    real(DP) :: mpi_sleep = 0.05
 
-   public :: tc_server_name
    public :: nteraservers
    public :: mpi_sleep, max_wait_time
+   public :: TC_TAG
 #ifdef USE_MPI
+   integer, allocatable ::  tc_comms(:)
+
    ! TODO: Move handle_mpi_error to a dedicated MPI module
    public :: handle_mpi_error
    public :: get_tc_communicator
-   public :: finalize_terachem, initialize_tc_servers, initialize_terachem_interface
+   public :: wait_for_terachem
+   public :: finalize_terachem
+   public :: send_natom, send_atom_types_and_scrdir, send_coordinates
 #endif
+   public :: initialize_tc_servers, initialize_terachem_interface
    save
 
 CONTAINS
 
 #ifdef USE_MPI
 
-   subroutine initialize_terachem_interface()
+   subroutine initialize_terachem_interface(tc_server_name)
       use mod_general, only: nwalk
+      character(len=*) :: tc_server_name
       integer :: i, ierr
 
       if (nwalk > 1) then
@@ -80,51 +76,53 @@ CONTAINS
       ! Connect to all TC servers concurrently.
       !$OMP PARALLEL DO
       do i = 1, nteraservers
-         call connect_tc_server(i)
+         call connect_tc_server(tc_server_name, i)
       end do
       !$OMP END PARALLEL DO
-
    end subroutine initialize_terachem_interface
 
-   subroutine connect_tc_server(itera)
-   use mod_utils, only: abinerror
-   ! TODO: Figure out how to handle REMD
-!   use mod_general, only: iremd, my_rank
-   integer, intent(in) :: itera
-   character(len=MPI_MAX_PORT_NAME) :: port_name
-   integer :: ierr, newcomm
-   character(len=1024) :: server_name
-   character(len=1024) :: portfile
 
-   if (tc_server_name /= '') then 
+   subroutine connect_tc_server(tc_server_name, itera)
+      use mod_utils, only: abinerror
+      ! TODO: Figure out how to handle REMD
+      ! use mod_general, only: iremd, my_rank
+      character(len=*) :: tc_server_name
+      integer, intent(in) :: itera
+      character(len=MPI_MAX_PORT_NAME) :: port_name
+      integer :: ierr, newcomm
+      character(len=1024) :: server_name
+      character(len=1024) :: portfile
+ 
+      if (tc_server_name /= '') then
+ 
+         write (server_name, '(A,I0)')trim(adjustl(tc_server_name))//'.', itera
+         call lookup_port_via_nameserver(trim(server_name), port_name)
+ 
+      else
+ 
+         write (portfile, '(A,I0)') TC_PORT_FILE_NAME, itera
+         call read_tc_port_from_file(trim(portfile), port_name)
+ 
+      end if
+ 
+      write (6, '(2A)') 'Found TeraChem port: ', trim(port_name)
+      write (6, '(A)') 'Establishing connection...'
+      call flush(6)
 
-      write (server_name, '(A,I0)')trim(adjustl(tc_server_name))//'.', itera
-      call lookup_port_via_nameserver(trim(server_name), port_name)
-
-   else
-
-      write (portfile, '(A,I0)') TC_PORT_FILE_NAME, itera
-      call read_tc_port_from_file(trim(portfile), port_name)
-
-   end if
-
-   write (6, '(2A)') 'Found TeraChem port: ', trim(port_name)
-   write (6, '(A)') 'Establishing connection...'
-   call flush(6)
-
-   ! Establish new communicator via port name
-   call MPI_Comm_connect(trim(port_name), MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
-   call handle_mpi_error(ierr)
-   write(6, '(A)') 'Connection established!'
-
-   tc_comms(itera) = newcomm
-
+      ! Establish new communicator via port name
+      call MPI_Comm_connect(trim(port_name), MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
+      call handle_mpi_error(ierr)
+      write(6, '(A)') 'Connection established!'
+ 
+      tc_comms(itera) = newcomm
    end subroutine connect_tc_server
+
 
    integer function get_tc_communicator(itera) result(tc_comm)
       integer, intent(in) :: itera
       tc_comm = tc_comms(itera)
    end function get_tc_communicator
+
 
    ! Look for server_name via MPI nameserver, get port name
    subroutine lookup_port_via_nameserver(server_name, port_name)
@@ -216,25 +214,15 @@ CONTAINS
 
 
    subroutine initialize_tc_servers()
-      use mod_general, only: idebug
       use mod_qmmm,  only: natqm
       use mod_system,only: names
-      use mod_utils, only: abinerror
-      integer :: ierr, itera
+      integer :: itera
  
-      !$OMP PARALLEL DO PRIVATE(ierr, itera)
+      !$OMP PARALLEL DO
       do itera = 1, nteraservers
-         if (idebug > 0) then
-            write (*, *) 'Sending initial number of QM atoms to TeraChem.'
-         end if
-         call MPI_Send(natqm, 1, MPI_INTEGER, 0, 2, tc_comms(itera), ierr)
-         call handle_mpi_error(ierr)
- 
-         if (idebug > 0) then
-            write (*, *) 'Sending initial QM atom names to TeraChem.'
-         end if
-         call MPI_Send(names, 2*natqm, MPI_CHARACTER, 0, 2, tc_comms(itera), ierr)
-         call handle_mpi_error(ierr)
+         call send_natom(natqm, tc_comms(itera))
+         
+         call send_atom_types_and_scrdir(names, natqm, 0, tc_comms(itera), .false.)
       end do
       !$OMP END PARALLEL DO
    end subroutine initialize_tc_servers
@@ -290,6 +278,146 @@ CONTAINS
          call abinerror('handle_mpi_error')
       end if
    end subroutine handle_mpi_error
+
+
+   subroutine wait_for_terachem(tc_comm)
+      integer, intent(in) :: tc_comm
+      character(len=20) :: chsys_sleep
+      integer :: status(MPI_STATUS_SIZE)
+      integer :: ierr
+      logical :: ready
+      ! TODO: we need to somehow make sure that
+      ! we don't wait forever if TeraChem crashes.
+      ! At this moment, this is ensured at the BASH script level.
+ 
+      ! The idea here is to reduce the CPU usage of MPI_Recv() via system call to 'sleep'.
+      ! In most MPI implementations, MPI_Recv() is actively polling the other end
+      ! (in this case TeraChem) and consumes a whole CPU core. That's clearly wasteful,
+      ! since we're waiting for a long time for the ab initio result.
+
+      ! Some implementation provide an option to change this behaviour,
+      ! but I didn't figure out any for MPICH so we rather inelegantly call system sleep.
+      ! Based according to an answer here:
+      ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
+      ready = .false.
+      write (chsys_sleep, '(A6, F10.4)') 'sleep ', mpi_sleep
+      do while(.not.ready)
+         call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, ready, status, ierr)
+         call handle_mpi_error(ierr)
+         call system(trim(chsys_sleep))
+      end do
+   end subroutine wait_for_terachem
+
+   subroutine append_scrdir_name(buffer, offset, iw, remd_replica)
+      use mod_general, only: iremd
+      character(len=*), intent(inout) :: buffer
+      integer, intent(in) :: offset
+      integer, intent(in) :: iw
+      integer, intent(in) :: remd_replica
+      integer :: i
+
+      i = offset
+      write (buffer(i+1:i+12), '(A8, I4.4)') '++scrdir', iw
+      if (iremd == 1) then
+         write (buffer(i+13:i+23), '(A4, I4.4, A2)') 'rank', remd_replica, '++'
+      else
+         write (buffer(i+13:i+14), '(A2)') '++'
+      end if
+   end subroutine append_scrdir_name
+
+   subroutine send_natom(num_atom, tc_comm)
+      use mod_general, only: idebug
+      integer, intent(in) :: num_atom
+      integer, intent(in) :: tc_comm
+      integer :: ierr
+
+      ! Send natqm and the type of each qmatom
+      if (idebug > 1) then
+         write(6,'(A, I0)') 'Sending number of atoms  = ', num_atom
+         call flush(6)
+      end if
+      call MPI_Send(num_atom, 1, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
+      call handle_mpi_error(ierr)
+   end subroutine send_natom
+
+
+   subroutine send_atom_types_and_scrdir(at_names, num_atom, iw, tc_comm, send_scrdir)
+      use mod_general, only: my_rank, idebug
+      character(len=2), intent(in) :: at_names(:)
+      logical, intent(in) :: send_scrdir
+      integer, intent(in) :: num_atom
+      integer, intent(in) :: iw
+      integer, intent(in) :: tc_comm
+      integer, parameter :: MAX_SCRDIR_LEN = 30
+      character(len=2 * num_atom + MAX_SCRDIR_LEN) :: buffer
+      integer :: ierr, offset, iat
+      integer :: num_char
+
+      buffer = ''
+      offset = 1
+      do iat = 1, num_atom
+         write(buffer(offset:offset+1), '(A2)') at_names(iat)
+         offset = offset + 2
+      end do
+      num_char = num_atom * 2
+
+      if (send_scrdir) then
+         call append_scrdir_name(buffer, num_atom * 2, iw, my_rank)
+         num_char = len_trim(buffer)
+      end if
+ 
+      if (idebug > 1) then
+         write (6, '(A)') 'Sending QM atom types: '
+         write (*, '(A)') trim(buffer)
+         call flush(6)
+      end if
+ 
+      call MPI_Send(buffer, num_char, MPI_CHARACTER, 0, TC_TAG, tc_comm, ierr)
+      call handle_mpi_error(ierr)
+   end subroutine send_atom_types_and_scrdir
+
+
+   subroutine send_coordinates(x, y, z, num_atom, iw, tc_comm)
+      use mod_general, only: idebug
+      use mod_const, only: ANG
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      integer, intent(in) :: num_atom
+      integer, intent(in) :: iw
+      integer, intent(in) :: tc_comm
+      real(DP), allocatable :: coords(:, :)
+      integer :: ierr, iat
+
+      allocate (coords(3, num_atom))
+      do iat = 1, num_atom
+         coords(1, iat) = x(iat, iw) / ANG
+         coords(2, iat) = y(iat, iw) / ANG
+         coords(3, iat) = z(iat, iw) / ANG
+      end do
+
+      if (idebug > 1) then
+         write(6, '(A)') 'Sending QM coords: '
+         do iat = 1, num_atom
+            write (6, *) 'Atom ', iat, ': ', coords(:, iat)
+            call flush(6)
+         end do 
+      end if
+      call MPI_Send(coords, num_atom * 3, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
+      call handle_mpi_error(ierr)
+   end subroutine send_coordinates
+
+#else
+
+   subroutine initialize_tc_servers()
+      use mod_utils, only: not_compiled_with
+      call not_compiled_with('MPI', 'initialize_tc_servers')
+   end subroutine initialize_tc_servers
+      
+   subroutine initialize_terachem_interface(tc_server_name)
+      use mod_utils, only: not_compiled_with
+      character(len=*), intent(in) :: tc_server_name
+      write (*, *) 'TC_SERVER_NAME=', tc_server_name
+      call not_compiled_with('MPI', 'initialize_terachem_interface')
+   end subroutine initialize_terachem_interface
 
 ! USE_MPI
 #endif

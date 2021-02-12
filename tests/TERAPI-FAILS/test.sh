@@ -34,12 +34,7 @@ check_for_openmpi
 # Compile default TC server
 $MPICXX $TCSRC -Wall -o $TCEXE
 
-cleanup() {
-  #kill -9 $hydrapid > /dev/null 2>&1 || true
-  exit 0
-}
-
-trap cleanup INT ABRT TERM EXIT
+#trap cleanup INT ABRT TERM EXIT
 
 echo "########### SUBTEST 1 ###################"
 ./test1.sh
@@ -56,10 +51,7 @@ echo "########### SUBTEST 6 ###################"
 echo "########### SUBTEST 7 ###################"
 ./test7.sh
 
-# Check how tc_server handles bad input
+# TODO: Check how tc_server handles bad input
 # (again, we'll need a modified version)
 # Basically we should test every assertion
 # in the TCServerMock code.
-
-# Check handling of port.txt file in ABIN.
-# (without launching the tc_server)

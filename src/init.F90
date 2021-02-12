@@ -58,6 +58,7 @@ subroutine init(dt)
    character(len=20)   :: xyz_units='angstrom'
    character(len=60)   :: chdivider
    character(len=60)   :: mdtype
+   character(len=1024) :: tc_server_name
    LOGICAL :: file_exists
    logical :: rem_comvel, rem_comrot
    integer :: ierr
@@ -120,6 +121,7 @@ subroutine init(dt)
       call init_cp2k()
 #ifdef USE_MPI
    else
+      ! TODO: Move this to a mpi_wrapper module
       if (pot == "_tera_" .and. nteraservers > 1) then
          ! We will be calling TS servers concurently
          ! via OpenMP parallelization, hence we need MPI_Init_thread().
@@ -154,8 +156,6 @@ subroutine init(dt)
    ! which decreases thread utilization.
 !$ call OMP_set_num_threads(nproc)
 
-! We need to connect to TeraChem as soon as possible,
-! because we want to shut down TeraChem nicely in case something goes wrong.
 #ifdef USE_MPI
    ! TODO: Move this to an mpi_wrapper module
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
@@ -164,21 +164,13 @@ subroutine init(dt)
    if (my_rank.eq.0.and.mpi_world_size.gt.1)then
       write(*,'(A,I3)')'Number of MPI processes = ', mpi_world_size
    end if
-   if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
-      call initialize_terachem_interface()
-   end if
-
-   ! TODO: Do we need a barrier here?
-   call MPI_Barrier(MPI_COMM_WORLD, ierr)
-
-#else
-   if(pot.eq.'_tera_')then
-      write(*,*)'FATAL ERROR: This version was not compiled with MPI support.'
-      write(*,*)'You cannot use the direct MPI interface to TeraChem.'
-      call abinerror('init')
-   end if
 #endif
 
+   ! We need to connect to TeraChem as soon as possible,
+   ! because we want to shut down TeraChem nicely in case something goes wrong.
+   if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
+      call initialize_terachem_interface(trim(tc_server_name))
+   end if
 
    if (en_restraint.ge.1) then
       call en_rest_init()
@@ -439,14 +431,12 @@ subroutine init(dt)
 !--END OF READING INPUT---------------
 
 
-#ifdef USE_MPI
    if(pot.eq.'_tera_'.or.restrain_pot.eq.'_tera_')then
       call initialize_tc_servers()
       if (ipimd.eq.2.or.ipimd.eq.4.or.ipimd.eq.5)then
          call init_terash(x, y, z)
       end if
    end if
-#endif
 
 !-----HERE WE CHECK FOR ERRORS IN INPUT-----------
       call check_inputsanity()

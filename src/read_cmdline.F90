@@ -25,11 +25,14 @@ module mod_cmdline
    end subroutine print_help
 
 
-   subroutine get_cmdline(chinput, chcoords, chveloc, tc_port)
+   subroutine get_cmdline(chinput, chcoords, chveloc, tc_server_name)
    use mod_utils, only: abinerror, file_exists_or_exit
-   character(len=*),intent(inout) :: chinput, chcoords, chveloc, tc_port
+   character(len=*),intent(inout) :: chinput, chcoords, chveloc
+   character(len=*), intent(out) :: tc_server_name
    character(len=len(chinput)) :: arg
    integer :: i
+
+   tc_server_name = ''
    
    i = 0
    do while (i < command_argument_count())
@@ -60,8 +63,7 @@ module mod_cmdline
       case ('-M')
          i = i + 1
          call get_command_argument(i, arg)
-         read(arg,'(A)')tc_port
-         tc_port=trim(tc_port)
+         read(arg,'(A)')tc_server_name
       case default
          write(*,'(A)')'Invalid command line argument ' // arg
          call print_help()
