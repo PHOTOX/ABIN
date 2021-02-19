@@ -25,6 +25,9 @@ launch_hydra_nameserver() {
   #fi
   $CMD &
   hydrapid=$!
+  # Sometime tests fail connecting to the nameserver,
+  # let's try to give it some time.
+  sleep 0.2
 }
 
 check_for_openmpi() {
