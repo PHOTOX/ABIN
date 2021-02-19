@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
+rm -f ERROR abin.out
 if [[ $1 = "clean" ]];then
-  rm -f ERROR abin.out
   exit 0
 fi
 

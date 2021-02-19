@@ -44,7 +44,6 @@ program abin_dyn
    integer,dimension(8) :: time_start, time_end
    real(DP) :: total_cpu_time
    integer  :: ierr
-!$ integer  :: nthreads,omp_get_max_threads
 
    call date_and_time(VALUES=time_start)
 
@@ -52,7 +51,9 @@ program abin_dyn
    call init(dt)
 
    ! This cannot be in init because of the namelist 'system'
-   if (my_rank.eq.0) call clean_temp_files()
+   if (my_rank == 0) then
+      call clean_temp_files()
+   end if
 
    if(irest.eq.1.and.(my_rank.eq.0.or.iremd.eq.1))then
       call archive_file('restart.xyz',it)
@@ -66,9 +67,7 @@ program abin_dyn
       call lz_rewind(en_array_lz)
    endif
 
-!$ nthreads = omp_get_max_threads()
    if (my_rank.eq.0)then
-!$    write (*, '(A,I0)') 'Number of OpenMP threads: ', nthreads
       write(*,'(A)')'Job started at: ' // trim(get_formatted_date_and_time(time_start))
       write(*,*)''
    end if

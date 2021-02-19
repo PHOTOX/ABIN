@@ -132,7 +132,7 @@ check_running_processes() {
       break
     elif [[ $running -lt $num_jobs ]];then
       # Give the others time to finish 
-      sleep 1
+      sleep 1.2
       running=$(ps -eo pid|grep -E "$regex"|wc -l)
       if [[ $running -ne 0 ]];then
         echo "One of the TC servers or ABIN died. Killing the rest."

@@ -26,8 +26,8 @@ module mod_terampi
 #ifdef USE_MPI
    integer, allocatable ::  tc_comms(:)
 
-   ! TODO: Move handle_mpi_error to a dedicated MPI module
-   public :: handle_mpi_error
+   ! TODO: Move handle_mpi_error and check_recv_count to a dedicated MPI module
+   public :: handle_mpi_error, check_recv_count
    public :: get_tc_communicator
    public :: wait_for_terachem
    public :: finalize_terachem
@@ -51,9 +51,9 @@ CONTAINS
       end if
       write (*, '(A,I0)') 'Number of TeraChem servers: ', nteraservers
 
-      if(mpi_sleep <= 0) then
-         write(*,*)'WARNING: Parameter "mpi_sleep" must be positive!'
-         write(*,*)'Setting it back to default value'
+      if (mpi_sleep <= 0) then
+         write (*, *) 'WARNING: Parameter "mpi_sleep" must be positive!'
+         write (*, *) 'Setting it back to default value'
          mpi_sleep = 0.05D0
       end if
 
@@ -74,7 +74,7 @@ CONTAINS
       call handle_mpi_error(ierr)
 
       ! Connect to all TC servers concurrently.
-      !$OMP PARALLEL DO
+      !$OMP PARALLEL DO PRIVATE(i)
       do i = 1, nteraservers
          call connect_tc_server(trim(tc_server_name), i)
       end do
@@ -86,7 +86,7 @@ CONTAINS
       use mod_utils, only: abinerror
       ! TODO: Figure out how to handle REMD
       ! use mod_general, only: iremd, my_rank
-      character(len=*) :: tc_server_name
+      character(len=*), intent(in) :: tc_server_name
       integer, intent(in) :: itera
       character(len=MPI_MAX_PORT_NAME) :: port_name
       integer :: ierr, newcomm
@@ -259,8 +259,8 @@ CONTAINS
    end subroutine finalize_terachem
 
    subroutine print_mpi_error(mpi_err)
-      character(len=MPI_MAX_ERROR_STRING) :: error_string
       integer, intent(in) :: mpi_err
+      character(len=MPI_MAX_ERROR_STRING) :: error_string
       integer :: ierr, result_len
 
       call MPI_Error_string(mpi_err, error_string, result_len, ierr)
@@ -279,6 +279,23 @@ CONTAINS
       end if
    end subroutine handle_mpi_error
 
+   ! TODO: Move this to mpi_wrapper module
+   subroutine check_recv_count(mpi_status, expected_count, datatype)
+      use mod_utils, only: abinerror
+      integer, intent(in) :: mpi_status(:)
+      integer, intent(in) :: expected_count
+      integer, intent(in) :: datatype ! e.g. MPI_INTEGER
+      integer :: recv_count
+      integer :: ierr
+
+      call MPI_Get_count(mpi_status, datatype, recv_count, ierr)
+      call handle_mpi_error(ierr)
+      if (recv_count /= expected_count) then
+         write (*, *) 'ERROR: MPI_Recv failed'
+         write (*, '(A,I0,A,I0)') 'Received ',recv_count , 'bytes, expected ', expected_count
+         call abinerror('check_recv_count')
+      end if
+   end subroutine check_recv_count
 
    subroutine wait_for_terachem(tc_comm)
       integer, intent(in) :: tc_comm

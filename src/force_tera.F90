@@ -149,40 +149,40 @@ subroutine send_mm_data(x, y, z, iw, tc_comm)
 
    ! Begin receiving data from TeraChem
 
-   ! Energy
    if (idebug > 2) then
       write(6,'(a)') 'Waiting to receive energy from TeraChem...'
       call flush(6)
    end if
-   call MPI_Recv( escf, 1, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
+   call MPI_Recv(escf, 1, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, 1, MPI_DOUBLE_PRECISION)
    ! Checking for TAG=1, which means that SCF did not converge
-   if (status(MPI_TAG) == 1)then
+   if (status(MPI_TAG) == 1) then
       write (*, *) 'Got TAG 1 from TeraChem: SCF probably did not converge.'
       call abinerror('force_tera')
    end if
-   if ( idebug > 1 ) then
+   if (idebug > 1) then
       write(6, '(A,ES15.6)') 'Received SCF energy from server:', escf
       call flush(6)
    end if
 
-   ! Charges (Mulliken or other)
    if (idebug > 2) then
       write(6,'(a)') 'Waiting to receive charges...'
    end if
    call MPI_Recv(qmcharges(:), natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, natqm, MPI_DOUBLE_PRECISION)
    if (modulo(it, nwrite) == 0 .and. nteraservers == 1) then
       call print_charges(qmcharges, iw)
    end if
 
-   ! Dipole moment
    if ( idebug > 2 ) then
       write(6,'(a)') 'Waiting to receive dipole moment...'
    end if
    ! QM dipole moment
-   call MPI_Recv( dipmom(:,1), 4, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr )
+   call MPI_Recv(dipmom(:,1), 4, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr )
    call handle_mpi_error(ierr)
+   call check_recv_count(status, 4, MPI_DOUBLE_PRECISION)
    if ( idebug > 1 ) then
       write(6,'(a,4es15.6)') 'Received QM  dipole moment from server:', dipmom(:,1)
       call flush(6)
@@ -205,6 +205,7 @@ subroutine send_mm_data(x, y, z, iw, tc_comm)
    call MPI_Recv(dxyz_all, 3 * natqm, MPI_DOUBLE_PRECISION, &
         MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, 3 * natqm, MPI_DOUBLE_PRECISION)
    if ( idebug > 1 ) then
       write (6, '(A)') 'Received the following gradients from server:'
       do iat = 1, natqm

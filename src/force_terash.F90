@@ -42,7 +42,7 @@ subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
    use mod_const, only: DP, ANG
    use mod_array_size, only: NSTMAX
    use mod_general, only: idebug, natom, en_restraint, ipimd
-   use mod_terampi, only: handle_mpi_error
+   use mod_terampi, only: handle_mpi_error, check_recv_count
    use mod_qmmm, only: natqm
    use mod_utils, only: abinerror
    use mod_io, only: print_charges, print_dipoles, print_transdipoles
@@ -71,6 +71,7 @@ subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
    call MPI_Recv( en_array, nstate, MPI_DOUBLE_PRECISION, &
            MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, nstate, MPI_DOUBLE_PRECISION)
 
    eclas = en_array(istate(itrj), itrj)
 
@@ -87,6 +88,7 @@ subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
    call MPI_Recv( TDip, (nstate-1)*3,  &
         MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, (nstate - 1) * 3, MPI_DOUBLE_PRECISION)
 !   do i=1, nstate-1
 !      T_FMS%ElecStruc%TransDipole(i+1,:)=TDip(3*(i-1)+1:3*(i-1)+3)
 !   end do
@@ -101,6 +103,7 @@ subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
    call MPI_Recv( Dip,nstate*3, &
           MPI_DOUBLE_PRECISION,MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, nstate * 3, MPI_DOUBLE_PRECISION)
 
    call print_dipoles(Dip, iw, nstate )
 
@@ -108,6 +111,7 @@ subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
    if (idebug>0) write(*, '(a)') 'Receiving atomic charges from TC.'
    call MPI_Recv( qmcharges, natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, natqm, MPI_DOUBLE_PRECISION)
 
    call print_charges(qmcharges, istate(itrj) )
 
@@ -116,6 +120,7 @@ subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
    call MPI_Recv( MO, nbf*nbf, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
      MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, nbf * nbf, MPI_DOUBLE_PRECISION)
 
 !   T_FMS%ElecStruc%OldOrbitals=MO
 
@@ -123,10 +128,12 @@ subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
    call MPI_Recv( CIvecs, nstate*civec,  &
            MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, nstate * civec, MPI_DOUBLE_PRECISION)
         
    if (idebug>0) write(*,*) "Receiving wavefunction overlap."
-   call MPI_Recv(SMatrix, nstate*nstate, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr);
+   call MPI_Recv(SMatrix, nstate*nstate, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr);
    call handle_mpi_error(ierr)
+   call check_recv_count(status, nstate * nstate, MPI_DOUBLE_PRECISION)
 
    ! Should change the following according to what is done in TeraChem
    i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
@@ -137,6 +144,7 @@ subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
    call MPI_Recv( blob, blobsize,  &
            MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
    call handle_mpi_error(ierr)
+   call check_recv_count(status, blobsize, MPI_DOUBLE_PRECISION)
 
    ! TODO: Extract all this to a function.
    if (idebug > 0) then
@@ -155,6 +163,7 @@ subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
          call MPI_Recv( NAC, 3*natom, MPI_DOUBLE_PRECISION, &
               MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
          call handle_mpi_error(ierr)
+         call check_recv_count(status, 3 * natom, MPI_DOUBLE_PRECISION)
 
          if (idebug>0) write(*, *)(NAC(i),i=1,3*natom)
 
@@ -506,7 +515,7 @@ end subroutine move_old2new_terash
    subroutine init_terash(x, y, z)
       use mod_utils, only: not_compiled_with
       real(DP),intent(inout) ::  x(:,:), y(:,:), z(:,:)
-      ! Just to squash compiler warnings
+      ! Assignments just to squash compiler warnings
       x = 0.0D0; y = 0.0D0; z = 0.0D0
       call not_compiled_with('MPI', 'init_terash')
    end subroutine init_terash
@@ -517,7 +526,7 @@ end subroutine move_old2new_terash
       real(DP),intent(in) ::  x(:,:),y(:,:),z(:,:)
       real(DP),intent(inout) :: fx(:,:),fy(:,:),fz(:,:)
       real(DP),intent(inout) :: eclas
-      ! Just to squash compiler warnings
+      ! Assignments just to squash compiler warnings
       fx = x; fy = y; fz = z; eclas = 0.0d0
       call not_compiled_with('MPI', 'force_terash')
    end subroutine force_terash

@@ -50,12 +50,18 @@ subroutine init(dt)
    real(DP),intent(out) :: dt
    real(DP) :: masses(MAXTYPES)
    real(DP)  :: rans(10)
-   integer :: iw, iat, natom_xyz, imol, shiftdihed = 1, iost
-   integer :: error, getpid, nproc=1, ipom
-   character(len=2)    :: massnames(MAXTYPES), atom
+   integer :: ipom, iw, iat, natom_xyz, imol, iost
+   integer :: shiftdihed
+   ! Number of OpenMP processes, read from ABIN input
+   ! WARNING: We do NOT use OMP_NUM_THREADS environment variable!
+   integer :: nproc
+   integer :: getPID
+!$ integer :: omp_get_max_threads
+   character(len=2)    :: massnames(MAXTYPES)
+   character(len=2)    :: atom
    character(len=200)  :: chinput, chcoords, chveloc
    character(len=200)  :: chiomsg, chout
-   character(len=20)   :: xyz_units='angstrom'
+   character(len=20)   :: xyz_units
    character(len=60)   :: chdivider
    character(len=60)   :: mdtype
    character(len=1024) :: tc_server_name
@@ -93,12 +99,14 @@ subroutine init(dt)
 
 
    chcoords = 'mini.dat'
+   xyz_units = 'angstrom'
    chinput = 'input.in'
    chveloc = ''
    mdtype = ''
    dt = -1
-   error = 0
+   nproc = 1
    iplumed = 0
+   shiftdihed = 1
 
    chdivider = "######################################################"
 
@@ -633,14 +641,13 @@ subroutine init(dt)
       if (iqmmm.eq.3.or.pot.eq.'mm') write(*,nml=qmmm)
       write(*,*)
    end if
-   call flush(6)
 #ifdef USE_MPI
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+   write (*, '(A,I0,A,I0)') 'MPI rank: ', my_rank, ' PID: ', GetPID()
+#else
+   write (*, '(A,I0)') 'Process ID (PID): ', GetPID()
 #endif
-   pid = GetPID()
-   ! TODO: Print pid together with my_rank, need to be part of a single write statement
-   write (*, '(A,I0)') 'Pid of the current proccess is: ', pid
-
+!$    write (*, '(A,I0)') 'Number of OpenMP threads: ', omp_get_max_threads()
 
    ! Open files for writing
    ! TODO: It's strange that we're passing these random params here...
@@ -652,7 +659,10 @@ subroutine init(dt)
 
    subroutine check_inputsanity()
    use mod_chars, only: chknow
+   integer :: error
 !$ integer :: nthreads, omp_get_max_threads
+
+   error = 0
 
    !  We should exclude all non-abinitio options, but whatever....
 !$    nthreads = omp_get_max_threads()
