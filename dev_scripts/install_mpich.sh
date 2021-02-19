@@ -35,8 +35,8 @@ cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MP
 
 # If you're building MPI for general use, not only for ABIN,
 # you might want change some of the configure options.
-# --enable-fortran=yes Compile all versions of Fortran interfaces
-#                      This option is needed for GitHub Actions build, I don't know why
+# --enable-fortran=all Compile all versions of Fortran interfaces
+#                      In principle we don't need F77, but configure fails in that case.
 # --with-namepublisher=pmi
 #         This compiled hydra_nameserver binary, needed for MPI interface with TeraChem
 # For production builds, delete the second line of options.
@@ -44,7 +44,7 @@ cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MP
 #--disable-fast --enable-g-option=all \
 ./configure FC=gfortran CC=gcc \
   --enable-fortran=all \
-  --with-pm=hydra --with-device=ch3 \
+  --with-pm=hydra --with-device=ch4:ofi \
   --with-namepublisher=pmi \
   --enable-static --disable-shared \
   --prefix=${INSTALL_DIR} 2>&1 |\
