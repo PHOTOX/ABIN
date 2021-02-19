@@ -32,5 +32,6 @@ tc.out*
 port.txt*
 TC_ERROR?
 ABIN_ERROR?
+scrdir????
 
 !mini.xyz

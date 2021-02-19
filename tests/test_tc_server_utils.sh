@@ -82,7 +82,7 @@ clean_output_files() {
   rm -f $* 
   rm -f *dat *diff
   rm -f restart.xyz velocities.xyz forces.xyz movie.xyz restart.xyz.old
-  rm -f $TCEXE $TCOUT* $ABINOUT $TC_PORT_FILE.* ERROR
+  rm -f $TCEXE $TCOUT* $ABINOUT $TC_PORT_FILE.* ERROR scrdir000?
   return $return_code
 }
 

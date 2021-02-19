@@ -152,6 +152,12 @@ CONTAINS
             end if
          end if
 
+         ! Timeout after max_wait_time seconds
+         if ( (MPI_WTIME()-timer) > max_wait_time ) then
+            write (*, *) 'Server name '//server_name//' not found.'
+            call abinerror("lookup_port_via_nameserver")
+         end if
+
          ! Let's wait a bit since too many calls
          ! to MPI_LOOKUP_NAME() can crash the hydra_nameserver process
          if(idebug > 1)then
@@ -160,12 +166,6 @@ CONTAINS
          ! TODO: Try out how long should we sleep here.
          call system('sleep 0.5')
        
-         ! Timeout after max_wait_time seconds
-         if ( (MPI_WTIME()-timer) > max_wait_time ) then
-            write (*, *) 'Server name '//server_name//' not found.'
-            call abinerror("lookup_port_via_nameserver")
-         end if
-
       end do
 
    end subroutine lookup_port_via_nameserver
@@ -193,13 +193,13 @@ CONTAINS
             exit
          end if
 
-         write (*, '(A)') 'WARNING: Cannot open file '//portfile
-         call system('sleep 0.5')
-
          if ( (MPI_WTIME()-timer) > max_wait_time) then
             write (*, '(A)') 'ERROR: Could not open file '//portfile
             call abinerror('read_tc_port_from_file')
          end if
+
+         write (*, '(A)') 'WARNING: Cannot open file '//portfile
+         call system('sleep 0.5')
 
       end do
 
@@ -234,7 +234,7 @@ CONTAINS
  
       ! Make sure we send MPI_TAG_EXIT to all servers.
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
-      do itera=1, nteraservers
+      do itera = 1, nteraservers
  
          write (*, '(A,I0)') 'Shutting down TeraChem server id = ', itera
          if (abin_error_code == 0) then

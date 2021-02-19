@@ -27,7 +27,7 @@ class TCServerMock {
     void initializeCommunication();
 
     int receiveNumAtoms();
-    void receiveAtomTypes();
+    char* receiveAtomTypes();
     void receiveAtomTypesAndScrdir();
     void receiveCoordinates();
 
@@ -75,6 +75,8 @@ class TCServerMock {
 
     void publishServerName(char*, char*);
     void printMPIError(int);
+    void parseScrDir(char*, char*);
+    void validateScrDir(char*);
     void checkRecvCount(MPI_Status*, MPI_Datatype, int);
     void checkRecvTag(MPI_Status&);
 };

@@ -1,4 +1,5 @@
 #include<unistd.h>
+#include<fstream>
 #include "tc_mpi_api.h"
 
 using namespace std;
@@ -7,6 +8,7 @@ TCServerMock::TCServerMock(char *serverName) {
 
   tcServerName = NULL;
   gradients = coordinates = NULL;
+  atomTypes = NULL;
   if (serverName) {
     tcServerName = new char[strlen(serverName)+1];
     strcpy(tcServerName, serverName);
@@ -35,6 +37,9 @@ TCServerMock::~TCServerMock(void) {
     MPI_Close_port(mpiPortName);
   }
   MPI_Finalize();
+  if (atomTypes) {
+    delete[] atomTypes;
+  }
   if (gradients) {
     delete[] gradients;
   }
@@ -164,33 +169,72 @@ int TCServerMock::receiveNumAtoms() {
 }
 
 
-// TODO: Each receive function should actually return 
-// the data it received so that they can be validated.
-void TCServerMock::receiveAtomTypes() {
+char* TCServerMock::receiveAtomTypes() {
   printf("Receiving atom types...\n");
   fflush(stdout);
   int recvCount = totNumAtoms * 2;
   MPI_Recv(bufchars, recvCount, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_CHAR, recvCount);
-  puts(bufchars);
+
+  atomTypes = new char[totNumAtoms * 2 + 1];
+  strncpy(atomTypes, bufchars, totNumAtoms * 2);
+  atomTypes[totNumAtoms * 2] = '\0';
+  puts(atomTypes);
+  return atomTypes;
 }
 
 
 void TCServerMock::receiveAtomTypesAndScrdir() {
-  // TODO: Check that we get the same atom types every iteration!
   printf("Receiving atom types and scrdir...\n");
-  fflush(stdout);
   MPI_Recv(bufchars, MAX_DATA, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
-  // TODO: parse and validate scrdir name.
-  // This is a horrible hack in TC
-  // ABIN misuses the atom type array to set scratch directories
-  // (useful e.g. for different beads in PIMD)
-  // This was done this way to preserve the existing Amber interface.
   puts(bufchars);
+  char *atoms = new char[2*totNumAtoms + 1];
+  strncpy(atoms, bufchars, totNumAtoms * 2);
+  atoms[totNumAtoms * 2] = '\0';
+  if (strcmp(atomTypes, atoms) != 0) {
+    printf("ERROR: expected '%s', got '%s'\n", atomTypes, atoms);
+    throw std::runtime_error("invalid atom types");
+  }
+  delete[] atoms;
+
+  char scrdir[1024];
+  parseScrDir(bufchars, scrdir);
+  validateScrDir(scrdir);
+  printf("Using scratch directory %s\n", scrdir);
 }
 
+void TCServerMock::validateScrDir(char *scrdir) {
+  unsigned int beadIdx;
+  int ret = sscanf(scrdir, "scrdir%4u", &beadIdx);
+  if (ret == 0 || ret == EOF) {
+    throw std::runtime_error("invalid scrdir");
+  }
+  printf("Bead index: %u\n", beadIdx);
+  // To make sure all scrdirs were passed correctly,
+  // we create empty files with their names so
+  // that they can be compared with the reference.
+  std::ofstream output(scrdir);
+}
+
+void TCServerMock::parseScrDir(char *buffer, char *scrdir) {
+  // DH VARIABLE SCRATCH DIRECTORY, useful for Path Integral MD
+  // Done a bit awkwardly to preserve AMBER interface
+  // The format in bufchars needs to be: AtomTypes++scrdir++
+  // i.e. "C H H H H ++scrdir01++
+  // Code copied directly from terachem/amber.cpp
+  char delim = '+';
+  if (buffer[totNumAtoms*2] == delim && buffer[totNumAtoms*2+1] == delim) {
+    int i = totNumAtoms * 2 + 2;
+    int j = 0;
+    while (bufchars[i] != delim) {
+      scrdir[j] = bufchars[i];
+      i++;j++;
+    }
+    scrdir[j] = '\0';
+  }
+}
 
 void TCServerMock::receiveCoordinates() {
   // Receive QM coordinates from ABIN
