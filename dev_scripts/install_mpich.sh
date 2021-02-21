@@ -38,13 +38,14 @@ cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MP
 # --enable-fortran=all Compile all versions of Fortran interfaces
 #                      In principle we don't need F77, but configure fails in that case.
 # --with-namepublisher=pmi
-#         This compiled hydra_nameserver binary, needed for MPI interface with TeraChem
-# For production builds, delete the second line of options.
-#export CFLAGS='-g -O0'
-#--disable-fast --enable-g-option=all \
+#         This compiles hydra_nameserver binary, needed for MPI interface with TeraChem
+#
+# Use the two rows below for a debug build/
+# export CFLAGS='-g -O0'
+# --disable-fast --enable-g-option=all \
 ./configure FC=gfortran CC=gcc \
   --enable-fortran=all \
-  --with-pm=hydra --with-device=ch4:ofi \
+  --with-pm=hydra --with-device=ch3:nemesis \
   --with-namepublisher=pmi \
   --enable-static --disable-shared \
   --prefix=${INSTALL_DIR} 2>&1 |\
