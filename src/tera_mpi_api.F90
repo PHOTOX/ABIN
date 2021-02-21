@@ -24,7 +24,7 @@ module mod_terampi
    public :: mpi_sleep, max_wait_time
    public :: TC_TAG
 #ifdef USE_MPI
-   integer, allocatable ::  tc_comms(:)
+   integer, allocatable :: tc_comms(:)
 
    ! TODO: Move handle_mpi_error and check_recv_count to a dedicated MPI module
    public :: handle_mpi_error, check_recv_count
@@ -36,7 +36,7 @@ module mod_terampi
    public :: initialize_tc_servers, initialize_terachem_interface
    save
 
-CONTAINS
+contains
 
 #ifdef USE_MPI
 
@@ -63,7 +63,7 @@ CONTAINS
       ! Setting MPI_ERRORS_RETURN error handler allows us to retry
       ! failed MPI_LOOKUP_NAME() call. It also allows us
       ! to send the exit signal to TeraChem upon encoutering an error.
- 
+
       ! It might also be a good idea to write our own error handler by MPI_Errorhandler_Create()
       ! https://www.open-mpi.org/doc/current/man3/MPI_Comm_create_errhandler.3.php
       ! so that we don't have to call handle_mpi_error() after each MPI call.
@@ -81,7 +81,6 @@ CONTAINS
       !$OMP END PARALLEL DO
    end subroutine initialize_terachem_interface
 
-
    subroutine connect_tc_server(tc_server_name, itera)
       use mod_utils, only: abinerror
       ! TODO: Figure out how to handle REMD
@@ -92,37 +91,35 @@ CONTAINS
       integer :: ierr, newcomm
       character(len=1024) :: server_name
       character(len=1024) :: portfile
- 
+
       if (tc_server_name /= '') then
- 
-         write (server_name, '(A,I0)')trim(adjustl(tc_server_name))//'.', itera
+
+         write (server_name, '(A,I0)') trim(adjustl(tc_server_name))//'.', itera
          call lookup_port_via_nameserver(trim(server_name), port_name)
- 
+
       else
- 
+
          write (portfile, '(A,I0)') TC_PORT_FILE_NAME, itera
          call read_tc_port_from_file(trim(portfile), port_name)
- 
+
       end if
- 
+
       write (6, '(2A)') 'Found TeraChem port: ', trim(port_name)
       write (6, '(A)') 'Establishing connection...'
-      call flush(6)
+      call flush (6)
 
       ! Establish new communicator via port name
       call MPI_Comm_connect(trim(port_name), MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
       call handle_mpi_error(ierr)
-      write(6, '(A)') 'Connection established!'
- 
+      write (6, '(A)') 'Connection established!'
+
       tc_comms(itera) = newcomm
    end subroutine connect_tc_server
-
 
    integer function get_tc_communicator(itera) result(tc_comm)
       integer, intent(in) :: itera
       tc_comm = tc_comms(itera)
    end function get_tc_communicator
-
 
    ! Look for server_name via MPI nameserver, get port name
    subroutine lookup_port_via_nameserver(server_name, port_name)
@@ -135,8 +132,8 @@ CONTAINS
 
       port_name = ''
 
-      write(*,'(2A)') 'Looking up TeraChem server under name:', server_name
-      call flush(6)
+      write (*, '(2A)') 'Looking up TeraChem server under name:', server_name
+      call flush (6)
 
       timer = MPI_WTIME()
 
@@ -146,30 +143,29 @@ CONTAINS
          if (ierr == MPI_SUCCESS) then
             ! Workaround for a bug in hydra_nameserver for MPICH versions < 3.3
             if (len_trim(port_name) == 0) then
-               write(*,'(a)') 'Found empty port, retrying...'
+               write (*, '(a)') 'Found empty port, retrying...'
             else
                exit
             end if
          end if
 
          ! Timeout after max_wait_time seconds
-         if ( (MPI_WTIME()-timer) > max_wait_time ) then
+         if ((MPI_WTIME() - timer) > max_wait_time) then
             write (*, *) 'Server name '//server_name//' not found.'
             call abinerror("lookup_port_via_nameserver")
          end if
 
          ! Let's wait a bit since too many calls
          ! to MPI_LOOKUP_NAME() can crash the hydra_nameserver process
-         if(idebug > 1)then
-            write(*, '(A)')'Waiting for TC port'
+         if (idebug > 1) then
+            write (*, '(A)') 'Waiting for TC port'
          end if
          ! TODO: Try out how long should we sleep here.
          call system('sleep 0.5')
-       
+
       end do
 
    end subroutine lookup_port_via_nameserver
-
 
    ! Read TeraChem port from a file.
    ! TeraChem prints it's port to STDOUT, where the launch script
@@ -193,7 +189,7 @@ CONTAINS
             exit
          end if
 
-         if ( (MPI_WTIME()-timer) > max_wait_time) then
+         if ((MPI_WTIME() - timer) > max_wait_time) then
             write (*, '(A)') 'ERROR: Could not open file '//portfile
             call abinerror('read_tc_port_from_file')
          end if
@@ -205,37 +201,35 @@ CONTAINS
 
       read (iunit, '(A)', iostat=iost) port_name
       if (iost /= 0) then
-          write (*, '(A)') 'ERROR reading file '//portfile
-          call abinerror('read_tc_port_from_file')
+         write (*, '(A)') 'ERROR reading file '//portfile
+         call abinerror('read_tc_port_from_file')
       end if
 
-      close(iunit, status='delete')
+      close (iunit, status='delete')
    end subroutine read_tc_port_from_file
 
-
    subroutine initialize_tc_servers()
-      use mod_qmmm,  only: natqm
-      use mod_system,only: names
+      use mod_qmmm, only: natqm
+      use mod_system, only: names
       integer :: itera
- 
+
       !$OMP PARALLEL DO
       do itera = 1, nteraservers
          call send_natom(natqm, tc_comms(itera))
-         
+
          call send_atom_types_and_scrdir(names, natqm, 0, tc_comms(itera), .false.)
       end do
       !$OMP END PARALLEL DO
    end subroutine initialize_tc_servers
 
-
    subroutine finalize_terachem(abin_error_code)
       integer, intent(in) :: abin_error_code
       integer :: itera, ierr, empty
- 
+
       ! Make sure we send MPI_TAG_EXIT to all servers.
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
       do itera = 1, nteraservers
- 
+
          write (*, '(A,I0)') 'Shutting down TeraChem server id = ', itera
          if (abin_error_code == 0) then
             call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_EXIT, tc_comms(itera), ierr)
@@ -243,18 +237,18 @@ CONTAINS
             call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_ERROR, tc_comms(itera), ierr)
          end if
          if (ierr /= MPI_SUCCESS) then
-            write(*,'(A,I0)')'I got a MPI Error when I tried to shutdown TeraChem server id = ', itera
-            write(*,'(A)')'Verify manually that the TeraChem server was terminated.'
+            write (*, '(A,I0)') 'MPI ERROR during shutdown of TeraChem server id = ', itera
+            write (*, '(A)') 'Verify manually that the TeraChem server was terminated.'
             call print_mpi_error(ierr)
          end if
- 
+
          call MPI_Comm_free(tc_comms(itera), ierr)
          if (ierr /= MPI_SUCCESS) then
             call print_mpi_error(ierr)
          end if
- 
+
       end do
- 
+
       deallocate (tc_comms)
    end subroutine finalize_terachem
 
@@ -292,7 +286,7 @@ CONTAINS
       call handle_mpi_error(ierr)
       if (recv_count /= expected_count) then
          write (*, *) 'ERROR: MPI_Recv failed'
-         write (*, '(A,I0,A,I0)') 'Received ',recv_count , 'bytes, expected ', expected_count
+         write (*, '(A,I0,A,I0)') 'Received ', recv_count, 'bytes, expected ', expected_count
          call abinerror('check_recv_count')
       end if
    end subroutine check_recv_count
@@ -306,7 +300,7 @@ CONTAINS
       ! TODO: we need to somehow make sure that
       ! we don't wait forever if TeraChem crashes.
       ! At this moment, this is ensured at the BASH script level.
- 
+
       ! The idea here is to reduce the CPU usage of MPI_Recv() via system call to 'sleep'.
       ! In most MPI implementations, MPI_Recv() is actively polling the other end
       ! (in this case TeraChem) and consumes a whole CPU core. That's clearly wasteful,
@@ -318,7 +312,7 @@ CONTAINS
       ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
       ready = .false.
       write (chsys_sleep, '(A6, F10.4)') 'sleep ', mpi_sleep
-      do while(.not.ready)
+      do while (.not. ready)
          call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, ready, status, ierr)
          call handle_mpi_error(ierr)
          call system(trim(chsys_sleep))
@@ -334,11 +328,11 @@ CONTAINS
       integer :: i
 
       i = offset
-      write (buffer(i+1:i+12), '(A8, I4.4)') '++scrdir', iw
+      write (buffer(i + 1:i + 12), '(A8, I4.4)') '++scrdir', iw
       if (iremd == 1) then
-         write (buffer(i+13:i+23), '(A4, I4.4, A2)') 'rank', remd_replica, '++'
+         write (buffer(i + 13:i + 23), '(A4, I4.4, A2)') 'rank', remd_replica, '++'
       else
-         write (buffer(i+13:i+14), '(A2)') '++'
+         write (buffer(i + 13:i + 14), '(A2)') '++'
       end if
    end subroutine append_scrdir_name
 
@@ -350,13 +344,12 @@ CONTAINS
 
       ! Send natqm and the type of each qmatom
       if (idebug > 1) then
-         write(6,'(A, I0)') 'Sending number of atoms  = ', num_atom
-         call flush(6)
+         write (6, '(A, I0)') 'Sending number of atoms  = ', num_atom
+         call flush (6)
       end if
       call MPI_Send(num_atom, 1, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
    end subroutine send_natom
-
 
    subroutine send_atom_types_and_scrdir(at_names, num_atom, iw, tc_comm, send_scrdir)
       use mod_general, only: my_rank, idebug
@@ -366,14 +359,14 @@ CONTAINS
       integer, intent(in) :: iw
       integer, intent(in) :: tc_comm
       integer, parameter :: MAX_SCRDIR_LEN = 30
-      character(len=2 * num_atom + MAX_SCRDIR_LEN) :: buffer
+      character(len=2*num_atom + MAX_SCRDIR_LEN) :: buffer
       integer :: ierr, offset, iat
       integer :: num_char
 
       buffer = ''
       offset = 1
       do iat = 1, num_atom
-         write(buffer(offset:offset+1), '(A2)') at_names(iat)
+         write (buffer(offset:offset + 1), '(A2)') at_names(iat)
          offset = offset + 2
       end do
       num_char = num_atom * 2
@@ -382,17 +375,16 @@ CONTAINS
          call append_scrdir_name(buffer, num_atom * 2, iw, my_rank)
          num_char = len_trim(buffer)
       end if
- 
+
       if (idebug > 1) then
          write (6, '(A)') 'Sending QM atom types: '
          write (*, '(A)') trim(buffer)
-         call flush(6)
+         call flush (6)
       end if
- 
+
       call MPI_Send(buffer, num_char, MPI_CHARACTER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
    end subroutine send_atom_types_and_scrdir
-
 
    subroutine send_coordinates(x, y, z, num_atom, iw, tc_comm)
       use mod_general, only: idebug
@@ -412,11 +404,11 @@ CONTAINS
       end do
 
       if (idebug > 1) then
-         write(6, '(A)') 'Sending QM coords: '
+         write (6, '(A)') 'Sending QM coords: '
          do iat = 1, num_atom
             write (6, *) 'Atom ', iat, ': ', coords(:, iat)
-            call flush(6)
-         end do 
+            call flush (6)
+         end do
       end if
       call MPI_Send(coords, num_atom * 3, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
@@ -428,7 +420,7 @@ CONTAINS
       use mod_utils, only: not_compiled_with
       call not_compiled_with('MPI', 'initialize_tc_servers')
    end subroutine initialize_tc_servers
-      
+
    subroutine initialize_terachem_interface(tc_server_name)
       use mod_utils, only: not_compiled_with
       character(len=*), intent(in) :: tc_server_name
