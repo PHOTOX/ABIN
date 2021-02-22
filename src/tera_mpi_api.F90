@@ -73,12 +73,13 @@ contains
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
       call handle_mpi_error(ierr)
 
-      ! Connect to all TC servers concurrently.
-      !$OMP PARALLEL DO PRIVATE(i)
+      ! Parallel calls to MPI_Comm_connect often lead to segfault,
+      ! maybe a bug in MPICH. Commenting out until we debug further.
+      !!$OMP PARALLEL DO PRIVATE(i)
       do i = 1, nteraservers
          call connect_tc_server(trim(tc_server_name), i)
       end do
-      !$OMP END PARALLEL DO
+      !!$OMP END PARALLEL DO
    end subroutine initialize_terachem_interface
 
    subroutine connect_tc_server(tc_server_name, itera)
@@ -143,7 +144,7 @@ contains
          if (ierr == MPI_SUCCESS) then
             ! Workaround for a bug in hydra_nameserver for MPICH versions < 3.3
             if (len_trim(port_name) == 0) then
-               write (*, '(a)') 'Found empty port, retrying...'
+               write (*, '(A)') 'Found empty port, retrying...'
             else
                exit
             end if
@@ -286,7 +287,7 @@ contains
       call handle_mpi_error(ierr)
       if (recv_count /= expected_count) then
          write (*, *) 'ERROR: MPI_Recv failed'
-         write (*, '(A,I0,A,I0)') 'Received ', recv_count, 'bytes, expected ', expected_count
+         write (*, '(A,I0,A,I0)') 'Received ', recv_count, ' bytes, expected ', expected_count
          call abinerror('check_recv_count')
       end if
    end subroutine check_recv_count
