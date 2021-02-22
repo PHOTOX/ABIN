@@ -133,11 +133,10 @@ if [[ $TESTS = "all" ]];then
       folders[index]=REMD
       let index++
       folders[index]=TERAPI
-      # TODO: TERAPI-PIMD should test ABIN+multiple TC servers.
-      # However, the test seems to be flaky so it's currently running
-      # with just one TC server.
       let index++
       folders[index]=TERAPI-PIMD
+      let index++
+      folders[index]=TERAPI-PIMD-PARALLEL
       let index++
       folders[index]=TERAPI-FAILS
       # TODO: Test SH-MPI interface with TC
