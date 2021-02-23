@@ -1,14 +1,14 @@
 #/bin/bash
 
 # Test how ABIN handles MPI error.
-# Concretely, how it handles if TC sends more data
-# then expected (see tc_server4.cpp).
+# Concretely, how it handles if TC sends less data
+# than expected (see tc_server8.cpp).
 
 set -euo pipefail
 
 source ../test_tc_server_utils.sh
 
-IDX=4
+IDX=8
 ABININ=input.in$IDX
 ABINOUT=${ABINOUT}$IDX
 TCOUT=${TCOUT}$IDX
