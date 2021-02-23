@@ -8,6 +8,7 @@ c-relations=True
 indent=3
 line-length=100
 strict-indent=True
+strip-comments=True
 whitespace-relational=True
 whitespace-logical=True
 whitespace-plusminus=True

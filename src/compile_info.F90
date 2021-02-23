@@ -7,27 +7,27 @@ subroutine print_compile_info()
 #endif
 
    ! DATE and COMMIT are defined and exported in Makefile
-   print *, 'Compiled at ', COMPILE_DATE
-   print *, 'Git commit ' // GIT_COMMIT
-!$ print *,'Compiled with parallel OpenMP support for PIMD.'
+   print*,'Compiled at ', COMPILE_DATE
+   print*,'Git commit '//GIT_COMMIT
+!$ print*,'Compiled with parallel OpenMP support for PIMD.'
 #ifdef USE_FFTW
-   write(*,*)'Compiled with FFTW support.'
+   write (*, *) 'Compiled with FFTW support.'
 #endif
 #ifdef USE_CP2K
-   write(*,*)'Compiled with in-built CP2K interface.'
+   write (*, *) 'Compiled with in-built CP2K interface.'
 #endif
 #ifdef USE_PLUMED
-   write(*,*)'Compiled with PLUMED (static lib).'
+   write (*, *) 'Compiled with PLUMED (static lib).'
 #endif
 #ifdef USE_MPI
-   write(*,*)'Compiled with MPI support.'
-   write(*,*)'(used for REMD and direct CP2K and TeraChem interfaces.)'
+   write (*, *) 'Compiled with MPI support.'
+   write (*, *) '(used for REMD and direct CP2K and TeraChem interfaces.)'
 #endif
-   print *,' '
+   print*,' '
 
 #if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
-   print *, 'This program was compiled by ',  &
-             compiler_version(), ' using the options: '
-   print *,     compiler_options()
+   print*,'This program was compiled by ', &
+      compiler_version(), ' using the options: '
+   print*,compiler_options()
 #endif
 end subroutine print_compile_info
