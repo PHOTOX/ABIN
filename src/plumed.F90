@@ -47,9 +47,9 @@ contains
       integer, parameter :: PLUMED_RESTART = 1
       ! Conversion from ABIN to PLUMED units
       real(DP), parameter :: PLUMED_ENERGY_UNIT = AUTOJ * AVOGADRO * 1.0D-3 ! Ha -> kJ/mol
-      real(DP), parameter :: PLUMED_LENGTH_UNIT = 0.1D0 / ANG    ! Bohr -> nm
+      real(DP), parameter :: PLUMED_LENGTH_UNIT = 0.1D0 / ANG ! Bohr -> nm
       real(DP), parameter :: PLUMED_TIME_UNIT = AUTOFS * 0.001D0 ! a.u. -> ps
-      real(DP), parameter :: PLUMED_MASS_UNIT = 1.0D0 / AMU      ! a.u. -> amu
+      real(DP), parameter :: PLUMED_MASS_UNIT = 1.0D0 / AMU ! a.u. -> amu
       !real(DP) :: plumed_kbt
       integer :: api_version
       character(len=32) :: chint

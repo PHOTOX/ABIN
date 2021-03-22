@@ -8,18 +8,31 @@ module test_utils
 contains
 
    @test
-   subroutine test_uppertolower()
+   subroutine test_sanitize_string()
+      ! NOTE: Sanitize string should exit when
+      ! suspicious character is found, but we currently cannot
+      ! test that. So we only test that it leaves valid strings
+      ! alone, except for applying adjustl on them.
+      @assertEqual("12345abC-._ ", sanitize_string("12345abC-._ "))
 
-      @assertEqual("abc-._", UpperToLower("AbC-._"), "UpperToLower('AbC-._')")
-   
-   end subroutine test_uppertolower
+      @assertEqual("abC-._67890", sanitize_string("  abC-._67890 "))
+   end subroutine test_sanitize_string
 
    @test
-   subroutine test_lower_to_upper()
+   subroutine test_tolower()
 
-      @assertEqual("ABC-._", LowerToUpper("AbC-._"), "LowerToUpper('AbC-._')")
+      ! Notice that we also left-adjust the string.
+      @assertEqual("12abc-._ ", tolower("   12AbC-._ "))
    
-   end subroutine test_lower_to_upper
+   end subroutine test_tolower
+
+   @test
+   subroutine test_toupper()
+
+      ! Notice that we also left-adjust the string.
+      @assertEqual("ABC-._123", toupper("  AbC-._123 "))
+   
+   end subroutine test_toupper
 
    @test
    subroutine test_c_string()
@@ -30,6 +43,27 @@ contains
 
       @assertEqual(6+1, len_trim(c_string(fstring)), "len_trim(c_string) = len(trim(adjustl(fstring)))+1")
    end subroutine test_c_string
+
+
+   @test
+   subroutine test_normalize_atom_name()
+      @assertEqual("H", normalize_atom_name("h"), "h -> H")
+      @assertEqual("Cl", normalize_atom_name("cl"), "cl -> Cl")
+      @assertEqual("Fe", normalize_atom_name("FE"), "FE -> Fe")
+      @assertEqual("H", normalize_atom_name("   h  "), "accepts blanks")
+      @assertEqual("Cl", normalize_atom_name(" cl   "), "accepts blanks")
+   end subroutine test_normalize_atom_name
+
+   @test
+   subroutine test_count_atoms_by_name()
+      integer, parameter :: NATOM = 4
+      character(len=2) :: names(NATOM)
+      ! Note: names must already be normalized
+      names = (/'He', 'C ', 'C ', 'Cl' /)
+      @assertEqual(1, count_atoms_by_name(names, 'HE', NATOM))
+      @assertEqual(2, count_atoms_by_name(names, 'c ', NATOM))
+      @assertEqual(1, count_atoms_by_name(names, 'Cl', NATOM))
+   end subroutine test_count_atoms_by_name
 
    @test
    subroutine test_get_distance()

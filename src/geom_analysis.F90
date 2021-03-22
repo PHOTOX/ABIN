@@ -1,4 +1,3 @@
-
 module mod_analyze_geometry
    use mod_const, only: DP, ANG, AUtoFS
    use mod_array_size, only: NDISTMAX
@@ -13,8 +12,9 @@ module mod_analyze_geometry
    integer :: ndist = 0, dist1(NDISTMAX), dist2(NDISTMAX)
    integer :: nang = 0, ang1(NDISTMAX), ang2(NDISTMAX), ang3(NDISTMAX)
    integer :: ndih = 0, dih1(NDISTMAX), dih2(NDISTMAX), dih3(NDISTMAX), dih4(NDISTMAX)
-   real(DP)  :: shiftdih = 360.0D0 ! 0 for (-180,180), 360 for (0,360)
+   real(DP) :: shiftdih = 360.0D0 ! 0 for (-180,180), 360 for (0,360)
    save
+
 contains
 
    subroutine print_distances(x, y, z)
@@ -33,15 +33,15 @@ contains
          do idist = 1, ndist
             ! If we have only one atom, take the distance from the origin,
             ! i.e. [0, 0, 0]
-            if (natom==1) then
+            if (natom == 1) then
                r(idist) = dsqrt(x(1, iw)**2 + y(1, iw)**2 + z(1, iw)**2)
             else
                r(idist) = get_distance(x, y, z, dist1(idist), dist2(idist), iw)
             end if
-            r(idist) = r(idist)/ANG
+            r(idist) = r(idist) / ANG
          end do
 
-         write (UDIST, frmt) sim_time*AUtoFS, (r(idist), idist=1, ndist)
+         write (UDIST, frmt) sim_time * AUtoFS, (r(idist), idist=1, ndist)
 
       end do
    end subroutine print_distances
@@ -62,7 +62,7 @@ contains
             alfa(idist) = get_angle(x, y, z, ang1(idist), ang2(idist), ang3(idist), iw)
          end do
 
-         write (UANG, frmt) sim_time*AUtoFS, (alfa(idist), idist=1, nang)
+         write (UANG, frmt) sim_time * AUtoFS, (alfa(idist), idist=1, nang)
 
       end do
    end subroutine print_angles
@@ -85,7 +85,7 @@ contains
                                         iw, shiftdih)
          end do
 
-         write (UDIH, frmt) sim_time*AUtoFS, (delta(idist), idist=1, ndih)
+         write (UDIH, frmt) sim_time * AUtoFS, (delta(idist), idist=1, ndih)
 
       end do
    end subroutine print_dihedrals

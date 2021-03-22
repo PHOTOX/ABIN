@@ -24,21 +24,21 @@ contains
       real(C_DOUBLE), dimension(:), allocatable :: x_tmp
       complex(C_DOUBLE_COMPLEX), dimension(:), allocatable :: cx_tmp
 
-      if(DP.ne.C_DOUBLE)then
-         write(*,*)'WARNING: Kind DP is not equal kind C_DOUBLE'
-         write(*,*)'Precision might be lost during normal mode transform.'
-         write(*,*)'Set iknow=1 if you want to proceed.'
-         if (iknow.ne.1) call abinerror('fftw_init')
+      if (DP /= C_DOUBLE) then
+         write (*, *) 'WARNING: Kind DP is not equal kind C_DOUBLE'
+         write (*, *) 'Precision might be lost during normal mode transform.'
+         write (*, *) 'Set iknow=1 if you want to proceed.'
+         if (iknow /= 1) call abinerror('fftw_init')
       end if
 
-      allocate( x_tmp(nwalk+1) )
-      allocate( cx_tmp(nwalk+1) )
+      allocate (x_tmp(nwalk + 1))
+      allocate (cx_tmp(nwalk + 1))
 
-      plan_xtou = fftw_plan_dft_r2c_1d(nwalk,x_tmp,cx_tmp, FFTW_MEASURE)
-      plan_utox = fftw_plan_dft_c2r_1d(nwalk,cx_tmp,x_tmp, FFTW_MEASURE)
+      plan_xtou = fftw_plan_dft_r2c_1d(nwalk, x_tmp, cx_tmp, FFTW_MEASURE)
+      plan_utox = fftw_plan_dft_c2r_1d(nwalk, cx_tmp, x_tmp, FFTW_MEASURE)
 
-      deallocate(x_tmp)
-      deallocate(cx_tmp)
+      deallocate (x_tmp)
+      deallocate (cx_tmp)
    end subroutine
 
    ! Simple wrapper functions around the FFTW interface.
@@ -69,7 +69,7 @@ contains
       use mod_utils, only: abinerror
       integer :: nwalk
       nwalk = 0
-      write(*,*)'ERROR: Normal mode transformations cannot be performed.'
+      write (*, *) 'ERROR: Normal mode transformations cannot be performed.'
       call not_compiled_with('FFTW library', 'fftw_normalmodes_init')
    end subroutine fftw_normalmodes_init
 

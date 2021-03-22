@@ -84,7 +84,6 @@ extern"C" {
          E = pot4(nwater, crd, grd);
          break;
       default:
-         //TODO: move this check to check_water subroutine
          std::cerr << "Error: Parameter watpot out of range." << std::endl;
          return;
         break;

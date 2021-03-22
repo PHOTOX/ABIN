@@ -120,7 +120,7 @@ if [[ $TESTS = "all" ]];then
    folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
             LZ_SS LZ_ST LZ_ENE \
             PIMD SHAKE HARMON MINI QMMM \
-            ANALYZE_EXT CMDLINE)
+            ANALYZE_EXT CMDLINE WATER_FAIL)
 
    let index=${#folders[@]}+1
    # TODO: Split this test, test OpenMP separately

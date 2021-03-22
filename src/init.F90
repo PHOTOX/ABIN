@@ -29,7 +29,7 @@ subroutine init(dt)
    use mod_sbc,      only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
    use mod_splined_grid, only: initialize_spline
-   use mod_utils, only: lowertoupper, uppertolower, file_exists_or_exit
+   use mod_utils, only: toupper, tolower, normalize_atom_name, file_exists_or_exit
    use mod_vinit
    use mod_analyze_geometry
    use mod_shake
@@ -102,6 +102,7 @@ subroutine init(dt)
    xyz_units = 'angstrom'
    chinput = 'input.in'
    chveloc = ''
+   tc_server_name = ''
    mdtype = ''
    dt = -1
    nproc = 1
@@ -116,7 +117,7 @@ subroutine init(dt)
    open(150,file=chinput, status='OLD', delim='APOSTROPHE', action = "READ")
    read(150, general)
    rewind(150)
-   pot = UpperToLower(pot)
+   pot = tolower(pot)
 
    if(pot.eq.'splined_grid')then
       natom = 1
@@ -194,7 +195,7 @@ subroutine init(dt)
    end if
 
    if (mdtype.ne.'')then
-      mdtype = UpperToLower(mdtype)
+      mdtype = tolower(mdtype)
       SELECT CASE (mdtype)
          case ('md')
             ipimd = 0
@@ -253,7 +254,7 @@ subroutine init(dt)
             print '(a)','             Landau Zener MD                  '
       END SELECT
 
-            write(*,*)'    using potential: ', LowerToUpper(pot)
+            write(*,*)'    using potential: ', toupper(pot)
                print '(a)','                                              '
             print '(a)', chdivider
    end if
@@ -347,12 +348,12 @@ subroutine init(dt)
 
      read(111,*, iostat=iost)names(iat),x(iat,1),y(iat,1),z(iat,1)
      if(iost.ne.0) call print_read_error(chcoords,'Could not read atom names and coordinates', iost)
-     names(iat) = LowerToUpper(names(iat))
-     if (UpperToLower(trim(xyz_units)).eq."angstrom")then
+     names(iat) = normalize_atom_name(names(iat))
+     if (tolower(trim(xyz_units)).eq."angstrom")then
          x(iat,1) = x(iat,1) * ANG
          y(iat,1) = y(iat,1) * ANG
          z(iat,1) = z(iat,1) * ANG
-     else if (UpperToLower(trim(xyz_units)).eq."bohr")then
+     else if (tolower(trim(xyz_units)).eq."bohr")then
          continue
      else
          write(*,*)'ERROR: Wrong XYZ units: ', trim(xyz_units)
@@ -383,7 +384,7 @@ subroutine init(dt)
       end if
 
       do iat = 1, MAXTYPES
-         massnames(iat) = LowerToUpper(massnames(iat))
+         massnames(iat) = normalize_atom_name(massnames(iat))
       end do
 
      ! Determine atomic masses from periodic table
@@ -391,11 +392,6 @@ subroutine init(dt)
      ! Transform masses for PIMD
      ! TODO: rename this function
      call init_mass(amg, amt)
-     ! Lower the second character of atom name.
-     ! This is because of TeraChem.
-      do iat=1,natom
-         names(iat)(2:2)=UpperToLower(names(iat)(2:2))
-      end do
 
 #if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4 
       allocate ( natmolt(natom)  )
@@ -411,7 +407,7 @@ subroutine init(dt)
       if(ipimd.eq.2.or.ipimd.eq.4)then
          read(150, sh)
          rewind(150)
-         integ = UpperToLower(integ)
+         integ = tolower(integ)
       end if
 
       if(ipimd.eq.5)then
@@ -516,7 +512,9 @@ subroutine init(dt)
          call shake_init(x,y,z)
       endif
 
-      if (pot.eq.'mmwater'.or.pot_ref.eq.'mmwater') call check_water(natom, names)
+      if (pot.eq.'mmwater'.or.pot_ref.eq.'mmwater') then
+         call check_water(natom, names)
+      end if
 
 !    MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
      if (my_rank .ne. 0) then
@@ -584,8 +582,8 @@ subroutine init(dt)
             do iat=1,natom
                read(500,*, IOSTAT=iost)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
                if (iost.ne.0) call print_read_error(chveloc,"Could not read velocities.", iost)
-               atom = LowerToUpper(atom)
-               if (atom.ne.LowerToUpper(names(iat)))then
+               atom = normalize_atom_name(atom)
+               if (atom /= names(iat)) then
                   write(*,*)'Offending line:'
                   write(*,*)atom, vx(iat,iw), vy(iat,iw), vz(iat, iw)
                   call print_read_error(chveloc,"Inconsistent atom types in input velocities.", iost)
@@ -619,7 +617,7 @@ subroutine init(dt)
       if(iqmmm.eq.3.or.pot.eq.'mm')then 
          do iat = 1, MAXTYPES
             if(attypes(iat).eq.'') exit
-            attypes(iat) = LowerToUpper(attypes(iat))
+            attypes(iat) = normalize_atom_name(attypes(iat))
          end do
          call inames_init()
          call ABr_init()
