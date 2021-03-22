@@ -16,7 +16,8 @@ fi
 # Exit early for OpenMPI build.
 check_for_openmpi
 
-# Compiled the fake TC server
+# Compile the fake TC server.
+# TCSRC end TCEXE is defined in ../test_tc_server_utils.sh.
 $MPICXX $TCSRC -Wall -o $TCEXE
 
 launch_hydra_nameserver $MPICH_HYDRA

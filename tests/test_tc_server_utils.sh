@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Various utility function that are shared by test.sh scripts
-# in tests for TeraChem MPI interface (e.g. in TERAPI/)
+# in tests for TeraChem MPI interface (TERAPI*/)
 
 # This file is meant to be sourced, NOT executed!
 
