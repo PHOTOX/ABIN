@@ -197,7 +197,7 @@ contains
       allocate (am(natom))
       am = -1.0D0
       do i = 1, natom
-         select case(names(i))
+         select case (names(i))
          case ('H')
             am(i) = 1.008D0
          case ('H1')
@@ -609,8 +609,8 @@ contains
       if (ipimd /= 2 .and. pot == '_tera_') then
          open (UCHARGES, file=chfiles(UCHARGES), access=chaccess, action='write')
          write (UCHARGES, *) '# Atomic Mulliken charges from current electronic state'
-         write (UCHARGES, *) '# Time_step Bead_index ', (names(i), i = 1, natom)
- 
+         write (UCHARGES, *) '# Time_step Bead_index ', (names(i), i=1, natom)
+
          open (UDIP, file=chfiles(UDIP), access=chaccess, action='write')
          write (UDIP, *) '# Time  |D| Dx Dy Dz'
       end if
