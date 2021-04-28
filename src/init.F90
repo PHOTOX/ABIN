@@ -44,35 +44,38 @@ subroutine init(dt)
    use mod_terampi
    use mod_terampi_sh
 #ifdef USE_MPI
-   use mpi, only: MPI_COMM_WORLD, MPI_Init, MPI_Comm_Rank, MPI_Comm_Size, MPI_Barrier
+   use mpi
 #endif
    implicit none
    real(DP), intent(out) :: dt
    real(DP) :: masses(MAXTYPES)
    real(DP) :: rans(10)
-   integer :: iw, iat, natom_xyz, imol, shiftdihed = 1, iost
-   integer :: error, getpid, nproc = 1, ipom
-   character(len=2) :: massnames(MAXTYPES), atom
+   integer :: ipom, iw, iat, natom_xyz, imol, iost
+   integer :: shiftdihed
+   ! Number of OpenMP processes, read from ABIN input
+   ! WARNING: We do NOT use OMP_NUM_THREADS environment variable!
+   integer :: nproc
+   integer :: getPID
+!$ integer :: omp_get_max_threads
+   character(len=2) :: massnames(MAXTYPES)
+   character(len=2) :: atom
    character(len=200) :: chinput, chcoords, chveloc
    character(len=200) :: chiomsg, chout
-   character(len=20) :: xyz_units = 'angstrom'
+   character(len=20) :: xyz_units
    character(len=60) :: chdivider
    character(len=60) :: mdtype
+   character(len=1024) :: tc_server_name
    logical :: file_exists
    logical :: rem_comvel, rem_comrot
-!  real(DP) :: wnw=5.0d-5
-   ! Used for MPI calls
    integer :: ierr
    integer :: irand
-!$ integer :: nthreads, omp_get_max_threads
-!  wnw "optimal" frequency for langevin (inose=3)
 
    namelist /general/ natom, pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
       nwrite, nwritex, nwritev, nwritef, dt, irandom, nabin, irest, nrest, anal_ext, &
       isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_sleep, narchive, xyz_units, &
       dime, ncalc, idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
       en_restraint, en_diff, en_kk, restrain_pot, &
-      pot_ref, nstep_ref, nteraservers, cp2k_mpi_beads
+      pot_ref, nstep_ref, nteraservers, max_wait_time, cp2k_mpi_beads
 
 #ifdef USE_MPI
    namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
@@ -87,7 +90,7 @@ subroutine init(dt)
       Nshake, ishake1, ishake2, shake_tol
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
-      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, natmm_tera, &
+      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
       dE_S0S1_thr, correct_decoherence
 
    namelist /lz/ initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz
@@ -95,16 +98,19 @@ subroutine init(dt)
    namelist /qmmm/ natqm, natmm, q, rmin, eps, attypes
 
    chcoords = 'mini.dat'
+   xyz_units = 'angstrom'
    chinput = 'input.in'
    chveloc = ''
+   tc_server_name = ''
    mdtype = ''
    dt = -1
-   error = 0
+   nproc = 1
    iplumed = 0
+   shiftdihed = 1
 
    chdivider = "######################################################"
 
-   call get_cmdline(chinput, chcoords, chveloc, teraport)
+   call get_cmdline(chinput, chcoords, chveloc, tc_server_name)
 
    ! READING MAIN INPUT
    open (150, file=chinput, status='OLD', delim='APOSTROPHE', action="READ")
@@ -123,7 +129,26 @@ subroutine init(dt)
       call init_cp2k()
 #ifdef USE_MPI
    else
-      call MPI_INIT(ierr)
+      ! TODO: Move this to a mpi_wrapper module
+      if (pot == "_tera_" .and. nteraservers > 1) then
+         ! We will be calling TS servers concurently
+         ! via OpenMP parallelization, hence we need MPI_Init_thread().
+         ! https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report/node303.htm
+         call MPI_Init_thread(MPI_THREAD_MULTIPLE, ipom, ierr)
+         if (ipom /= MPI_THREAD_MULTIPLE) then
+            write (*, *) 'Provided safety level is not MPI_THREAD_MULTIPLE'
+            write (*, '(A,I1,A,I1)') 'Requested ', MPI_THREAD_MULTIPLE, 'got:', ipom
+            call abinerror('init')
+         end if
+         ! nproc is used to initialize OpenMP threads below.
+         if (nproc /= nteraservers) then
+            nproc = nteraservers
+         end if
+      else
+         ! TODO: Check whether MPI is already initialized
+         ! This can happen when using internal CP2K interface.
+         call MPI_Init(ierr)
+      end if
       if (ierr /= 0) then
          write (*, *) 'Bad signal from MPI_INIT:', ierr
          stop 1
@@ -131,42 +156,29 @@ subroutine init(dt)
 #endif
    end if
 
-   ! We need to connect to TeraChem as soon as possible
-   ! because we want to shut down TeraChem nicely in case something goes wrong.
+   ! Set OpenMP parallelization
+   ! Currently only used in PIMD for trivial
+   ! parallelization over PI beads.
+   ! Note that scaling is actually not so great
+   ! since SCF timings will vary for different beads,
+   ! which decreases thread utilization.
+!$ call OMP_set_num_threads(nproc)
+
 #ifdef USE_MPI
-   ! TODO: Add explicit checks for ierr for all MPI calls!
+   ! TODO: Move this to an mpi_wrapper module
    call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
    call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
+   ! TODO: allow mpi_world_size > 1 only for REMD
    if (my_rank == 0 .and. mpi_world_size > 1) then
       write (*, '(A,I3)') 'Number of MPI processes = ', mpi_world_size
    end if
-   if (pot == '_tera_' .or. restrain_pot == '_tera_') then
-      if (nwalk > 1) then
-         write (*, *) 'WARNING: You are using PIMD with direct TeraChem interface.'
-         write (*, *) 'You should have "integrator regular" in &
-& the TeraChem input file'
-      end if
-      write (*, *) 'Number of TeraChem servers = ', nteraservers
-      do ipom = 1, nteraservers
-         call connect_terachem(ipom)
-      end do
-
-      if (nproc /= nteraservers) then
-         write (*, *) 'WARNING: parameter "nproc" must equal "nteraservers"'
-         write (*, *) 'Setting nproc = ', nteraservers
-         nproc = nteraservers
-      end if
-   end if
-
-   call MPI_Barrier(MPI_COMM_WORLD, ierr)
-
-#else
-   if (pot == '_tera_') then
-      write (*, *) 'FATAL ERROR: This version was not compiled with MPI support.'
-      write (*, *) 'You cannot use the direct MPI interface to TeraChem.'
-      call abinerror('init')
-   end if
 #endif
+
+   ! We need to connect to TeraChem as soon as possible,
+   ! because we want to shut down TeraChem nicely in case something goes wrong.
+   if (pot == '_tera_' .or. restrain_pot == '_tera_') then
+      call initialize_terachem_interface(trim(tc_server_name))
+   end if
 
    if (en_restraint >= 1) then
       call en_rest_init()
@@ -269,7 +281,9 @@ subroutine init(dt)
 
    ! This line is super important,
    ! cause we actually use natqm in many parts of the code
-   if (iqmmm == 0 .and. pot /= 'mm') natqm = natom
+   if (iqmmm == 0 .and. pot /= 'mm') then
+      natqm = natom
+   end if
 
    if (irest == 1) then
       readnhc = 1 !readnhc has precedence before initNHC
@@ -287,7 +301,7 @@ subroutine init(dt)
       scaleveloc = 0
    end if
 
-   ! for future multiple time step integration in SH
+! for future multiple time step integration in SH
    dt0 = dt
 
    ! We have to initialize here, because we read them from input
@@ -314,17 +328,17 @@ subroutine init(dt)
       rem_comvel = .true.
    end if
 
-   ! allocate all basic arrays and set them to 0.0d0
+!  allocate all basic arrays and set them to 0.0d0
    call allocate_arrays(natom, nwalk + 1)
-   ! Ehrenfest require larger array since gradients for all of the states are need
-   ! TODO: We should really make this differently..
+!  Ehrenfest require larger array since gradients for all of the states are need
+!  TODO: We should really make this differently..
    if (ipimd == 4) call allocate_ehrenfest(natom, nstate)
 
    if (iplumed == 1) then
       call plumed_init()
    end if
 
-   ! READING GEOMETRY
+!  READING GEOMETRY
    read (111, *)
    do iat = 1, natom
 
@@ -355,7 +369,7 @@ subroutine init(dt)
    ! the namelist system does not need to be present
    read (150, system, iostat=iost, iomsg=chiomsg)
    rewind (150)
-   ! check, whether we hit End-Of-File or other error
+   !check, whether we hit End-Of-File or other error
    if (IS_IOSTAT_END(iost)) then !fortran intrinsic for EOF
       continue
    else if (iost /= 0) then
@@ -415,22 +429,19 @@ subroutine init(dt)
    end if
 
    close (150)
-   ! END OF READING INPUT
+!--END OF READING INPUT---------------
 
-!$ call OMP_set_num_threads(nproc)
-!$ nthreads = omp_get_max_threads()
-
-#ifdef USE_MPI
    if (pot == '_tera_' .or. restrain_pot == '_tera_') then
-      call initialize_terachem()
-      if (ipimd == 2 .or. ipimd == 4 .or. ipimd == 5) call init_terash(x, y, z)
+      call initialize_tc_servers()
+      if (ipimd == 2 .or. ipimd == 4 .or. ipimd == 5) then
+         call init_terash(x, y, z)
+      end if
    end if
-#endif
 
-   ! HERE WE CHECK FOR ERRORS IN INPUT
+!-----HERE WE CHECK FOR ERRORS IN INPUT-----------
    call check_inputsanity()
 
-   ! resetting number of walkers to 1 in case of classical simulation
+!     resetting number of walkers to 1 in case of classical simulation
    if (ipimd == 0) then
       if (my_rank == 0) then
          write (*, *) 'Using velocity Verlet integrator'
@@ -442,7 +453,7 @@ subroutine init(dt)
       ! algorithm as well
    end if
 
-   ! for surface hopping and ehrenfest
+!for surface hopping and ehrenfest
    if (ipimd == 2 .or. ipimd == 4 .or. ipimd == 5) then
       nwalk = ntraj !currently 1
       md = 2 ! velocity verlet
@@ -459,7 +470,7 @@ subroutine init(dt)
       md = 3
    end if
 
-   if (pot_ref /= 'none') then
+   if (pot_ref /= '_none_') then
       md = 4
       write (*, '(A)') 'Using Multiple Time-Step RESPA integrator!'
       write (*, '(A)') "Reference (cheap) potential is "//trim(pot_ref)
@@ -487,7 +498,7 @@ subroutine init(dt)
       cvhess_cumul = 0.0D0
    end if
 
-   ! SHAKE initialization, determining the constrained bond lenghts
+!     SHAKE initialization, determining the constrained bond lenghts
    if (nshake /= 0) then
       if (my_rank == 0) then
          write (*, *) 'Setting distances for SHAKE from XYZ coordinates'
@@ -495,11 +506,11 @@ subroutine init(dt)
       call shake_init(x, y, z)
    end if
 
-   if (pot == 'mmwater' .or. pot_ref == 'mmwater')then
+   if (pot == 'mmwater' .or. pot_ref == 'mmwater') then
       call check_water(natom, names)
    end if
 
-   ! MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
+!    MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
    if (my_rank /= 0) then
       call srand(irandom)
       do ipom = 0, my_rank
@@ -507,11 +518,10 @@ subroutine init(dt)
       end do
    end if
 
-   ! initialize prng, maybe rewritten during restart
-   ! call vranf(rans,0,irandom)
-   call gautrg(rans, 0, irandom)
+!    call vranf(rans,0,IRandom)  !initialize prng,maybe rewritten during restart
+   call gautrg(rans, 0, IRandom) !initialize prng, maybe rewritten during restart
 
-   ! THERMOSTAT INITIALIZATION
+!    THERMOSTAT INITIALIZATION
    if (inose == 1) then
       call nhc_init()
    else if (inose == 2) then
@@ -525,18 +535,18 @@ subroutine init(dt)
       call abinerror('init')
    end if
 
-   ! performing RESTART from restart.xyz
+!    performing RESTART from restart.xyz
    if (irest == 1) call restin(x, y, z, vx, vy, vz, it)
 
    if (pot == '2dho') then
       f = 0 !temporary hack
    end if
    if (nchain > 1) then
-      f = 0 ! what about nchain=1?
-      ! what about massive thermostat?
+      f = 0 !what about nchain=1?
+      ! what about massive therm?
    end if
 
-   ! SETTING initial velocities according to the Maxwell-Boltzmann distribution
+!     SETTING initial velocities according to the Maxwell-Boltzmann distribution
    if (irest == 0 .and. chveloc == '') then
       ! TODO: GLE thermostat, initialize momenta in gle_init
       if (temp0 >= 0) then
@@ -546,7 +556,7 @@ subroutine init(dt)
       end if
    end if
 
-   ! Reading velocities from file
+!     Reading velocities from file
    if (chveloc /= '' .and. irest == 0) then
       ! TODO: move the following to a separate function
       open (500, file=chveloc, status='OLD', action="READ")
@@ -577,7 +587,7 @@ subroutine init(dt)
 
    end if
 
-   ! END OF READING VELOCITIES
+!     END OF READING VELOCITIES--------------------
 
    ! doing this here so that we can do it even when reading velocities from file
    if (rem_comvel) call remove_comvel(vx, vy, vz, am, rem_comvel)
@@ -621,12 +631,13 @@ subroutine init(dt)
       if (iqmmm == 3 .or. pot == 'mm') write (*, nml=qmmm)
       write (*, *)
    end if
-   call flush (6)
 #ifdef USE_MPI
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+   write (*, '(A,I0,A,I0)') 'MPI rank: ', my_rank, ' PID: ', GetPID()
+#else
+   write (*, '(A,I0)') 'Process ID (PID): ', GetPID()
 #endif
-   pid = GetPID()
-   if (my_rank == 0) write (*, *) 'Pid of the current proccess is:', pid
+!$ write (*, '(A,I0)') 'Number of OpenMP threads: ', omp_get_max_threads()
 
    ! Open files for writing
    ! TODO: It's strange that we're passing these random params here...
@@ -638,8 +649,13 @@ contains
 
    subroutine check_inputsanity()
       use mod_chars, only: chknow
+      integer :: error
+!$    integer :: nthreads, omp_get_max_threads
+
+      error = 0
 
       !  We should exclude all non-abinitio options, but whatever....
+!$    nthreads = omp_get_max_threads()
 !$    if (nthreads > 1 .and. (ipimd /= 1 .and. pot /= '_cp2k_')) then
 !$       write (*, *) 'Number of threads is ', nthreads
 !$       write (*, *) 'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
@@ -654,14 +670,14 @@ contains
       end if
 
       if (irest == 1 .and. chveloc /= '') then
-         ! write(*,*)'ERROR: Input velocities are not compatible with irest=1.'
+         !   write(*,*)'ERROR: Input velocities are not compatible with irest=1.'
          write (*, *) 'WARNING: Input velocities from file'//trim(chveloc)//' will be ignored!'
          write (*, *) 'Velocities will be taken from restart file because irest=1.'
-         ! write(*,*)chknow
-         ! if(iknow.ne.1) error=1
+         !   write(*,*)chknow
+         !   if(iknow.ne.1) error=1
       end if
 
-      ! Check, whether input variables don't exceeds array limits
+      !-----Check, whether input variables don't exceeds array limits
       if (ntraj > ntrajmax) then
          write (*, *) 'Maximum number of trajectories is:'
          write (*, *) ntrajmax
@@ -698,7 +714,7 @@ contains
          write (*, *) 'Adjust variable ndistmax in modules.f90'
          error = 1
       end if
-      ! HERE we check for errors in input.
+!----------HERE we check for errors in input.
       if (pot /= '_cp2k_') then
          if (nproc > nwalk) then
             write (*, *) 'ERROR: Nproc greater than nwalk. That does not make sense.'
@@ -710,11 +726,12 @@ contains
             error = 1
          end if
          if (modulo(nwalk, nproc) /= 0) then
-            write (*, *) 'ERROR: Nwalk is not divisible by nproc. This is not a wise usage of your computer time.'
+            write (*, *) 'ERROR: Nwalk is not divisible by the number of OpenMP threads.'
+            write (*, *) 'This is not a wise usage of your computer time.'
             error = 1
          end if
       end if
-      if (pot == 'none') then
+      if (pot == '_none_') then
          write (*, *) 'FATAL: Variable "pot" not specified.Exiting now...'
          error = 1
       end if
@@ -956,8 +973,7 @@ contains
          error = 1
       end if
       if (nyosh <= 1 .and. inose == 1) then
-         write (*, *) 'It is strongly reccommended to use Suzuki-Yoshida scheme'//&
-                     &' when using Nose-Hoover thermostat (nyosh=3 or 7).'
+         write (*, *) 'It is strongly reccommended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh=3 or 7).'
          write (*, *) iknow, error, chknow
          if (iknow /= 1) error = 1
       end if
@@ -1082,6 +1098,7 @@ contains
       print '(a)', '  /_/        \_\ |_____/   |_|  |_|    \_|'
       print '(a)', ' '
 
+! TODO: Pass version as compiler parameter
       print '(a)', ' version 1.1'
       print '(a)', ' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek'
       print '(a)', ' '
@@ -1108,12 +1125,11 @@ contains
 
 end subroutine init
 
-! TODO: Move to a separate file.
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general
    use mod_files, only: MAXUNITS
-   use mod_nhc, only: inose, finalize_nhc
+   use mod_nhc !,   only: finalize_nhc
    use mod_gle, only: finalize_gle
    use mod_estimators, only: h
    use mod_harmon, only: hess
@@ -1192,13 +1208,13 @@ subroutine finish(error_code)
       call finalize_cp2k()
    end if
 
-   ! At last, we terminate MPI processes
-   ! TODO: We should have an MPI module handling this
-   ! TODO: We should check whether MPI was initialized with MPI_Init
-   ! before we attempt to call MPI_Finalize().
+! At last, we terminate MPI processes
+! TODO: We should have an MPI module handling this
+! TODO: We should check whether MPI was initialized with MPI_Init
+! before we attempt to call MPI_Finalize().
 #ifdef USE_MPI
    if (iremd == 1 .or. pot == '_tera_' .or. pot == '_cp2k_') then
-      if (error_code == 0 .and. pot /= "_cp2k_") then
+      if (error_code == 0 .and. pot /= "_cp2k_" .or. pot == '_tera_') then
          call MPI_Finalize(ierr)
          if (ierr /= MPI_SUCCESS) then
             write (*, '(A)') 'Bad signal from MPI_FINALIZE: ', ierr

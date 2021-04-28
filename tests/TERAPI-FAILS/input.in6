@@ -1,0 +1,11 @@
+&general
+max_wait_time=0.5
+
+pot='_tera_'
+ipimd=0,
+nstep=1,
+dt=40.,
+irandom=13131313,
+
+idebug=3
+/

@@ -117,8 +117,10 @@ restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.
 # Run all tests
 if [[ $TESTS = "all" ]];then
    # TODO: Re-enable GLE and PIGLE tests!
-   folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE LZ_SS LZ_ST LZ_ENE PIMD SHAKE HARMON MINI QMMM \
-            ANALYZE_EXT WATER_FAIL)
+   folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
+            LZ_SS LZ_ST LZ_ENE \
+            PIMD SHAKE HARMON MINI QMMM \
+            ANALYZE_EXT CMDLINE WATER_FAIL)
 
    let index=${#folders[@]}+1
    # TODO: Split this test, test OpenMP separately
@@ -129,9 +131,18 @@ if [[ $TESTS = "all" ]];then
    if [[ $MPI = "TRUE" ]];then
       let index=${#folders[@]}+1
       folders[index]=REMD
-      # TODO: Test MPI interface with TC
+      let index++
+      folders[index]=TERAPI
+      let index++
+      folders[index]=TERAPI-PIMD
+      let index++
+      folders[index]=TERAPI-PIMD-PARALLEL
+      let index++
+      folders[index]=TERAPI-FAILS
       # TODO: Test SH-MPI interface with TC
-      # folders[index]=TERAPI # does not yet work
+   else
+      let index=${#folders[@]}+1
+      folders[index]=WITHOUT_MPI
    fi
 
    if [[ $CP2K = "TRUE" ]];then

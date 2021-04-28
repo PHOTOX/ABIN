@@ -1,0 +1,33 @@
+&general
+pot='_tera_'
+watpot=1
+ipimd=1,
+istage=1
+nwalk=4,
+nstep=1,
+dt=10.,
+irandom=13131313,
+
+nwrite=1,
+nwritef=1,
+nwritev=1,
+nwritex=1,
+nrest=1,
+idebug=3
+
+! TODO: Set nteraservers=nwalk=4 
+! For now we're running just one since I've seen
+! random failures in Github CI when running 4 TC servers.
+! Will need to dig deeper after I refactor the code,
+! there might be some issue with OpenMP parallelization.
+! For now, we're running single threaded so that I
+! don't have to disable this test.
+nteraservers=1
+
+iknow=1 ! We're running PIMD without thermostat !
+/
+
+&nhcopt
+inose=0,
+temp=0.0,
+/

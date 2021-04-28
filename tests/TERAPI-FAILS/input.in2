@@ -1,0 +1,18 @@
+Intentionally invalid ABIN input
+(requires PIMD without thermostat)
+
+&general
+mpi_sleep=-1
+
+pot='_tera_'
+ipimd=1,
+nstep=1,
+dt=20.,
+irandom=13131313,
+idebug=3
+/
+
+&nhcopt
+inose=0,
+temp=0.0d0
+/

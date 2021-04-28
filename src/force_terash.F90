@@ -1,17 +1,16 @@
 module mod_terampi_sh
-!----------------------------------------------------------------
-! Interface for TeraChem based Surface Hopping.
-! Based on the FMS interface from FMS90 (TerachemModule.f90)
-!
-! Original Authors: Basile Curchod, J. Snyder and Ed Hohenstein
-!----------------------------------------------------------------
+   !----------------------------------------------------------------
+   ! Interface for TeraChem based Surface Hopping.
+   ! Based on the FMS interface from FMS90 (TerachemModule.f90)
+   !
+   ! Original Authors: Basile Curchod, J. Snyder and Ed Hohenstein
+   !----------------------------------------------------------------
    use mod_const, only: DP
+   use mod_terampi, only: TC_TAG
    implicit none
    private
-#ifdef USE_MPI
-   public :: init_terash
-#endif
-   public :: force_terash, finalize_terash
+   public :: force_terash
+   public :: init_terash, finalize_terash
    public :: write_wfn, read_wfn, move_new2old_terash, move_old2new_terash
    real(DP), allocatable :: CIvecs(:, :), MO(:, :), blob(:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:, :), MO_old(:, :), blob_old(:)
@@ -21,33 +20,29 @@ module mod_terampi_sh
 
 contains
 
+#ifdef USE_MPI
    subroutine force_terash(x, y, z, fx, fy, fz, eclas)
       use mod_const, only: DP
-      use mod_terampi, only: newcomms
+      use mod_terampi, only: get_tc_communicator
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
+      integer :: tc_comm
 
-      ! for SH, we use only one TC server...
-      ! might be changes if we ever implement more elaborate SH schemes
-#ifdef USE_MPI
-      call send_terash(x, y, z, fx, fy, fz, newcomms(1))
+      tc_comm = get_tc_communicator(1)
 
-      call receive_terash(fx, fy, fz, eclas, newcomms(1))
-#else
-      write (*, *) "FATAL ERROR: ABIN not compiled with MPI, cannot connect to TeraChem"
-      stop 1
-#endif
+      ! For SH we use only one TC server.
+      call send_terash(x, y, z, tc_comm)
 
+      call receive_terash(fx, fy, fz, eclas, tc_comm)
    end subroutine force_terash
 
-#ifdef USE_MPI
-
-   subroutine receive_terash(fx, fy, fz, eclas, newcomm)
+   subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
+      use mod_terampi, only: wait_for_terachem
       use mod_const, only: DP, ANG
       use mod_array_size, only: NSTMAX
       use mod_general, only: idebug, natom, en_restraint, ipimd
-      use mod_terampi, only: mpi_sleep, handle_mpi_error
+      use mod_terampi, only: handle_mpi_error, check_recv_count
       use mod_qmmm, only: natqm
       use mod_utils, only: abinerror
       use mod_io, only: print_charges, print_dipoles, print_transdipoles
@@ -57,36 +52,26 @@ contains
       use mpi
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
-      integer, intent(in) :: newcomm
+      integer, intent(in) :: tc_comm
       real(DP) :: dip(NSTMAX * 3), tdip((NSTMAX - 1) * 3) ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
       real(DP) :: qmcharges(size(fx, 1))
       integer :: status(MPI_STATUS_SIZE)
       integer :: ierr, iat, iw, ist1, ist2, itrj, ipom, i
-      logical :: ltest
-      character*50 :: chsys_sleep
 
       itrj = 1
       iw = 1
 
+      call wait_for_terachem(tc_comm)
+
 !  Receive energies from TC
-      if (idebug > 0) write (*, '(a)') 'Receiving energies from TC.'
-
-      ! DH reduce cpu usage comming from MPI_Recv() via system call to 'sleep'.
-      ! Not elegant, but MPICH apparently does not currently provide better solution.
-      ! Based according to an answer here:
-      ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
-
-      ltest = .false.
-      write (chsys_sleep, '(A6, F10.4)') 'sleep ', mpi_sleep
-      do while (.not. ltest)
-         call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, ltest, status, ierr)
-         call system(chsys_sleep)
-      end do
-
-!  DH WARNING this will only work if itrj = 1
+      if (idebug > 0) then
+         write (*, '(a)') 'Receiving energies from TC.'
+      end if
+      ! DH WARNING this will only work if itrj = 1
       call MPI_Recv(en_array, nstate, MPI_DOUBLE_PRECISION, &
-                    MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+                    MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
+      call check_recv_count(status, nstate, MPI_DOUBLE_PRECISION)
 
       eclas = en_array(istate(itrj), itrj)
 
@@ -101,8 +86,9 @@ contains
 
       if (idebug > 0) write (*, '(a)') 'Receiving transition dipoles from TC.'
       call MPI_Recv(TDip, (nstate - 1) * 3, &
-                    MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+                    MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
+      call check_recv_count(status, (nstate - 1) * 3, MPI_DOUBLE_PRECISION)
 !   do i=1, nstate-1
 !      T_FMS%ElecStruc%TransDipole(i+1,:)=TDip(3*(i-1)+1:3*(i-1)+3)
 !   end do
@@ -115,64 +101,75 @@ contains
 !  Receive dipole moment from TC
       if (idebug > 0) write (*, '(a)') 'Receiving dipole moments from TC.'
       call MPI_Recv(Dip, nstate * 3, &
-                    MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+                    MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
+      call check_recv_count(status, nstate * 3, MPI_DOUBLE_PRECISION)
 
       call print_dipoles(Dip, iw, nstate)
 
 !  Receive partial charges from TC
       if (idebug > 0) write (*, '(a)') 'Receiving atomic charges from TC.'
-      call MPI_Recv(qmcharges, natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+      call MPI_Recv(qmcharges, natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
+      call check_recv_count(status, natqm, MPI_DOUBLE_PRECISION)
 
       call print_charges(qmcharges, istate(itrj))
 
 !  Receive MOs from TC
       if (idebug > 0) write (*, '(a)') 'Receiving MOs from TC.'
       call MPI_Recv(MO, nbf * nbf, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
-                    MPI_ANY_TAG, newcomm, status, ierr)
+                    MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
+      call check_recv_count(status, nbf * nbf, MPI_DOUBLE_PRECISION)
 
 !   T_FMS%ElecStruc%OldOrbitals=MO
 
       if (idebug > 0) write (*, '(a)') 'Receiving CI vectors from TC.'
       call MPI_Recv(CIvecs, nstate * civec, &
-                    MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+                    MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
+      call check_recv_count(status, nstate * civec, MPI_DOUBLE_PRECISION)
 
-      if (idebug > 0) write (*, *) "Receiving wavefunction overlap via MPI."
-      call MPI_Recv(SMatrix, nstate * nstate, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr); 
+      if (idebug > 0) write (*, *) "Receiving wavefunction overlap."
+      call MPI_Recv(SMatrix, nstate * nstate, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr); 
       call handle_mpi_error(ierr)
+      call check_recv_count(status, nstate * nstate, MPI_DOUBLE_PRECISION)
 
       ! Should change the following according to what is done in TeraChem
       i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
 
       CIVecs_old = Civecs
 
-      if (idebug > 0) write (*, '(a)') 'Receiving blob from TC.'
+      if (idebug > 0) write (*, '(a)') 'Receiving blob.'
       call MPI_Recv(blob, blobsize, &
-                    MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+                    MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
+      call check_recv_count(status, blobsize, MPI_DOUBLE_PRECISION)
 
-      if (idebug > 0) write (*, '(a)') 'Receiving gradients and NACME from TC.'
+      ! TODO: Extract all this to a function.
+      if (idebug > 0) then
+         write (*, '(A)') 'Receiving gradients and NACME.'
+      end if
       do ist1 = 1, nstate
          do ist2 = ist1, nstate
 
-            if (idebug > 0) write (*, '(a,i3,i3)') 'Receiving derivatives between states.' &
-               , ist1, ist2
+            if (idebug > 0) then
+               write (*, '(A,i0,i0)') 'Receiving derivatives between states ', ist1, ist2
+            end if
 
             ! NOTE: We do not filter here based on tocalc because TC always sends the whole
             ! derivative matrix, including zero elements, see 'terachem/fms.cpp:'
             ! Is TC sending zero arrays for NAC that we did not want it to compute???
             call MPI_Recv(NAC, 3 * natom, MPI_DOUBLE_PRECISION, &
-                          MPI_ANY_SOURCE, MPI_ANY_TAG, newcomm, status, ierr)
+                          MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
             call handle_mpi_error(ierr)
+            call check_recv_count(status, 3 * natom, MPI_DOUBLE_PRECISION)
 
             if (idebug > 0) write (*, *) (NAC(i), i=1, 3 * natom)
 
             ipom = 1
+            ! GRADIENTS
             if (ist1 == ist2 .and. istate(itrj) == ist1) then
-               ! GRADIENTS
                do iat = 1, natom
                   fx(iat, iw) = -NAC(ipom)
                   fy(iat, iw) = -NAC(ipom + 1)
@@ -217,7 +214,8 @@ contains
 
    end subroutine receive_terash
 
-   subroutine send_terash(x, y, z, vx, vy, vz, newcomm)
+   subroutine send_terash(x, y, z, tc_comm)
+      use mod_terampi, only: send_coordinates
       use mod_array_size, only: NSTMAX
       use mod_const, only: DP, ANG, AUTOFS
       use mod_terampi, only: handle_mpi_error
@@ -228,24 +226,15 @@ contains
       use mod_sh, only: istate, tocalc, ignore_state
       use mpi
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-      real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
-      integer, intent(in) :: newcomm
+      integer, intent(in) :: tc_comm
       real(DP) :: bufdoubles(100)
-      real(DP) :: qmcoords(3, size(x, 1)), vels(3, size(vx, 1))
-      integer :: ierr, iw, iat, itrj, i, ist1, ist2
+      real(DP) :: vels(3, size(x, 1))
+      integer :: ierr, iw, itrj, i, ist1, ist2
       integer :: bufints(NSTMAX * (NSTMAX - 1) / 2 + NSTMAX)
       integer, parameter :: FMSInit = 0
 
       itrj = 1
       iw = 1
-      do iat = 1, natqm
-         qmcoords(1, iat) = x(iat, iw)
-         qmcoords(2, iat) = y(iat, iw)
-         qmcoords(3, iat) = z(iat, iw)
-         vels(1, iat) = vx(iat, iw)
-         vels(2, iat) = vy(iat, iw)
-         vels(3, iat) = vz(iat, iw)
-      end do
 
       ! Send ESinit
       bufints(1) = FMSinit
@@ -261,7 +250,7 @@ contains
       bufints(11) = 0 ! first_call, not used
       bufints(12) = 0 ! FMSRestart, not used
 
-      call MPI_Send(bufints, 12, MPI_INTEGER, 0, 2, newcomm, ierr)
+      call MPI_Send(bufints, 12, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
       ! The following bit is not in FMS code
@@ -296,94 +285,88 @@ contains
          write (*, *) 'Sending derivative matrix logic.'
          write (*, *) (bufints(i), i=1, nstate * (nstate - 1) / 2 + nstate)
       end if
-      call MPI_SSend(bufints, nstate * (nstate - 1) / 2 + nstate, MPI_INTEGER, 0, 2, newcomm, ierr)
+      call MPI_SSend(bufints, nstate * (nstate - 1) / 2 + nstate, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
       ! temporary hack
       bufdoubles(1) = sim_time ! * AUtoFS !* dt
       ! Send Time
-      call MPI_Send(bufdoubles, 1, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+      call MPI_Send(bufdoubles, 1, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
-!  Send coordinates
-      call MPI_Send(qmcoords, 3 * natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
-      call handle_mpi_error(ierr)
-      if (idebug > 0) write (*, '(a)') 'Sent coordinates to TeraChem.'
+      call send_coordinates(x, y, z, natqm, iw, tc_comm)
 
 !  Send previous diabatic MOs
       if (idebug > 0) write (*, *) 'Sending previous orbitals.', nbf * nbf
-      call MPI_Send(MO, nbf * nbf, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+      call MPI_Send(MO, nbf * nbf, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
 !  Send previous CI vecs
       if (idebug > 0) write (*, *) 'Sending CI vector of size ', civec * nstate
-      call MPI_Send(CIvecs, civec * nstate, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+      call MPI_Send(CIvecs, civec * nstate, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
       if (idebug > 0) write (*, *) 'Sending blob.'
-      call MPI_Send(blob, blobsize, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+      call MPI_Send(blob, blobsize, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
       if (idebug > 0) write (*, *) 'Sending velocities'
-!  Only needed for numerical NACME, so send 0 instead for now
+      ! Only needed for numerical NACME, so send 0 instead for now
       vels = 0.0D0
-      call MPI_Send(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+      call MPI_Send(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
-!  Imaginary velocities for FMS, not needed here, sending zeros...
-      call MPI_SSend(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
+      ! Imaginary velocities for FMS, not needed here, sending zeros...
+      call MPI_SSend(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
-      if (idebug > 0) write (*, *) 'Succesfully sent all data to TeraChem-FMS'
-
+      if (idebug > 0) then
+         write (*, *) 'Succesfully sent all data to TeraChem-FMS'
+      end if
    end subroutine send_terash
 
    subroutine init_terash(x, y, z)
+      use mpi
       use mod_const, only: DP, ANG
       use mod_general, only: idebug, DP, natom
       use mod_system, only: names
       use mod_qmmm, only: natqm
       use mod_sh_integ, only: nstate
-      use mod_terampi, only: newcomms, natmm_tera, handle_mpi_error
-      use mpi
+      use mod_terampi, only: get_tc_communicator, &
+                             handle_mpi_error, &
+                             send_natom, &
+                             send_atom_types_and_scrdir, &
+                             send_coordinates
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-      real(DP) :: qmcoords(3, size(x, 1))
       integer :: status(MPI_STATUS_SIZE)
-      integer :: ierr, iat, iw, newcomm
-      integer, parameter :: FMSinit = 1
+      integer :: ierr, iw, tc_comm
+      integer, parameter :: FMS_INIT = 1
+      logical, parameter :: send_scrdir = .false.
       integer :: bufints(3)
+      ! QMMM currently not supported
+      integer, parameter :: natmm_tera = 0
 
       ! use only one TC server !
-      newcomm = newcomms(1)
+      tc_comm = get_tc_communicator(1)
 
       iw = 1
-      do iat = 1, natom
-         qmcoords(1, iat) = x(iat, iw)
-         qmcoords(2, iat) = y(iat, iw)
-         qmcoords(3, iat) = z(iat, iw)
-      end do
 
-      bufints(1) = FMSinit
-      bufints(2) = natom - natmm_tera
+      bufints(1) = FMS_INIT
+      bufints(2) = natqm
       bufints(3) = natmm_tera
-      call MPI_SSend(bufints, 3, MPI_INTEGER, 0, 2, newcomm, ierr)
+      call MPI_SSend(bufints, 3, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
-      if (idebug > 0) write (*, '(a)') 'Sent initial FMSinit.'
+      if (idebug > 0) then
+         write (*, '(a)') 'Sent initial FMSinit.'
+      end if
 
-!  Send atom types
-      call MPI_Send(names, 2 * natqm, MPI_CHARACTER, 0, 2, newcomm, ierr)
-      call handle_mpi_error(ierr)
-      if (idebug > 0) write (*, '(a)') 'Sent initial atom types.'
+      call send_atom_types_and_scrdir(names, natqm, iw, tc_comm, send_scrdir)
 
-!  Send coordinates
-      call MPI_Send(qmcoords, 3 * natom, MPI_DOUBLE_PRECISION, 0, 2, newcomm, ierr)
-      call handle_mpi_error(ierr)
-      if (idebug > 0) write (*, '(a)') 'Sent initial coordinates to TeraChem.'
+      call send_coordinates(x, y, z, natqm, iw, tc_comm)
 
-!-- START RECEIVING INFO FROM TeraChem ------!
-
-!  Receive nbf,CI length and blob size
+      ! START RECEIVING INFO FROM TeraChem.
+      ! Receive nbf, CI length and blob size
       call MPI_Recv(bufints, 3, MPI_INTEGER, MPI_ANY_SOURCE, &
-                    MPI_ANY_TAG, newcomm, status, ierr)
+                    MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
 
       civec = bufints(1)
@@ -402,9 +385,9 @@ contains
       allocate (SMatrix(nstate * nstate))
       blob = 0.0D0
       blob_old = 0.0D0
-
    end subroutine init_terash
 
+! USE_MPI
 #endif
 
    subroutine finalize_terash()
@@ -523,4 +506,24 @@ contains
       blob = blob_old
    end subroutine move_old2new_terash
 
+#ifndef USE_MPI
+   subroutine init_terash(x, y, z)
+      use mod_utils, only: not_compiled_with
+      real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
+      ! Assignments just to squash compiler warnings
+      x = 0.0D0; y = 0.0D0; z = 0.0D0
+      call not_compiled_with('MPI', 'init_terash')
+   end subroutine init_terash
+
+   subroutine force_terash(x, y, z, fx, fy, fz, eclas)
+      use mod_const, only: DP
+      use mod_utils, only: not_compiled_with
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
+      real(DP), intent(inout) :: eclas
+      ! Assignments just to squash compiler warnings
+      fx = x; fy = y; fz = z; eclas = 0.0D0
+      call not_compiled_with('MPI', 'force_terash')
+   end subroutine force_terash
+#endif
 end module mod_terampi_sh

@@ -1,0 +1,20 @@
+Intentionally invalid ABIN input
+nteraservers > nwalk
+
+&general
+pot='_tera_'
+ipimd=1,
+istage=1
+nwalk=2
+nteraservers=3
+
+dt=20
+nstep=1,
+irandom=13131313,
+idebug=3
+/
+
+&nhcopt
+inose=1,
+temp=300
+/

@@ -11,7 +11,7 @@
 */geom.dat.00*
 */geom_mm.dat.00*
 REMD/DFTB/OUT*
-*/abin.out
+*/abin.out*
 REMD/restart.xyz.??.*
 */restart.xyz.old
 */restart.xyz.0?
@@ -21,6 +21,17 @@ REMD/restart.xyz.??.*
 */ERROR
 SH_BUTCHER/geom.?.?.?
 CP2K*/WATER*
+
 # PLUMED backup files
 bck.*
+
+# Files from TERAPI* tests
+tc_server?
+tc_server
+tc.out*
+port.txt*
+TC_ERROR?
+ABIN_ERROR?
+scrdir????
+
 !mini.xyz

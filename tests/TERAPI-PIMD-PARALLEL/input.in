@@ -1,0 +1,26 @@
+&general
+pot='_tera_'
+watpot=1
+ipimd=1,
+istage=1
+nwalk=4,
+nstep=1,
+dt=10.,
+irandom=13131313,
+
+nwrite=1,
+nwritef=1,
+nwritev=1,
+nwritex=1,
+nrest=1,
+idebug=3
+
+nteraservers=4
+
+iknow=1 ! We're running PIMD without thermostat !
+/
+
+&nhcopt
+inose=0,
+temp=0.0,
+/

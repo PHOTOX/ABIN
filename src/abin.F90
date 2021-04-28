@@ -43,8 +43,9 @@ program abin
    logical :: file_exists
    integer, dimension(8) :: time_start, time_end
    real(DP) :: total_cpu_time
+#ifdef USE_MPI
    integer :: ierr
-!$ integer :: nthreads, omp_get_max_threads
+#endif
 
    call date_and_time(VALUES=time_start)
 
@@ -52,7 +53,9 @@ program abin
    call init(dt)
 
    ! This cannot be in init because of the namelist 'system'
-   if (my_rank == 0) call clean_temp_files()
+   if (my_rank == 0) then
+      call clean_temp_files()
+   end if
 
    if (irest == 1 .and. (my_rank == 0 .or. iremd == 1)) then
       call archive_file('restart.xyz', it)
@@ -66,9 +69,7 @@ program abin
       call lz_rewind(en_array_lz)
    end if
 
-!$ nthreads = omp_get_max_threads()
    if (my_rank == 0) then
-!$    write (*, *) 'Number of OpenMP threads used = ', nthreads
       write (*, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
       write (*, *) ''
    end if
@@ -111,7 +112,7 @@ program abin
       if (ipimd == 5) call lz_rewind(en_array_lz)
 
       ! if we use reference potential with RESPA
-      if (pot_ref /= 'none') then
+      if (pot_ref /= '_none_') then
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
          call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
       end if

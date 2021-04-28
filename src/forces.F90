@@ -83,7 +83,7 @@ subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
    if (iplumed == 1) call force_plumed(transx, transy, transz, fxab, fyab, fzab, eclas)
 
    ! For reference potential and ring-polymer contraction
-   if (pot_ref /= 'none' .and. chpot == pot) then
+   if (pot_ref /= '_none_' .and. chpot == pot) then
       ! fxab now holds the full potential,
       ! but we need the difference force on the output
       fx = fxab; fy = fyab; fz = fzab
@@ -164,7 +164,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_harmon, only: force_harmon, force_2dho, force_morse, force_doublewell
    use mod_splined_grid
    use mod_cp2k, only: force_cp2k
-   use mod_terampi, only: force_tera
+   use mod_force_tera, only: force_tera
    use mod_terampi_sh, only: force_terash
    implicit none
    real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)

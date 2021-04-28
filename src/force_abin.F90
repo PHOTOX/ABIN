@@ -121,12 +121,11 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       !-----MAKE THE CALL----------!
       ISTATUS = system(chsystem)
 
+      ! TODO: Verify that the below is true even for GCC >= 7
       ! Exit status 0 turns to 0
       ! For some reason, exit status 1 turns to 256
-      ! However, this one we get by default from bash, don't know why...
-      ! see this thread for explanation:
-      ! http://coding.derkeiler.com/Archive/Fortran/comp.lang.fortran/MAXUNITS07-01/msg00085.html
-      ! If the bash script wants to notify ABIN, it can use e.g. exit 2
+      ! However, this one we get by default from BASH, I don't know why.
+      ! If the BASH script wants to notify ABIN, it can use e.g. exit 2
       if (ISTATUS /= 0 .and. ISTATUS /= 256) then
          write (*, '(A)') 'ERROR during the execution of the ab initio external program.'
          write (*, '(A)') 'Please inspect the output files in&

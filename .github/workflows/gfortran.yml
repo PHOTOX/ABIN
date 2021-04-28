@@ -14,6 +14,9 @@ env:
   CURL_OPTS:  -S --no-silent
   CODECOV_OPTIONS: -Z -X coveragepy -X xcode
 
+  # FFLAGS for building ABIN, applicable for most jobs
+  ABIN_FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
+
 jobs:
 
   basic_build:
@@ -25,7 +28,6 @@ jobs:
          gcc_v: [7, 8, 9]
     env:
       FC: gfortran
-      FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
       GCC_V: ${{ matrix.gcc_v}}
       CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
 
@@ -56,6 +58,8 @@ jobs:
 
     - name: Build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
+      env:
+        FFLAGS: ${{ env.ABIN_FFLAGS }}
 
     - name: Run Unit tests
       run: make unittest
@@ -132,7 +136,6 @@ jobs:
       matrix:
          gcc_v: [7]
     env:
-      FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
       GCC_V: ${{ matrix.gcc_v}}
       CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
     steps:
@@ -156,6 +159,8 @@ jobs:
 
     - name: Build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ --fftw && make
+      env:
+        FFLAGS: ${{ env.ABIN_FFLAGS }}
 
     - name: Run Unit tests
       run: make unittest
@@ -174,9 +179,8 @@ jobs:
       fail-fast: false
       matrix:
          gcc_v: [7, 8, 9]
-         mpich_v: ["3.1.3", "3.3.2"]
+         mpich_v: ["3.3.2", "3.4.1"]
     env:
-      ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal
       # To speed-up MPICH build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
@@ -204,10 +208,9 @@ jobs:
       run: ./dev_scripts/install_mpich.sh ${HOME}/mpich ${MPICH_V}
 
     - name: build ABIN
-      run: |
-            export FFLAGS=${ABIN_FFLAGS} &&\
-            ./configure --mpi ${HOME}/mpich/${MPICH_V}/install &&\
-            make
+      run:  ./configure --mpi ${HOME}/mpich/${MPICH_V}/install && make
+      env:
+        FFLAGS: ${{ env.ABIN_FFLAGS }} -g
     - name: test ABIN
       run: make test
       # We upload to Codecov from the OpenMPI build,
@@ -227,7 +230,6 @@ jobs:
       matrix:
          gcc_v: [7]
     env:
-      ABIN_FFLAGS: -O0 --coverage -fopenmp -ffpe-trap=invalid,zero,overflow,denormal
       # To speed-up OpenMPI build
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
@@ -255,10 +257,9 @@ jobs:
       run: ./dev_scripts/install_openmpi.sh ${HOME}/openmpi ${OPENMPI_V} ${OPENMPI_PATCH}
 
     - name: build ABIN
-      run: |
-        export FFLAGS=${ABIN_FFLAGS} &&\
-        ./configure --mpi "${HOME}/openmpi/${OPENMPI_V}/install" &&\
-        make
+      run: ./configure --mpi "${HOME}/openmpi/${OPENMPI_V}/install" && make
+      env:
+        FFLAGS: ${{ env.ABIN_FFLAGS }}
     - name: test ABIN
       run: make test
     - name: Codecov upload
@@ -278,7 +279,6 @@ jobs:
     env:
       PLUMED_V: ${{ matrix.plumed_v}}
       GCC_V: ${{ matrix.gcc_v}}
-      ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal
       # Speeding up the Plumed build
       CFLAGS: -O0
       CXXLAGS: -O0
@@ -312,10 +312,11 @@ jobs:
 
     - name: build ABIN
       run: |
-        export FFLAGS=${ABIN_FFLAGS} &&\
         ./configure --plumed "${HOME}/plumed/${PLUMED_V}/install"\
                     --pfunit ~/pfunit/build/installed/ &&\
         make
+      env:
+        FFLAGS: ${{ env.ABIN_FFLAGS }}
 
     - name: Run Unit tests
       run: make unittest

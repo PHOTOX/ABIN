@@ -17,6 +17,10 @@ TAR_FILE="mpich-${MPICH_VERSION}.tar.gz"
 DOWNLOAD_URL="https://www.mpich.org/static/downloads/${MPICH_VERSION}/${TAR_FILE}"
 INSTALL_DIR="$MPICH_DIR/$MPICH_VERSION/install"
 
+# Github Actions machines have two CPUs, per:
+# https://docs.github.com/en/free-pro-team@latest/actions/reference/specifications-for-github-hosted-runners#supported-runners-and-hardware-resources
+NCPUS=2
+
 if [[ -d $MPICH_DIR/$MPICH_VERSION ]];then
   echo "Found existing MPICH installation in $MPICH_DIR/$MPICH_VERSION"
   echo "Remove this folder if you want to reinstall"
@@ -30,18 +34,23 @@ curl "$DOWNLOAD_URL" > $MPICH_DIR/$MPICH_VERSION/pkg/${TAR_FILE}
 cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MPICH_VERSION}
 
 # If you're building MPI for general use, not only for ABIN,
-# you might want to change the configure options:
-# --enable-fortran=yes Compile all versions of Fortran interfaces
-#                     This option is needed for GitHub Actions build, I don't know why
-# --with-hydra-pm=pmiserv --with-namepublisher=pmi
-#                     Needed for MPI interface with TeraChem
+# you might want change some of the configure options.
+# --enable-fortran=all Compile all versions of Fortran interfaces
+#                      In principle we don't need F77, but configure fails in that case.
+# --with-namepublisher=pmi
+#         This compiles hydra_nameserver binary, needed for MPI interface with TeraChem
+#
+# Use the two rows below for a debug build/
+# export CFLAGS='-g -O0'
+# --disable-fast --enable-g-option=all \
 ./configure FC=gfortran CC=gcc \
-  --enable-fortran=all --disable-cxx \
-  --with-hydra-pm=pmiserv --with-namepublisher=pmi \
+  --enable-fortran=all \
+  --with-pm=hydra --with-device=ch3:nemesis \
+  --with-namepublisher=pmi \
   --enable-static --disable-shared \
   --prefix=${INSTALL_DIR} 2>&1 |\
   tee configure.log
-make 2>&1 | tee make.log
+make -j $NCPUS 2>&1 | tee make.log
 make install 2>&1 | tee make_install.log
 
 echo "

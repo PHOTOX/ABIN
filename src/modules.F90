@@ -68,9 +68,9 @@ module mod_general
    ! PIMD parameters, staging transformation, number of beads, NM transform
    integer :: istage = 0, nwalk = 1, inormalmodes = 0
    ! Ab-initio potential
-   character(len=15) :: pot = 'none'
-   ! Ab initio potential for a reference in Multile time step propagator
-   character(len=15) :: pot_ref = 'none'
+   character(len=15) :: pot = '_none_'
+   ! Reference potential for a multiple time step propagator
+   character(len=15) :: pot_ref = '_none_'
    ! imini keyword is mostly deprecated
    integer :: imini = 0
    ! number of time steps (length of simulation)
@@ -197,7 +197,7 @@ contains
       allocate (am(natom))
       am = -1.0D0
       do i = 1, natom
-         select case(names(i))
+         select case (names(i))
          case ('H')
             am(i) = 1.008D0
          case ('H1')
@@ -604,6 +604,15 @@ contains
             open (UTDIP, file=chfiles(UTDIP), access=chaccess, action='write')
             write (UTDIP, *) '# Time  st  tdip_tot.1 tdip_tot.2 ... tdip_x.1 tdip_y.1 tdip_z.1 tdip_x.2 tdip_y.2 tdip_z.2.'
          end if
+      end if
+
+      if (ipimd /= 2 .and. pot == '_tera_') then
+         open (UCHARGES, file=chfiles(UCHARGES), access=chaccess, action='write')
+         write (UCHARGES, *) '# Atomic Mulliken charges from current electronic state'
+         write (UCHARGES, *) '# Time_step Bead_index ', (names(i), i=1, natom)
+
+         open (UDIP, file=chfiles(UDIP), access=chaccess, action='write')
+         write (UDIP, *) '# Time  |D| Dx Dy Dz'
       end if
 
       if (isbc == 1) then

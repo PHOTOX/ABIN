@@ -1,50 +1,46 @@
 #/bin/bash
-#module load mpich2/1.4.1p1
-#MPIRUN=mpiexec
+set -euo pipefail
+# Useful for debugging
+#set -x
 
-MPIRUN=$MPI_PATH/bin/mpirun
+ABINEXE=$1
+source ../test_tc_server_utils.sh
 
-rm -f restart.xyz movie.xyz
-if [[ "$1" = "clean" ]];then
-   rm -f  output terapi.out temper.dat energies.dat
-   exit 0
+set_default_vars
+set_mpich_vars
+# If $1 = "clean"; exit early.
+if ! clean_output_files $1; then
+  exit 0
 fi
 
+# Exit early for OpenMPI build.
+check_for_openmpi
 
+# Compile the fake TC server.
+# TCSRC end TCEXE is defined in ../test_tc_server_utils.sh.
+$MPICXX $TCSRC -Wall -o $TCEXE
 
-#DHHack:
-if [[ -z $1 ]];then
-   ABINEXE=../../abin
-else
-   ABINEXE=$1
-fi
+launch_hydra_nameserver $MPICH_HYDRA
 
-$MPIRUN  -np 1 ./tera-mpiapi > terapi.out &
-# Get PID of the last process
-terapid=$!
+hostname=$HOSTNAME
+MPIRUN="$MPIRUN -nameserver $hostname -n 1"
 
-sleep 2
-# Ugly workaround because MPI_Lookup does not work
-grep port_name: terapi.out | awk '{print $6}' > port.txt
-$MPIRUN  -np 1 $ABINEXE > output &
+TC_PORT="tcport.$$"
+ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM -M $TC_PORT"
+TC_CMD="./$TCEXE $TC_PORT.1"
+
+$MPIRUN $TC_CMD > $TCOUT 2>&1 &
+tcpid=$!
+
+$MPIRUN $ABIN_CMD > $ABINOUT 2>&1 &
 abinpid=$!
 
-while true;do
-   sleep 1
-   if ! `ps|grep -q $terapid` && ! `ps|grep -q $abinpid` ;then
-      echo "Both ABIN and TeraChem stopped."
-      break
-   fi
-   if ! `ps|grep -q $terapid` ;then
-      echo "Terachem died. Killing ABIN."
-      kill -9 $abinpid 
-      break
-   fi   
-   if ! `ps|grep -q $abinpid` ;then
-      echo "ABIN died. Killing TeraChem."
-      echo $terapid
-      kill -9 $terapid 
-      break
-   fi
-done
+function cleanup {
+  kill -9 $tcpid $abinpid > /dev/null 2>&1 || true
+  #kill -9 $tcpid $abinpid $hydrapid > /dev/null 2>&1 || true
+  exit 0
+}
 
+trap cleanup INT ABRT TERM EXIT
+
+check_running_processes $abinpid $tcpid
