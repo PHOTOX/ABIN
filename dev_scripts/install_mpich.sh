@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Install OpenMPI implementation of Message Passing Interface (MPI)
-# This script installs both the MPI compilers (mpifort,mpicc)
-# and MPI process manager (mpirun)
+# Install the MPICH implementation of Message Passing Interface (MPI).
+# This script installs both the MPI compilers (mpifort, mpicc)
+# and the MPI process manager (mpirun).
 
 # Exit script immediately upon error
 set -euo pipefail
@@ -10,7 +10,7 @@ set -euo pipefail
 # Path as an optional first parameter
 MPICH_DIR="${1-/home/$USER/mpich}"
 # We take current stable version as default
-# (as of 06 Nov 2020)
+# (as of 06 Nov 2020).
 MPICH_VERSION="${2-"3.3.2"}"
 
 TAR_FILE="mpich-${MPICH_VERSION}.tar.gz"
@@ -54,7 +54,7 @@ make -j $NCPUS 2>&1 | tee make.log
 make install 2>&1 | tee make_install.log
 
 echo "
-Succesfully installed MPICH!
+Succesfully installed MPICH-${MPICH_VERSION}!
 Set the following path in your ABIN make.vars
 
 MPI_PATH = ${INSTALL_DIR}
