@@ -1,6 +1,6 @@
 #/bin/bash
 
-rm -f remd.out restart.xyz.??.old output output2 restart.xyz.?? restart.xyz.??.? geom.dat.?? movie.xyz.?? cp2k.out temper.dat.?? energies.dat.?? 
+rm -f remd.out abin.out restart.xyz.??.old restart.xyz.?? restart.xyz.??.? geom.dat.?? movie.xyz.?? cp2k.out temper.dat.?? energies.dat.??
 if [[ "$1" = "clean" ]];then
    exit 0
 fi

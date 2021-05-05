@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [7, 8, 9]
+         gcc_v: [7, 9, 10]
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
@@ -80,7 +80,7 @@ jobs:
     needs: basic_build
     strategy:
       matrix:
-         gcc_v: [7, 8, 9]
+         gcc_v: [7, 9, 10]
     env:
       FC: gfortran
       FFLAGS: -O3 -fopenmp -Wall
@@ -178,7 +178,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [7, 8, 9]
+         gcc_v: [7, 9, 10]
          mpich_v: ["3.3.2", "3.4.1"]
     env:
       # To speed-up MPICH build
@@ -205,16 +205,24 @@ jobs:
 
     - name: Build and Install MPICH
       if: steps.mpich-cache.outputs.cache-hit != 'true'
-      run: ./dev_scripts/install_mpich.sh ${HOME}/mpich ${MPICH_V}
+      # Without the extra "-fallow-argument-mismatch" FFLAG, configure with GFortran-10 fails with:
+      # "The Fortran compiler gfortran does not accept programs
+      # that call the same routine with arguments of different types"
+      # Unfortunately, previous GCC versions do not have this flag
+      # so we need to set it conditionally.
+      # We also need to set it for ABIN compilation below.
+      run: |
+        if [ $GCC_V -eq 10 ];then export FFLAGS="-fallow-argument-mismatch $FFLAGS";fi && \
+        ./dev_scripts/install_mpich.sh ${HOME}/mpich ${MPICH_V}
 
     - name: build ABIN
-      run:  ./configure --mpi ${HOME}/mpich/${MPICH_V}/install && make
+      run: |
+        if [ $GCC_V -eq 10 ];then export FFLAGS="-fallow-argument-mismatch $FFLAGS";fi && \
+        ./configure --mpi ${HOME}/mpich/${MPICH_V}/install && make
       env:
         FFLAGS: ${{ env.ABIN_FFLAGS }} -g
     - name: test ABIN
       run: make test
-      # We upload to Codecov from the OpenMPI build,
-      # so no need to do that here.
     - name: Codecov upload
       run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
 
