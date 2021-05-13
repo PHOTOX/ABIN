@@ -77,9 +77,7 @@ subroutine init(dt)
       en_restraint, en_diff, en_kk, restrain_pot, &
       pot_ref, nstep_ref, nteraservers, max_wait_time, cp2k_mpi_beads
 
-#ifdef USE_MPI
    namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
-#endif
 
    namelist /nhcopt/ inose, temp, temp0, nchain, ams, tau0, tau0_langevin, imasst, nrespnose, nyosh, &
       scaleveloc, readNHC, readQT, initNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel
@@ -412,15 +410,9 @@ subroutine init(dt)
    end if
 
    if (iremd == 1) then
-#ifdef USE_MPI
       read (150, remd)
       rewind (150)
       call remd_init(temp, temp0)
-#else
-      write (*, *) 'FATAL ERROR: This version was not compiled with MPI support.'
-      write (*, *) 'You cannot do REMD.'
-      call abinerror('init')
-#endif
    end if
 
    if (iqmmm > 0 .or. pot == 'mm') then
@@ -622,22 +614,33 @@ subroutine init(dt)
       write (*, *)
       write (*, nml=system)
       write (*, *)
-      if (inose >= 1) write (*, nml=nhcopt)
-      write (*, *)
-      if (ipimd == 2 .or. ipimd == 4) write (*, nml=sh)
-      write (*, *)
-      if (ipimd == 5) write (*, nml=lz)
-      write (*, *)
-      if (iqmmm == 3 .or. pot == 'mm') write (*, nml=qmmm)
-      write (*, *)
+      if (inose >= 1) then
+         write (*, nml=nhcopt)
+         write (*, *)
+      end if
+      if (ipimd == 2 .or. ipimd == 4) then
+         write (*, nml=sh)
+         write (*, *)
+      end if
+      if (ipimd == 5) then
+         write (*, nml=lz)
+         write (*, *)
+      end if
+      if (iqmmm == 3 .or. pot == 'mm') then
+         write (*, nml=qmmm)
+         write (*, *)
+      end if
    end if
 #ifdef USE_MPI
    call MPI_Barrier(MPI_COMM_WORLD, ierr)
    write (*, '(A,I0,A,I0)') 'MPI rank: ', my_rank, ' PID: ', GetPID()
+   call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #else
    write (*, '(A,I0)') 'Process ID (PID): ', GetPID()
 #endif
-!$ write (*, '(A,I0)') 'Number of OpenMP threads: ', omp_get_max_threads()
+   if (my_rank == 0) then
+!$    write (*, '(A,I0)') 'Number of OpenMP threads: ', omp_get_max_threads()
+   end if
 
    ! Open files for writing
    ! TODO: It's strange that we're passing these random params here...

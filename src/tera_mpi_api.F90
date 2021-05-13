@@ -42,6 +42,7 @@ contains
 
    subroutine initialize_terachem_interface(tc_server_name)
       use mod_general, only: nwalk
+      use mod_general, only: iremd, my_rank
       character(len=*) :: tc_server_name
       integer :: i, ierr
 
@@ -49,7 +50,10 @@ contains
          write (*, '(A)') 'WARNING: You are using PIMD with direct TeraChem interface.'
          write (*, '(A)') 'You should have "integrator regular" in the TeraChem input file'
       end if
-      write (*, '(A,I0)') 'Number of TeraChem servers: ', nteraservers
+
+      if (my_rank == 0) then
+         write (*, '(A,I0)') 'Number of TeraChem servers: ', nteraservers
+      end if
 
       if (mpi_sleep <= 0) then
          write (*, *) 'WARNING: Parameter "mpi_sleep" must be positive!'
@@ -62,7 +66,7 @@ contains
 
       ! Setting MPI_ERRORS_RETURN error handler allows us to retry
       ! failed MPI_LOOKUP_NAME() call. It also allows us
-      ! to send the exit signal to TeraChem upon encoutering an error.
+      ! to send the exit signal to TeraChem upon encountering an error.
 
       ! It might also be a good idea to write our own error handler by MPI_Errorhandler_Create()
       ! https://www.open-mpi.org/doc/current/man3/MPI_Comm_create_errhandler.3.php
@@ -73,19 +77,27 @@ contains
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
       call handle_mpi_error(ierr)
 
-      ! Parallel calls to MPI_Comm_connect often lead to segfault,
-      ! maybe a bug in MPICH. Commenting out until we debug further.
-      !!$OMP PARALLEL DO PRIVATE(i)
-      do i = 1, nteraservers
-         call connect_tc_server(trim(tc_server_name), i)
-      end do
-      !!$OMP END PARALLEL DO
+      if (iremd == 1) then
+         ! TODO: Make this more general so that the number of
+         ! TC servers can be lower than number of replicas.
+         ! Right now, we hardcode one TC server per replica
+         ! and we ignore the nteraservers setting in the ABIN input.
+         nteraservers = 1
+         call connect_tc_server(trim(tc_server_name), my_rank + 1)
+      else
+         ! Parallel calls to MPI_Comm_connect often lead to segfault,
+         ! maybe a bug in MPICH. Commenting out until we debug further.
+         !!$OMP PARALLEL DO PRIVATE(i)
+         do i = 1, nteraservers
+            call connect_tc_server(trim(tc_server_name), i)
+         end do
+         !!$OMP END PARALLEL DO
+      end if
    end subroutine initialize_terachem_interface
 
    subroutine connect_tc_server(tc_server_name, itera)
+      use mod_general, only: iremd
       use mod_utils, only: abinerror
-      ! TODO: Figure out how to handle REMD
-      ! use mod_general, only: iremd, my_rank
       character(len=*), intent(in) :: tc_server_name
       integer, intent(in) :: itera
       character(len=MPI_MAX_PORT_NAME) :: port_name
@@ -114,7 +126,12 @@ contains
       call handle_mpi_error(ierr)
       write (6, '(A)') 'Connection established!'
 
-      tc_comms(itera) = newcomm
+      ! This is a horrible hack :-(
+      if (iremd == 1) then
+         tc_comms(1) = newcomm
+      else
+         tc_comms(itera) = newcomm
+      end if
    end subroutine connect_tc_server
 
    integer function get_tc_communicator(itera) result(tc_comm)

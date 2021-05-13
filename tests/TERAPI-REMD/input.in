@@ -1,0 +1,37 @@
+
+&general
+iremd=1
+pot='_tera_'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
+watpot=1
+ipimd=0,		!classical simulation 0, quantum simulation 1
+nwalk=1,		!number of random walkers 
+imini=0,		!equilibration period,!not properly implemented yet
+istage=0,		!staging transformation (1), without staging (0)
+nstep=5,
+dt=40.,			!number of steps and timestep
+irandom=131313,  	!random seed
+nabin=50,		! what is the gap between ab initio calculations?
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=1,		! how often should we print coordinates?
+nrest=1,		! how often we print restart files?
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+
+natom=3,		!number of atoms
+nteraservers=1
+/
+
+&nhcopt
+inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+temp=100.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+nrespnose=8
+rem_comrot=.false.
+rem_comvel=.false.
+/
+
+&remd
+nswap=2
+nreplica=3
+temp_list=100.,200.,300,
+/
+

@@ -65,8 +65,6 @@ contains
 
    ! Dummy functions when ABIN is not compiled with FFTW
    subroutine fftw_normalmodes_init(nwalk)
-      use mod_const, only: DP
-      use mod_utils, only: abinerror
       integer :: nwalk
       nwalk = 0
       write (*, *) 'ERROR: Normal mode transformations cannot be performed.'
@@ -74,7 +72,6 @@ contains
    end subroutine fftw_normalmodes_init
 
    subroutine dft_normalmode2cart(nm, cart)
-      use mod_utils, only: abinerror
       complex(C_DOUBLE_COMPLEX), dimension(:) :: nm
       real(C_DOUBLE), dimension(:) :: cart
       cart = 0.0D0
@@ -83,7 +80,6 @@ contains
    end subroutine dft_normalmode2cart
 
    subroutine dft_cart2normalmode(cart, nm)
-      use mod_utils, only: abinerror
       complex(C_DOUBLE_COMPLEX), dimension(:) :: nm
       real(C_DOUBLE), dimension(:) :: cart
       cart = 0.0D0
