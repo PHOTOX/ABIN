@@ -42,10 +42,7 @@ function files_exist {
    fi
 }
 
-files_exist $TC_INPUT $ABIN_IN $INPUTGEOM
-if [[ ! -z $INPUTVELOC ]];then
-   files_exist $INPUTVELOC
-fi
+files_exist $TC_INPUT $ABIN_IN
 
 # Check pot=_tera_ in ABIN input
 grep -E -q -e ^[^!]*pot[[:space:]]*=[[:space:]]*[\'"]_tera_["\'] $ABIN_IN
@@ -54,20 +51,29 @@ if [[ $? -eq 1 ]];then
    exit 1 
 fi
 
-# REMD SETTINGS, automatic from ABIN input
+# automatic REMD settings from ABIN input
 N_REPLICAS=1
 grep -E -q -e ^[^!]*iremd[[:space:]]*=[[:space:]]*1\\b $ABIN_IN
 if [[ $? -eq 0 ]];then
-   echo "REMD detected. Assuming one TC server per replica!"
-   N_REPLICAS=$(grep -E -o -e ^[^!]*nreplica[[:space:]]*=[[:space:]]*[0-9]+ $ABIN_IN | grep -E -o -e [0-9]+)
-   N_TERA_SERVERS=$N_REPLICAS
+    echo "REMD detected. Assuming one TC server per replica!"
+    # TODO: Simplify this with AWK
+    N_REPLICAS=$(grep -E -o -e ^[^!]*nreplica[[:space:]]*=[[:space:]]*[0-9]+ $ABIN_IN | grep -E -o -e [0-9]+)
+    if [[ -z $N_REPLICAS ]];then
+      echo "ERROR: Could not determine the number of replicas from $ABIN_IN"
+      exit 1
+    fi
+    N_TERA_SERVERS=$N_REPLICAS
+else
+    files_exist $INPUTGEOM
+    if [[ ! -z $INPUTVELOC ]];then
+        files_exist $INPUTVELOC
+    fi
 fi
 
 export LD_LIBRARY_PATH=
 source SetEnvironment.sh TERACHEM
 source SetEnvironment.sh ABIN mpi
 export OMP_NUM_THREADS=$N_TERA_SERVERS
-#hostname="403-as67-01"
 hostname=$HOSTNAME
 MPIRUN_TERA="$MPIRUN -n 1 -nameserver $hostname"
 MPIRUN_ABIN="$MPIRUN -n $N_REPLICAS -nameserver $hostname"

@@ -2,18 +2,37 @@
 module mod_remd
    use mod_const, only: DP
    use mod_utils, only: abinerror
-#ifdef USE_MPI
    implicit none
    private
-   public :: remd_init, remd_swap
-   public :: nreplica, nswap, deltaT, Tmax, temp_list
+
    integer, parameter :: MAX_REPLICA = 50
-   integer :: nreplica, nswap = -1, reps(MAX_REPLICA) = -1
-   real(DP) :: deltaT = -1, Tmax = -1
-   real(DP) :: temp_list(MAX_REPLICA) = -1, ratios_cumul(MAX_REPLICA) = 0.0D0
+
+   public :: remd_init
+   public :: nreplica, nswap, deltaT, Tmax, temp_list
+
+#ifdef USE_MPI
+   public :: remd_swap
+
+   integer :: reps(MAX_REPLICA) = -1
+   real(DP) :: ratios_cumul(MAX_REPLICA) = 0.0D0
+#endif
+
+   ! Number of replicas
+   integer :: nreplica = 0
+   ! Attempt to swap replicas every nwap step.
+   integer :: nswap = -1
+   ! Determine temperatures by specifying deltaT
+   ! between replicas.
+   real(DP) :: deltaT = -1
+   ! Specify maximum temperature (and minimum temperature by temp),
+   ! the other temperatures are determined by distributions in remd_init().
+   real(DP) :: Tmax = -1
+   ! Determine all temperatures manually.
+   real(DP) :: temp_list(MAX_REPLICA) = -1
 
 contains
 
+#ifdef USE_MPI
    !TODO: make general subroutine check_mpi_error in utils.f90 and check every ierr
    subroutine remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
       use mpi
@@ -295,6 +314,15 @@ contains
 
       reps(my_rank + 1) = my_rank
 
+   end subroutine remd_init
+
+#else
+
+   subroutine remd_init(temp, temp0)
+      use mod_utils, only: not_compiled_with
+      real(DP), intent(inout) :: temp, temp0
+      temp = 0.0D0; temp0 = 0.0D0
+      call not_compiled_with('MPI', 'remd_init')
    end subroutine remd_init
 
 ! USE_MPI
