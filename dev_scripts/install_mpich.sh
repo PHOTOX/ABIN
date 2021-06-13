@@ -21,16 +21,24 @@ INSTALL_DIR="$MPICH_DIR/$MPICH_VERSION/install"
 # https://docs.github.com/en/free-pro-team@latest/actions/reference/specifications-for-github-hosted-runners#supported-runners-and-hardware-resources
 NCPUS=2
 
-if [[ -d $MPICH_DIR/$MPICH_VERSION ]];then
-  echo "Found existing MPICH installation in $MPICH_DIR/$MPICH_VERSION"
+if [[ -d $INSTALL_DIR ]];then
+  echo "Found existing MPICH installation in $INSTALL_DIR"
   echo "Remove this folder if you want to reinstall"
   exit 1
 fi
 
-mkdir -p $MPICH_DIR/$MPICH_VERSION/src
-mkdir -p $MPICH_DIR/$MPICH_VERSION/pkg
+if [[ ! -d $MPICH_DIR/$MPICH_VERSION/pkg ]];then
+  mkdir -p $MPICH_DIR/$MPICH_VERSION/pkg
+fi
 
-curl "$DOWNLOAD_URL" > $MPICH_DIR/$MPICH_VERSION/pkg/${TAR_FILE}
+if [[ ! -f  $MPICH_DIR/$MPICH_VERSION/pkg/${TAR_FILE} ]];then
+  curl "$DOWNLOAD_URL" > $MPICH_DIR/$MPICH_VERSION/pkg/${TAR_FILE}
+fi
+
+if [[ -d $MPICH_DIR/$MPICH_VERSION/src ]];then
+  rm -rf $MPICH_DIR/$MPICH_VERSION/src
+fi
+mkdir -p $MPICH_DIR/$MPICH_VERSION/src
 cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MPICH_VERSION}
 
 # If you're building MPI for general use, not only for ABIN,

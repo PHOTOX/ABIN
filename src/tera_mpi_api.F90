@@ -231,13 +231,13 @@ contains
       use mod_system, only: names
       integer :: itera
 
-      !$OMP PARALLEL DO
+!$OMP PARALLEL DO
       do itera = 1, nteraservers
          call send_natom(natqm, tc_comms(itera))
 
          call send_atom_types_and_scrdir(names, natqm, 0, tc_comms(itera), .false.)
       end do
-      !$OMP END PARALLEL DO
+!$OMP END PARALLEL DO
    end subroutine initialize_tc_servers
 
    subroutine finalize_terachem(abin_error_code)
