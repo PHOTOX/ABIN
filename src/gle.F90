@@ -115,6 +115,9 @@ contains
    subroutine gle_init(dt)
       use mod_const, only: AUtoEV
       use mod_general, only: natom, nwalk, inormalmodes, my_rank, iremd
+#if __GNUC__ == 0
+      use mod_general, only: irest
+#endif
       use mod_utils, only: abinerror
       use mod_nhc, only: temp, inose
       implicit none
@@ -285,8 +288,8 @@ contains
       end if
 #if __GNUC__ == 0
       if (irest /= 0 .and. ns > 6) then
-         write (*, *) 'ERROR: Restarting GLE thermostat with ns>6 &
-          &  is not supported with IFORT compiler. Sorry :-('
+         write (*, *) 'ERROR: Restarting GLE thermostat with ns>6&
+          & is not supported with non-GNU compilers.'
          call abinerror('gle_init')
       end if
 #endif

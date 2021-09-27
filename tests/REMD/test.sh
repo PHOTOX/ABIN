@@ -6,6 +6,9 @@ if [[ "$1" = "clean" ]];then
 fi
 
 ABINEXE=$1
+ABININ=input.in
+ABINVEL=vel0.in
+ABINOUT=abin.out
 
 # If MPI_PATH is not set, let's hope mpirun is in PATH
 if [[ ! -d $MPI_PATH ]];then
@@ -20,7 +23,8 @@ else
   MPIRUN="$MPI_PATH/bin/mpirun"
 fi
 
+N_REPLICAS=$(egrep --only-matching 'nreplica\s*=\s*[0-9]' $ABININ | egrep -o [0-9])
 
-$MPIRUN -np 3 $ABINEXE -i input.in -v vel0.in > abin.out
-$MPIRUN -np 3 $ABINEXE -i input.in2 >> abin.out
-#$MPIRUN -np 2 xterm -e gdb ../../abin.mpi
+$MPIRUN -np $N_REPLICAS $ABINEXE -i $ABININ -v $ABINVEL > $ABINOUT
+$MPIRUN -np $N_REPLICAS $ABINEXE -i ${ABININ}2 >> $ABINOUT
+#$MPIRUN -np $N_REPLICAS xterm -e gdb $ABINEXE -i $ABININ -v $ABINVEL > $ABINOUT

@@ -1,13 +1,17 @@
-! This messy function performs many things, among others:
+! init() subroutine performs many things:
+!
 ! 1. Reading input
 ! 2. Input sanity check
 ! 3. Allocation of arrays
 ! 4. Reading restart OR reading input geometry
 ! 5. Initialize velocities
 ! 6. Initialize everything else
-! At this moment, coordinate and velocity transformations are NOT performed here
-! Surface hopping is NOT initialized here.
-
+!
+! Coordinate and velocity transformations for path integral MD are NOT performed here.
+! Surface hopping is initialized in sh_init().
+!
+! In general, each module should have their own init function,
+! that can be called from here.
 subroutine init(dt)
    use mod_const
    use mod_interfaces, only: print_compile_info
@@ -67,9 +71,25 @@ subroutine init(dt)
    character(len=1024) :: tc_server_name
    logical :: file_exists
    logical :: rem_comvel, rem_comrot
+#ifdef USE_MPI
    integer :: ierr
+#endif
    integer :: irand
 
+   ! ABIN input parameters are read from the input file (default 'input.in')
+   ! in the form of the standard Fortran namelist syntax.
+   ! The input parameters are grouped in several different namelists:
+   !
+   ! - general: Most basic MD settings + misc
+   ! - nhcopt:  parameters for thermostats
+   ! - remd:    parameters for Replica Exchange MD
+   ! - sh:      parameters for Surface Hopping
+   ! - system:  system-specific parameters for model potentials, masses, SHAKE constraints...
+   ! - lz:      parameters for Landau-Zener excited state dynamics.
+   ! - qmmm:    parameters for internal QMMM (not really tested).
+   !
+   ! All namelists need to be in a single input file, and the code
+   ! in this subroutine must ensure that the namelists can be in any order.
    namelist /general/ natom, pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
       nwrite, nwritex, nwritev, nwritef, dt, irandom, nabin, irest, nrest, anal_ext, &
       isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_sleep, narchive, xyz_units, &
@@ -110,7 +130,7 @@ subroutine init(dt)
 
    call get_cmdline(chinput, chcoords, chveloc, tc_server_name)
 
-   ! READING MAIN INPUT
+   ! Reading main input parameters from namelist &general
    open (150, file=chinput, status='OLD', delim='APOSTROPHE', action="READ")
    read (150, general)
    rewind (150)
@@ -502,15 +522,23 @@ subroutine init(dt)
       call check_water(natom, names)
    end if
 
-!    MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
+   ! Generate different random number seeds for different MPI processes.
+   ! TODO: The current code works only with GNU compilers.
    if (my_rank /= 0) then
       call srand(irandom)
       do ipom = 0, my_rank
+#if __GNUC__ == 0
+         write (*, *) 'ERROR: REMD not supported with non-GNU compilers.'
+         call abinerror('init')
+#endif
+         ! TODO: irand is GNU extension, use random_number instead
+         ! https://gcc.gnu.org/onlinedocs/gfortran/RANDOM_005fNUMBER.html
+         ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
          irandom = irand()
       end do
    end if
 
-!    call vranf(rans,0,IRandom)  !initialize prng,maybe rewritten during restart
+   ! MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
    call gautrg(rans, 0, IRandom) !initialize prng, maybe rewritten during restart
 
 !    THERMOSTAT INITIALIZATION
@@ -527,8 +555,10 @@ subroutine init(dt)
       call abinerror('init')
    end if
 
-!    performing RESTART from restart.xyz
-   if (irest == 1) call restin(x, y, z, vx, vy, vz, it)
+   ! performing RESTART from restart.xyz
+   if (irest == 1) then
+      call restin(x, y, z, vx, vy, vz, it)
+   end if
 
    if (pot == '2dho') then
       f = 0 !temporary hack
@@ -610,24 +640,24 @@ subroutine init(dt)
    if (my_rank == 0) then
       write (*, *)
       write (*, *) '--------------SIMULATION PARAMETERS--------------'
-      write (*, nml=general)
+      write (*, nml=general, delim='APOSTROPHE')
       write (*, *)
-      write (*, nml=system)
+      write (*, nml=system, delim='APOSTROPHE')
       write (*, *)
       if (inose >= 1) then
-         write (*, nml=nhcopt)
+         write (*, nml=nhcopt, delim='APOSTROPHE')
          write (*, *)
       end if
       if (ipimd == 2 .or. ipimd == 4) then
-         write (*, nml=sh)
+         write (*, nml=sh, delim='APOSTROPHE')
          write (*, *)
       end if
       if (ipimd == 5) then
-         write (*, nml=lz)
+         write (*, nml=lz, delim='APOSTROPHE')
          write (*, *)
       end if
       if (iqmmm == 3 .or. pot == 'mm') then
-         write (*, nml=qmmm)
+         write (*, nml=qmmm, delim='APOSTROPHE')
          write (*, *)
       end if
    end if
@@ -1107,26 +1137,29 @@ contains
       print '(a)', ' '
    end subroutine print_logo
 
-   subroutine print_runtime_info()
-      character(len=1024) :: cmdline
-      print '(a)', ''
-      print '(a)', '          RUNTIME INFO'
-      print '(a)', ' '
-      write (*, '(A17)') "Running on node: "
-      call system('uname -n')
-      write (*, '(A19)') 'Working directory: '
-      call system('pwd')
-      write (*, *)
-      call get_command(cmdline)
-      write (*, *) trim(cmdline)
-      call flush (6)
-      call get_command_argument(0, cmdline)
-      write (*, *)
-      call system('ldd '//cmdline)
-      print '(a)', ' '
-   end subroutine print_runtime_info
-
 end subroutine init
+
+! NOTE: This subroutine is outside of init()
+! due to a conflict of 'call system()` with namelist 'system',
+! which some compilers do not like.
+subroutine print_runtime_info()
+   character(len=1024) :: cmdline
+   print '(a)', ''
+   print '(a)', '          RUNTIME INFO'
+   print '(a)', ' '
+   write (*, '(A17)') "Running on node: "
+   call system('uname -n')
+   write (*, '(A19)') 'Working directory: '
+   call system('pwd')
+   write (*, *)
+   call get_command(cmdline)
+   write (*, *) trim(cmdline)
+   call flush (6)
+   call get_command_argument(0, cmdline)
+   write (*, *)
+   call system('ldd '//cmdline)
+   print '(a)', ' '
+end subroutine print_runtime_info
 
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
@@ -1145,11 +1178,16 @@ subroutine finish(error_code)
 #ifdef USE_MPI
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
-   use mpi, only: MPI_COMM_WORLD, MPI_SUCCESS, MPI_Finalize, MPI_Abort
+   ! Commenting this out to support older MPICH versions.
+   ! use mpi, only: MPI_COMM_WORLD, MPI_SUCCESS, MPI_Finalize, MPI_Abort
+   use mpi
 #endif
    implicit none
    integer, intent(in) :: error_code
-   integer :: i, ierr
+   integer :: i
+#ifdef USE_MPI
+   integer :: ierr
+#endif
    logical :: lopen
 
 #ifdef USE_MPI

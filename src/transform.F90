@@ -338,6 +338,12 @@ contains
 
       do iat = 1, natom
 
+         ! TODO: complex() is a GNU intrinsic, we need to figure out how to do this
+         ! in a portable manner to support intel compilers.
+#if __GNUC__ == 0
+         write (*, *) 'ERROR: Normal mode transform not supported for non-GNU compilers'
+         call abinerror('UtoX')
+#else
          cx(1) = complex(x(iat, 1), 0)
          cy(1) = complex(y(iat, 1), 0)
          cz(1) = complex(z(iat, 1), 0)
@@ -351,6 +357,7 @@ contains
             cy(nmodes + 1) = complex(y(iat, nmodes + 1), 0)
             cz(nmodes + 1) = complex(z(iat, nmodes + 1), 0)
          end if
+#endif
 
          call dft_normalmode2cart(cx, x_in)
          call dft_normalmode2cart(cy, y_in)
@@ -400,6 +407,12 @@ contains
          call dft_cart2normalmode(y_in, cy)
          call dft_cart2normalmode(z_in, cz)
 
+         ! TODO: realpart() and imagpart() are GNU intrinsics, we need to
+         ! figure out a portable way to do this to support intel compilers.
+#if __GNUC__ == 0
+         write (*, *) 'ERROR: Normal mode transform not supported for non-GNU compilers'
+         call abinerror('XtoU')
+#else
          transx(iat, 1) = realpart(cx(1))
          transy(iat, 1) = realpart(cy(1))
          transz(iat, 1) = realpart(cz(1))
@@ -417,6 +430,7 @@ contains
             transy(iat, nmodes + 1) = realpart(cy((nwalk + 2) / 2))
             transz(iat, nmodes + 1) = realpart(cz((nwalk + 2) / 2))
          end if
+#endif
 
       end do
 
