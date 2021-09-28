@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # Path as an optional first parameter
-PLUMED_DIR="${1-/home/$USER/plumed}"
+PLUMED_DIR="${1-$HOME/plumed}"
 # We take the current stable version as default
 # (as of 17 Dec 2020)
 PLUMED_VERSION="${2-"2.6.2"}"

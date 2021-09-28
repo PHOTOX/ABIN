@@ -179,7 +179,7 @@ jobs:
       fail-fast: false
       matrix:
          gcc_v: [7, 9, 10]
-         mpich_v: ["3.3.2", "3.4.1"]
+         mpich_v: ["3.3.2", "3.4.2"]
     env:
       # To speed-up MPICH build
       CFLAGS: -O0

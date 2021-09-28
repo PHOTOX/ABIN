@@ -1,6 +1,11 @@
 #/bin/bash
 set -euo pipefail
 
+function local_cleanup {
+  kill -9 ${job_pids[@]}  > /dev/null 2>&1 || true
+  exit 0
+}
+
 ABINEXE=$1
 source ../test_tc_server_utils.sh
 
@@ -27,6 +32,8 @@ TC_SERVER_NAME="tcserver.$$"
 
 ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM" # -M $TC_SERVER_NAME"
 
+trap local_cleanup INT ABRT TERM EXIT
+
 let NUM_JOBS=N_TERA_SERVERS+1
 declare -A job_pids
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
@@ -42,10 +49,4 @@ for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
 $MPIRUN -np 3 $ABINEXE -i input.in -x mini.xyz -v vel0.in > $ABINOUT 2>&1
 job_pids[$NUM_JOBS]=$!
 
-function cleanup {
-  kill -9 ${job_pids[@]}  > /dev/null 2>&1 || true
-  exit 0
-}
-
-trap cleanup INT ABRT TERM EXIT
 check_running_processes ${job_pids[@]}

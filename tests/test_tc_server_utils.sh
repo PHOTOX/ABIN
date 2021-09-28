@@ -90,19 +90,19 @@ clean_output_files() {
 }
 
 
-# Sillently kill all processes whose PIDs
-# are passed as parameters. Note that some of
-# them could have already ended sucessfully.
+# Sillently kill all processes whose PIDs are passed as parameters.
+# Typically, all these processes should have already ended.
 kill_processes() {
   kill -9 $* > /dev/null 2>&1 || true
 }
 
-# Not that it is hard in general to know
-# whether we ended successfully or not,
-# so we always return 0. Validation is then
-# always done on the output files.
+# NOTE that this function will typically get overwritten
+# in the TERAPI*/test.sh scripts.
 cleanup() {
-  kill_processeses $*
+  kill_processes $*
+  # It is hard in general to know whether we ended successfully or not,
+  # so we always return 0. Validation is then
+  # always done on the output files.
   exit 0
 }
 
@@ -128,7 +128,6 @@ check_running_processes() {
   while true;do
     running=$(ps -eo pid | egrep "$regex" | wc -l)
     if [[ $running -eq 0 ]];then
-      #echo "Both ABIN and TeraChem servers stopped"
       break
     elif [[ $running -lt $num_jobs ]];then
       # Give the others time to finish 
@@ -136,7 +135,9 @@ check_running_processes() {
       running=$(ps -eo pid | egrep "$regex" | wc -l)
       if [[ $running -ne 0 ]];then
         echo "One of the TC servers or ABIN died. Killing the rest."
-        cat ${ABINOUT}* ${TCOUT}*
+	#echo "Printing ABIN and TC server outputs for debugging."
+	#echo "##################################################"
+        #cat ${ABINOUT}* ${TCOUT}*
       fi
       break
     fi

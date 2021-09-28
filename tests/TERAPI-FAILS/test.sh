@@ -34,8 +34,6 @@ check_for_openmpi
 # Compile default TC server
 $MPICXX $TCSRC -Wall -o $TCEXE
 
-#trap cleanup INT ABRT TERM EXIT
-
 echo "########### SUBTEST 1 ###################"
 ./test1.sh
 echo "########### SUBTEST 2 ###################"

@@ -158,10 +158,10 @@ validate_inputs
 parse_inputs
 
 # SET THE ENVIRONMENT
-set +ux
+set +u
 source SetEnvironment.sh TERACHEM
 source SetEnvironment.sh ABIN
-set -ux
+set -u
 
 if [[ $N_TERA_SERVERS -gt 1 ]];then
   # hydra_nameserver <= v3.4.1 does not work with multiple servers.

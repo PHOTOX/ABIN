@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # Path as an optional first parameter
-MPICH_DIR="${1-/home/$USER/mpich}"
+MPICH_DIR="${1-$HOME/mpich}"
 # We take current stable version as default
 # (as of 06 Nov 2020).
 MPICH_VERSION="${2-"3.3.2"}"
