@@ -11,14 +11,16 @@ set -euxo pipefail
 CWD=`dirname $0`
 if [[ ! -f $CWD/../.git/hooks/pre-push ]];then
     cp $CWD/pre-push.hook $CWD/../.git/hooks/pre-push
-    chmod +x ../.git/hooks/pre-push
+    chmod +x $CWD/../.git/hooks/pre-push
 fi
 
 # Heuristic: if .vimrc exists, we presume we're dealing with a VIM user :-)
-if [[ -f /home/$USER/.vimrc ]];then
+if [[ -f ~/.vimrc ]];then
   $CWD/setup_vim.sh
 fi
 
 # Install fprettify to autoformat our code.
 # (needs Python 3)
-pip3 install --upgrade fprettify
+# NOTE: Due to a vast variety of different Python environments,
+# you're required to do this step yourself.
+#pip3 install --upgrade fprettify

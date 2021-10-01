@@ -1,4 +1,3 @@
-CXX = g++
 CXXFLAGS = -O2 -Wall -std=c++11
 
 LIB_OBJ = qtip4pf.o ps.o electrostatics.o gammq.o smear.o \

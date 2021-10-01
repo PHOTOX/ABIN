@@ -4,8 +4,8 @@ set -euxo pipefail
 
 # Append ~/.vimrc, turn on filetype plugins,
 # setup autoformatter to fprettify.
-grep -q "ABIN SETUP" /home/$USER/.vimrc || \
-cat >> /home/$USER/.vimrc << EOF
+grep -q "ABIN SETUP" ~/.vimrc || \
+cat >> ~/.vimrc << EOF
 " ABIN SETUP
 filetype plugin on
 :let fortran_free_source=1
@@ -58,8 +58,8 @@ set textwidth=120
 EOF
 
 # Recognize *.pf files (pFUnit unit tests) as FORTRAN filetype.
-grep -q "ABIN SETUP" /home/$USER/.vim/filetype.vim || \
-cat >> /home/$USER/.vim/filetype.vim << EOF
+grep -q "ABIN SETUP" ~/.vim/filetype.vim || \
+cat >> ~/.vim/filetype.vim << EOF
 " ABIN SETUP
 " Recognize *.pf files (pFUnit unit tests) as fortran
 augroup filetypedetect
