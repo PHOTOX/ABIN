@@ -1,3 +1,3 @@
-ERROR at utils.F90:204 ABIN was not compiled with FFTW library      
+ERROR: ABIN was not compiled with FFTW library
  FATAL ERROR encountered in subroutine: pile_init
  Check standard output for further information.

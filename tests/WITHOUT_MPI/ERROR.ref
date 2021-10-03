@@ -1,1 +1,1 @@
-ERROR at utils.F90:204 ABIN was not compiled with MPI      
+ERROR: ABIN was not compiled with MPI

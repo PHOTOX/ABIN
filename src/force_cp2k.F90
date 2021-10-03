@@ -292,7 +292,7 @@ contains
    ! Dummy functions for compilation without CP2K
    subroutine init_cp2k()
       use mod_utils, only: abinerror
-      call not_compiled_with('internal CP2K interface', 'init_cp2k')
+      call not_compiled_with('internal CP2K interface')
    end subroutine init_cp2k
 
    subroutine finalize_cp2k()
@@ -309,7 +309,7 @@ contains
       eclas = 0.0D0
       walkmax = 0
 
-      call not_compiled_with('internal CP2K interface', 'force_cp2k')
+      call not_compiled_with('internal CP2K interface')
    end subroutine force_cp2k
 
 #endif

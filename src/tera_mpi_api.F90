@@ -436,14 +436,14 @@ contains
 
    subroutine initialize_tc_servers()
       use mod_utils, only: not_compiled_with
-      call not_compiled_with('MPI', 'initialize_tc_servers')
+      call not_compiled_with('MPI')
    end subroutine initialize_tc_servers
 
    subroutine initialize_terachem_interface(tc_server_name)
       use mod_utils, only: not_compiled_with
       character(len=*), intent(in) :: tc_server_name
       write (*, *) 'TC_SERVER_NAME=', tc_server_name
-      call not_compiled_with('MPI', 'initialize_terachem_interface')
+      call not_compiled_with('MPI')
    end subroutine initialize_terachem_interface
 
 ! USE_MPI

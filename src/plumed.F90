@@ -205,7 +205,7 @@ contains
    ! We use this approach to avoid needing to have '#ifdef USE_PLUMED'
    ! elsewhere in the codebase
    subroutine plumed_init()
-      call not_compiled_with('PLUMED', 'plumed_init')
+      call not_compiled_with('PLUMED')
    end subroutine plumed_init
 
    subroutine finalize_plumed()
@@ -224,7 +224,7 @@ contains
       ! Just to get rid of compiler warnings :-(
       fx = x; fy = y; fz = z; eclas = 0.0D0
 
-      call not_compiled_with('PLUMED', 'force_plumed')
+      call not_compiled_with('PLUMED')
    end subroutine force_plumed
 #endif
 

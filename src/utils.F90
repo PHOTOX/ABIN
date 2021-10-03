@@ -2,12 +2,12 @@
 module mod_utils
    use mod_const, only: DP
    use mod_interfaces
+   use mod_error, only: fatal_error
    implicit none
    public
 contains
 
    real(DP) function get_distance(x, y, z, at1, at2, iw)
-      use mod_error, only: fatal_error
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: at1, at2, iw
       character(len=*), parameter :: error_msg = 'Atom indices in get_distance() must be unique'
@@ -27,7 +27,6 @@ contains
 
    real(DP) function get_angle(x, y, z, at1, at2, at3, iw)
       use mod_const, only: PI
-      use mod_error, only: fatal_error
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: iw
       real(DP) :: vec1x, vec1y, vec1z
@@ -96,18 +95,19 @@ contains
    function sanitize_string(string) result(return_string)
       character(len=*), intent(in) :: string
       character(len=len(string)) :: return_string
+      character(len=len(string)+200) :: error_msg
+      character(len=1) :: ch
       integer :: c, i
 
       return_string = adjustl(string)
       do i = 1, len(trim(return_string))
-         c = iachar(return_string(i:i))
+         ch = return_string(i:i)
+         c = iachar(ch)
          ! check for almost all nonalphabetical chars from ASCII table
          ! allow dash, slash and dot -/.
          if (c < 44 .or. (c > 57 .and. c < 65) .or. c > 172) then
-            write (*, *) 'Suspicious character found in one of the input strings: '//string
-            write (*, *) 'ASCII index:', c, ' Position in the string:', i
-            write (*, *) 'Please check your input files. Exiting...'
-            call abinerror('sanitize_string')
+            error_msg = 'Suspicious character "'//ch//'" in input string "'//string//'"'
+            call fatal_error(__FILE__, __LINE__, error_msg)
          end if
       end do
 
@@ -125,12 +125,13 @@ contains
    function validate_atom_name(atom_name) result(adjustl_name)
       character(len=*), intent(in) :: atom_name
       character(len=len(atom_name)) :: adjustl_name
+      character(len=30) :: error_msg
       ! Note that sanitize_string does adjustl() on the string.
       ! This is quite confusing, maybe we should change that.
       adjustl_name = sanitize_string(atom_name)
       if (len_trim(adjustl_name) > 2) then
-         write (*, *) 'ERROR: Incorrect atom name: '//atom_name
-         call abinerror('validate_atom_name')
+         error_msg = 'Incorrect atom name: "'//atom_name//'"'
+         call fatal_error(__FILE__, __LINE__, error_msg)
       end if
    end function validate_atom_name
 
@@ -196,9 +197,8 @@ contains
       end do
    end function toupper
 
-   subroutine not_compiled_with(feature, caller)
-      use mod_error, only: fatal_error
-      character(len=*), intent(in) :: feature, caller
+   subroutine not_compiled_with(feature)
+      character(len=*), intent(in) :: feature
       character(:), allocatable :: error_msg
       error_msg = 'ABIN was not compiled with '//feature
       call fatal_error(__FILE__, __LINE__, error_msg)
@@ -280,11 +280,12 @@ contains
 
    subroutine file_exists_or_exit(fname)
       character(len=*), intent(in) :: fname
+      character(len=len(fname)+30) :: error_msg
       logical :: exists
       inquire (file=trim(fname), exist=exists)
       if (.not. exists) then
-         write (*, '(2A)') 'ERROR: Could not find file '//trim(fname)
-         call abinerror('file_exists_or_exit')
+         error_msg = 'Could not find file "'//trim(fname)//'"'
+         call fatal_error(__FILE__, __LINE__, error_msg)
       end if
    end subroutine file_exists_or_exit
 

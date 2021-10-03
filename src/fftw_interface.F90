@@ -65,10 +65,11 @@ contains
 
    ! Dummy functions when ABIN is not compiled with FFTW
    subroutine fftw_normalmodes_init(nwalk)
+      use iso_fortran_env, only: ERROR_UNIT
       integer :: nwalk
       nwalk = 0
-      write (*, *) 'ERROR: Normal mode transformations cannot be performed.'
-      call not_compiled_with('FFTW library', 'fftw_normalmodes_init')
+      write (ERROR_UNIT, *) 'ERROR: Normal mode transformation cannot be performed.'
+      call not_compiled_with('FFTW library')
    end subroutine fftw_normalmodes_init
 
    subroutine dft_normalmode2cart(nm, cart)
@@ -76,7 +77,7 @@ contains
       real(C_DOUBLE), dimension(:) :: cart
       cart = 0.0D0
       nm = (0.0D0, 0.0D0)
-      call not_compiled_with('FFTW library', 'dft_normalmode2cart')
+      call not_compiled_with('FFTW library')
    end subroutine dft_normalmode2cart
 
    subroutine dft_cart2normalmode(cart, nm)
@@ -84,7 +85,7 @@ contains
       real(C_DOUBLE), dimension(:) :: cart
       cart = 0.0D0
       nm = (0.0D0, 0.0D0)
-      call not_compiled_with('FFTW library', 'dft_cart2normalmode')
+      call not_compiled_with('FFTW library')
    end subroutine dft_cart2normalmode
 
    ! This must be a no-op and must not call abinerror()

@@ -59,7 +59,7 @@ contains
       write (ERROR_UNIT, '(A)') full_message
 
       open (newunit=iunit, file=ERROR_FILE, action='write')
-      write (iunit, '(a)') full_message
+      write (iunit, '(a)') 'ERROR: '//message
       close (unit=iunit)
 
       call flush (OUTPUT_UNIT)
