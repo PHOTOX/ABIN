@@ -285,6 +285,11 @@ program abin
       ! MINIMIZATION endif
    end if
 
+   if (my_rank == 0) then
+      write (*, *) ''
+      write (*, '(A)') 'Job finished successfully!'
+   end if
+
    call finish(0)
 
    ! FINAL TIMING

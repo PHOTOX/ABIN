@@ -197,9 +197,11 @@ contains
    end function toupper
 
    subroutine not_compiled_with(feature, caller)
+      use mod_error, only: fatal_error
       character(len=*), intent(in) :: feature, caller
-      write (*, *) 'ERROR: ABIN was not compiled with '//feature
-      call abinerror(caller)
+      character(:), allocatable :: error_msg
+      error_msg = 'ABIN was not compiled with '//feature
+      call fatal_error(__FILE__, __LINE__, error_msg)
    end subroutine not_compiled_with
 
    ! TODO: Maybe move this into a separate error handling module,

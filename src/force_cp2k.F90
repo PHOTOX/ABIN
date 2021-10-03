@@ -292,7 +292,6 @@ contains
    ! Dummy functions for compilation without CP2K
    subroutine init_cp2k()
       use mod_utils, only: abinerror
-      write (*, *) 'ERROR: ABIN was not compiled with CP2K interface.'
       call not_compiled_with('internal CP2K interface', 'init_cp2k')
    end subroutine init_cp2k
 

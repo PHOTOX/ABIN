@@ -1,6 +1,6 @@
 module throw_with_pfunit_mod
    ! This is a method from ABIN, see src/error.F90
-   use mod_error, only: set_throw_method
+   use mod_error, only: set_error_method
    implicit none
    private
 
@@ -14,21 +14,14 @@ contains
       use funit, only: pFUnit_throw => throw
       character(len=*), intent(in) :: file_name
       integer, intent(in) :: line_number
-      character(len=*), optional, intent(in) :: message
+      character(len=*), intent(in) :: message
 
-      character(len=:), allocatable :: message_
-
-      if (present(message)) then
-         message_ = message
-      else
-         message_ = '<no message>'
-      end if
-      call pFUnit_throw(message_, SourceLocation(file_name, line_number))
+      call pFUnit_throw(message, SourceLocation(file_name, line_number))
 
    end subroutine throw
 
    subroutine initialize_throw()
-      call set_throw_method(throw)
+      call set_error_method(throw)
    end subroutine initialize_throw
 
    

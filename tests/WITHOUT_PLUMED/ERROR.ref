@@ -1,2 +1,1 @@
- FATAL ERROR encountered in subroutine: plumed_init
- Check standard output for further information.
+ERROR at utils.F90:204 ABIN was not compiled with PLUMED      
