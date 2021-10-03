@@ -1,4 +1,5 @@
 # Makefile for ABIN Unit Tests
+#
 # Should be invoked from top level Makefile,
 # which defines certain variables used here,
 # namely path to PFUNIT library
@@ -19,11 +20,13 @@ endif
 # NOTE: $(LIBS) are defined in the root Makefile
 
 utils_TESTS := test_utils.pf
-utils_REGISTRY :=
-utils_OTHER_SOURCES :=
 utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
-utils_OTHER_INCS :=
+utils_OTHER_SRCS := throw_with_pfunit.F90
+utils_EXTRA_USE := throw_with_pfunit_mod
+utils_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,utils))
+
+utils_driver.o: throw_with_pfunit.o
 
 plumed_TESTS := test_plumed.pf
 plumed_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}

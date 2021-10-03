@@ -7,12 +7,15 @@ module mod_utils
 contains
 
    real(DP) function get_distance(x, y, z, at1, at2, iw)
+      use mod_error, only: fatal_error
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: at1, at2, iw
+      character(len=*), parameter :: error_msg = 'Atom indices in get_distance() must be unique'
       real(DP) :: r
+
       if (at1 == at2) then
-         write (*, *) 'ERROR: Atom indices in function get_distance are not unique!'
-         call abinerror('get_distance')
+         call fatal_error(__FILE__, __LINE__, error_msg)
+         return
       end if
 
       r = (x(at1, iw) - x(at2, iw))**2
@@ -24,15 +27,17 @@ contains
 
    real(DP) function get_angle(x, y, z, at1, at2, at3, iw)
       use mod_const, only: PI
+      use mod_error, only: fatal_error
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: iw
       real(DP) :: vec1x, vec1y, vec1z
       real(DP) :: vec2x, vec2y, vec2z
       integer :: at1, at2, at3
+      character(len=*), parameter :: error_msg = 'Atom indices in get_angle() must be unique'
 
       if (at1 == at2 .or. at1 == at3 .or. at2 == at3) then
-         write (*, *) 'ERROR: Atom indices in function get_angle are not unique!'
-         call abinerror('get_angle')
+         call fatal_error(__FILE__, __LINE__, error_msg)
+         return
       end if
 
       vec1x = x(at1, iw) - x(at2, iw)
@@ -77,6 +82,7 @@ contains
       sign = norm1x * vec3x + norm1y * vec3y + norm1z * vec3z
       ! TODO: Refactor, make more intermediate results, e.g.
       ! norms of the normal vectors.
+      ! TODO: Add error handling for malformed dihedral angles to prevent division by zero
       get_dihedral = 180 / pi * acos( &
              & (norm1x * norm2x + norm1y * norm2y + norm1z * norm2z) / &
              & (sqrt(norm1x**2 + norm1y**2 + norm1z**2) * sqrt(norm2x**2 + norm2y**2 + norm2z**2)) &

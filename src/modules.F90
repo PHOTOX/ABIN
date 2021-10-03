@@ -114,6 +114,7 @@ module mod_general
 end module
 
 ! Some information about simulated system, especially for distributions and shake
+! TODO: Move this to a separate file, and think hard what should be inside this module.
 module mod_system
    use mod_const, only: DP
    ! cannot use this
@@ -442,7 +443,9 @@ contains
 
 end module mod_system
 
-! module for permanent file handling
+! Module for permanent file handling
+! Note that we're not trying to explicitly handle I/O errors here.
+! If open() or write fails, we crash ungracefully.
 ! TODO: Move this to a separate file.
 module mod_files
    implicit none
@@ -649,7 +652,7 @@ contains
 end module mod_files
 
 module mod_chars
-   character(len=*), parameter :: chknow = 'If you know what you are doing, &
+   character(len=*), parameter :: CHKNOW = 'If you know what you are doing, &
     &set iknow=1 (namelist general) to proceed.'
 
 end module mod_chars
