@@ -12,19 +12,18 @@ contains
 #ifdef USE_FFTW
 
    ! This routine is called automatically before each test.
-   @before
+   @before(ifdef=USE_FFTW)
    subroutine setup()
       call fftw_normalmodes_init(NBEADS)
    end subroutine setup
 
    ! This routine is called automatically after each test.
-   @after
+   @after(ifdef=USE_FFTW)
    subroutine teardown()
       call fftw_normalmodes_finalize()
    end subroutine teardown
 
-
-   ! Here we just test we can initialize and finalize FFTW module 
+   ! Here we just test we can initialize and finalize FFTW module
    ! without dying, no assertions here.
    @test(ifdef=USE_FFTW)
    subroutine test_fftw_init_and_finalize()
@@ -40,6 +39,27 @@ contains
    @disable
    subroutine test_dft_cart2normalmode()
    end subroutine test_dft_cart2normalmode
+
+#else
+
+   @test(ifndef=USE_FFTW)
+   subroutine test_not_compiled_with_fftw()
+      use, intrinsic :: iso_c_binding, only: C_DOUBLE, C_DOUBLE_COMPLEX
+      complex(C_DOUBLE_COMPLEX), dimension(1) :: normal_modes
+      real(C_DOUBLE), dimension(1) :: xyz
+      integer :: nbeads
+      call fftw_normalmodes_init(nbeads)
+      @assertExceptionRaised('ABIN was not compiled with FFTW library')
+
+      call dft_normalmode2cart(normal_modes, xyz)
+      @assertExceptionRaised('ABIN was not compiled with FFTW library')
+
+      call dft_cart2normalmode(xyz, normal_modes)
+      @assertExceptionRaised('ABIN was not compiled with FFTW library')
+
+      ! This one is must be a no-op, so no exception should be raised
+      call fftw_normalmodes_finalize()
+   end subroutine test_not_compiled_with_fftw
 
 #endif
 end module test_fftw

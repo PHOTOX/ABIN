@@ -30,10 +30,16 @@ utils_driver.o: throw_with_pfunit.o
 
 plumed_TESTS := test_plumed.pf
 plumed_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+plumed_OTHER_SRCS := throw_with_pfunit.F90
+plumed_EXTRA_USE := throw_with_pfunit_mod
+plumed_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,plumed))
 
 fftw_TESTS := test_fftw.pf
 fftw_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+fftw_OTHER_SRCS := throw_with_pfunit.F90
+fftw_EXTRA_USE := throw_with_pfunit_mod
+fftw_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,fftw))
 
 all : utils plumed fftw

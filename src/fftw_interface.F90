@@ -66,7 +66,7 @@ contains
    ! Dummy functions when ABIN is not compiled with FFTW
    subroutine fftw_normalmodes_init(nwalk)
       use iso_fortran_env, only: ERROR_UNIT
-      integer :: nwalk
+      integer, intent(inout) :: nwalk
       nwalk = 0
       write (ERROR_UNIT, *) 'ERROR: Normal mode transformation cannot be performed.'
       call not_compiled_with('FFTW library')

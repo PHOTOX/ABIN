@@ -50,11 +50,16 @@ contains
 
    @test
    subroutine test_normalize_atom_name()
+      character(len=:), allocatable :: dummy
       @assertEqual("H", normalize_atom_name("h"), "h -> H")
       @assertEqual("Cl", normalize_atom_name("cl"), "cl -> Cl")
       @assertEqual("Fe", normalize_atom_name("FE"), "FE -> Fe")
       @assertEqual("H", normalize_atom_name("   h  "), "accepts blanks")
       @assertEqual("Cl", normalize_atom_name(" cl   "), "accepts blanks")
+
+      ! Reject atom names longer then three characters.
+      dummy = normalize_atom_name("HeH")
+      @assertExceptionRaised('Incorrect atom name: "HeH"')
    end subroutine test_normalize_atom_name
 
    @test
