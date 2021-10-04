@@ -18,7 +18,7 @@ contains
 #ifdef USE_PLUMED
 
    ! This routine is called automatically before each test.
-   @before(ifdef=USE_PLUMED)
+   @before
    subroutine setup()
       use mod_general, only: natom, nwalk, dt0, it
       use mod_system, only: am
@@ -49,7 +49,7 @@ contains
    end subroutine setup
 
    ! This routine is called automatically after each test.
-   @after(ifdef=USE_PLUMED)
+   @after
    subroutine teardown()
       use mod_system, only: am
       deallocate (am)
@@ -327,6 +327,16 @@ contains
    end subroutine test_force_metad
 
 #else
+   @before
+   subroutine setup()
+   end subroutine setup
+
+   @after
+   subroutine teardown()
+      ! This one is must be a no-op, so no exception should be raised
+      call finalize_plumed()
+   end subroutine teardown
+
    @test(ifndef=USE_PLUMED)
    subroutine test_not_compiled_with_plumed()
       real(DP) :: eclas
@@ -335,9 +345,6 @@ contains
 
       call force_plumed(x, y, z, fx, fy, fz, eclas)
       @assertExceptionRaised('ABIN was not compiled with PLUMED')
-
-      ! This one is must be a no-op, so no exception should be raised
-      call finalize_plumed()
    end subroutine test_not_compiled_with_plumed
 
 #endif
