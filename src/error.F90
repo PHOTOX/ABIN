@@ -15,7 +15,9 @@ module mod_error
       end subroutine error
    end interface
 
-   procedure(error), pointer :: error_method => Fail
+   ! This is the defailt error handle, which gets
+   ! overriden in pFUnit unit tests.
+   procedure(error), pointer :: error_method => print_error_and_stop
 
 contains
 
@@ -33,43 +35,52 @@ contains
       call error_method(filename, line_number, message=message)
    end subroutine fatal_error
 
-   ! Part of abinerror should go here.
-   subroutine Fail(filename, line, message)
+   subroutine print_error_and_stop(filename, line, message)
+      character(*), intent(in) :: filename
+      integer, intent(in) :: line
+      character(*), intent(in) :: message
+      ! In case of an error, ABIN will return this to the shell.
+      integer, parameter :: ERROR_CODE = 1
+
+      call print_error(filename, line, message)
+
+      ! Try to finalize various modules gracefully.
+      call finish(ERROR_CODE)
+
+      stop ERROR_CODE
+   end subroutine print_error_and_stop
+
+   ! We print the error both to stderr and to file 'ERROR'.
+   ! Presence of this file straightforwardly indicates a problem,
+   ! and scripts checking for errors don't need to grep ABIN output.
+   subroutine print_error(filename, line, message)
       use, intrinsic :: iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
       character(*), intent(in) :: filename
       integer, intent(in) :: line
       character(*), intent(in) :: message
-      ! In case of any error, ABIN will return this
-      integer, parameter :: ERROR_CODE = 1
       ! We write out the error message to file 'ERROR'
-      ! Presence of this file straightforwardly indicates a problem.
       character(len=*), parameter :: ERROR_FILE = 'ERROR'
-      character(len=:), allocatable :: base_name, full_message
-      integer :: iunit, strlen
+      character(len=:), allocatable :: base_name
+      integer :: iunit
 
       base_name = get_base_name(filename)
 
-      strlen = len_trim(message) + len(base_name) + 20
-      allocate (character(len=strlen) :: full_message)
-
-      write (full_message, '(a9, a, a1, i0, a)') &
+      write (ERROR_UNIT, '(a9, a, a1, i0, a)') &
            & 'ERROR at ', base_name, ':', line, &
            & ' '//adjustl(trim(message))
 
-      write (ERROR_UNIT, '(A)') full_message
-
+      ! We do not print line number in the ERROR file,
+      ! because we check the ERROR file in tests, and any change
+      ! in a line number of the error would broke the test.
+      ! TODO: We should probably make the test suite more clever to
+      ! ignore the line number when comparing the ERROR to ERROR.ref
       open (newunit=iunit, file=ERROR_FILE, action='write')
-      write (iunit, '(a)') 'ERROR: '//message
+      write (iunit, '(a)') 'ERROR in '//base_name//': '//message
       close (unit=iunit)
 
       call flush (OUTPUT_UNIT)
       call flush (ERROR_UNIT)
-
-      ! Depending on the state of the program, this call might itself fail
-      call finish(ERROR_CODE)
-
-      stop ERROR_CODE
-   end subroutine Fail
+   end subroutine print_error
 
    function get_base_name(filename) result(base_name)
       character(:), allocatable :: base_name

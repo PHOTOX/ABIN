@@ -1,1 +1,1 @@
-ERROR: ABIN was not compiled with internal CP2K interface
+ERROR in utils.F90: ABIN was not compiled with internal CP2K interface
