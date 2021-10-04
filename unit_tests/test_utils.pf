@@ -26,7 +26,7 @@ contains
 
       ! Notice that we also left-adjust the string.
       @assertEqual("12abc-._ ", tolower("   12AbC-._ "))
-   
+
    end subroutine test_tolower
 
    @test
@@ -34,7 +34,7 @@ contains
 
       ! Notice that we also left-adjust the string.
       @assertEqual("ABC-._123", toupper("  AbC-._123 "))
-   
+
    end subroutine test_toupper
 
    @test
@@ -42,11 +42,10 @@ contains
       character(len=*), parameter :: fstring = " string "
       @assertEqual("string"//char(0), c_string(fstring), "c_string(' string ')")
 
-      @assertEqual(len(fstring)+1, len(c_string(fstring)), "len(cstring) == len(fstring)+1")
+      @assertEqual(len(fstring) + 1, len(c_string(fstring)), "len(cstring) == len(fstring)+1")
 
-      @assertEqual(6+1, len_trim(c_string(fstring)), "len_trim(c_string) = len(trim(adjustl(fstring)))+1")
+      @assertEqual(6 + 1, len_trim(c_string(fstring)), "len_trim(c_string) = len(trim(adjustl(fstring)))+1")
    end subroutine test_c_string
-
 
    @test
    subroutine test_normalize_atom_name()
@@ -67,7 +66,7 @@ contains
       integer, parameter :: NATOM = 4
       character(len=2) :: names(NATOM)
       ! Note: names must already be normalized
-      names = (/'He', 'C ', 'C ', 'Cl' /)
+      names = (/'He', 'C ', 'C ', 'Cl'/)
       @assertEqual(1, count_atoms_by_name(names, 'HE', NATOM))
       @assertEqual(2, count_atoms_by_name(names, 'c ', NATOM))
       @assertEqual(1, count_atoms_by_name(names, 'Cl', NATOM))
@@ -76,29 +75,29 @@ contains
    @test
    subroutine test_get_distance()
       ! Cartesian distance between two atoms
-      real(DP) :: x(2,2), y(2,2), z(2,2)
+      real(DP) :: x(2, 2), y(2, 2), z(2, 2)
       integer :: iw
       real(DP) :: dist
 
-      x(:,1) = [0.0d0, 1.0d0]
-      y(:,1) = [2.0d0, 2.0d0]
-      z(:,1) = [3.0d0, 3.0d0]
+      x(:, 1) = [0.0D0, 1.0D0]
+      y(:, 1) = [2.0D0, 2.0D0]
+      z(:, 1) = [3.0D0, 3.0D0]
 
       iw = 1
       dist = get_distance(x, y, z, 1, 2, iw)
-      @assertEqual(1.0d0, dist, "get_distance1")
+      @assertEqual(1.0D0, dist, "get_distance1")
 
       ! Should be invariant with respect to the atom order
       dist = get_distance(x, y, z, 2, 1, iw)
-      @assertEqual(1.0d0, dist, "get_distance2")
+      @assertEqual(1.0D0, dist, "get_distance2")
 
       iw = 2
       ! Pascal triangle, 3^2 + 4^2 = 5^2
-      x(:,2) = [1.0d0, 1.0d0]
-      y(:,2) = [1.0d0, 4.0d0]
-      z(:,2) = [4.0d0, 0.0d0]
+      x(:, 2) = [1.0D0, 1.0D0]
+      y(:, 2) = [1.0D0, 4.0D0]
+      z(:, 2) = [4.0D0, 0.0D0]
       dist = get_distance(x, y, z, 1, 2, iw)
-      @assertEqual(5.0d0, dist, "get_distance3")
+      @assertEqual(5.0D0, dist, "get_distance3")
 
       ! Should error when non-unique atom indeces are passed in
       dist = get_distance(x, y, z, 1, 1, iw)
@@ -107,41 +106,41 @@ contains
 
    @test
    subroutine test_get_angle()
-      real(DP) :: x(3,2), y(3,2), z(3,2)
+      real(DP) :: x(3, 2), y(3, 2), z(3, 2)
       integer :: iw
       real(DP) :: ang
 
-      x(:,1) = [0.0d0, 0.0d0, 0.0d0 ]
-      y(:,1) = [1.0d0, 0.0d0, 0.0d0 ]
-      z(:,1) = [0.0d0, 0.0d0, 1.0d0 ]
+      x(:, 1) = [0.0D0, 0.0D0, 0.0D0]
+      y(:, 1) = [1.0D0, 0.0D0, 0.0D0]
+      z(:, 1) = [0.0D0, 0.0D0, 1.0D0]
       iw = 1
 
       ang = get_angle(x, y, z, 1, 2, 3, iw)
-      @assertEqual(90.0d0, ang, "get_angle_90")
+      @assertEqual(90.0D0, ang, "get_angle_90")
 
       ! Test atom order invariance
       ang = get_angle(x, y, z, 3, 2, 1, iw)
-      @assertEqual(90.0d0, ang, "get_angle_90_2")
+      @assertEqual(90.0D0, ang, "get_angle_90_2")
 
       ang = get_angle(x, y, z, 2, 1, 3, iw)
       ! TODO: instead of hardcoding this imprecise value,
       ! specify a tolerance for 45.0d0. Need to figure out how.
-      @assertEqual(45.000000000000007d0, ang, "get_angle_45")
+      @assertEqual(45.000000000000007D0, ang, "get_angle_45")
 
       iw = 2
-      x(:,2) = [1.0d0, 0.0d0, -1.0d0 ]
-      y(:,2) = [2.0d0, 2.0d0, 2.0d0 ]
-      z(:,2) = [3.0d0, 3.0d0, 3.0d0 ]
+      x(:, 2) = [1.0D0, 0.0D0, -1.0D0]
+      y(:, 2) = [2.0D0, 2.0D0, 2.0D0]
+      z(:, 2) = [3.0D0, 3.0D0, 3.0D0]
       ang = get_angle(x, y, z, 1, 2, 3, iw)
-      @assertEqual(180.0d0, ang, "get_angle_180")
+      @assertEqual(180.0D0, ang, "get_angle_180")
 
       ang = get_angle(x, y, z, 3, 2, 1, iw)
-      @assertEqual(180.0d0, ang, "get_angle_180_2")
+      @assertEqual(180.0D0, ang, "get_angle_180_2")
 
       ang = get_angle(x, y, z, 2, 1, 3, iw)
-      @assertEqual(0.0d0, ang, "get_angle_0")
+      @assertEqual(0.0D0, ang, "get_angle_0")
       ang = get_angle(x, y, z, 2, 3, 1, iw)
-      @assertEqual(0.0d0, ang, "get_angle_0_2")
+      @assertEqual(0.0D0, ang, "get_angle_0_2")
 
       ! Should error when non-unique atom indeces are passed in
       ang = get_angle(x, y, z, 3, 1, 1, iw)
@@ -151,38 +150,38 @@ contains
 
    @test
    subroutine test_get_dihedral()
-      real(DP) :: x(4,2), y(4,2), z(4,2)
+      real(DP) :: x(4, 2), y(4, 2), z(4, 2)
       real(DP) :: shiftdih
       integer :: iw
       real(DP) :: ang
 
       ! Dihedral values between -180 -- 180 degrees
-      shiftdih = 0.0d0
+      shiftdih = 0.0D0
 
-      x(:,1) = [1.0d0, 1.0d0, 0.0d0, 0.0d0 ]
-      y(:,1) = [1.0d0, 0.0d0, 0.0d0, 0.0d0 ]
-      z(:,1) = [0.0d0, 0.0d0, 0.0d0, 1.0d0 ]
+      x(:, 1) = [1.0D0, 1.0D0, 0.0D0, 0.0D0]
+      y(:, 1) = [1.0D0, 0.0D0, 0.0D0, 0.0D0]
+      z(:, 1) = [0.0D0, 0.0D0, 0.0D0, 1.0D0]
 
       iw = 1
       ang = get_dihedral(x, y, z, 1, 2, 3, 4, iw, shiftdih)
-      @assertEqual(-90.0d0, ang, "get_dihedral_-90")
+      @assertEqual(-90.0D0, ang, "get_dihedral_-90")
 
       ang = get_dihedral(x, y, z, 1, 3, 2, 4, iw, shiftdih)
-      @assertEqual(90.0d0, ang, "get_dihedral_90")
+      @assertEqual(90.0D0, ang, "get_dihedral_90")
 
-      x(:,2) = [1.0d0, 1.0d0, 0.0d0, 0.0d0 ]
-      y(:,2) = [1.0d0, 0.0d0, 0.0d0, -1.0d0 ]
-      z(:,2) = [0.0d0, 0.0d0, 0.0d0, 0.0d0 ]
+      x(:, 2) = [1.0D0, 1.0D0, 0.0D0, 0.0D0]
+      y(:, 2) = [1.0D0, 0.0D0, 0.0D0, -1.0D0]
+      z(:, 2) = [0.0D0, 0.0D0, 0.0D0, 0.0D0]
 
       iw = 2
       ang = get_dihedral(x, y, z, 1, 2, 3, 4, iw, shiftdih)
-      @assertEqual(180.0d0, ang, "get_dihedral_180")
+      @assertEqual(180.0D0, ang, "get_dihedral_180")
 
-      x(:,2) = [1.0d0, 1.0d0, 0.0d0, 0.0d0 ]
-      y(:,2) = [1.0d0, 0.0d0, 0.0d0, 1.0d0 ]
-      z(:,2) = [0.0d0, 0.0d0, 0.0d0, 0.0d0 ]
+      x(:, 2) = [1.0D0, 1.0D0, 0.0D0, 0.0D0]
+      y(:, 2) = [1.0D0, 0.0D0, 0.0D0, 1.0D0]
+      z(:, 2) = [0.0D0, 0.0D0, 0.0D0, 0.0D0]
       ang = get_dihedral(x, y, z, 1, 2, 3, 4, iw, shiftdih)
-      @assertEqual(0.0d0, ang, "get_dihedral_0")
+      @assertEqual(0.0D0, ang, "get_dihedral_0")
 
       ! TODO: Should error when non-unique atom indeces are passed in
       !ang = get_dihedral(x, y, z, 1, 1, 3, 4, iw, shiftdih)
@@ -190,41 +189,40 @@ contains
 
    end subroutine test_get_dihedral
 
-
    @test
    subroutine test_shifted_dihedral()
-      real(DP) :: x(4,2), y(4,2), z(4,2)
+      real(DP) :: x(4, 2), y(4, 2), z(4, 2)
       real(DP) :: shiftdih
       integer :: iw
       real(DP) :: ang
 
       ! Dihedral values between 0 - 360 degrees
-      shiftdih = 360.0d0
+      shiftdih = 360.0D0
 
-      x(:,1) = [1.0d0, 1.0d0, 0.0d0, 0.0d0 ]
-      y(:,1) = [1.0d0, 0.0d0, 0.0d0, 0.0d0 ]
-      z(:,1) = [0.0d0, 0.0d0, 0.0d0, 1.0d0 ]
+      x(:, 1) = [1.0D0, 1.0D0, 0.0D0, 0.0D0]
+      y(:, 1) = [1.0D0, 0.0D0, 0.0D0, 0.0D0]
+      z(:, 1) = [0.0D0, 0.0D0, 0.0D0, 1.0D0]
 
       iw = 1
       ang = get_dihedral(x, y, z, 1, 2, 3, 4, iw, shiftdih)
-      @assertEqual(270.0d0, ang, "get_dihedral_270")
+      @assertEqual(270.0D0, ang, "get_dihedral_270")
 
       ang = get_dihedral(x, y, z, 1, 3, 2, 4, iw, shiftdih)
-      @assertEqual(90.0d0, ang, "get_dihedral_90")
+      @assertEqual(90.0D0, ang, "get_dihedral_90")
 
-      x(:,2) = [1.0d0, 1.0d0, 0.0d0, 0.0d0 ]
-      y(:,2) = [1.0d0, 0.0d0, 0.0d0, -1.0d0 ]
-      z(:,2) = [0.0d0, 0.0d0, 0.0d0, 0.0d0 ]
+      x(:, 2) = [1.0D0, 1.0D0, 0.0D0, 0.0D0]
+      y(:, 2) = [1.0D0, 0.0D0, 0.0D0, -1.0D0]
+      z(:, 2) = [0.0D0, 0.0D0, 0.0D0, 0.0D0]
 
       iw = 2
       ang = get_dihedral(x, y, z, 1, 2, 3, 4, iw, shiftdih)
-      @assertEqual(180.0d0, ang, "get_dihedral_180")
+      @assertEqual(180.0D0, ang, "get_dihedral_180")
 
-      x(:,2) = [1.0d0, 1.0d0, 0.0d0, 0.0d0 ]
-      y(:,2) = [1.0d0, 0.0d0, 0.0d0, 1.0d0 ]
-      z(:,2) = [0.0d0, 0.0d0, 0.0d0, 0.0d0 ]
+      x(:, 2) = [1.0D0, 1.0D0, 0.0D0, 0.0D0]
+      y(:, 2) = [1.0D0, 0.0D0, 0.0D0, 1.0D0]
+      z(:, 2) = [0.0D0, 0.0D0, 0.0D0, 0.0D0]
       ang = get_dihedral(x, y, z, 1, 2, 3, 4, iw, shiftdih)
-      @assertEqual(0.0d0, ang, "get_dihedral_0")
+      @assertEqual(0.0D0, ang, "get_dihedral_0")
 
    end subroutine test_shifted_dihedral
 
