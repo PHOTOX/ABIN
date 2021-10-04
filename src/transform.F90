@@ -480,7 +480,7 @@ contains
 
       equant = equantx + equanty + equantz
 
-      if (idebug == 1) then
+      if (idebug > 0) then
          write (*, *) "Quantum energy in cartesian coordinates"
          write (*, *) equantx, equanty, equantz, equant
          write (*, *) "Cartesian coordinates"
@@ -533,7 +533,7 @@ contains
 
       equant = equantx + equanty + equantz
 
-      if (idebug == 1) then
+      if (idebug > 0) then
          write (*, *) 'omegas', (omega(iw), iw=1, nwalk)
          write (*, *) "Quantum energy in normal modes coordinates"
          write (*, *) equantx, equanty, equantz, equant

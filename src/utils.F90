@@ -269,15 +269,6 @@ contains
       end if
    end subroutine archive_file
 
-   subroutine debug_output(msg)
-      ! See SO about fortran std units
-      ! https://stackoverflow.com/questions/8508590/standard-input-and-output-units-in-fortran-90#8508757
-      use iso_fortran_env, only: ERROR_UNIT
-      character(len=*), intent(in) :: msg
-      write (ERROR_UNIT, '(A)') msg
-      call flush (ERROR_UNIT)
-   end subroutine debug_output
-
    subroutine file_exists_or_exit(fname)
       character(len=*), intent(in) :: fname
       character(len=len(fname)+30) :: error_msg

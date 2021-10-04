@@ -3,7 +3,7 @@
 module mod_sh
    use mod_const, only: DP
    use mod_array_size, only: NSTMAX, NTRAJMAX
-   use mod_utils, only: abinerror, print_xyz_arrays
+   use mod_utils, only: abinerror
    use mod_sh_integ
    implicit none
    private
