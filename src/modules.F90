@@ -443,6 +443,7 @@ contains
 end module mod_system
 
 ! module for permanent file handling
+! TODO: Move this to a separate file.
 module mod_files
    implicit none
    public
@@ -612,7 +613,7 @@ contains
          write (UCHARGES, *) '# Time_step Bead_index ', (names(i), i=1, natom)
 
          open (UDIP, file=chfiles(UDIP), access=chaccess, action='write')
-         write (UDIP, *) '# Time  |D| Dx Dy Dz'
+         write (UDIP, *) '# Time Bead_index |D| Dx Dy Dz'
       end if
 
       if (isbc == 1) then

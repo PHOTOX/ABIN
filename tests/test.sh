@@ -211,9 +211,8 @@ do
       continue
    fi
 
-   # For special cases such as REMD, we need a more complicated
-   # test setup. If a file, test.sh is present in the test directory,
-   # we will use it.
+   # For special cases such as REMD, we need a more complicated test setup.
+   # If a file 'test.sh' is present in the test directory we will use it.
    if [[ -f "test.sh" ]];then
 
       # Redirection to dev/null apparently needed for CP2K tests.

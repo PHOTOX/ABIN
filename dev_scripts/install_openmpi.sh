@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # Path as an optional first parameter
-OPENMPI_DIR="${1-/home/$USER/openmpi}"
+OPENMPI_DIR="${1-$HOME/openmpi}"
 # We take current stable version as default
 # (as of 06 Nov 2020)
 OPENMPI_VERSION=${2-"4.0"}

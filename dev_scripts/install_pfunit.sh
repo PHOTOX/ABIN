@@ -3,9 +3,14 @@
 # Exit script immediately upon error
 set -euo pipefail
 
-REPO_DIR="/home/$USER/pfunit"
+REPO_DIR="$HOME/pfunit"
 if [[ "$#" -eq 1 && ! -z $1 ]];then
    REPO_DIR=$1
+fi
+
+if [[ -e $REPO_DIR ]];then
+  echo "ERROR: $REPO_DIR already exists."
+  exit 1
 fi
 
 git clone --recursive https://github.com/Goddard-Fortran-Ecosystem/pFUnit $REPO_DIR && cd $REPO_DIR

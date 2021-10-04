@@ -1,7 +1,5 @@
 #/bin/bash
 set -euo pipefail
-# Useful for debugging
-#set -x
 
 ABINEXE=$1
 source ../test_tc_server_utils.sh
@@ -18,7 +16,7 @@ N_TERA_SERVERS=$(egrep --only-matching 'nteraservers\s*=\s*[0-9]' $ABININ | egre
 # Exit early for OpenMPI build.
 check_for_openmpi
 
-# Compiled the fake TC server
+# Compile fake TC server
 $MPICXX $TCSRC -Wall -o $TCEXE
 
 # NOTE: We very intentionally do NOT launch
@@ -27,23 +25,25 @@ $MPICXX $TCSRC -Wall -o $TCEXE
 # https://github.com/pmodels/mpich/issues/5058
 #
 # Therefore, we pass the port_name to ABIN via files, see below.
-#TC_SERVER_NAME="tcserver.$$"
-#launch_hydra_nameserver $MPICH_HYDRA
-#hostname=$HOSTNAME
-#MPIRUN="$MPIRUN -nameserver $hostname -n 1"
 
 MPIRUN="$MPIRUN -n 1"
 
-ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM" # -M $TC_SERVER_NAME"
+ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM"
+
+function cleanup {
+  kill -9 ${job_pids[@]} > /dev/null 2>&1 || true
+  exit 0
+}
+trap cleanup INT ABRT TERM EXIT
 
 let NUM_JOBS=N_TERA_SERVERS+1
 declare -A job_pids
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
-   #$MPIRUN ./$TCEXE $TC_SERVER_NAME.$itera > $TCOUT.$itera 2>&1 &
    $MPIRUN ./$TCEXE > $TCOUT.$itera 2>&1 &
    job_pids[$itera]=$!
 }
 sleep 1
+
 # Grep port names from TC output, pass to ABIN via a file.
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
   grep 'port name' $TCOUT.$itera | awk -F"port name: " '{print $2;exit}' > $TC_PORT_FILE.$itera
@@ -52,10 +52,4 @@ for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
 $MPIRUN $ABIN_CMD > $ABINOUT 2>&1 &
 job_pids[$NUM_JOBS]=$!
 
-function cleanup {
-  kill -9 ${job_pids[@]}  > /dev/null 2>&1 || true
-  exit 0
-}
-
-trap cleanup INT ABRT TERM EXIT
 check_running_processes ${job_pids[@]}
