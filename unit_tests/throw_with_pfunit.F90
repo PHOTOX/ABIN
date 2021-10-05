@@ -9,6 +9,8 @@ module throw_with_pfunit_mod
 
 contains
 
+   ! This routine replaces src/error.F90:fatal_error()
+   ! so that we can catch exceptions in the unit tests.
    subroutine throw(file_name, line_number, message)
       use funit, only: SourceLocation
       use funit, only: pFUnit_throw => throw

@@ -1,10 +1,30 @@
+! New unit test friendly error handling.
+!
+! The code in this file has beed adapted from pFUnit_demos repository -
+! https://github.com/Goddard-Fortran-Ecosystem/pFUnit_demos
+! - and is distributed under the Apache 2.0 license.
+!
+! Background: code that stops/aborts is unfriendly to testing
+! frameworks that ideally want to attempt running later tests. At the
+! same time, an explicit dependency on pFUnit forces users of your
+! application to install pFUnit even if they don't care about testing
+! your code
+!
+! Solution:
+!
+!   During initialization the testing framework can override the
+!   default behavior with a call to set_error_method(). This logic
+!   can comfortably live in your test code, and thus does not
+!   introduce any undesirable dependencies (just a bit of
+!   obscurity). 
 module mod_error
    implicit none
    private
 
+   ! This method replaces abinerror()
    public :: fatal_error
-   ! This method is used by pFUnit to set it's own error handler.
-   ! Therefore, this method and its name cannot be changed!
+   ! This method is used by pFUnit to set it's own error handler,
+   ! see unit_tests/throw_with_pfunit.F90
    public :: set_error_method
 
    abstract interface
@@ -26,7 +46,8 @@ contains
       error_method => method
    end subroutine set_error_method
 
-   ! This should superseed abinerror()
+   ! filename and line_number parameters should be passed using the preprocessor
+   ! defined constants __FILENAME__ and __LINE__
    subroutine fatal_error(filename, line_number, message)
       character(len=*), intent(in) :: filename
       integer, intent(in) :: line_number
@@ -58,7 +79,6 @@ contains
       character(*), intent(in) :: filename
       integer, intent(in) :: line
       character(*), intent(in) :: message
-      ! We write out the error message to file 'ERROR'
       character(len=*), parameter :: ERROR_FILE = 'ERROR'
       character(len=:), allocatable :: base_name
       integer :: iunit
@@ -75,23 +95,21 @@ contains
       ! TODO: We should probably make the test suite more clever to
       ! ignore the line number when comparing the ERROR to ERROR.ref
       open (newunit=iunit, file=ERROR_FILE, action='write')
-      write (iunit, '(a)') 'ERROR in '//base_name//': '//message
+      write (iunit, '(a)') 'ERROR in '//base_name//': '//adjustl(trim(message))
       close (unit=iunit)
 
       call flush (OUTPUT_UNIT)
       call flush (ERROR_UNIT)
    end subroutine print_error
 
+   ! Get get base filename from the full path.
    function get_base_name(filename) result(base_name)
       character(:), allocatable :: base_name
       character(*), intent(in) :: filename
-
       integer :: idx
 
       idx = scan(filename, '/', back=.true.)
-
       base_name = filename(idx + 1:)
-
    end function get_base_name
 
 end module mod_error
