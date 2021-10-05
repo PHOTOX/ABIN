@@ -95,7 +95,7 @@ contains
    function sanitize_string(string) result(return_string)
       character(len=*), intent(in) :: string
       character(len=len(string)) :: return_string
-      character(len=len(string)+200) :: error_msg
+      character(len=len(string) + 200) :: error_msg
       character(len=1) :: ch
       integer :: c, i
 
@@ -271,7 +271,7 @@ contains
 
    subroutine file_exists_or_exit(fname)
       character(len=*), intent(in) :: fname
-      character(len=len(fname)+30) :: error_msg
+      character(len=len(fname) + 30) :: error_msg
       logical :: exists
       inquire (file=trim(fname), exist=exists)
       if (.not. exists) then

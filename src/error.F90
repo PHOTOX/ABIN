@@ -16,7 +16,7 @@
 !   default behavior with a call to set_error_method(). This logic
 !   can comfortably live in your test code, and thus does not
 !   introduce any undesirable dependencies (just a bit of
-!   obscurity). 
+!   obscurity).
 module mod_error
    implicit none
    private
@@ -47,7 +47,7 @@ contains
    end subroutine set_error_method
 
    ! filename and line_number parameters should be passed using the preprocessor
-   ! defined constants __FILENAME__ and __LINE__
+   ! defined constants __FILE__ and __LINE__
    subroutine fatal_error(filename, line_number, message)
       character(len=*), intent(in) :: filename
       integer, intent(in) :: line_number
