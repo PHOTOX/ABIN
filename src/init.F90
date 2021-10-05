@@ -1199,13 +1199,6 @@ subroutine finish(error_code)
    end if
 #endif
 
-   if (my_rank == 0) then
-      write (*, *) ''
-      if (error_code == 0) then
-         write (*, '(A)') 'Job finished!'
-      end if
-   end if
-
    call deallocate_arrays()
 
    ! TODO: Move this to a subroutine in mod_files

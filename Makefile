@@ -110,6 +110,9 @@ test: unittest e2etest
 
 # Clean all test folders.
 testclean:
+ifneq ($(strip $(PFUNIT_PATH)),)
+	$(MAKE) -C unit_tests clean
+endif
 	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} clean
 
 # This will automatically generate new reference data for E2E tests

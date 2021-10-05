@@ -1,4 +1,3 @@
- FATAL ERROR encountered in subroutine: fftw_normalmodes_init
- Check standard output for further information.
+ERROR in utils.F90: ABIN was not compiled with FFTW library
  FATAL ERROR encountered in subroutine: pile_init
  Check standard output for further information.

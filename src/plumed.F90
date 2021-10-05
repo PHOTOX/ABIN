@@ -38,7 +38,8 @@ contains
    subroutine plumed_init(silent_output)
       use mod_general, only: natom, irest, dt0, nrest
       use mod_const, only: ANG, AUTOFS, AMU, AVOGADRO, AUTOJ
-      use mod_utils, only: abinerror, c_string
+      use mod_utils, only: c_string
+      use mod_error, only: fatal_error
       !use mod_nhc, only: temp
       implicit none
       ! Do not print any output (used in unit tests, unittest/test_plumed.pf)
@@ -66,24 +67,23 @@ contains
          silent = silent_output
       end if
 
-      if (.not. silent) then
-         write (*, *) 'PLUMED is ON'
-         write (*, *) 'PLUMED input file is '//trim(plumedfile)
-      end if
-
       ! Initialize the main plumed object.
       ! This must be the very first call.
       call plumed_f_gcreate()
 
       call plumed_f_gcmd(c_string("getApiVersion"), api_version)
+
       if (.not. silent) then
-         write (*, *) "PLUMED API VERSION: ", api_version
+         write (*, '(a)') 'PLUMED is ON'
+         write (*, '(a)') 'PLUMED input file is '//trim(plumedfile)
+         write (*, '(a, i0)') 'PLUMED API version: ', api_version
       end if
 
       if (api_version < MIN_API_VERSION) then
-         write (*, *) 'ERROR: PLUMED version not supported'
-         write (*, *) 'Please, install a newer PLUMED version and recompile ABIN'
-         call abinerror('plumed_init')
+         call fatal_error(__FILE__, __LINE__, &
+                     'PLUMED version not supported. '//&
+                    &'Please, install a newer PLUMED version and recompile ABIN')
+         return
       end if
 
       ! Set units for conversion between PLUMED and ABIN.
@@ -205,7 +205,7 @@ contains
    ! We use this approach to avoid needing to have '#ifdef USE_PLUMED'
    ! elsewhere in the codebase
    subroutine plumed_init()
-      call not_compiled_with('PLUMED', 'plumed_init')
+      call not_compiled_with('PLUMED')
    end subroutine plumed_init
 
    subroutine finalize_plumed()
@@ -224,7 +224,7 @@ contains
       ! Just to get rid of compiler warnings :-(
       fx = x; fy = y; fz = z; eclas = 0.0D0
 
-      call not_compiled_with('PLUMED', 'force_plumed')
+      call not_compiled_with('PLUMED')
    end subroutine force_plumed
 #endif
 

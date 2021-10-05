@@ -299,7 +299,7 @@ contains
    subroutine initialize_momenta(C, iw)
       !use mod_arrays,  only: px, py, pz, vx, vy, vz, amt
       use mod_general, only: natom
-      use mod_utils, only: abinerror, print_xyz_arrays
+      use mod_utils, only: abinerror
       real(DP), intent(in) :: C(:, :)
       integer, intent(in) :: iw
       real(DP), allocatable :: gr(:)
@@ -327,9 +327,6 @@ contains
       !vx = px / amt
       !vy = py / amt
       !vz = pz / amt
-
-      !call print_xyz_arrays(px, py, pz)
-      !call print_xyz_arrays(vx, vy, vz)
 
       do j = 1, natom * 3
          do i = 1, ns

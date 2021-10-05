@@ -11,6 +11,8 @@ irandom=131313,
 nwrite=1,
 nwritex=1,
 nrest=1,
+
+idebug=2
 /
 
 &nhcopt

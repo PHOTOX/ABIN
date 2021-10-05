@@ -66,7 +66,6 @@ contains
       call finalize_plumed()
    end subroutine teardown
 
-
    ! Here we just test we can initialize and finalize PLUMED without dying,
    ! no assertions here.
    @test(ifdef=USE_PLUMED)
@@ -326,6 +325,27 @@ contains
       open (iunit, file=PLUMED_HILLS_FILE)
       close (iunit, status='delete')
    end subroutine test_force_metad
+
+#else
+   @before
+   subroutine setup()
+   end subroutine setup
+
+   @after
+   subroutine teardown()
+      ! This one is must be a no-op, so no exception should be raised
+      call finalize_plumed()
+   end subroutine teardown
+
+   @test(ifndef=USE_PLUMED)
+   subroutine test_not_compiled_with_plumed()
+      real(DP) :: eclas
+      call plumed_init()
+      @assertExceptionRaised('ABIN was not compiled with PLUMED')
+
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+      @assertExceptionRaised('ABIN was not compiled with PLUMED')
+   end subroutine test_not_compiled_with_plumed
 
 #endif
 end module test_plumed

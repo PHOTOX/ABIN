@@ -3,8 +3,12 @@ the GNU General Public License, either version 3 of the License,
 or any later version, except for parts noted below.
 A copy of this license is given later in this file. 
 
-The random number generator in random.f90 was kindly provided by prof. M. Lewerenze
-and is distributed under the GNU GPL v3 license. See random.f90
+The random number generator in src/random.F90 was kindly provided by prof. M. Lewerenze
+and is distributed under the GNU GPL v3 license. For details see random.F90.
+
+Files unit_test/throw_with_pfunit.F90 and src/error.F90 were adapted from
+the [pFUnit_demos repository](https://github.com/Goddard-Fortran-Ecosystem/pFUnit_demos)
+and are distributed under the Apache License version 2.0, see http://www.apache.org/licenses/.
 
 ==============================================================================
 Here is the text of the GPL license:

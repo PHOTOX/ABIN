@@ -1,2 +1,1 @@
- FATAL ERROR encountered in subroutine: initialize_terachem_interface
- Check standard output for further information.
+ERROR in utils.F90: ABIN was not compiled with MPI

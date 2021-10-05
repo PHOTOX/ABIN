@@ -512,7 +512,7 @@ contains
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       ! Assignments just to squash compiler warnings
       x = 0.0D0; y = 0.0D0; z = 0.0D0
-      call not_compiled_with('MPI', 'init_terash')
+      call not_compiled_with('MPI')
    end subroutine init_terash
 
    subroutine force_terash(x, y, z, fx, fy, fz, eclas)
@@ -523,7 +523,7 @@ contains
       real(DP), intent(inout) :: eclas
       ! Assignments just to squash compiler warnings
       fx = x; fy = y; fz = z; eclas = 0.0D0
-      call not_compiled_with('MPI', 'force_terash')
+      call not_compiled_with('MPI')
    end subroutine force_terash
 #endif
 end module mod_terampi_sh

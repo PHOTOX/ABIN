@@ -2,6 +2,7 @@
 module mod_utils
    use mod_const, only: DP
    use mod_interfaces
+   use mod_error, only: fatal_error
    implicit none
    public
 contains
@@ -9,10 +10,12 @@ contains
    real(DP) function get_distance(x, y, z, at1, at2, iw)
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: at1, at2, iw
+      character(len=*), parameter :: error_msg = 'Atom indices in get_distance() must be unique'
       real(DP) :: r
+
       if (at1 == at2) then
-         write (*, *) 'ERROR: Atom indices in function get_distance are not unique!'
-         call abinerror('get_distance')
+         call fatal_error(__FILE__, __LINE__, error_msg)
+         return
       end if
 
       r = (x(at1, iw) - x(at2, iw))**2
@@ -29,10 +32,11 @@ contains
       real(DP) :: vec1x, vec1y, vec1z
       real(DP) :: vec2x, vec2y, vec2z
       integer :: at1, at2, at3
+      character(len=*), parameter :: error_msg = 'Atom indices in get_angle() must be unique'
 
       if (at1 == at2 .or. at1 == at3 .or. at2 == at3) then
-         write (*, *) 'ERROR: Atom indices in function get_angle are not unique!'
-         call abinerror('get_angle')
+         call fatal_error(__FILE__, __LINE__, error_msg)
+         return
       end if
 
       vec1x = x(at1, iw) - x(at2, iw)
@@ -77,6 +81,7 @@ contains
       sign = norm1x * vec3x + norm1y * vec3y + norm1z * vec3z
       ! TODO: Refactor, make more intermediate results, e.g.
       ! norms of the normal vectors.
+      ! TODO: Add error handling for malformed dihedral angles to prevent division by zero
       get_dihedral = 180 / pi * acos( &
              & (norm1x * norm2x + norm1y * norm2y + norm1z * norm2z) / &
              & (sqrt(norm1x**2 + norm1y**2 + norm1z**2) * sqrt(norm2x**2 + norm2y**2 + norm2z**2)) &
@@ -90,18 +95,19 @@ contains
    function sanitize_string(string) result(return_string)
       character(len=*), intent(in) :: string
       character(len=len(string)) :: return_string
+      character(len=len(string) + 200) :: error_msg
+      character(len=1) :: ch
       integer :: c, i
 
       return_string = adjustl(string)
       do i = 1, len(trim(return_string))
-         c = iachar(return_string(i:i))
+         ch = return_string(i:i)
+         c = iachar(ch)
          ! check for almost all nonalphabetical chars from ASCII table
          ! allow dash, slash and dot -/.
          if (c < 44 .or. (c > 57 .and. c < 65) .or. c > 172) then
-            write (*, *) 'Suspicious character found in one of the input strings: '//string
-            write (*, *) 'ASCII index:', c, ' Position in the string:', i
-            write (*, *) 'Please check your input files. Exiting...'
-            call abinerror('sanitize_string')
+            error_msg = 'Suspicious character "'//ch//'" in input string "'//string//'"'
+            call fatal_error(__FILE__, __LINE__, error_msg)
          end if
       end do
 
@@ -119,12 +125,13 @@ contains
    function validate_atom_name(atom_name) result(adjustl_name)
       character(len=*), intent(in) :: atom_name
       character(len=len(atom_name)) :: adjustl_name
+      character(len=30) :: error_msg
       ! Note that sanitize_string does adjustl() on the string.
       ! This is quite confusing, maybe we should change that.
       adjustl_name = sanitize_string(atom_name)
       if (len_trim(adjustl_name) > 2) then
-         write (*, *) 'ERROR: Incorrect atom name: '//atom_name
-         call abinerror('validate_atom_name')
+         error_msg = 'Incorrect atom name: "'//atom_name//'"'
+         call fatal_error(__FILE__, __LINE__, error_msg)
       end if
    end function validate_atom_name
 
@@ -190,10 +197,11 @@ contains
       end do
    end function toupper
 
-   subroutine not_compiled_with(feature, caller)
-      character(len=*), intent(in) :: feature, caller
-      write (*, *) 'ERROR: ABIN was not compiled with '//feature
-      call abinerror(caller)
+   subroutine not_compiled_with(feature)
+      character(len=*), intent(in) :: feature
+      character(:), allocatable :: error_msg
+      error_msg = 'ABIN was not compiled with '//feature
+      call fatal_error(__FILE__, __LINE__, error_msg)
    end subroutine not_compiled_with
 
    ! TODO: Maybe move this into a separate error handling module,
@@ -261,22 +269,14 @@ contains
       end if
    end subroutine archive_file
 
-   subroutine debug_output(msg)
-      ! See SO about fortran std units
-      ! https://stackoverflow.com/questions/8508590/standard-input-and-output-units-in-fortran-90#8508757
-      use iso_fortran_env, only: ERROR_UNIT
-      character(len=*), intent(in) :: msg
-      write (ERROR_UNIT, '(A)') msg
-      call flush (ERROR_UNIT)
-   end subroutine debug_output
-
    subroutine file_exists_or_exit(fname)
       character(len=*), intent(in) :: fname
+      character(len=len(fname) + 30) :: error_msg
       logical :: exists
       inquire (file=trim(fname), exist=exists)
       if (.not. exists) then
-         write (*, '(2A)') 'ERROR: Could not find file '//trim(fname)
-         call abinerror('file_exists_or_exit')
+         error_msg = 'Could not find file "'//trim(fname)//'"'
+         call fatal_error(__FILE__, __LINE__, error_msg)
       end if
    end subroutine file_exists_or_exit
 

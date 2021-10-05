@@ -322,7 +322,7 @@ contains
       use mod_utils, only: not_compiled_with
       real(DP), intent(inout) :: temp, temp0
       temp = 0.0D0; temp0 = 0.0D0
-      call not_compiled_with('MPI', 'remd_init')
+      call not_compiled_with('MPI')
    end subroutine remd_init
 
 ! USE_MPI
