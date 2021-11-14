@@ -100,9 +100,9 @@ contains
       ! TODO: implement global version according to equations 51-54
       do iw = 1, nwalk
          do iat = 1, natom
-            px(iat, iw) = c1(iw) * px(iat, iw) + c2(iw) * ran(pom) * sqrt(m(iat, iw))
-            py(iat, iw) = c1(iw) * py(iat, iw) + c2(iw) * ran(pom + 1) * sqrt(m(iat, iw))
-            pz(iat, iw) = c1(iw) * pz(iat, iw) + c2(iw) * ran(pom + 2) * sqrt(m(iat, iw))
+            px(iat, iw) = c1(iw) * px(iat, iw) + c2(iw) * ran(pom) * dsqrt(m(iat, iw))
+            py(iat, iw) = c1(iw) * py(iat, iw) + c2(iw) * ran(pom + 1) * dsqrt(m(iat, iw))
+            pz(iat, iw) = c1(iw) * pz(iat, iw) + c2(iw) * ran(pom + 2) * dsqrt(m(iat, iw))
             pom = pom + 3
          end do
       end do
@@ -441,7 +441,7 @@ contains
       do i = 1, ns + 1
          call gautrg(ran, natom * 3)
          do j = 1, natom
-            sqm = sqrt(mass(j, iw))
+            sqm = dsqrt(mass(j, iw))
             !<-- if m!= 1, alternatively one could perform the scaling here (check also init!)
             p(j, i) = ran(j) * sqm
             p(j + natom, i) = ran(j + natom) * sqm
@@ -529,7 +529,7 @@ contains
       end do
       do i = 1, n
          if (D(i, i) >= 0.0D0) then
-            D(i, i) = sqrt(D(i, i))
+            D(i, i) = dsqrt(D(i, i))
          else
             write (0, *) "Warning: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
             D(i, i) = 0.0D0

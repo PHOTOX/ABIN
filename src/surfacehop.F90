@@ -875,11 +875,11 @@ contains
       ! Rescaling the velocities
 
       if (b_temp < 0) then
-         g_temp = (b_temp + sqrt(c_temp)) / 2.0D0 / a_temp
+         g_temp = (b_temp + dsqrt(c_temp)) / 2.0D0 / a_temp
       end if
 
       if (b_temp >= 0) then
-         g_temp = (b_temp - sqrt(c_temp)) / 2.0D0 / a_temp
+         g_temp = (b_temp - dsqrt(c_temp)) / 2.0D0 / a_temp
       end if
 
       do iat = 1, natom
@@ -962,7 +962,7 @@ contains
 
       if (ekin >= de) then
 
-         alfa = sqrt(1 - de / ekin)
+         alfa = dsqrt(1 - de / ekin)
 
          do iat = 1, natom
             vx(iat, itrj) = alfa * vx(iat, itrj)

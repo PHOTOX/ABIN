@@ -125,7 +125,6 @@ contains
       ! 1/(beta*omega_p^2)
       ! where
       ! omega_p=sqrt(P)/(beta*hbar)
-      ! DH DEBUG
       if (ipimd == 1 .and. inormalmodes /= 1) then
 
          do iw = 1, nwalk
@@ -162,9 +161,9 @@ contains
                call gautrg(ran, natom * 3)
                ipom = 1
                do iat = 1, natom
-                  pnhx(iat, iw, inh) = ran(ipom) * sqrt(temp * Qm(iw))
-                  pnhy(iat, iw, inh) = ran(ipom + 1) * sqrt(temp * Qm(iw))
-                  pnhz(iat, iw, inh) = ran(ipom + 2) * sqrt(temp * Qm(iw))
+                  pnhx(iat, iw, inh) = ran(ipom) * dsqrt(temp * Qm(iw))
+                  pnhy(iat, iw, inh) = ran(ipom + 1) * dsqrt(temp * Qm(iw))
+                  pnhz(iat, iw, inh) = ran(ipom + 2) * dsqrt(temp * Qm(iw))
                end do
                ipom = ipom + 3
             end do
@@ -177,7 +176,7 @@ contains
                ! +1 if nmolt=1, gautrg needs array at least of length=2
                call gautrg(ran, nmolt + 1)
                do imol = 1, nmolt
-                  pnhx(imol, iw, inh) = ran(imol) * sqrt(temp * ms(imol, inh))
+                  pnhx(imol, iw, inh) = ran(imol) * dsqrt(temp * ms(imol, inh))
                end do
             end do
          end do

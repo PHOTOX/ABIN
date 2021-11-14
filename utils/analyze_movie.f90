@@ -67,7 +67,7 @@ real*8 function get_angle(at1, at2, at3, boxx, boxy, boxz)
    end if
 
    get_angle=180/pi*acos((vec1x*vec2x+vec1y*vec2y+vec1z*vec2z)/ &
-   (dsqrt(vec1x**2+vec1y**2+vec1z**2)*sqrt(vec2x**2+vec2y**2+vec2z**2)))
+   (dsqrt(vec1x**2+vec1y**2+vec1z**2)*dsqrt(vec2x**2+vec2y**2+vec2z**2)))
 
 return 
 end function get_angle
@@ -113,7 +113,7 @@ real*8 function get_dihedral(at1, at2, at3, at4, shiftdih, boxx, boxy, boxz)
    
    sign = norm1x*vec3x+norm1y*vec3y+norm1z*vec3z
    get_dihedral = 180/pi*acos((norm1x*norm2x+norm1y*norm2y+norm1z*norm2z)/ &
-   (sqrt(norm1x**2+norm1y**2+norm1z**2)*sqrt(norm2x**2+norm2y**2+norm2z**2)))
+   (dsqrt(norm1x**2+norm1y**2+norm1z**2)*dsqrt(norm2x**2+norm2y**2+norm2z**2)))
    
    if (sign.gt.0) get_dihedral = shiftdih - get_dihedral
    

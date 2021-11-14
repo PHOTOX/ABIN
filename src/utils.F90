@@ -7,13 +7,13 @@ module mod_utils
    public
 contains
 
-   real(DP) function get_distance(x, y, z, at1, at2, iw)
+   real(DP) function get_distance(x, y, z, at1, at2, iw) result(r)
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: at1, at2, iw
       character(len=*), parameter :: error_msg = 'Atom indices in get_distance() must be unique'
-      real(DP) :: r
 
       if (at1 == at2) then
+         r = 0
          call fatal_error(__FILE__, __LINE__, error_msg)
          return
       end if
@@ -21,11 +21,10 @@ contains
       r = (x(at1, iw) - x(at2, iw))**2
       r = r + (y(at1, iw) - y(at2, iw))**2
       r = r + (z(at1, iw) - z(at2, iw))**2
-      r = sqrt(r)
-      get_distance = r
+      r = dsqrt(r)
    end function get_distance
 
-   real(DP) function get_angle(x, y, z, at1, at2, at3, iw)
+   real(DP) function get_angle(x, y, z, at1, at2, at3, iw) result(angle)
       use mod_const, only: PI
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: iw
@@ -35,6 +34,7 @@ contains
       character(len=*), parameter :: error_msg = 'Atom indices in get_angle() must be unique'
 
       if (at1 == at2 .or. at1 == at3 .or. at2 == at3) then
+         angle = 0
          call fatal_error(__FILE__, __LINE__, error_msg)
          return
       end if
@@ -45,10 +45,8 @@ contains
       vec2x = x(at3, iw) - x(at2, iw)
       vec2y = y(at3, iw) - y(at2, iw)
       vec2z = z(at3, iw) - z(at2, iw)
-      get_angle = 180 / pi * acos((vec1x * vec2x + vec1y * vec2y + vec1z * vec2z) / &
-               & (sqrt(vec1x**2 + vec1y**2 + vec1z**2) * sqrt(vec2x**2 + vec2y**2 + vec2z**2)))
-
-      return
+      angle = 180 / pi * acos((vec1x * vec2x + vec1y * vec2y + vec1z * vec2z) / &
+               & (dsqrt(vec1x**2 + vec1y**2 + vec1z**2) * dsqrt(vec2x**2 + vec2y**2 + vec2z**2)))
    end function get_angle
 
    real(DP) function get_dihedral(x, y, z, at1, at2, at3, at4, iw, shiftdih)
@@ -84,7 +82,7 @@ contains
       ! TODO: Add error handling for malformed dihedral angles to prevent division by zero
       get_dihedral = 180 / pi * acos( &
              & (norm1x * norm2x + norm1y * norm2y + norm1z * norm2z) / &
-             & (sqrt(norm1x**2 + norm1y**2 + norm1z**2) * sqrt(norm2x**2 + norm2y**2 + norm2z**2)) &
+             & (dsqrt(norm1x**2 + norm1y**2 + norm1z**2) * dsqrt(norm2x**2 + norm2y**2 + norm2z**2)) &
              & )
 
       if (sign > 0) get_dihedral = shiftdih - get_dihedral
