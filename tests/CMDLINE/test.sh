@@ -14,3 +14,8 @@ $ABINEXE -invalid > abin.out || true
 
 # Test that ABIN prints help, without an error
 $ABINEXE -h >> abin.out || echo "ERROR when printing help" >> ERROR
+$ABINEXE --help >> abin.out || echo "ERROR when printing help" >> ERROR
+
+# Test that ABIN prints version, without an error
+$ABINEXE -V >> abin.out || echo "ERROR when printing version" >> ERROR
+$ABINEXE --version >> abin.out || echo "ERROR when printing version" >> ERROR

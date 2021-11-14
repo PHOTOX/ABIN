@@ -1131,8 +1131,6 @@ contains
       print '(a)', '  /_/        \_\ |_____/   |_|  |_|    \_|'
       print '(a)', ' '
 
-! TODO: Pass version as compiler parameter
-      print '(a)', ' version 1.1'
       print '(a)', ' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek'
       print '(a)', ' '
    end subroutine print_logo

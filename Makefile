@@ -35,8 +35,6 @@ export
 include make.vars
 
 export SHELL=/bin/bash
-export DATE=`date +"%X %x"`
-
 export COMMIT=NaN
 ifeq ($(shell git --version | cut -b -3),git)
   ifneq ($(shell git status 2>&1 | head -1 | cut -b -5),fatal)

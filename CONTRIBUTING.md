@@ -13,9 +13,11 @@ Read through the script first to see what it does (it's not long, I promise).
 It is useful especially if you use VIM as your text editor, as it sets it up to use our code style rules.
 If you use a different editor, we welcome if you contribute your config files!
 
-The script also installs `fprettify` that we use to automatically format our code (needs a `python3` environment).
-The script tries to use `pip3` to install it.
-If you use a different Python package manager you should install `fprettify` manually.
+You also should install `fprettify`, which is a Python program that we use for autoformatting the Fortran code. Due to a large variability of Python installation options and environments, we do not try to install it automatically. For example, you can use `pip` (or `pip3` if your default is Python2). 
+
+```sh
+pip install --upgrade fprettify
+```
 
 ### Install dev dependencies
 
@@ -35,6 +37,7 @@ Here's a quick summary of our code style that we try to adhere to:
 module mod_my_module
   private
   integer :: public_var
+  integer :: private_var
   public :: public_var
   public :: public_subroutine
 contains
@@ -59,7 +62,7 @@ Here's a quick summary of our formatting style, as it is defined in `.fprettify.
  - use capital letters only for defined constants (e.g. those from module `mod_const`). We use lower case for everything else.
  - use `snake_case` for naming your subroutines and variables. (not `camelCase`)
  - use C-style relational operators (`< > == /=`) instead of the old FORTRAN style (`.gt. .lt.`)
- - comments should start at the same indenation level as the code they are commnenting.
+ - comments should start at the same indentation level as the code they are commnenting.
     - use an exclamation mark to start a comment
 
 ### Inspecting Git history
