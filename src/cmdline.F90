@@ -1,11 +1,11 @@
 module mod_cmdline
+   use mod_interfaces, only: print_compile_info
    private
    public :: get_cmdline
 
 contains
 
    subroutine print_help()
-      use mod_interfaces, only: print_compile_info
       implicit none
       integer, dimension(8) :: time_data
 
@@ -18,6 +18,7 @@ contains
       print '(a)', 'cmdline options:'
       print '(a)', ''
       print '(a)', '  -h, --help               print help and exit'
+      print '(a)', '  -V, --version            print version and compiler options'
       print '(a)', '  -i <input_parameters>    default: input.in'
       print '(a)', '  -x <input_coordinates>   default: mini.dat'
       print '(a)', '  -v <input_velocities>    no default'
@@ -39,6 +40,9 @@ contains
          select case (arg)
          case ('-h', '--help')
             call print_help()
+            stop 0
+         case ('-V', '--version')
+            call print_compile_info()
             stop 0
          case ('-i')
             i = i + 1

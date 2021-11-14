@@ -1,33 +1,34 @@
 ! This file must be recompiled at each compilation
-! to get the current date and timem
-! passed via make parameter (-DCOMPILE_DATE=)
+! to get the current date and time,
+! which are taken from preprocessor constants,
+! and the current Git commit, which is passed in from Makefile.
 subroutine print_compile_info()
-#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
+   use iso_fortran_env, only: compiler_version
    use iso_fortran_env, only: compiler_version, compiler_options
-#endif
+   ! TODO: Decide how we should do versioning
+   character(len=*), parameter :: ABIN_VERSION = '1.1'
 
-   ! DATE and COMMIT are defined and exported in Makefile
-   print*,'Compiled at ', COMPILE_DATE
-   print*,'Git commit '//GIT_COMMIT
-!$ print*,'Compiled with parallel OpenMP support for PIMD.'
+   print '(a)', 'ABIN version '//ABIN_VERSION
+   print '(a, a, 1x, a)', 'Compiled at ', __TIME__, __DATE__
+   print '(a)', 'Git commit '//GIT_COMMIT
+!$ print'(a)', 'Compiled with parallel OpenMP support for PIMD.'
 #ifdef USE_FFTW
-   write (*, *) 'Compiled with FFTW support.'
+   print '(a)', 'Compiled with FFTW support.'
 #endif
 #ifdef USE_CP2K
-   write (*, *) 'Compiled with in-built CP2K interface.'
+   print '(a)', 'Compiled with in-built CP2K interface.'
 #endif
 #ifdef USE_PLUMED
-   write (*, *) 'Compiled with PLUMED (static lib).'
+   print '(a)', 'Compiled with PLUMED (static lib).'
 #endif
 #ifdef USE_MPI
-   write (*, *) 'Compiled with MPI support.'
-   write (*, *) '(used for REMD and direct CP2K and TeraChem interfaces.)'
+   print '(a)', 'Compiled with MPI support.'
+   print '(a)', '(used for REMD and direct CP2K and TeraChem interfaces.)'
 #endif
-   print*,' '
+   print '(a)', ' '
 
-#if __GNUC__ >= 4 && __GNUC_MINOR__ >= 6
-   print*,'This program was compiled by ', &
-      compiler_version(), ' using the options: '
-   print*,compiler_options()
-#endif
+   print '(a)', 'This program was compiled by:'
+   print '(a)', compiler_version()
+   print '(a)', 'using the compiler options:'
+   print '(a)', compiler_options()
 end subroutine print_compile_info

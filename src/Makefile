@@ -2,7 +2,7 @@ F_OBJS := modules.o fortran_interfaces.o error.o utils.o io.o random.o arrays.o 
           shake.o nosehoover.o gle.o transform.o potentials.o estimators.o ekin.o vinit.o plumed.o \
           remd.o force_bound.o water.o force_cp2k.o sh_integ.o surfacehop.o landau_zener.o\
           force_mm.o tera_mpi_api.o force_tera.o force_terash.o force_abin.o en_restraint.o analyze_ext_template.o geom_analysis.o analysis.o \
-          minimizer.o mdstep.o forces.o read_cmdline.o init.o
+          minimizer.o mdstep.o forces.o cmdline.o init.o
 
 C_OBJS := water_interface.o
 
@@ -16,7 +16,7 @@ libabin.a: compile_info.o
 
 # compile_info.F90 must be always recompiled to get the current date/time and git commit
 compile_info.o: compile_info.F90 ${C_OBJS} ${F_OBJS} abin.o
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DCOMPILE_DATE="'${DATE}'" -DGIT_COMMIT="'${COMMIT}'" -c $<
+	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DGIT_COMMIT="'${COMMIT}'" -c $<
 
 clean:
 	/bin/rm -f *.o *.mod *.gcno *.gcda *.gcov libabin.a $(BIN)
