@@ -149,7 +149,7 @@ contains
       allocate (fzc_new(size1, size2))
 
       ! Momenta are scaled according to the new temperature
-      ! p_new = p_old * sqrt(T_new/T_old)
+      ! p_new = p_old * dsqrt(T_new/T_old)
       if (my_rank == rank1) then
          scal = dsqrt(temp_list(my_rank + 1) / temp_list(my_rank + 2))
       else if (my_rank == rank2) then

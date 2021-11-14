@@ -47,7 +47,7 @@ contains
          pom = 1
          do iat = 1, natom
             ! Variance of distribution
-            sigma = sqrt(TEMP / MASS(iat))
+            sigma = dsqrt(TEMP / MASS(iat))
 
             ! Velocity vector of iat-th atom
             vx(iat, iw) = sigma * rans(pom)
@@ -98,11 +98,11 @@ contains
 
       if (my_rank == 0) write (*, *) 'Initial temperature (K):', temp_mom * autok
 
-      ! TODO: pro normal modes nemusi nutne fungovat!
+      ! TODO: Might not work correctly for PIMD with normal modes!
       if (scaleveloc == 1 .and. temp_mom > 0.1E-10) then
 
          if (my_rank == 0) write (*, *) 'Scaling velocities to correct temperature.'
-         scal = sqrt(temp / temp_mom)
+         scal = dsqrt(temp / temp_mom)
          vx = vx * scal
          vy = vy * scal
          vz = vz * scal

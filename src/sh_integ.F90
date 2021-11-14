@@ -402,7 +402,7 @@ contains
          call abinerror('surfacehop')
       end if
 
-      renormalization_factor = sqrt(renormalization_factor)
+      renormalization_factor = dsqrt(renormalization_factor)
 
       cel_re(current_state, itrj) = cel_re(current_state, itrj) * renormalization_factor
       cel_im(current_state, itrj) = cel_im(current_state, itrj) * renormalization_factor

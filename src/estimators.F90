@@ -252,7 +252,7 @@ end module mod_estimators
 !        dy=yc(2)-yc(1)
 !        dz=zc(2)-zc(1)
 !        r=dx**2+dy**2+dz**2
-!        r=sqrt(r)
+!        r=dsqrt(r)
 !        Vq=0.5*aa*(r-r0)**2
 !      endif
 

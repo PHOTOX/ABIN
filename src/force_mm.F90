@@ -56,7 +56,7 @@ contains
             i2 = inames(iat2)
             if (LJcomb == 'LB') then
                rij = 0.5 * (rmin(i1) + rmin(i2)) * ang
-               epsij = sqrt(eps(i1) * eps(i2))
+               epsij = dsqrt(eps(i1) * eps(i2))
             end if
             BIJ(i1, i2) = 2 * 6 * epsij * rij**6
             AIJ(i1, i2) = 12 * epsij * rij**12
@@ -89,7 +89,7 @@ contains
                i1 = inames(iat1)
                i2 = inames(iat2)
                kLJ = ri3 * (ri3 * AIJ(i1, i2) - BIJ(i1, i2)) * ri
-               kC = q(i1) * q(i2) * sqrt(ri3)
+               kC = q(i1) * q(i2) * dsqrt(ri3)
                fx(iat1, iw) = fx(iat1, iw) + (kLJ + kC) * dx
                fx(iat2, iw) = fx(iat2, iw) - (kLJ + kC) * dx
                fy(iat1, iw) = fy(iat1, iw) + (kLJ + kC) * dy
@@ -97,7 +97,7 @@ contains
                fz(iat1, iw) = fz(iat1, iw) + (kLJ + kC) * dz
                fz(iat2, iw) = fz(iat2, iw) - (kLJ + kC) * dz
                eclas = eclas + ri3 * (ri3 * AIJ(i1, i2) / 12 - BIJ(i1, i2) / 6) / nwalk
-               eclas = eclas + q(i1) * q(i2) / sqrt(r) / nwalk
+               eclas = eclas + q(i1) * q(i2) / dsqrt(r) / nwalk
             end do
          end do
       end do

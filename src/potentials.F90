@@ -87,7 +87,7 @@ contains
          dy = y(2, i) - y(1, i)
          dz = z(2, i) - z(1, i)
          r = dx**2 + dy**2 + dz**2
-         r = sqrt(r)
+         r = dsqrt(r)
          fac = k * (r - r0) / r
          fxab(1, i) = fac * dx
          fxab(2, i) = -fxab(1, i)
@@ -112,7 +112,7 @@ contains
          dy = y(2, i) - y(1, i)
          dz = z(2, i) - z(1, i)
          r = dx**2 + dy**2 + dz**2
-         r = sqrt(r)
+         r = dsqrt(r)
          fac = k * (r - r0) / r
          hess(1, 1, i) = (k * dx**2 / r**2 - fac * dx**2 / r**2 + fac) / nwalk
          hess(2, 2, i) = (k * dy**2 / r**2 - fac * dy**2 / r**2 + fac) / nwalk
@@ -159,7 +159,7 @@ contains
 !NOT REALLY SURE about a
 !if it is not set from input, we determine it from k(normaly used for
 !harmon osciallator)
-      if (a <= 0) a = sqrt(k / 2 / De)
+      if (a <= 0) a = dsqrt(k / 2 / De)
 
       eclas = 0.0D0
 
@@ -168,7 +168,7 @@ contains
          dy = y(2, i) - y(1, i)
          dz = z(2, i) - z(1, i)
          r = dx**2 + dy**2 + dz**2
-         r = sqrt(r)
+         r = dsqrt(r)
          ex = exp(-a * (r - r0))
          fac = 2 * a * ex * De * (1 - ex) / r
          fxab(1, i) = fac * dx
@@ -189,7 +189,7 @@ contains
       integer :: i, ipom1, ipom2
 
 !NOT REALLY SURE about a
-      a = sqrt(k / 2 / De)
+      a = dsqrt(k / 2 / De)
 
       do i = 1, nwalk
 
@@ -197,7 +197,7 @@ contains
          dy = y(2, i) - y(1, i)
          dz = z(2, i) - z(1, i)
          r = dx**2 + dy**2 + dz**2
-         r = sqrt(r)
+         r = dsqrt(r)
          ex = exp(-a * (r - r0))
          fac = 2 * a * ex * De * (1 - ex) / r
          fac2 = 2 * De * a**2 * ex**2 / r**2

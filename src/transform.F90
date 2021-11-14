@@ -456,7 +456,7 @@ contains
 
       omega_n = NWALK * TEMP
       if (inormalmodes == 2) then
-         omega_n = omega_n * sqrt(NWALK * 1.D0)
+         omega_n = omega_n * dsqrt(NWALK * 1.D0)
       end if
       equantx = 0.0D0
       equanty = 0.0D0
