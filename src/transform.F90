@@ -326,6 +326,8 @@ contains
       real(DP) :: dnwalk, fac, equant
       integer :: nmodes, odd
 
+      dnwalk = 1.0D0
+      fac = 1.0D0
       if (inormalmodes == 1) then
          dnwalk = dsqrt(1.0D0 * nwalk)
          fac = dsqrt(2.0D0)
@@ -386,6 +388,8 @@ contains
       real(DP) :: dnwalk, fac
       integer :: nmodes, odd
 
+      dnwalk = 1.0D0
+      fac = 1.0D0
       if (inormalmodes == 1) then
          dnwalk = dsqrt(1.0D0 * nwalk)
          fac = dsqrt(2.0D0)
