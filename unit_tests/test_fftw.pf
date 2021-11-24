@@ -55,9 +55,13 @@ contains
    @test(ifndef=USE_FFTW)
    subroutine test_not_compiled_with_fftw()
       use, intrinsic :: iso_c_binding, only: C_DOUBLE, C_DOUBLE_COMPLEX
+      use mod_general, only: my_rank
       complex(C_DOUBLE_COMPLEX), dimension(1) :: normal_modes
       real(C_DOUBLE), dimension(1) :: xyz
       integer :: nbeads
+
+      ! To suppress output
+      my_rank = 1
 
       call fftw_normalmodes_init(nbeads)
       @assertExceptionRaised('ABIN was not compiled with FFTW library')

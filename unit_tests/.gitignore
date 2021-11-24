@@ -5,6 +5,7 @@
 *.mod
 *.inc
 bck.*
+masses
 utils
 plumed
 plumed.out

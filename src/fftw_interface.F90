@@ -4,6 +4,7 @@ module mod_fftw3
    use, intrinsic :: iso_c_binding
 #ifndef USE_FFTW
    use mod_utils, only: not_compiled_with
+   implicit none
 #endif
    private
    public :: fftw_normalmodes_init, fftw_normalmodes_finalize
@@ -19,16 +20,15 @@ contains
 #ifdef USE_FFTW
    subroutine fftw_normalmodes_init(nwalk)
       use mod_const, only: DP
-      use mod_utils, only: abinerror
+      use mod_error, only: fatal_error
       integer, intent(in) :: nwalk
       real(C_DOUBLE), dimension(:), allocatable :: x_tmp
       complex(C_DOUBLE_COMPLEX), dimension(:), allocatable :: cx_tmp
+      character, allocatable :: error_msg
 
       if (DP /= C_DOUBLE) then
-         write (*, *) 'WARNING: Kind DP is not equal kind C_DOUBLE'
-         write (*, *) 'Precision might be lost during normal mode transform.'
-         write (*, *) 'Set iknow=1 if you want to proceed.'
-         if (iknow /= 1) call abinerror('fftw_init')
+         error_msg = 'Kind DP is not equal to C_DOUBLE. Normal mode transform not possible.'
+         call fatal_error(__FILE__, __LINE__, error_msg)
       end if
 
       allocate (x_tmp(nwalk + 1))
@@ -66,9 +66,12 @@ contains
    ! Dummy functions when ABIN is not compiled with FFTW
    subroutine fftw_normalmodes_init(nwalk)
       use iso_fortran_env, only: ERROR_UNIT
+      use mod_general, only: my_rank
       integer, intent(inout) :: nwalk
       nwalk = 0
-      write (ERROR_UNIT, *) 'ERROR: Normal mode transformation cannot be performed.'
+      if (my_rank == 0) then
+         write (ERROR_UNIT, *) 'ERROR: Normal mode transformation cannot be performed.'
+      end if
       call not_compiled_with('FFTW library')
    end subroutine fftw_normalmodes_init
 

@@ -1,0 +1,89 @@
+! Testing functions for initializing masses,
+! currently defined in module.F90
+module test_masses
+   use funit
+   use mod_utils
+   implicit none
+   integer, parameter :: NATOM = 3
+   real(DP) :: masses(NATOM)
+   character(len=2) :: massnames(NATOM)
+
+contains
+
+   ! This routine is called automatically before each test.
+   @before
+   subroutine setup()
+      use mod_general, only: my_rank
+      use mod_system, only: names
+      ! Setting this non-zero to prevent output to stdout
+      my_rank = 1
+      ! These are normally user-defined in the input file
+      massnames = ''
+      masses = -1.0D0
+      allocate (names(NATOM))
+   end subroutine setup
+
+   @after
+   subroutine teardown()
+      use mod_system, only: am, names
+      deallocate (am)
+      deallocate (names)
+   end subroutine teardown
+
+   @test
+   subroutine test_library_masses()
+      use mod_const, only: AMU
+      use mod_system, only: names, am, mass_init
+
+      names = (/'H', 'H', 'C'/)
+      call mass_init(masses, massnames, NATOM)
+      @assertEqual(1.008D0 * AMU, am(1), "hydrogen mass")
+      @assertEqual(1.008D0 * AMU, am(2), "hydrogen mass 2")
+      @assertEqual(12.0110D0 * AMU, am(3), "carbon mass")
+   end subroutine test_library_masses
+
+   @test
+   subroutine test_custom_masses()
+      use mod_const, only: AMU
+      use mod_system, only: names, am, mass_init
+
+      names = (/'H ', 'XY', 'C '/)
+      ! Here we override hydrogen mass, and define mass
+      ! for custom atomtype XY
+      massnames = (/'H ', 'XY', '  '/)
+      masses = (/2.0D0, 5.0D0, -1.0D0/)
+      call mass_init(masses, massnames, NATOM)
+      @assertEqual(2.0D0 * AMU, am(1), "custom deuterium mass")
+      @assertEqual(5.0D0 * AMU, am(2), "custom XY mass")
+      @assertEqual(12.0110D0 * AMU, am(3), "carbon mass from library")
+   end subroutine test_custom_masses
+
+   @test
+   subroutine test_not_specified()
+      use mod_system, only: names, mass_init
+      names = (/'H ', 'XY', 'C '/)
+      call mass_init(masses, massnames, NATOM)
+      @assertExceptionRaised('Atomic mass for atom XY was not specified')
+   end subroutine test_not_specified
+
+   @test
+   subroutine test_duplicates()
+      use mod_system, only: names, mass_init
+      names = (/'H ', 'XY', 'C '/)
+      massnames = (/'XY', 'XY', '  '/)
+      masses = (/2.0D0, 5.0D0, -1.0D0/)
+      call mass_init(masses, massnames, NATOM)
+      @assertExceptionRaised('Duplicate atom names in input array "massnames"')
+   end subroutine test_duplicates
+
+   @test
+   subroutine test_negative_mass()
+      use mod_system, only: names, mass_init
+      names = (/'H ', 'XY', 'C '/)
+      massnames = (/'XY', '  ', '  '/)
+      masses = (/-2.0D0, 5.0D0, -1.0D0/)
+      call mass_init(masses, massnames, NATOM)
+      @assertExceptionRaised('Mass cannot be negative. Fix arrays "masses" in the input file.')
+   end subroutine test_negative_mass
+
+end module test_masses

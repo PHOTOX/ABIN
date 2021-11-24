@@ -542,8 +542,11 @@ module mod_random
 
 
       FUNCTION R1MACH()
-      IMPLICIT real(DP) (A-H,O-Z)
-      PARAMETER (ONE=1.D0,TWO=2.D0,HALF=0.5D0)
+      real(DP), parameter :: ONE=1.D0, TWO=2.D0, HALF=0.5D0
+      real(DP) :: R1MACH
+      real(DP) :: eps
+      real(DP) :: U, COMP
+      integer :: icall
       SAVE ICALL,EPS
       DATA ICALL,EPS/0,ONE/
 ! ---------------------------------------------------------------------

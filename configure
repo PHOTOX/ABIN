@@ -43,12 +43,14 @@ OPTIONS
 "
 }
 
+warning_flags="-Wall -Wno-integer-division -Wno-maybe-uninitialized"
+
 # Overwrite default options from command line
 PARAMS="$@"
 while [[ $# -gt 0 ]]; do
     case "$1" in
       --debug)
-        FFLAGS="-g -O0 -fopenmp -Wall"
+        FFLAGS="-g -O0 -fopenmp -fimplicit-none $warning_flags"
         shift
         ;;
       --mpi)
@@ -109,7 +111,7 @@ done
 
 # Set to default if FFLAGS is not defined yet, see
 # https://stackoverflow.com/questions/11362250/in-bash-how-do-i-test-if-a-variable-is-defined-in-u-mode
-: ${FFLAGS:='-O2 -fopenmp -Wall'}
+: ${FFLAGS:="-O2 -fopenmp -fimplicit-none $warning_flags"}
 
 if [[ -z ${FC-} ]];then
    if [[ $MPI = "TRUE" ]];then

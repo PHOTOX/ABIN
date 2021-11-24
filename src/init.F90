@@ -14,7 +14,7 @@
 ! that can be called from here.
 subroutine init(dt)
    use mod_const
-   use mod_interfaces, only: print_compile_info
+   use mod_interfaces, only: print_compile_info, omp_set_num_threads, print_runtime_info
    use mod_cmdline, only: get_cmdline
    use mod_files
    use mod_arrays
@@ -60,7 +60,7 @@ subroutine init(dt)
    ! WARNING: We do NOT use OMP_NUM_THREADS environment variable!
    integer :: nproc
    integer :: getPID
-!$ integer :: omp_get_max_threads
+!$ integer, external :: omp_get_max_threads
    character(len=2) :: massnames(MAXTYPES)
    character(len=2) :: atom
    character(len=200) :: chinput, chcoords, chveloc
@@ -180,7 +180,7 @@ subroutine init(dt)
    ! Note that scaling is actually not so great
    ! since SCF timings will vary for different beads,
    ! which decreases thread utilization.
-!$ call OMP_set_num_threads(nproc)
+!$ call omp_set_num_threads(nproc)
 
 #ifdef USE_MPI
    ! TODO: Move this to an mpi_wrapper module
@@ -401,7 +401,7 @@ subroutine init(dt)
    end do
 
    ! Determine atomic masses from periodic table
-   call mass_init(masses, massnames)
+   call mass_init(masses, massnames, natom)
    ! Transform masses for PIMD
    ! TODO: rename this function
    call init_mass(amg, amt)
@@ -1173,9 +1173,9 @@ subroutine finish(error_code)
 
    use mod_plumed, only: iplumed, finalize_plumed
 
-#ifdef USE_MPI
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
+#ifdef USE_MPI
    ! Commenting this out to support older MPICH versions.
    ! use mpi, only: MPI_COMM_WORLD, MPI_SUCCESS, MPI_Finalize, MPI_Abort
    use mpi
@@ -1188,14 +1188,12 @@ subroutine finish(error_code)
 #endif
    logical :: lopen
 
-#ifdef USE_MPI
    if (pot == '_tera_') then
       if (ipimd == 2) then
          call finalize_terash()
       end if
       call finalize_terachem(error_code)
    end if
-#endif
 
    call deallocate_arrays()
 

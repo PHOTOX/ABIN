@@ -69,7 +69,23 @@ module mod_interfaces
          integer, intent(in) :: iw
       end subroutine oniom
 
+      subroutine omp_set_num_threads(nthreads)
+         integer, intent(in) :: nthreads
+      end subroutine omp_set_num_threads
+
+      subroutine print_runtime_info()
+      end subroutine
+
+      ! TODO: This interface currently doesn't work, probably because
+      ! of how we pass the 2D arrays...
+      !subroutine force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot) !bind(C)
+      !   use, intrinsic :: iso_c_binding
+      !   real(C_DOUBLE), intent(in) :: x(:, :), y(:, :), z(:, :)
+      !   real(C_DOUBLE), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
+      !   real(C_DOUBLE), intent(inout) :: eclas
+      !   integer(C_INT), intent(in) :: natom, walkmax, watpot
+      !end subroutine
+
    end interface
 
 end module mod_interfaces
-
