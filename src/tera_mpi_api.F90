@@ -30,10 +30,9 @@ module mod_terampi
    public :: handle_mpi_error, check_recv_count
    public :: get_tc_communicator
    public :: wait_for_terachem
-   public :: finalize_terachem
    public :: send_natom, send_atom_types_and_scrdir, send_coordinates
 #endif
-   public :: initialize_tc_servers, initialize_terachem_interface
+   public :: initialize_tc_servers, initialize_terachem_interface, finalize_terachem
    save
 
 contains
@@ -242,18 +241,23 @@ contains
 
    subroutine finalize_terachem(abin_error_code)
       integer, intent(in) :: abin_error_code
-      integer :: itera, ierr, empty
+      integer :: itera, ierr, empty, mpi_tag
 
-      ! Make sure we send MPI_TAG_EXIT to all servers.
+      ! To make sure we attempt to send MPI_TAG_EXIT to all servers,
+      ! we will ignore MPI errors.
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
+
+      mpi_tag = MPI_TAG_EXIT
+      if (abin_error_code /= 0) then
+         mpi_tag = MPI_TAG_ERROR
+      end if
+
       do itera = 1, nteraservers
 
          write (*, '(A,I0)') 'Shutting down TeraChem server id = ', itera
-         if (abin_error_code == 0) then
-            call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_EXIT, tc_comms(itera), ierr)
-         else
-            call MPI_Send(empty, 0, MPI_INTEGER, 0, MPI_TAG_ERROR, tc_comms(itera), ierr)
-         end if
+
+         call MPI_Send(empty, 0, MPI_INTEGER, 0, mpi_tag, tc_comms(itera), ierr)
+
          if (ierr /= MPI_SUCCESS) then
             write (*, '(A,I0)') 'MPI ERROR during shutdown of TeraChem server id = ', itera
             write (*, '(A)') 'Verify manually that the TeraChem server was terminated.'
@@ -445,6 +449,12 @@ contains
       write (*, *) 'TC_SERVER_NAME=', tc_server_name
       call not_compiled_with('MPI')
    end subroutine initialize_terachem_interface
+
+   ! This must be a no-op, since it is called from finish()
+   subroutine finalize_terachem(error_code)
+      integer, intent(in) :: error_code
+      print*,'Error code in finalize_terachem', error_code
+   end subroutine finalize_terachem
 
 ! USE_MPI
 #endif

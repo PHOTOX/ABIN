@@ -15,7 +15,8 @@ env:
   CODECOV_OPTIONS: -Z -X coveragepy -X xcode
 
   # FFLAGS for building ABIN, applicable for most jobs
-  ABIN_FFLAGS: -O0 -fopenmp -Wall --coverage -ffpe-trap=invalid,zero,overflow,denormal
+  ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
+  OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
 
 jobs:
 
@@ -83,7 +84,6 @@ jobs:
          gcc_v: [7, 9, 10]
     env:
       FC: gfortran
-      FFLAGS: -O3 -fopenmp -Wall
       GCC_V: ${{ matrix.gcc_v}}
 
     steps:
@@ -108,6 +108,8 @@ jobs:
 
     - name: build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ && make
+      env:
+        FFLAGS: ${{ env.OPTIMIZED_FFLAGS }}
 
     - name: Run Unit tests
       run: make unittest

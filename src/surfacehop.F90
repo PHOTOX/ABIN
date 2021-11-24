@@ -1014,6 +1014,7 @@ contains
    end subroutine interpolate_dot
 
    subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
+      use mod_interfaces, only: finish
       use mod_const, only: AUtoEV
       use mod_kinetic, only: ekin_v
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)

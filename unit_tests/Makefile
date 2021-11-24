@@ -12,7 +12,7 @@ ifneq ($(strip $(PFUNIT_PATH)),)
   include $(LATEST_PFUNIT_DIR)/include/PFUNIT.mk
   # TODO: Here we rewrite FFLAGS, but we should be reusing it
   # Need to figure out how to do test coverage separately
-  FFLAGS = $(PFUNIT_EXTRA_FFLAGS) -Wall -O0 -ffpe-trap=invalid,zero,overflow,denormal
+  FFLAGS = $(PFUNIT_EXTRA_FFLAGS) -Wall -Wno-maybe-uninitialized -O0 -ffpe-trap=invalid,zero,overflow,denormal
   FFLAGS += -I../src/
   FFLAGS += $(DFLAGS)
 endif
@@ -28,6 +28,13 @@ $(eval $(call make_pfunit_test,utils))
 
 utils_driver.o: throw_with_pfunit.o
 
+masses_TESTS := test_masses.pf
+masses_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+masses_OTHER_SRCS := throw_with_pfunit.F90
+masses_EXTRA_USE := throw_with_pfunit_mod
+masses_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,masses))
+
 plumed_TESTS := test_plumed.pf
 plumed_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
 plumed_OTHER_SRCS := throw_with_pfunit.F90
@@ -42,18 +49,19 @@ fftw_EXTRA_USE := throw_with_pfunit_mod
 fftw_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,fftw))
 
-all : utils plumed fftw
+all : utils masses plumed fftw
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
 
 test : clean_plumed_output
 	./utils
+	./masses
 	./plumed
 	./fftw
 
 clean : clean_plumed_output
-	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 utils plumed fftw
+	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 masses utils plumed fftw
 
 clean_plumed_output :
 	/bin/rm -f bck.* plumed_*.dat

@@ -57,6 +57,7 @@ contains
    end subroutine fatal_error
 
    subroutine print_error_and_stop(filename, line, message)
+      use mod_interfaces, only: finish
       character(*), intent(in) :: filename
       integer, intent(in) :: line
       character(*), intent(in) :: message
