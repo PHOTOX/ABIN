@@ -84,7 +84,7 @@ contains
 
       call send_atom_types_and_scrdir(names, natqm, iw, tc_comm, .true.)
 
-      call send_coordinates(x, y, z, natqm, iw, tc_comm)
+      call send_coordinates(x, y, z, natqm, iw, tc_comm, 'angstrom')
 
       ! NOT IMPLEMENTED !
       !if (natmm_tera > 0) then

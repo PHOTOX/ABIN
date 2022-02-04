@@ -294,7 +294,7 @@ contains
       call MPI_Send(bufdoubles, 1, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
-      call send_coordinates(x, y, z, natqm, iw, tc_comm)
+      call send_coordinates(x, y, z, natqm, iw, tc_comm, 'bohr')
 
 !  Send previous diabatic MOs
       if (idebug > 0) write (*, *) 'Sending previous orbitals.', nbf * nbf
@@ -361,7 +361,7 @@ contains
 
       call send_atom_types_and_scrdir(names, natqm, iw, tc_comm, send_scrdir)
 
-      call send_coordinates(x, y, z, natqm, iw, tc_comm)
+      call send_coordinates(x, y, z, natqm, iw, tc_comm, 'bohr')
 
       ! START RECEIVING INFO FROM TeraChem.
       ! Receive nbf, CI length and blob size
