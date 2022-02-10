@@ -135,9 +135,9 @@ check_running_processes() {
       running=$(ps -eo pid | egrep "$regex" | wc -l)
       if [[ $running -ne 0 ]];then
         echo "One of the TC servers or ABIN died. Killing the rest."
-	#echo "Printing ABIN and TC server outputs for debugging."
-	#echo "##################################################"
-        #cat ${ABINOUT}* ${TCOUT}*
+	echo "Printing ABIN and TC server outputs for debugging."
+	echo "##################################################"
+        cat ${ABINOUT}* ${TCOUT}*
       fi
       break
     fi
