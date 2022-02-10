@@ -28,8 +28,8 @@ module mod_sh
    integer :: substep = 100
    ! Controls calculations of Non-adiabatic Couplings (NAC)
    ! 0 - Analytical NAC
-   ! 1 - Numerical Hammers-Schffer-Tully model (currently deprecated)
-   ! 2 - Do not compute coupling
+   ! 1 - Numerical Hammers-Schffer-Tully model (currently not implemented)
+   ! 2 - Do not compute couplings
    integer :: inac = 0
    ! 1 - Turn OFF hopping
    integer :: nohop = 0

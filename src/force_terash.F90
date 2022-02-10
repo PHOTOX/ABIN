@@ -64,9 +64,7 @@ contains
       call wait_for_terachem(tc_comm)
 
 !  Receive energies from TC
-      if (idebug > 0) then
-         write (*, '(a)') 'Receiving energies from TC.'
-      end if
+      if (idebug > 0) write (*, '(a)') 'Receiving energies from TC.'
       ! DH WARNING this will only work if itrj = 1
       call MPI_Recv(en_array, nstate, MPI_DOUBLE_PRECISION, &
                     MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
@@ -147,15 +145,11 @@ contains
       call check_recv_count(status, blobsize, MPI_DOUBLE_PRECISION)
 
       ! TODO: Extract all this to a function.
-      if (idebug > 0) then
-         write (*, '(A)') 'Receiving gradients and NACME.'
-      end if
+      if (idebug > 0) write (*, '(A)') 'Receiving gradients and NACME.'
       do ist1 = 1, nstate
          do ist2 = ist1, nstate
 
-            if (idebug > 0) then
-               write (*, '(A,i0,i0)') 'Receiving derivatives between states ', ist1, ist2
-            end if
+            if (idebug > 0) write (*, '(A,i0,1X,i0)') 'Receiving derivatives between states ', ist1, ist2
 
             ! NOTE: We do not filter here based on tocalc because TC always sends the whole
             ! derivative matrix, including zero elements, see 'terachem/fms.cpp:'
@@ -250,6 +244,7 @@ contains
       bufints(11) = 0 ! first_call, not used
       bufints(12) = 0 ! FMSRestart, not used
 
+      if (idebug > 0) write (*, *) 'Sending surface hopping configuration.'
       call MPI_Send(bufints, 12, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
@@ -316,12 +311,11 @@ contains
       call MPI_Send(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
       ! Imaginary velocities for FMS, not needed here, sending zeros...
-      call MPI_SSend(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
+      if (idebug > 0) write (*, *) 'Sending imaginary velocities'
+      call MPI_Send(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
-      if (idebug > 0) then
-         write (*, *) 'Succesfully sent all data to TeraChem-FMS'
-      end if
+      if (idebug > 0) write (*, *) 'Succesfully sent all data to TeraChem-FMS'
    end subroutine send_terash
 
    subroutine init_terash(x, y, z)
@@ -355,16 +349,15 @@ contains
       bufints(3) = natmm_tera
       call MPI_SSend(bufints, 3, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
-      if (idebug > 0) then
-         write (*, '(a)') 'Sent initial FMSinit.'
-      end if
+      if (idebug > 0) write (*, '(a)') 'Sent initial FMSinit.'
 
       call send_atom_types_and_scrdir(names, natqm, iw, tc_comm, send_scrdir)
 
       call send_coordinates(x, y, z, natqm, iw, tc_comm, 'bohr')
 
-      ! START RECEIVING INFO FROM TeraChem.
+      ! Receive initial info TeraChem.
       ! Receive nbf, CI length and blob size
+      ! No energies or gradients yet.
       call MPI_Recv(bufints, 3, MPI_INTEGER, MPI_ANY_SOURCE, &
                     MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)

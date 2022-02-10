@@ -141,7 +141,8 @@ if [[ $TESTS = "all" ]];then
       folders[index]=TERAPI-REMD
       let index++
       folders[index]=TERAPI-FAILS
-      # TODO: Test SH-MPI interface with TC
+      let index++
+      folders[index]=TERAPI-SH-S0
    else
       let index=${#folders[@]}+1
       folders[index]=WITHOUT_MPI

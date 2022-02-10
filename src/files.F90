@@ -154,12 +154,12 @@ contains
          if (pot == '_tera_') then
             open (UCHARGES, file=chfiles(UCHARGES), access=chaccess, action='write')
             write (UCHARGES, *) '# Atomic charges from current electronic state'
-            write (UCHARGES, *) '# Time  st ', (names(i), i=1, natom)
+            write (UCHARGES, *) '# Time  state ', (names(i), i=1, natom)
             open (UDOTPRODCI, file=chfiles(UDOTPRODCI), access=chaccess, action='write')
             write (UDOTPRODCI, *) '# Dot products between current and previous CI vectors.'
             write (UDOTPRODCI, *) '# Time  cidotprod1  cidotprod2 ... '
             open (UDIP, file=chfiles(UDIP), access=chaccess, action='write')
-            write (UDIP, *) '# Time  dip_tot.1 dip_tot.2 ... dip_x.1 dip_y.1 dip_z.1 dip_x.2 dip_y.2 dip_z.2.'
+            write (UDIP, *) '# Time dip_tot.1 dip_tot.2 ... dip_x.1 dip_y.1 dip_z.1 dip_x.2 dip_y.2 dip_z.2.'
             open (UTDIP, file=chfiles(UTDIP), access=chaccess, action='write')
             write (UTDIP, *) '# Time  st  tdip_tot.1 tdip_tot.2 ... tdip_x.1 tdip_y.1 tdip_z.1 tdip_x.2 tdip_y.2 tdip_z.2.'
          end if
