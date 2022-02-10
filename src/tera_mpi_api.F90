@@ -408,22 +408,37 @@ contains
       call handle_mpi_error(ierr)
    end subroutine send_atom_types_and_scrdir
 
-   subroutine send_coordinates(x, y, z, num_atom, iw, tc_comm)
+   subroutine send_coordinates(x, y, z, num_atom, iw, tc_comm, units)
       use mod_general, only: idebug
       use mod_const, only: ANG
+      use mod_error, only: fatal_error
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: num_atom
       integer, intent(in) :: iw
       integer, intent(in) :: tc_comm
+      character(len=*), intent(in) :: units
       real(DP), allocatable :: coords(:, :)
       integer :: ierr, iat
 
       allocate (coords(3, num_atom))
-      do iat = 1, num_atom
-         coords(1, iat) = x(iat, iw) / ANG
-         coords(2, iat) = y(iat, iw) / ANG
-         coords(3, iat) = z(iat, iw) / ANG
-      end do
+
+      ! Amber MPI interface
+      if (units == 'angstrom') then
+         do iat = 1, num_atom
+            coords(1, iat) = x(iat, iw) / ANG
+            coords(2, iat) = y(iat, iw) / ANG
+            coords(3, iat) = z(iat, iw) / ANG
+         end do
+      ! FMS / Surface Hopping interface
+      else if (units == 'bohr') then
+         do iat = 1, num_atom
+            coords(1, iat) = x(iat, iw)
+            coords(2, iat) = y(iat, iw)
+            coords(3, iat) = z(iat, iw)
+         end do
+      else
+         call fatal_error(__FILE__, __LINE__, 'Incorrect units in send_coordinates')
+      end if
 
       if (idebug > 1) then
          write (6, '(A)') 'Sending QM coords: '
