@@ -597,26 +597,20 @@ int TCServerMock::fms_receive() {
 
   printf("Receiving previous MOs\n");
   // Receiving previous diabatic MOs
-  recvCount =  OldData_.nbf * OldData_.nbf;
-  // DH Hack for now
-  //MPI_Recv(bufdoubles, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
+  recvCount =  Data_.nbf * Data_.nbf;
   MPI_Recv(OldData_.MOs, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
 
   // Receiving previous CI vectors
   printf("Receiving previous CI vectors\n");
-  recvCount =  FMSNumStates * OldData_.nci;
-  // DH Hack for now
-  //MPI_Recv(bufdoubles, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
+  recvCount =  FMSNumStates * Data_.nci;
   MPI_Recv(OldData_.CIvecs, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
 
   printf("Receiving blob\n");
-  recvCount = OldData_.nblob;
-  // DH Hack for now
-  //MPI_Recv(bufdoubles, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
+  recvCount = Data_.nblob;
   MPI_Recv(OldData_.Blob, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
@@ -760,10 +754,10 @@ void TCServerMock::allocate_fms_data() {
   if (FMS_GAIMS)
     Data_.SOMat = TCTensor::double1D(18*FMSNumStates*FMSNumStates);
  
-  OldData_.MOs = TCTensor::double1D(OldData_.nbf * OldData_.nbf);
-  OldData_.CIvecs = TCTensor::double1D(FMSNumStates * OldData_.nci);
+  OldData_.MOs = TCTensor::double1D(Data_.nbf * Data_.nbf);
+  OldData_.CIvecs = TCTensor::double1D(FMSNumStates * Data_.nci);
   OldData_.SMatrix = TCTensor::double1D(FMSNumStates * FMSNumStates);
-  OldData_.Blob = TCTensor::double1D(OldData_.nblob);
+  OldData_.Blob = TCTensor::double1D(Data_.nblob);
 }
 
 void TCServerMock::populate_fms_data() {
@@ -831,4 +825,8 @@ void TCServerMock::populate_fms_data() {
     Data_.DerivMat[3*i+2 + offset] = gradients[3*i+2];
   }
   // TODO: Populate BLOB
+  Data_.CIvecs[0] = 1.0;
+  for (int i = 1; i < FMSNumStates * Data_.nci; i++) {
+    Data_.CIvecs[i] = 0.0;
+  }
 }

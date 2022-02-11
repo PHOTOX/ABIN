@@ -41,7 +41,7 @@ contains
       use mod_terampi, only: wait_for_terachem
       use mod_const, only: DP, ANG
       use mod_array_size, only: NSTMAX
-      use mod_general, only: idebug, natom, en_restraint, ipimd
+      use mod_general, only: idebug, natom, en_restraint, ipimd, it
       use mod_terampi, only: handle_mpi_error, check_recv_count
       use mod_qmmm, only: natqm
       use mod_utils, only: abinerror
@@ -134,7 +134,10 @@ contains
       call check_recv_count(status, nstate * nstate, MPI_DOUBLE_PRECISION)
 
       ! Should change the following according to what is done in TeraChem
-      i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
+      ! TODO: Make this nicer
+      if (it /= 0) then
+         i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
+      end if
 
       CIVecs_old = Civecs
 
