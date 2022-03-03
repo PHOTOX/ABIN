@@ -528,6 +528,7 @@ int TCServerMock::fms_receive() {
   FMS_.OldWfn = bufints[7];
   FMS_.iState = bufints[8];
   FMS_.jState = bufints[9];
+
   FMS_.FirstCall = bufints[10];
   FMS_.FMSRestart = bufints[11];
 
@@ -594,6 +595,7 @@ int TCServerMock::fms_receive() {
     coordinates[i] = bufdoubles[i];
     printf("%g ", bufdoubles[i]);
   }
+  printf("\n");
 
   printf("Receiving previous MOs\n");
   // Receiving previous diabatic MOs
@@ -601,6 +603,9 @@ int TCServerMock::fms_receive() {
   MPI_Recv(OldData_.MOs, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
+  if (FMS_.iCall != 0) {
+    check_array_equality(OldData_.MOs, Data_.MOs, Data_.nbf*Data_.nbf);
+  }
 
   // Receiving previous CI vectors
   printf("Receiving previous CI vectors\n");
@@ -608,12 +613,18 @@ int TCServerMock::fms_receive() {
   MPI_Recv(OldData_.CIvecs, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
+  if (FMS_.iCall != 0) {
+    check_array_equality(OldData_.CIvecs, Data_.CIvecs, FMSNumStates*Data_.nci);
+  }
 
   printf("Receiving blob\n");
   recvCount = Data_.nblob;
   MPI_Recv(OldData_.Blob, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
+  if (FMS_.iCall != 0) {
+    check_array_equality(OldData_.Blob, Data_.Blob, Data_.nblob);
+  }
 
   printf("Receiving real velocity vector for projected couplings\n");
   recvCount = FMS_.NAtoms * 3;
@@ -626,6 +637,8 @@ int TCServerMock::fms_receive() {
   MPI_Recv(bufdoubles, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
+
+  FMS_.iCall++;
 
   return tag;
 }
@@ -644,7 +657,6 @@ void TCServerMock::fms_send() {
   MPI_Send(Data_.Dip, 3*FMSNumStates, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client); 
 
   printf("Sending Partial Charges via MPI\n");
-  //MPI_Send(Data_.Chg, total_atoms, MPI_DOUBLE, 0, MPI_TAG_OK, abin_client);
   sendQMCharges();
 
   printf("Sending MOs via MPI.\n");
@@ -711,20 +723,23 @@ fms_data::~fms_data()
 }
 
 fms_directive::fms_directive() {
-  FMSInit=0;
-  NAtoms=0;
-  MMAtoms=0;
-  DoCoup=0;
-  TrajID=0;
-  Cent1=0;
-  Cent2=0;
-  StateID=0;
-  OldWfn=0;
-  iState=0;
-  jState=0;
-  FirstCall=0;
-  FMSRestart=0;
+  FMSInit = 0;
+  NAtoms = 0;
+  MMAtoms = 0;
+  DoCoup = 0;
+  TrajID = 0;
+  Cent1 = 0;
+  Cent2 = 0;
+  StateID = 0;
+  OldWfn = 0;
+  iState = 0;
+  jState = 0;
+  FirstCall = 0;
+  FMSRestart = 0;
   Derivs = NULL;
+  // DH: This one is extra here to actually keep track
+  // of how many times ABIN called us.
+  iCall = 0;
 }
 
 fms_directive::~fms_directive() {
@@ -763,18 +778,7 @@ void TCServerMock::allocate_fms_data() {
 void TCServerMock::populate_fms_data() {
   printf("Entering populate_fms_data\n");
 
-  if (!FMS_.OldWfn) { // No guess is available
-    //TODO
-  }
-  else {
-    // TODO
-  }
-
   double energy = getWaterGradients();
-
-  ////////////////////////////////////////////
-  // Load up the stuff FMS is going to want //
-  ////////////////////////////////////////////
 
   // Energies
   // For now just a constant shift between states
@@ -783,11 +787,8 @@ void TCServerMock::populate_fms_data() {
     Data_.Energy[i] = energy + i*energyShift;
   }
 
-  // Dipoles
-  for (int i=0; i<FMSNumStates; i++) {
-    Data_.Dip[i*3+0] = 0.0;
-    Data_.Dip[i*3+1] = 0.0;
-    Data_.Dip[i*3+2] = 0.0;
+  for (int i = 0; i < FMSNumStates * 3; i++) {
+    Data_.Dip[i] = 0.0;
   }
   // For now populate only S0 dipole moment, reuse stuff from Amber interface
   double DTotal = 0.0;
@@ -812,10 +813,20 @@ void TCServerMock::populate_fms_data() {
     }
   }
 
+  for (int i = 0, ij = 0; i < FMSNumStates; i++) {
+    for (int j = 0; j < FMSNumStates; j++, ij++) {
+      // Best case scenario for now
+      // ABIN is ignoring this at the moment anyway
+      if (i == j) {
+        Data_.SMatrix[ij] = 1.0;
+      } else {
+        Data_.SMatrix[ij] = 0.0;
+      }
+    }
+  }
+
   // TODO: Gradients/Couplings
   // For now just populate S0 gradient
-  //int istate = 0;
-  //int jstate = 0;
   int ij = 0;
   int total_atoms = FMS_.NAtoms + FMS_.MMAtoms;
   int offset = ij * 3 * total_atoms;
@@ -824,9 +835,37 @@ void TCServerMock::populate_fms_data() {
     Data_.DerivMat[3*i+1 + offset] = gradients[3*i+1];
     Data_.DerivMat[3*i+2 + offset] = gradients[3*i+2];
   }
-  // TODO: Populate BLOB
-  Data_.CIvecs[0] = 1.0;
-  for (int i = 1; i < FMSNumStates * Data_.nci; i++) {
+
+  populate_array(Data_.MOs, Data_.nbf * Data_.nbf, 2.5, FMS_.iCall * 2.0);
+  populate_array(Data_.Blob, Data_.nblob, 5.0, FMS_.iCall * 3.0);
+  //print_array(Data_.Blob, Data_.nblob);
+  //populate_array(Data_.CIvecs, FMSNumStates * Data_.nci, 1.0, FMS_.iCall * 4.0);
+  for (int i = 0; i < FMSNumStates * Data_.nci; i++) {
     Data_.CIvecs[i] = 0.0;
+  }
+  Data_.CIvecs[0] = 1.0;
+  Data_.CIvecs[Data_.nci + 1] = 1.0;
+  Data_.CIvecs[2 * Data_.nci + 2] = 1.0;
+}
+
+void TCServerMock::check_array_equality(double *A, double *B, int size) {
+  for (int i = 0; i < size; i++) {
+    if (A[i] != B[i]) {
+      printf("%g != %g\n", A[i], B[i]);
+      throw std::runtime_error("array validation failed");
+    }
+  }
+}
+
+void TCServerMock::print_array(double *A, int size) {
+  for (int i = 0; i < size; i++) {
+    printf("%g ", A[i]);
+  }
+  printf("\n");
+}
+
+void TCServerMock::populate_array(double *A, int size, double shift, double stride) {
+  for (int i = 0; i < size; i++) {
+    A[i] = shift + stride * i;
   }
 }

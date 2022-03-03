@@ -36,6 +36,7 @@ struct fms_directive {
   int FirstCall;
   int FMSRestart;
   bool* Derivs;
+  int iCall;
 
   fms_directive();
   ~fms_directive();
@@ -149,4 +150,8 @@ class TCServerMock {
     void validateScrDir(char*);
     void checkRecvCount(MPI_Status*, MPI_Datatype, int);
     void checkRecvTag(MPI_Status&);
+
+    void check_array_equality(double*, double*, int);
+    void populate_array(double*, int, double, double);
+    void print_array(double*, int);
 };
