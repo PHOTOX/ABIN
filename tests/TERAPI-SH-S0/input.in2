@@ -1,0 +1,43 @@
+NOTE: The reference files were actually created with
+pot='mmwater'
+TCServerMock uses the same qTIP4P potential,
+so now we are sure that all data are passed correctly.
+(Except for charges and dipoles, which are currently randomly
+assigned in tc_mpi_api.cpp)
+
+Here we use the FMS interface, but just run ground state S0,
+with two states in total.
+
+&general
+irest=1
+pot='_tera_'
+watpot=1
+mdtype='sh'
+nstep=2,
+dt=40.,
+irandom=13131313,
+
+nwrite=1,
+nwritef=1,
+nwritev=1,
+nwritex=1,
+nrest=1,
+idebug=3
+/
+
+&nhcopt
+inose=0,
+temp=0.0d0
+/
+
+&sh
+istate_init=1,		! initial electronic state
+nstate=3,		! number of electronic states
+deltaE=100.0,		! maximum energy difference [eV], for which we calculate NA coupling
+PopThr=0.001,           ! minimum population of either state, for which we compute NA coupling
+EnergyDifThr=0.50,      ! maximum energy difference between two consecutive steps
+EnergyDriftThr=0.50,    ! maximum energy drift from initial total energy
+substep=100,		! number of substeps for solving ESCH
+inac=2        ! Don't calculate NACME
+nohop=0       ! Turn off surface hopping
+/

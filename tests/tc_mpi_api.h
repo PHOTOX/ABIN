@@ -63,6 +63,7 @@ struct fms_data {
   double *CIvecs;
   double *SMatrix;
   double *Blob;
+  double sim_time;
 
   // GAIMS
   double* SOMat;
@@ -153,5 +154,6 @@ class TCServerMock {
 
     void check_array_equality(double*, double*, int);
     void populate_array(double*, int, double, double);
+    void populate_CIvecs(double*, int);
     void print_array(double*, int);
 };

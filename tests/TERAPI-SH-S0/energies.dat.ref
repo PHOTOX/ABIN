@@ -1,2 +1,4 @@
  #        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg
            0.97    0.5551215316E-03    0.2371941974E-03    0.7923157290E-03
+ #        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg
+           1.94    0.1650423312E-03    0.5838327493E-03    0.7488750806E-03

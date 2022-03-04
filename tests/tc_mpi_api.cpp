@@ -576,14 +576,12 @@ int TCServerMock::fms_receive() {
 
   printf("Running trajectory %d on State %d\n", FMS_.TrajID, FMS_.iState);
 
-  double sim_time = -999.0;
   recvCount = 1;
   MPI_Recv(bufdoubles, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus );
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
-  sim_time = bufdoubles[0];
-
-  printf("Simulation time: %16.3f\n", sim_time);
+  Data_.sim_time = bufdoubles[0];
+  printf("Simulation time: %16.3f\n", Data_.sim_time);
 
   // Receive QM coordinates from ABIN in Bohrs
   printf("Receiving coordinates from ABIN\n");
@@ -603,8 +601,12 @@ int TCServerMock::fms_receive() {
   MPI_Recv(OldData_.MOs, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
-  if (FMS_.iCall != 0) {
-    check_array_equality(OldData_.MOs, Data_.MOs, Data_.nbf*Data_.nbf);
+  if (FMS_.OldWfn == 1 && FMS_.iCall > 0) {
+    check_array_equality(OldData_.MOs, Data_.MOs, Data_.nbf * Data_.nbf);
+  }
+  if (FMS_.OldWfn == 1 && FMS_.iCall == 0) {
+    populate_array(Data_.MOs, Data_.nbf * Data_.nbf, 2.5, 2.0);
+    check_array_equality(OldData_.MOs, Data_.MOs, Data_.nbf * Data_.nbf);
   }
 
   // Receiving previous CI vectors
@@ -613,7 +615,10 @@ int TCServerMock::fms_receive() {
   MPI_Recv(OldData_.CIvecs, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
-  if (FMS_.iCall != 0) {
+  if (FMS_.OldWfn == 1 && FMS_.iCall > 0) {
+    check_array_equality(OldData_.CIvecs, Data_.CIvecs, FMSNumStates*Data_.nci);
+  } else  if (FMS_.OldWfn == 1 && FMS_.iCall == 0) {
+    populate_CIvecs(Data_.CIvecs, Data_.nci);
     check_array_equality(OldData_.CIvecs, Data_.CIvecs, FMSNumStates*Data_.nci);
   }
 
@@ -622,7 +627,10 @@ int TCServerMock::fms_receive() {
   MPI_Recv(OldData_.Blob, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
   checkRecvCount(&mpiStatus, MPI_DOUBLE, recvCount);
-  if (FMS_.iCall != 0) {
+  if (FMS_.OldWfn == 1 && FMS_.iCall > 0) {
+    check_array_equality(OldData_.Blob, Data_.Blob, Data_.nblob);
+  } else  if (FMS_.OldWfn == 1 && FMS_.iCall == 0) {
+    populate_array(Data_.Blob, Data_.nblob, 5.0, 3.0);
     check_array_equality(OldData_.Blob, Data_.Blob, Data_.nblob);
   }
 
@@ -705,6 +713,7 @@ fms_data::fms_data()
   Blob = NULL;
 
   SOMat = NULL; // GAIMS
+  sim_time = 0.0;
 }
 
 fms_data::~fms_data()
@@ -794,16 +803,14 @@ void TCServerMock::populate_fms_data() {
   double DTotal = 0.0;
   computeFakeQMDipoleMoment(Data_.Dip[0], Data_.Dip[1], Data_.Dip[2], DTotal);
 
-  // TODO: Transition Dipoles
   for (int i=0; i<FMSNumStates-1; i++) {
     // For now we only support singlets here.
     // if (FMS_Mults[i+1] == 1) {
     int FMS_Mults = 1;
     if (FMS_Mults == 1) {
-        // TODO: Make something up here.
-        Data_.TDip[i*3+0] = 0.0;
-        Data_.TDip[i*3+1] = 0.0;
-        Data_.TDip[i*3+2] = 0.0;
+        Data_.TDip[i*3+0] = i + 0.0;
+        Data_.TDip[i*3+1] = i + 1.0;
+        Data_.TDip[i*3+2] = i + 2.0;
     }
     // Assumes spin-pure states so singlet-triplet tdips are zero
     else {
@@ -836,16 +843,11 @@ void TCServerMock::populate_fms_data() {
     Data_.DerivMat[3*i+2 + offset] = gradients[3*i+2];
   }
 
-  populate_array(Data_.MOs, Data_.nbf * Data_.nbf, 2.5, FMS_.iCall * 2.0);
-  populate_array(Data_.Blob, Data_.nblob, 5.0, FMS_.iCall * 3.0);
-  //print_array(Data_.Blob, Data_.nblob);
-  //populate_array(Data_.CIvecs, FMSNumStates * Data_.nci, 1.0, FMS_.iCall * 4.0);
-  for (int i = 0; i < FMSNumStates * Data_.nci; i++) {
-    Data_.CIvecs[i] = 0.0;
-  }
-  Data_.CIvecs[0] = 1.0;
-  Data_.CIvecs[Data_.nci + 1] = 1.0;
-  Data_.CIvecs[2 * Data_.nci + 2] = 1.0;
+  // TODO: It would be great if the data arrays were different in different time steps,
+  // but it's tricky to get orking while also supporting restarting the simulation.
+  populate_array(Data_.MOs, Data_.nbf * Data_.nbf, 2.5, 2.0);
+  populate_array(Data_.Blob, Data_.nblob, 5.0, 3.0);
+  populate_CIvecs(Data_.CIvecs, Data_.nci);
 }
 
 void TCServerMock::check_array_equality(double *A, double *B, int size) {
@@ -868,4 +870,13 @@ void TCServerMock::populate_array(double *A, int size, double shift, double stri
   for (int i = 0; i < size; i++) {
     A[i] = shift + stride * i;
   }
+}
+
+void TCServerMock::populate_CIvecs(double *CIvecs, int nci) {
+  for (int i = 0; i < FMSNumStates * nci; i++) {
+    CIvecs[i] = 0.0;
+  }
+  CIvecs[0] = 1.0;
+  CIvecs[nci + 1] = 1.0;
+  CIvecs[2 * nci + 2] = 1.0;
 }

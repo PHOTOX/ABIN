@@ -1,12 +1,25 @@
 #/bin/bash
+
+# The goal here is to test various failure modes
+# and how TC and ABIN respond to them.
+
+# We're testing multiple things in this single test,
+# and we will be collecting ABIN and TC error messages
+# and compare them with the reference.
+# This is not a perfect approach, but let's see how it works.
+# Also, Codecov coverage will help us determine
+# that we have hit all the paths.
 set -euo pipefail
 
-ABINEXE=$1
+export ABINEXE=$1
+
 source ../test_tc_server_utils.sh
 
 set_default_vars
 set_mpich_vars
+
 # If $1 = "clean"; exit early.
+rm -f ${TCOUT}* ${ABINOUT}*
 if ! clean_output_files $1; then
   exit 0
 fi
@@ -14,28 +27,12 @@ fi
 # Exit early for OpenMPI build.
 check_for_openmpi
 
-# Compile the fake TC server.
-# TCSRC end TCEXE is defined in ../test_tc_server_utils.sh.
+# We relaunch the nameserver in each subtest
+# due to the bug in hydra_nameserver
+#launch_hydra_nameserver $MPICH_HYDRA
+
+# Compile default TC server
 $MPICXX $TCSRC -Wall -o $TCEXE
 
-launch_hydra_nameserver $MPICH_HYDRA
-
-MPIRUN="$MPIRUN -nameserver $HOSTNAME -n 1"
-
-TC_PORT="tcport.$$"
-ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM -M $TC_PORT"
-TC_CMD="./$TCEXE $TC_PORT.1"
-
-function cleanup {
-  kill -9 $tcpid $abinpid > /dev/null 2>&1 || true
-  exit 0
-}
-trap cleanup INT ABRT TERM EXIT
-
-$MPIRUN $TC_CMD > $TCOUT 2>&1 &
-tcpid=$!
-
-$MPIRUN $ABIN_CMD > $ABINOUT 2>&1 &
-abinpid=$!
-
-check_running_processes $abinpid $tcpid
+./test1.sh
+./test2.sh
