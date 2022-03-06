@@ -11,7 +11,7 @@ module mod_terampi_sh
    private
    public :: force_terash
    public :: init_terash, finalize_terash
-   public :: write_wfn, read_wfn, move_new2old_terash, move_old2new_terash
+   public :: write_wfn, read_wfn, move_new2old_terash
    real(DP), allocatable :: CIvecs(:, :), MO(:, :), blob(:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:, :), MO_old(:, :), blob_old(:)
    real(DP), allocatable :: SMatrix(:)
@@ -29,9 +29,9 @@ contains
       real(DP), intent(inout) :: eclas
       integer :: tc_comm
 
+      ! For SH always use only one TC server.
       tc_comm = get_tc_communicator(1)
 
-      ! For SH we use only one TC server.
       call send_terash(x, y, z, tc_comm)
 
       call receive_terash(fx, fy, fz, eclas, tc_comm)
@@ -63,7 +63,7 @@ contains
 
       call wait_for_terachem(tc_comm)
 
-!  Receive energies from TC
+      ! Receive energies from TC
       if (idebug > 0) write (*, '(a)') 'Receiving energies from TC.'
       ! DH WARNING this will only work if itrj = 1
       call MPI_Recv(en_array, nstate, MPI_DOUBLE_PRECISION, &
@@ -73,7 +73,7 @@ contains
 
       eclas = en_array(istate(itrj), itrj)
 
-      !Landau-Zener arrays
+      ! Landau-Zener arrays
       if (ipimd == 5) then
          !Move old energies by 1
          en_array_lz(:, 3) = en_array_lz(:, 2); 
@@ -87,16 +87,13 @@ contains
                     MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
       call check_recv_count(status, (nstate - 1) * 3, MPI_DOUBLE_PRECISION)
-!   do i=1, nstate-1
-!      T_FMS%ElecStruc%TransDipole(i+1,:)=TDip(3*(i-1)+1:3*(i-1)+3)
-!   end do
+
       ! TODO: these things should be printed in analysis.F90
       ! TODO: move charges and dipoles to array module and make them universal
       ! TODO: move TDIP to surface hopping module
       ! allow reading this stuff from other programs as well
       call print_transdipoles(TDip, istate(itrj), nstate - 1)
 
-!  Receive dipole moment from TC
       if (idebug > 0) write (*, '(a)') 'Receiving dipole moments from TC.'
       call MPI_Recv(Dip, nstate * 3, &
                     MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
@@ -105,7 +102,6 @@ contains
 
       call print_dipoles(Dip, iw, nstate)
 
-!  Receive partial charges from TC
       if (idebug > 0) write (*, '(a)') 'Receiving atomic charges from TC.'
       call MPI_Recv(qmcharges, natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
@@ -113,14 +109,11 @@ contains
 
       call print_charges(qmcharges, istate(itrj))
 
-!  Receive MOs from TC
       if (idebug > 0) write (*, '(a)') 'Receiving MOs from TC.'
       call MPI_Recv(MO, nbf * nbf, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
                     MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
       call check_recv_count(status, nbf * nbf, MPI_DOUBLE_PRECISION)
-
-!   T_FMS%ElecStruc%OldOrbitals=MO
 
       if (idebug > 0) write (*, '(a)') 'Receiving CI vectors from TC.'
       call MPI_Recv(CIvecs, nstate * civec, &
@@ -164,7 +157,7 @@ contains
             if (idebug > 0) write (*, *) (NAC(i), i=1, 3 * natom)
 
             ipom = 1
-            ! GRADIENTS
+            ! Gradients
             if (ist1 == ist2 .and. istate(itrj) == ist1) then
                do iat = 1, natom
                   fx(iat, iw) = -NAC(ipom)
@@ -395,12 +388,12 @@ contains
    end subroutine finalize_terash
 
    subroutine write_wfn()
-      use mod_files, only: UWFN
       use mod_general, only: it, sim_time, iremd, my_rank, narchive
       use mod_sh_integ, only: nstate
       use mod_utils, only: archive_file
       character(len=200) :: chout, chsystem
       logical :: file_exists
+      integer :: uwfn
 
       if (iremd == 1) then
          write (chout, '(A,I2.2)') 'wfn.bin.', my_rank
@@ -412,7 +405,7 @@ contains
       chsystem = 'mv '//trim(chout)//'  '//trim(chout)//'.old'
       if (file_exists) call system(chsystem)
 
-      open (UWFN, file=chout, action='WRITE', status="NEW", access="Sequential", form="UNFORMATTED")
+      open (newunit=UWFN, file=chout, action='WRITE', status="NEW", access="Sequential", form="UNFORMATTED")
 
       write (UWFN) it, sim_time
       write (UWFN) nbf
@@ -429,31 +422,31 @@ contains
    end subroutine write_wfn
 
    subroutine read_wfn()
-      use mod_files, only: UWFN
       use mod_general, only: iremd, my_rank, iknow, it
       use mod_chars, only: chknow
       use mod_utils, only: abinerror, archive_file
       use mod_sh_integ, only: nstate
-      character(len=200) :: chout
+      character(len=200) :: fname
       logical :: file_exists
       integer :: temp, temp2, time_step
+      integer :: uwfn
       real(DP) :: stime
 
       if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'wfn.bin.', my_rank
+         write (fname, '(A,I2.2)') 'wfn.bin.', my_rank
       else
-         chout = 'wfn.bin'
+         fname = 'wfn.bin'
       end if
 
-      inquire (FILE=chout, EXIST=file_exists)
+      inquire (FILE=fname, EXIST=file_exists)
       if (.not. file_exists) then
-         write (*, *) 'ERROR: wavefunction restart file does not exist! ', chout
+         write (*, *) 'ERROR: wavefunction restart file does not exist! ', fname
          write (*, *) chknow
          if (iknow /= 1) call abinerror('read_wfn')
          return
       end if
 
-      open (UWFN, file=chout, action='READ', status="OLD", access="Sequential", form="UNFORMATTED")
+      open (newunit=UWFN, file=fname, action='READ', status="OLD", access="Sequential", form="UNFORMATTED")
 
       read (UWFN) time_step, stime
       read (UWFN) temp
@@ -495,12 +488,6 @@ contains
       CIVecs_old = CIVecs
       blob_old = blob
    end subroutine move_new2old_terash
-
-   subroutine move_old2new_terash
-      MO = MO_old
-      CIVecs = CIVecs_old
-      blob = blob_old
-   end subroutine move_old2new_terash
 
 #ifndef USE_MPI
    subroutine init_terash(x, y, z)

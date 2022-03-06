@@ -23,7 +23,6 @@ module mod_files
    ! So far only for TeraChem
    integer, parameter :: UDOTPRODCI = 31, UCHARGES = 32
    integer, parameter :: UDIP = 33, UTDIP = 34
-   integer, parameter :: UWFN = 35 ! this one is not permanently opened
    ! Analysis output
    integer, parameter :: UDIST = 36, UANG = 37, UDIH = 38
    save

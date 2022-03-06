@@ -133,17 +133,14 @@ program abin
       it = it + 1
       do it = (it), nstep
 
-         ! TODO: Move this bit to a helper function check_for_exit()
 #ifdef USE_MPI
-         ! This is needed, because all ranks need to see fle EXIT
-         ! Maybe we should get rid of it for performance reasons
-         ! We could still call Abort from rank0, but we would not be sure that we are on
-         ! the same timestep. Does it matter??
+         ! This barrier is needed so that all MPI processes see the file 'EXIT'
+         ! if it is present (we delete it below before we stop the program).
          call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
          inquire (FILE="EXIT", EXIST=file_exists)
          if (file_exists) then
-            write (*, *) 'Found file EXIT. Exiting...'
+            print *, 'Found file EXIT. Writing restart file and exiting.'
             if (istage == 1) then
                call QtoX(vx, vy, vz, transxv, transyv, transzv)
                call QtoX(x, y, z, transx, transy, transz)
@@ -221,19 +218,15 @@ program abin
          end if
 #endif
 
-!--------------------SECTION of trajectory ANALYSIS
-! In order to analyze the output, we have to perform the back transformation
-! Transformed (cartesian) coordinates are stored in trans matrices.
-! DHmod-21.12.2012 enter this section only every ncalc step
+         ! --- Ttrajectory analysis ---
+         ! In order to analyze the output, we have to perform the back transformation
+         ! Transformed (cartesian) coordinates are stored in trans matrices.
 
-         ! maybe we should visit this section only when my_rank.eq.0
-         ! this would not be the case for REMD
-
+         ! Enter this section only every ncalc step
          if (modulo(it, ncalc) /= 0) then
             cycle
          end if
 
-         ! TODO: Move this call inside analysis() subroutine
          call temperature(px, py, pz, amt, eclas)
 
          if (istage == 1) then
@@ -282,7 +275,7 @@ program abin
          call restout(x, y, z, vx, vy, vz, it)
       end if
 
-      ! MINIMIZATION endif
+   ! minimization endif
    end if
 
    if (my_rank == 0) then
@@ -292,9 +285,6 @@ program abin
 
    call finish(0)
 
-   ! FINAL TIMING
-   ! TODO: Maybe we should print some statistics more often
-   ! i.e. hours per picosecond or sth like that
    if (my_rank == 0) then
       call cpu_time(total_cpu_time)
       write (*, '(A)') 'Total cpu time [s] (does not include ab initio calculations)'
