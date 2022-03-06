@@ -61,18 +61,21 @@ all : utils masses plumed fftw terapi
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
 
-test : clean_plumed_output
+test : clean_plumed_output clean_terapi_output
 	./utils
 	./masses
 	./plumed
 	./fftw
 	./terapi
 
-clean : clean_plumed_output
+clean : clean_plumed_output clean_terapi_output
 	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 masses utils plumed fftw terapi
 
 clean_plumed_output :
 	/bin/rm -f bck.* plumed_*.dat
+
+clean_terapi_output :
+	/bin/rm -f wfn.bin*
  
 .PHONY: clean test
 

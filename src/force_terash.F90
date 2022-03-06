@@ -12,6 +12,8 @@ module mod_terampi_sh
    public :: force_terash
    public :: init_terash, finalize_terash
    public :: write_wfn, read_wfn, move_new2old_terash
+   ! These are public for unit tests
+   public :: allocate_tc_arrays, set_blob_size, set_civec_size, set_nbf
    real(DP), allocatable :: CIvecs(:, :), MO(:, :), blob(:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:, :), MO_old(:, :), blob_old(:)
    real(DP), allocatable :: SMatrix(:)
@@ -356,12 +358,52 @@ contains
                     MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
 
-      civec = bufints(1)
-      nbf = bufints(2)
-      blobsize = bufints(3)
+      call set_civec_size(bufints(1))
+      call set_nbf(bufints(2))
+      call set_blob_size(bufints(3))
 
-      write (*, *) 'size of CI vector, number of AOs, blob size:', CiVec, nbf, blobsize
+      print*, 'size of CI vector, number of AOs, blob size:', bufints(1), bufints(2), bufints(3)
+      call allocate_tc_arrays(nstate, natom)
+   end subroutine init_terash
+! USE_MPI
+#endif
 
+   subroutine set_civec_size(n)
+      use mod_error, only: fatal_error
+      integer, intent(in) :: n
+      if (n <= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'invalid array size in set_civec_size')
+         return
+      end if
+      civec = n
+   end subroutine set_civec_size
+
+   subroutine set_blob_size(n)
+      use mod_error, only: fatal_error
+      integer, intent(in) :: n
+      if (n <= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'invalid array size in set_blob_size')
+         return
+      end if
+      blobsize = n
+   end subroutine set_blob_size
+
+   subroutine set_nbf(n)
+      use mod_error, only: fatal_error
+      integer, intent(in) :: n
+      if (n <= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'invalid array size in set_nbf')
+         return
+      end if
+      nbf = n
+   end subroutine set_nbf
+
+   subroutine allocate_tc_arrays(nstate, natom)
+      integer, intent(in) :: nstate
+      integer, intent(in) :: natom
       allocate (MO(nbf, nbf))
       allocate (MO_old(nbf, nbf))
       allocate (CiVecs(civec, nstate))
@@ -370,12 +412,15 @@ contains
       allocate (blob(blobsize))
       allocate (blob_old(blobsize))
       allocate (SMatrix(nstate * nstate))
+      MO = 0.0D0
+      MO_old = 0.0D0
+      CIVecs = 0.0D0
+      CIVecs_old = 0.0D0
       blob = 0.0D0
       blob_old = 0.0D0
-   end subroutine init_terash
-
-! USE_MPI
-#endif
+      SMatrix = 0.0D0
+      NAC = 0.0D0
+   end subroutine allocate_tc_arrays
 
    subroutine finalize_terash()
       if (allocated(MO)) then
@@ -387,99 +432,103 @@ contains
    end subroutine finalize_terash
 
    subroutine write_wfn()
-      use mod_general, only: it, sim_time, iremd, my_rank, narchive
+      use mod_general, only: it, sim_time, narchive
       use mod_sh_integ, only: nstate
       use mod_utils, only: archive_file
-      character(len=200) :: chout, chsystem
+      character(len=*), parameter :: fname='wfn.bin'
       logical :: file_exists
       integer :: uwfn
 
-      if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'wfn.bin.', my_rank
-      else
-         chout = 'wfn.bin'
+      inquire (FILE=fname, EXIST=file_exists)
+      if (file_exists) then
+         call system('mv '//fname//' '//fname//'.old')
       end if
 
-      inquire (FILE=chout, EXIST=file_exists)
-      chsystem = 'mv '//trim(chout)//'  '//trim(chout)//'.old'
-      if (file_exists) call system(chsystem)
+      open (newunit=uwfn, file=fname, action='write', status="new", access="sequential", form="unformatted")
 
-      open (newunit=UWFN, file=chout, action='WRITE', status="NEW", access="Sequential", form="UNFORMATTED")
+      write (uwfn) it, sim_time
+      write (uwfn) nbf
+      write (uwfn) MO
+      write (uwfn) civec, nstate
+      write (uwfn) Civecs
+      write (uwfn) blobsize
+      write (uwfn) blob
 
-      write (UWFN) it, sim_time
-      write (UWFN) nbf
-      write (UWFN) MO
-      write (UWFN) civec, nstate
-      write (UWFN) Civecs
-      write (UWFN) blobsize
-      write (UWFN) blob
+      close (uwfn)
 
-      close (UWFN)
-
-      if (modulo(it, narchive) == 0) call archive_file('wfn.bin', it)
-
+      if (modulo(it, narchive) == 0) then
+         call archive_file('wfn.bin', it)
+      end if
    end subroutine write_wfn
 
    subroutine read_wfn()
-      use mod_general, only: iremd, my_rank, iknow, it
+      use mod_general, only: iknow, it
       use mod_chars, only: chknow
-      use mod_utils, only: abinerror, archive_file
+      use mod_error, only: fatal_error
+      use mod_utils, only: archive_file
       use mod_sh_integ, only: nstate
-      character(len=200) :: fname
+      character(len=*), parameter :: fname='wfn.bin'
       logical :: file_exists
       integer :: temp, temp2, time_step
       integer :: uwfn
       real(DP) :: stime
 
-      if (iremd == 1) then
-         write (fname, '(A,I2.2)') 'wfn.bin.', my_rank
-      else
-         fname = 'wfn.bin'
-      end if
-
-      inquire (FILE=fname, EXIST=file_exists)
+      inquire (file=fname, exist=file_exists)
       if (.not. file_exists) then
-         write (*, *) 'ERROR: wavefunction restart file does not exist! ', fname
-         write (*, *) chknow
-         if (iknow /= 1) call abinerror('read_wfn')
+         close (uwfn)
+         print*, 'ERROR: Wavefunction restart file '//trim(fname)//' does not exist!'
+         if (iknow /= 1) then
+            print*, chknow
+            call fatal_error(__FILE__, __LINE__, &
+               & 'missing restart file '//trim(fname))
+         end if
          return
       end if
 
-      open (newunit=UWFN, file=fname, action='READ', status="OLD", access="Sequential", form="UNFORMATTED")
+      open (newunit=uwfn, file=fname, action='read', status="old", access="sequential", form="unformatted")
 
-      read (UWFN) time_step, stime
-      read (UWFN) temp
+      read (uwfn) time_step, stime
+      read (uwfn) temp
       if (temp /= nbf) then
-         write (*, *) 'ERROR: Number of MOs in restart file is inconsistent!'
-         GO TO 10
+         close (uwfn)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Number of MOs in restart file '//trim(fname)//' is inconsistent')
+         return
       end if
-      read (UWFN) MO
-      read (UWFN) temp, temp2
-      if (temp /= civec .or. temp2 /= nstate) then
-         write (*, *) 'ERROR: Number and/or size of the CI vectors in restart file is inconsistent!'
-         GO TO 10
-      end if
-      read (UWFN) CIVecs
-      read (UWFN) temp
-      if (temp /= blobsize) then
-         write (*, *) 'ERROR: Size of blob in restart file is inconsistent!'
-         GO TO 10
-      end if
-      read (UWFN) blob
 
-      close (UWFN)
+      read (uwfn) MO
+
+      read (uwfn) temp, temp2
+      if (temp /= civec) then
+         close (uwfn)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Size of CI vectors in restart file '//trim(fname)// ' is inconsistent')
+         return
+      end if
+      if (temp2 /= nstate) then
+         close (uwfn)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Number of states in restart file '//trim(fname)// ' is inconsistent')
+         return
+      end if
+
+      read (uwfn) CIVecs
+
+      read (uwfn) temp
+      if (temp /= blobsize) then
+         close (uwfn)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Size of blob in restart file '//trim(fname)//' is inconsistent')
+         return
+      end if
+
+      read (uwfn) blob
+
+      close (uwfn)
 
       call move_new2old_terash()
       oldWFN = 1
       call archive_file('wfn.bin', it)
-
-      return
-
-10    close (UWFN)
-      write (*, *) 'If you want to proceed, delete file "wfn.bin" and then...'
-      write (*, *) chknow
-      call abinerror('read_wfn')
-
    end subroutine read_wfn
 
    subroutine move_new2old_terash
