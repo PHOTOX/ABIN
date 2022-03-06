@@ -22,7 +22,6 @@ contains
 
 #ifdef USE_MPI
    subroutine force_terash(x, y, z, fx, fy, fz, eclas)
-      use mod_const, only: DP
       use mod_terampi, only: get_tc_communicator
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)

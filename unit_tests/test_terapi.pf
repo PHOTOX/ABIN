@@ -1,0 +1,36 @@
+! Testing functions from mod_plumed,
+! defined in plumed.F90
+module test_terapi
+   use funit
+   use mod_const, only: DP
+   use mod_terampi
+   use mod_terampi_sh
+   implicit none
+   integer, parameter :: NATOMS = 2, NBEADS = 1
+   real(DP) :: x(NATOMS, NBEADS), y(NATOMS, NBEADS), z(NATOMS, NBEADS)
+   real(DP) :: fx(NATOMS, NBEADS), fy(NATOMS, NBEADS), fz(NATOMS, NBEADS)
+   save
+
+contains
+
+#ifndef USE_MPI
+
+   @test(ifndef=USE_MPI)
+   subroutine test_not_compiled_with_mpi()
+      real(DP) :: eclas
+
+      call initialize_tc_servers()
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+
+      call initialize_terachem_interface('dummy')
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+
+      call init_terash(x, y, z)
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+
+      call force_terash(x, y, z, fx, fy, fz, eclas)
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+   end subroutine test_not_compiled_with_mpi
+
+#endif
+end module test_terapi

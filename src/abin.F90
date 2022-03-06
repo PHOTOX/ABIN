@@ -140,7 +140,7 @@ program abin
 #endif
          inquire (FILE="EXIT", EXIST=file_exists)
          if (file_exists) then
-            print *, 'Found file EXIT. Writing restart file and exiting.'
+            print*,'Found file EXIT. Writing restart file and exiting.'
             if (istage == 1) then
                call QtoX(vx, vy, vz, transxv, transyv, transzv)
                call QtoX(x, y, z, transx, transy, transz)
@@ -275,7 +275,7 @@ program abin
          call restout(x, y, z, vx, vy, vz, it)
       end if
 
-   ! minimization endif
+      ! minimization endif
    end if
 
    if (my_rank == 0) then

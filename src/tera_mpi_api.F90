@@ -429,7 +429,7 @@ contains
             coords(2, iat) = y(iat, iw) / ANG
             coords(3, iat) = z(iat, iw) / ANG
          end do
-      ! FMS / Surface Hopping interface
+         ! FMS / Surface Hopping interface
       else if (units == 'bohr') then
          do iat = 1, num_atom
             coords(1, iat) = x(iat, iw)
