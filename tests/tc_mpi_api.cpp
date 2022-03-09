@@ -466,21 +466,12 @@ int TCServerMock::fmsinit_receive()
 
   allocate_fms_data();
 
-  // Set up basis set on first call from ABIN
   printf("Receiving atom types from ABIN\n");
   receiveAtomTypes();
-  // atom types - these are stored with two characters each in the bufchars character array
-  /*
-  MPI_Recv(bufchars, MAX_DATA, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
-  checkRecvTag(mpiStatus);
-  if (strlen(bufchars) < (NAtoms + MMAtoms) * 2) {
-     throw std::runtime_error("did not receive atom types");
-  }
-  */
 
   // Receive first QM coordinates from ABIN
   // We don't actually need to do anythin with them here,
-  // in TC this is just to get initial WF, but nothing is passed back to ABIN, see fmsinit_send()
+  // in TC this is just to get initial WF, but only metadata are passed back to ABIN, see fmsinit_send()
   printf("Receiving coordinates from ABIN\n");
   recvCount = (FMS_.NAtoms + FMS_.MMAtoms) * 3;
   MPI_Recv(bufdoubles, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
@@ -495,7 +486,6 @@ int TCServerMock::fmsinit_receive()
 
 void TCServerMock::fmsinit_send() {
   // This this gets sent after the first receive from ABIN`
-  // TODO: Figure out where to hold all this data
   bufints[0] = Data_.nci;
   bufints[1] = Data_.nbf;
   bufints[2] = Data_.nblob;
@@ -558,7 +548,7 @@ int TCServerMock::fms_receive() {
   }
 
   // Work out which derivatives we need
-  // DH for Surface Hopping in ABIN, TrajID==0
+  // For Surface Hopping in ABIN, TrajID==0
   if (FMS_.TrajID == 0) {
     printf("Receive derivative matrix logic from ABIN\n");
     recvCount = FMSNumStates * (FMSNumStates-1)/2 + FMSNumStates;
@@ -583,8 +573,7 @@ int TCServerMock::fms_receive() {
   Data_.sim_time = bufdoubles[0];
   printf("Simulation time: %16.3f\n", Data_.sim_time);
 
-  // Receive QM coordinates from ABIN in Bohrs
-  printf("Receiving coordinates from ABIN\n");
+  printf("Receiving coordinates from ABIN in Bohrs\n");
   recvCount = FMS_.NAtoms * 3;
   MPI_Recv(bufdoubles, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
@@ -595,8 +584,8 @@ int TCServerMock::fms_receive() {
   }
   printf("\n");
 
-  printf("Receiving previous MOs\n");
   // Receiving previous diabatic MOs
+  printf("Receiving previous MOs\n");
   recvCount =  Data_.nbf * Data_.nbf;
   MPI_Recv(OldData_.MOs, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
   checkRecvTag(mpiStatus);
@@ -609,7 +598,6 @@ int TCServerMock::fms_receive() {
     check_array_equality(OldData_.MOs, Data_.MOs, Data_.nbf * Data_.nbf);
   }
 
-  // Receiving previous CI vectors
   printf("Receiving previous CI vectors\n");
   recvCount =  FMSNumStates * Data_.nci;
   MPI_Recv(OldData_.CIvecs, recvCount, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, abin_client, &mpiStatus);
@@ -822,7 +810,7 @@ void TCServerMock::populate_fms_data() {
 
   for (int i = 0, ij = 0; i < FMSNumStates; i++) {
     for (int j = 0; j < FMSNumStates; j++, ij++) {
-      // Best case scenario for now
+      // Best case scenario for now, perfect overlap between wavefuntions
       // ABIN is ignoring this at the moment anyway
       if (i == j) {
         Data_.SMatrix[ij] = 1.0;
@@ -844,7 +832,7 @@ void TCServerMock::populate_fms_data() {
   }
 
   // TODO: It would be great if the data arrays were different in different time steps,
-  // but it's tricky to get orking while also supporting restarting the simulation.
+  // but it's tricky to get working while also supporting restarting the simulation.
   populate_array(Data_.MOs, Data_.nbf * Data_.nbf, 2.5, 2.0);
   populate_array(Data_.Blob, Data_.nblob, 5.0, 3.0);
   populate_CIvecs(Data_.CIvecs, Data_.nci);

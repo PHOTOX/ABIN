@@ -152,8 +152,8 @@ class TCServerMock {
     void checkRecvCount(MPI_Status*, MPI_Datatype, int);
     void checkRecvTag(MPI_Status&);
 
-    void check_array_equality(double*, double*, int);
     void populate_array(double*, int, double, double);
     void populate_CIvecs(double*, int);
+    void check_array_equality(double*, double*, int);
     void print_array(double*, int);
 };
