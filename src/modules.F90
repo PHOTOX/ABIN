@@ -31,9 +31,9 @@ module mod_general
    ! PIMD parameters, staging transformation, number of beads, NM transform
    integer :: istage = 0, nwalk = 1, inormalmodes = 0
    ! Ab-initio potential
-   character(len=15) :: pot = '_none_'
+   character(len=100) :: pot = '_none_'
    ! Reference potential for a multiple time step propagator
-   character(len=15) :: pot_ref = '_none_'
+   character(len=100) :: pot_ref = '_none_'
    ! imini keyword is mostly deprecated
    integer :: imini = 0
    ! number of time steps (length of simulation)
@@ -48,7 +48,7 @@ module mod_general
    integer :: ncalc = 1
    ! How often do we print restart file and how often do we archive it
    integer :: nrest = 1, narchive = 10000
-   ! Restart switch
+   ! Restart switch, 1 = restart simulation
    integer :: irest = 0
    integer :: icv = 0, anal_ext = 0, idebug = 0
    integer :: ihess

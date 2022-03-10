@@ -1,52 +1,51 @@
-!  Various analytical potentials
-!  Now including harmonic potential for diatomic molecule, 3D-harmonic and Morse
-!  For all these, hessian is also available.
+! Various analytical potentials:
+! - one particle in harmonic potential well
+! - two-particle harmonic rotor
+! - two particles bound by Morse potential
+! - one particle in a 2D double well potential
+!   (originally used for testing PLUMED interface,
+!    see MSc thesis of Jirka Suchan)
 
-!  Includes double-well potential, originaly used for testing PLUMED.
-!
-!  Parameters should be set in input section 'system'
+! Parameters are set in input section 'system'
 
-module mod_harmon
+module mod_potentials
    use mod_const, only: DP
    implicit none
-!--some constansts for analytical potentials
-!--constants for 3DHO
-   real(DP) :: k1 = 0.0D0, k2 = 0.0D0, k3 = 0.0D0
-!--constants for 1D 2-particle harmonic oscillator
+   ! some constansts for analytical potentials
+   ! constants particle in 3D harmonic oscillator
+   real(DP) :: kx = 0.0D0, ky = 0.0D0, kz = 0.0D0
+   ! constants for 2-particle harmonic oscillator
    real(DP) :: k = 0.000D0, r0 = 0.0D0
-!--constants for double well
+   ! constants for double well
    real(DP) :: lambda_dw = 0.0D0, D0_dw = 0.0D0, k_dw, r0_dw
-!--CONSTANTS for morse potential ccc
-!  V=De*(1-exp(-a(r-r0)))^2
-   real(DP) :: De = 0.059167D0, a = -1.0D0
+   ! Dissociation energy constant for Morse potential
+   real(DP) :: dissociation_energy = 1.0D0
+   ! Array holding the hessian matrix
+   ! TODO: Should probably be elsewhere with other global arrays
    real(DP), allocatable :: hess(:, :, :)
    save
 contains
 
-!------3D Harmonic Oscillator---only 1 particle!!
-   ! TODO: Rename this function to force_harmonic_oscillator()
-   subroutine force_2dho(x, y, z, fxab, fyab, fzab, eclas)
+   ! 1 particle in a 3D harmonic potential
+   subroutine force_harmonic_oscillator(x, y, z, fxab, fyab, fzab, eclas)
       use mod_general, only: nwalk
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: fxab(:, :), fyab(:, :), fzab(:, :)
       real(DP), intent(out) :: eclas
-      real(DP) :: energy
       integer :: iw
 
       eclas = 0.0D0
-      energy = 0.0D0
       do iw = 1, nwalk
-         fxab(1, iw) = -k1 * x(1, iw)
-         fyab(1, iw) = -k2 * y(1, iw)
-         fzab(1, iw) = -k3 * z(1, iw)
-         energy = energy + 0.5D0 * k1 * x(1, iw)**2 + 0.5D0 * k2 * y(1, iw)**2
-         energy = energy + 0.5D0 * k3 * z(1, iw)**2
+         fxab(1, iw) = -kx * x(1, iw)
+         fyab(1, iw) = -ky * y(1, iw)
+         fzab(1, iw) = -kz * z(1, iw)
+         eclas = eclas + 0.5D0 * (kx * x(1, iw)**2 + &
+                                & ky * y(1, iw)**2 + &
+                                & kz * z(1, iw)**2)
       end do
 
-      eclas = energy / nwalk
-
-      return
-   end subroutine force_2dho
+      eclas = eclas / nwalk
+   end subroutine force_harmonic_oscillator
 
    ! 2D DOUBLE WELL potential
    ! According to: Tuckerman, Statistical Mechanics, page 350
@@ -70,12 +69,11 @@ contains
 
    end subroutine force_doublewell
 
-!ccccccccHARMONIC OSCILLATOR--diatomic molecules--ccccccccccccccccccccc
-   ! TODO: Rename this, name should be distiguishable from force_2dho
-   subroutine force_harmon(x, y, z, fxab, fyab, fzab, eclas)
+   ! Diatomic molecule bound by harmonic potential
+   subroutine force_harmonic_rotor(x, y, z, fx, fy, fz, eclas)
       use mod_general, only: nwalk
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-      real(DP), intent(out) :: fxab(:, :), fyab(:, :), fzab(:, :)
+      real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(out) :: eclas
       real(DP) :: dx, dy, dz, r, fac
       integer :: i
@@ -89,18 +87,19 @@ contains
          r = dx**2 + dy**2 + dz**2
          r = dsqrt(r)
          fac = k * (r - r0) / r
-         fxab(1, i) = fac * dx
-         fxab(2, i) = -fxab(1, i)
-         fyab(1, i) = fac * dy
-         fyab(2, i) = -fyab(1, i)
-         fzab(1, i) = fac * dz
-         fzab(2, i) = -fzab(1, i)
-         eclas = eclas + 0.5D0 * k * (r - r0)**2 / nwalk
+         fx(1, i) = fac * dx
+         fx(2, i) = -fx(1, i)
+         fy(1, i) = fac * dy
+         fy(2, i) = -fy(1, i)
+         fz(1, i) = fac * dz
+         fz(2, i) = -fz(1, i)
+         eclas = eclas + 0.5D0 * k * (r - r0)**2
       end do
 
-   end subroutine force_harmon
+      eclas = eclas / nwalk
+   end subroutine force_harmonic_rotor
 
-   subroutine hess_harmon(x, y, z)
+   subroutine hessian_harmonic_rotor(x, y, z)
       use mod_general, only: nwalk
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP) :: dx, dy, dz, r, fac
@@ -142,24 +141,25 @@ contains
             end do
          end do
 
-!     nwalk enddo
       end do
+   end subroutine hessian_harmonic_rotor
 
-   end subroutine hess_harmon
-
-   subroutine force_morse(x, y, z, fxab, fyab, fzab, eclas)
+   ! Morse potential between two particles in 3D
+   ! V = DE * (1 - exp(-a*(r-r0)) )^2
+   ! where DE is dissociation energy and
+   ! parameter 'a' is linked to the harmonic constant as
+   ! a = sqrt( k / 2 / de)
+   ! Here we actually use the harmonic constant as an input parameter.
+   subroutine force_morse(x, y, z, fx, fy, fz, eclas)
       use mod_general, only: nwalk
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-      real(DP), intent(out) :: fxab(:, :), fyab(:, :), fzab(:, :)
+      real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(out) :: eclas
       real(DP) :: dx, dy, dz, r, fac, ex
+      real(DP) :: a
       integer :: i
 
-!cccccccc  V=De*(1-exp(-a(r-r0)))^2
-!NOT REALLY SURE about a
-!if it is not set from input, we determine it from k(normaly used for
-!harmon osciallator)
-      if (a <= 0) a = dsqrt(k / 2 / De)
+      a = dsqrt(k / 2.0D0 / dissociation_energy)
 
       eclas = 0.0D0
 
@@ -170,26 +170,28 @@ contains
          r = dx**2 + dy**2 + dz**2
          r = dsqrt(r)
          ex = exp(-a * (r - r0))
-         fac = 2 * a * ex * De * (1 - ex) / r
-         fxab(1, i) = fac * dx
-         fxab(2, i) = -fxab(1, i)
-         fyab(1, i) = fac * dy
-         fyab(2, i) = -fyab(1, i)
-         fzab(1, i) = fac * dz
-         fzab(2, i) = -fzab(1, i)
-         eclas = eclas + De * (1 - ex)**2 / nwalk
+         fac = 2 * a * ex * dissociation_energy * (1 - ex) / r
+         fx(1, i) = fac * dx
+         fx(2, i) = -fx(1, i)
+         fy(1, i) = fac * dy
+         fy(2, i) = -fy(1, i)
+         fz(1, i) = fac * dz
+         fz(2, i) = -fz(1, i)
+         eclas = eclas + dissociation_energy * (1 - ex)**2
       end do
+
+      eclas = eclas / nwalk
 
    end subroutine force_morse
 
-   subroutine hess_morse(x, y, z)
+   subroutine hessian_morse(x, y, z)
       use mod_general, only: nwalk
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP) :: dx, dy, dz, r, fac, ex, fac2
+      real(DP) :: a
       integer :: i, ipom1, ipom2
 
-!NOT REALLY SURE about a
-      a = dsqrt(k / 2 / De)
+      a = dsqrt(k / 2 / dissociation_energy)
 
       do i = 1, nwalk
 
@@ -199,8 +201,8 @@ contains
          r = dx**2 + dy**2 + dz**2
          r = dsqrt(r)
          ex = exp(-a * (r - r0))
-         fac = 2 * a * ex * De * (1 - ex) / r
-         fac2 = 2 * De * a**2 * ex**2 / r**2
+         fac = 2 * a * ex * dissociation_energy * (1 - ex) / r
+         fac2 = 2 * dissociation_energy * a**2 * ex**2 / r**2
          hess(1, 1, i) = fac2 * dx**2 - (fac * dx**2) / r**2 + fac - fac * a * dx**2 / r
          hess(2, 2, i) = fac2 * dy**2 - (fac * dy**2) / r**2 + fac - fac * a * dy**2 / r
          hess(3, 3, i) = fac2 * dz**2 - (fac * dz**2) / r**2 + fac - fac * a * dz**2 / r
@@ -234,20 +236,20 @@ contains
             end do
          end do
 
-!     nwalk enddo
       end do
 
-   end subroutine hess_morse
+   end subroutine hessian_morse
 
-   !theoretically only needs to be called once, but nah
-   subroutine hess_2dho()
+   ! This hessian is constant, so theoretically only needs
+   ! to be called once, but we're callling it each step anyway for now.
+   subroutine hessian_harmonic_oscillator()
       use mod_general, only: nwalk
       integer :: i
 
       do i = 1, nwalk
-         hess(1, 1, i) = k1 / nwalk
-         hess(2, 2, i) = k2 / nwalk
-         hess(3, 3, i) = k3 / nwalk
+         hess(1, 1, i) = kx / nwalk
+         hess(2, 2, i) = ky / nwalk
+         hess(3, 3, i) = kz / nwalk
          hess(2, 1, i) = 0.0D0
          hess(3, 1, i) = 0.0D0
          hess(3, 2, i) = 0.0D0
@@ -255,10 +257,9 @@ contains
          hess(1, 3, i) = 0.0D0
          hess(2, 3, i) = 0.0D0
       end do
+   end subroutine hessian_harmonic_oscillator
 
-   end subroutine hess_2dho
-
-end module mod_harmon
+end module mod_potentials
 
 ! 1D numerical potential with cubic splines
 module mod_splined_grid

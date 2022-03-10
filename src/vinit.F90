@@ -66,7 +66,7 @@ contains
 
          end do
 
-         if (pot == '2dho') then
+         if (pot == '_harmonic_oscillator_') then
             vx(1, iw) = 0.0D0
             vy(1, iw) = 0.0D0
             vz(1, iw) = 0.0D0

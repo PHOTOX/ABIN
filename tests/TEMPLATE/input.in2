@@ -1,0 +1,20 @@
+&general
+irest=1,		! should we restart from restart.xyz?
+pot='mmwater'		! water force-field
+mdtype='MD',		! classical MD
+
+dt=20.,			! number of steps and timestep
+nstep=2,
+irandom=131313,  	! random seed
+
+nwrite=1,
+nwritex=1,
+nrest=1,
+nwritef=1,
+idebug=1,
+/
+
+&nhcopt
+inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [Kelvins]
+/

@@ -1,8 +1,9 @@
 ! Simple subroutine for calculation of
-! Coulomb na Lennard-Jones forces and energies
+! Coulomb and Lennard-Jones forces and energies
 
-! Currently, this module does not really support QMMM,
+! Currently, this module does not support QMMM,
 ! Instead we can only do pure MM with LJ and Coulomb potential
+! This is invoked via pot='mm'
 module mod_force_mm
    use mod_const, only: DP
    use mod_array_size, only: MAXTYPES
