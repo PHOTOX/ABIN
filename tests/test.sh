@@ -225,14 +225,14 @@ do
 
    else
       if [[ -f "velocities.in" ]];then
-         $ABINEXE -v "velocities.in" > $ABINOUT || true
+         $ABINEXE -v "velocities.in" > $ABINOUT 2>&1 || true
       else
-         $ABINEXE > $ABINOUT || true
+         $ABINEXE > $ABINOUT 2>&1 || true
       fi
 
       #for testing restart
       if [[ -e input.in2 ]];then
-         $ABINEXE -i input.in2 >> $ABINOUT || true
+         $ABINEXE -i input.in2 >> $ABINOUT 2>&1 || true
       fi
    fi
 
