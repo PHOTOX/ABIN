@@ -21,6 +21,7 @@ nwritef=1,
 nwritev=1,
 nwritex=1,
 nrest=1,
+narchive=1
 idebug=3
 /
 
