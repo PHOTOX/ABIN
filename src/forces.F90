@@ -221,7 +221,7 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
    real(DP), intent(in) :: amg(:, :)
    real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
    real(DP), intent(out) :: energy
-   real(DP) :: ak(size(x, 1), size(x, 2))
+   real(DP), allocatable :: ak(:, :)
    real(DP) :: equant
    integer :: i, j, kplus, kminus
 
@@ -232,6 +232,7 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
 !  TODO: we should not calculate ak params each step...
 !  Setting the quantum force constants
 !  ak is defined is m*P/(beta^2*hbar^2)
+   allocate (ak(natom, nwalk))
    do j = 1, nwalk
       do i = 1, natom
          ak(i, j) = nwalk * amg(i, j) * TEMP**2
@@ -295,6 +296,7 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
       end do
    end if
 
+   deallocate (ak)
    energy = equant
 
    if (idebug == 1) then

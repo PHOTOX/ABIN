@@ -1,11 +1,6 @@
-This is a sample input file for ABIN 
-NOTE: order of input sections matters!!
-
 &general
 nstep=20,
 irest=1,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
-idebug=0
-iknow=0
 
 pot='mmwater'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
 ipimd=1,		!classical simulation 0, quantum simulation 1
@@ -20,15 +15,6 @@ nabin=60,		! what is the gap between ab initio calculations?
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?
 nrest=1,		! how often we print restart files?
-
-isbc=0,			! spherical boundary conditions
-rb_sbc=10.9d0,              ! radius of the cluster for sbc
-kb_sbc=0.1d0,		! force constant for spherical potential,in A
-
-icv=0,			! do we compute heat capacities? meaningfull only with hessian
-ihess=0,		! do we have hessian?
-anal_ext=0,		! do we call user-defined function analyze_ext?
-natom=3,		!number of atoms
 /
 
 &nhcopt
