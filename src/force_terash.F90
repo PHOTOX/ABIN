@@ -362,7 +362,7 @@ contains
       call set_nbf(bufints(2))
       call set_blob_size(bufints(3))
 
-      print*, 'size of CI vector, number of AOs, blob size:', bufints(1), bufints(2), bufints(3)
+      print*,'size of CI vector, number of AOs, blob size:', bufints(1), bufints(2), bufints(3)
       call allocate_tc_arrays(nstate, natom)
    end subroutine init_terash
 ! USE_MPI
@@ -435,7 +435,7 @@ contains
       use mod_general, only: it, sim_time, narchive
       use mod_sh_integ, only: nstate
       use mod_utils, only: archive_file
-      character(len=*), parameter :: fname='wfn.bin'
+      character(len=*), parameter :: fname = 'wfn.bin'
       logical :: file_exists
       integer :: uwfn
 
@@ -467,7 +467,7 @@ contains
       use mod_error, only: fatal_error
       use mod_utils, only: archive_file
       use mod_sh_integ, only: nstate
-      character(len=*), parameter :: fname='wfn.bin'
+      character(len=*), parameter :: fname = 'wfn.bin'
       logical :: file_exists
       integer :: temp, temp2, time_step
       integer :: uwfn
@@ -476,9 +476,9 @@ contains
       inquire (file=fname, exist=file_exists)
       if (.not. file_exists) then
          close (uwfn)
-         print*, 'ERROR: Wavefunction restart file '//trim(fname)//' does not exist!'
+         print*,'ERROR: Wavefunction restart file '//trim(fname)//' does not exist!'
          if (iknow /= 1) then
-            print*, chknow
+            print*,chknow
             call fatal_error(__FILE__, __LINE__, &
                & 'missing restart file '//trim(fname))
          end if
@@ -502,13 +502,13 @@ contains
       if (temp /= civec) then
          close (uwfn)
          call fatal_error(__FILE__, __LINE__, &
-            & 'Size of CI vectors in restart file '//trim(fname)// ' is inconsistent')
+            & 'Size of CI vectors in restart file '//trim(fname)//' is inconsistent')
          return
       end if
       if (temp2 /= nstate) then
          close (uwfn)
          call fatal_error(__FILE__, __LINE__, &
-            & 'Number of states in restart file '//trim(fname)// ' is inconsistent')
+            & 'Number of states in restart file '//trim(fname)//' is inconsistent')
          return
       end if
 
