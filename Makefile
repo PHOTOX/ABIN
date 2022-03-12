@@ -1,21 +1,16 @@
-# Super simple Makefile for ABIN
+# Makefile for ABIN
 
 # The user-defined variables are included from file "make.vars',
 # which is not under version control
 # No user modification to this Makefile file should be necessary.
 
-# Simply type "make" and you should get the binary named $BIN
+# Type "make" and you should get the binary named src/$BIN as defined in make.vars
 # Before recompiling, it is wise to clean up by "make clean"
 
 # WARNING: dependecies on *.mod files are not properly resolved here!
 # If you change modules, you should recompile the whole thing by running
 # $ make clean && make
 
-# For compilation with static system libraries, see:
-# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=46539
-
-# Set defaults, likely to be overwritten in make.vars
- 
 # By default run all end-to-end tests in tests/
 TEST=all
 # ABIN binary name
@@ -74,8 +69,6 @@ ifeq  ($(strip $(MPI)),TRUE)
 endif
 
 LIBS += -lm -lstdc++
-# The following line for statically linking GFortran libs does not seem to work
-#LIBS := ${LIBS} -static-libgfortran -Wl,-Bstatic -lstdc++ -lm -Wl,-Bdynamic  
 
 # This is the default target
 ${BIN} :

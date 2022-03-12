@@ -8,6 +8,7 @@ bck.*
 masses
 utils
 plumed
+terapi
 plumed.out
 fftw
 plumed_*.dat

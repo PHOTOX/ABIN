@@ -1,15 +1,12 @@
-# ABIN TEST SUITE
+# ABIN END-TO-END TEST SUITE
 
-META-TODO: write a readme for this test suit,
-especially how to write new tests
+This folder contains high level integration (end-to-end) tests.
+Each test runs a short simulation, and output files are compared to the reference.
+Run the tests from root folder `make test`
+
+Unit tests are in `../unit_tests/`
+
+TODO: document how to write new tests.
 
 TODO: document, what exactly each test is testing
 
-Effectively, these are all high level integration tests.
-It would be nice to have unit tests as well.
-
-### Missing tests
-
-- test for spline potential
-- test for MM potential
-- tests for Landau-Zener SH

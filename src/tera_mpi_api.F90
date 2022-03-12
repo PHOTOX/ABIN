@@ -429,7 +429,7 @@ contains
             coords(2, iat) = y(iat, iw) / ANG
             coords(3, iat) = z(iat, iw) / ANG
          end do
-      ! FMS / Surface Hopping interface
+         ! FMS / Surface Hopping interface
       else if (units == 'bohr') then
          do iat = 1, num_atom
             coords(1, iat) = x(iat, iw)
@@ -461,14 +461,16 @@ contains
    subroutine initialize_terachem_interface(tc_server_name)
       use mod_utils, only: not_compiled_with
       character(len=*), intent(in) :: tc_server_name
-      write (*, *) 'TC_SERVER_NAME=', tc_server_name
+      character(len=len(tc_server_name)) :: dummy
+      dummy = tc_server_name
       call not_compiled_with('MPI')
    end subroutine initialize_terachem_interface
 
    ! This must be a no-op, since it is called from finish()
    subroutine finalize_terachem(error_code)
       integer, intent(in) :: error_code
-      print*,'Error code in finalize_terachem', error_code
+      integer :: i
+      i = error_code
    end subroutine finalize_terachem
 
 ! USE_MPI

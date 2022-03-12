@@ -11,7 +11,9 @@ module mod_terampi_sh
    private
    public :: force_terash
    public :: init_terash, finalize_terash
-   public :: write_wfn, read_wfn, move_new2old_terash, move_old2new_terash
+   public :: write_wfn, read_wfn, move_new2old_terash
+   ! These are public for unit tests
+   public :: allocate_tc_arrays, set_blob_size, set_civec_size, set_nbf
    real(DP), allocatable :: CIvecs(:, :), MO(:, :), blob(:), NAC(:)
    real(DP), allocatable :: CIvecs_old(:, :), MO_old(:, :), blob_old(:)
    real(DP), allocatable :: SMatrix(:)
@@ -22,16 +24,15 @@ contains
 
 #ifdef USE_MPI
    subroutine force_terash(x, y, z, fx, fy, fz, eclas)
-      use mod_const, only: DP
       use mod_terampi, only: get_tc_communicator
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
       integer :: tc_comm
 
+      ! For SH always use only one TC server.
       tc_comm = get_tc_communicator(1)
 
-      ! For SH we use only one TC server.
       call send_terash(x, y, z, tc_comm)
 
       call receive_terash(fx, fy, fz, eclas, tc_comm)
@@ -63,10 +64,8 @@ contains
 
       call wait_for_terachem(tc_comm)
 
-!  Receive energies from TC
-      if (idebug > 0) then
-         write (*, '(a)') 'Receiving energies from TC.'
-      end if
+      ! Receive energies from TC
+      if (idebug > 0) write (*, '(a)') 'Receiving energies from TC.'
       ! DH WARNING this will only work if itrj = 1
       call MPI_Recv(en_array, nstate, MPI_DOUBLE_PRECISION, &
                     MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
@@ -75,7 +74,7 @@ contains
 
       eclas = en_array(istate(itrj), itrj)
 
-      !Landau-Zener arrays
+      ! Landau-Zener arrays
       if (ipimd == 5) then
          !Move old energies by 1
          en_array_lz(:, 3) = en_array_lz(:, 2); 
@@ -89,16 +88,13 @@ contains
                     MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
       call check_recv_count(status, (nstate - 1) * 3, MPI_DOUBLE_PRECISION)
-!   do i=1, nstate-1
-!      T_FMS%ElecStruc%TransDipole(i+1,:)=TDip(3*(i-1)+1:3*(i-1)+3)
-!   end do
+
       ! TODO: these things should be printed in analysis.F90
       ! TODO: move charges and dipoles to array module and make them universal
       ! TODO: move TDIP to surface hopping module
       ! allow reading this stuff from other programs as well
       call print_transdipoles(TDip, istate(itrj), nstate - 1)
 
-!  Receive dipole moment from TC
       if (idebug > 0) write (*, '(a)') 'Receiving dipole moments from TC.'
       call MPI_Recv(Dip, nstate * 3, &
                     MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
@@ -107,7 +103,6 @@ contains
 
       call print_dipoles(Dip, iw, nstate)
 
-!  Receive partial charges from TC
       if (idebug > 0) write (*, '(a)') 'Receiving atomic charges from TC.'
       call MPI_Recv(qmcharges, natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
@@ -115,14 +110,11 @@ contains
 
       call print_charges(qmcharges, istate(itrj))
 
-!  Receive MOs from TC
       if (idebug > 0) write (*, '(a)') 'Receiving MOs from TC.'
       call MPI_Recv(MO, nbf * nbf, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
                     MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
       call check_recv_count(status, nbf * nbf, MPI_DOUBLE_PRECISION)
-
-!   T_FMS%ElecStruc%OldOrbitals=MO
 
       if (idebug > 0) write (*, '(a)') 'Receiving CI vectors from TC.'
       call MPI_Recv(CIvecs, nstate * civec, &
@@ -136,7 +128,9 @@ contains
       call check_recv_count(status, nstate * nstate, MPI_DOUBLE_PRECISION)
 
       ! Should change the following according to what is done in TeraChem
-      i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
+      if (oldwfn /= 0) then
+         i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
+      end if
 
       CIVecs_old = Civecs
 
@@ -147,15 +141,11 @@ contains
       call check_recv_count(status, blobsize, MPI_DOUBLE_PRECISION)
 
       ! TODO: Extract all this to a function.
-      if (idebug > 0) then
-         write (*, '(A)') 'Receiving gradients and NACME.'
-      end if
+      if (idebug > 0) write (*, '(A)') 'Receiving gradients and NACME.'
       do ist1 = 1, nstate
          do ist2 = ist1, nstate
 
-            if (idebug > 0) then
-               write (*, '(A,i0,i0)') 'Receiving derivatives between states ', ist1, ist2
-            end if
+            if (idebug > 0) write (*, '(A,i0,1X,i0)') 'Receiving derivatives between states ', ist1, ist2
 
             ! NOTE: We do not filter here based on tocalc because TC always sends the whole
             ! derivative matrix, including zero elements, see 'terachem/fms.cpp:'
@@ -168,7 +158,7 @@ contains
             if (idebug > 0) write (*, *) (NAC(i), i=1, 3 * natom)
 
             ipom = 1
-            ! GRADIENTS
+            ! Gradients
             if (ist1 == ist2 .and. istate(itrj) == ist1) then
                do iat = 1, natom
                   fx(iat, iw) = -NAC(ipom)
@@ -250,6 +240,7 @@ contains
       bufints(11) = 0 ! first_call, not used
       bufints(12) = 0 ! FMSRestart, not used
 
+      if (idebug > 0) write (*, *) 'Sending surface hopping configuration.'
       call MPI_Send(bufints, 12, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
@@ -296,12 +287,12 @@ contains
 
       call send_coordinates(x, y, z, natqm, iw, tc_comm, 'bohr')
 
-!  Send previous diabatic MOs
+      ! Send previous diabatic MOs
       if (idebug > 0) write (*, *) 'Sending previous orbitals.', nbf * nbf
       call MPI_Send(MO, nbf * nbf, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
-!  Send previous CI vecs
+      ! Send previous CI vecs
       if (idebug > 0) write (*, *) 'Sending CI vector of size ', civec * nstate
       call MPI_Send(CIvecs, civec * nstate, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
@@ -316,12 +307,11 @@ contains
       call MPI_Send(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
       ! Imaginary velocities for FMS, not needed here, sending zeros...
-      call MPI_SSend(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
+      if (idebug > 0) write (*, *) 'Sending imaginary velocities'
+      call MPI_Send(vels, 3 * natom, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
-      if (idebug > 0) then
-         write (*, *) 'Succesfully sent all data to TeraChem-FMS'
-      end if
+      if (idebug > 0) write (*, *) 'Succesfully sent all data to TeraChem-FMS'
    end subroutine send_terash
 
    subroutine init_terash(x, y, z)
@@ -355,26 +345,65 @@ contains
       bufints(3) = natmm_tera
       call MPI_SSend(bufints, 3, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
-      if (idebug > 0) then
-         write (*, '(a)') 'Sent initial FMSinit.'
-      end if
+      if (idebug > 0) write (*, '(a)') 'Sent initial FMSinit.'
 
       call send_atom_types_and_scrdir(names, natqm, iw, tc_comm, send_scrdir)
 
       call send_coordinates(x, y, z, natqm, iw, tc_comm, 'bohr')
 
-      ! START RECEIVING INFO FROM TeraChem.
+      ! Receive initial info TeraChem.
       ! Receive nbf, CI length and blob size
+      ! No energies or gradients yet.
       call MPI_Recv(bufints, 3, MPI_INTEGER, MPI_ANY_SOURCE, &
                     MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
 
-      civec = bufints(1)
-      nbf = bufints(2)
-      blobsize = bufints(3)
+      call set_civec_size(bufints(1))
+      call set_nbf(bufints(2))
+      call set_blob_size(bufints(3))
 
-      write (*, *) 'size of CI vector, number of AOs, blob size:', CiVec, nbf, blobsize
+      print*,'size of CI vector, number of AOs, blob size:', bufints(1), bufints(2), bufints(3)
+      call allocate_tc_arrays(nstate, natom)
+   end subroutine init_terash
+! USE_MPI
+#endif
 
+   subroutine set_civec_size(n)
+      use mod_error, only: fatal_error
+      integer, intent(in) :: n
+      if (n <= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'invalid array size in set_civec_size')
+         return
+      end if
+      civec = n
+   end subroutine set_civec_size
+
+   subroutine set_blob_size(n)
+      use mod_error, only: fatal_error
+      integer, intent(in) :: n
+      if (n <= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'invalid array size in set_blob_size')
+         return
+      end if
+      blobsize = n
+   end subroutine set_blob_size
+
+   subroutine set_nbf(n)
+      use mod_error, only: fatal_error
+      integer, intent(in) :: n
+      if (n <= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'invalid array size in set_nbf')
+         return
+      end if
+      nbf = n
+   end subroutine set_nbf
+
+   subroutine allocate_tc_arrays(nstate, natom)
+      integer, intent(in) :: nstate
+      integer, intent(in) :: natom
       allocate (MO(nbf, nbf))
       allocate (MO_old(nbf, nbf))
       allocate (CiVecs(civec, nstate))
@@ -383,12 +412,15 @@ contains
       allocate (blob(blobsize))
       allocate (blob_old(blobsize))
       allocate (SMatrix(nstate * nstate))
+      MO = 0.0D0
+      MO_old = 0.0D0
+      CIVecs = 0.0D0
+      CIVecs_old = 0.0D0
       blob = 0.0D0
       blob_old = 0.0D0
-   end subroutine init_terash
-
-! USE_MPI
-#endif
+      SMatrix = 0.0D0
+      NAC = 0.0D0
+   end subroutine allocate_tc_arrays
 
    subroutine finalize_terash()
       if (allocated(MO)) then
@@ -400,98 +432,103 @@ contains
    end subroutine finalize_terash
 
    subroutine write_wfn()
-      use mod_files, only: UWFN
-      use mod_general, only: it, sim_time, iremd, my_rank, narchive
+      use mod_general, only: it, sim_time, narchive
       use mod_sh_integ, only: nstate
       use mod_utils, only: archive_file
-      character(len=200) :: chout, chsystem
+      character(len=*), parameter :: fname = 'wfn.bin'
       logical :: file_exists
+      integer :: uwfn
 
-      if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'wfn.bin.', my_rank
-      else
-         chout = 'wfn.bin'
+      inquire (FILE=fname, EXIST=file_exists)
+      if (file_exists) then
+         call system('mv '//fname//' '//fname//'.old')
       end if
 
-      inquire (FILE=chout, EXIST=file_exists)
-      chsystem = 'mv '//trim(chout)//'  '//trim(chout)//'.old'
-      if (file_exists) call system(chsystem)
+      open (newunit=uwfn, file=fname, action='write', status="new", access="sequential", form="unformatted")
 
-      open (UWFN, file=chout, action='WRITE', status="NEW", access="Sequential", form="UNFORMATTED")
+      write (uwfn) it, sim_time
+      write (uwfn) nbf
+      write (uwfn) MO
+      write (uwfn) civec, nstate
+      write (uwfn) Civecs
+      write (uwfn) blobsize
+      write (uwfn) blob
 
-      write (UWFN) it, sim_time
-      write (UWFN) nbf
-      write (UWFN) MO
-      write (UWFN) civec, nstate
-      write (UWFN) Civecs
-      write (UWFN) blobsize
-      write (UWFN) blob
+      close (uwfn)
 
-      close (UWFN)
-
-      if (modulo(it, narchive) == 0) call archive_file('wfn.bin', it)
-
+      if (modulo(it, narchive) == 0) then
+         call archive_file('wfn.bin', it)
+      end if
    end subroutine write_wfn
 
    subroutine read_wfn()
-      use mod_files, only: UWFN
-      use mod_general, only: iremd, my_rank, iknow, it
+      use mod_general, only: iknow, it
       use mod_chars, only: chknow
-      use mod_utils, only: abinerror, archive_file
+      use mod_error, only: fatal_error
+      use mod_utils, only: archive_file
       use mod_sh_integ, only: nstate
-      character(len=200) :: chout
+      character(len=*), parameter :: fname = 'wfn.bin'
       logical :: file_exists
       integer :: temp, temp2, time_step
+      integer :: uwfn
       real(DP) :: stime
 
-      if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'wfn.bin.', my_rank
-      else
-         chout = 'wfn.bin'
-      end if
-
-      inquire (FILE=chout, EXIST=file_exists)
+      inquire (file=fname, exist=file_exists)
       if (.not. file_exists) then
-         write (*, *) 'ERROR: wavefunction restart file does not exist! ', chout
-         write (*, *) chknow
-         if (iknow /= 1) call abinerror('read_wfn')
+         close (uwfn)
+         print*,'ERROR: Wavefunction restart file '//trim(fname)//' does not exist!'
+         if (iknow /= 1) then
+            print*,chknow
+            call fatal_error(__FILE__, __LINE__, &
+               & 'missing restart file '//trim(fname))
+         end if
          return
       end if
 
-      open (UWFN, file=chout, action='READ', status="OLD", access="Sequential", form="UNFORMATTED")
+      open (newunit=uwfn, file=fname, action='read', status="old", access="sequential", form="unformatted")
 
-      read (UWFN) time_step, stime
-      read (UWFN) temp
+      read (uwfn) time_step, stime
+      read (uwfn) temp
       if (temp /= nbf) then
-         write (*, *) 'ERROR: Number of MOs in restart file is inconsistent!'
-         GO TO 10
+         close (uwfn)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Number of MOs in restart file '//trim(fname)//' is inconsistent')
+         return
       end if
-      read (UWFN) MO
-      read (UWFN) temp, temp2
-      if (temp /= civec .or. temp2 /= nstate) then
-         write (*, *) 'ERROR: Number and/or size of the CI vectors in restart file is inconsistent!'
-         GO TO 10
+
+      read (uwfn) MO
+
+      read (uwfn) temp, temp2
+      if (temp /= civec) then
+         close (uwfn)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Size of CI vectors in restart file '//trim(fname)//' is inconsistent')
+         return
       end if
-      read (UWFN) CIVecs
-      read (UWFN) temp
+      if (temp2 /= nstate) then
+         close (uwfn)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Number of states in restart file '//trim(fname)//' is inconsistent')
+         return
+      end if
+
+      read (uwfn) CIVecs
+
+      read (uwfn) temp
       if (temp /= blobsize) then
-         write (*, *) 'ERROR: Size of blob in restart file is inconsistent!'
-         GO TO 10
+         close (uwfn)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Size of blob in restart file '//trim(fname)//' is inconsistent')
+         return
       end if
-      read (UWFN) blob
 
-      close (UWFN)
+      read (uwfn) blob
 
+      close (uwfn)
+
+      call move_new2old_terash()
       oldWFN = 1
       call archive_file('wfn.bin', it)
-
-      return
-
-10    close (UWFN)
-      write (*, *) 'If you want to proceed, delete file "wfn.bin" and then...'
-      write (*, *) chknow
-      call abinerror('read_wfn')
-
    end subroutine read_wfn
 
    subroutine move_new2old_terash
@@ -499,12 +536,6 @@ contains
       CIVecs_old = CIVecs
       blob_old = blob
    end subroutine move_new2old_terash
-
-   subroutine move_old2new_terash
-      MO = MO_old
-      CIVecs = CIVecs_old
-      blob = blob_old
-   end subroutine move_old2new_terash
 
 #ifndef USE_MPI
    subroutine init_terash(x, y, z)

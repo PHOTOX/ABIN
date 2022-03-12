@@ -19,6 +19,59 @@
 
 #define MPI_TAG_SCF_DIED 1
 
+// What does FMS want us to do?
+// Store all the stuff sent by FMS
+struct fms_directive {
+  int FMSInit;
+  int NAtoms;
+  int MMAtoms;
+  int DoCoup;
+  int TrajID;
+  int Cent1;
+  int Cent2;
+  int StateID;
+  int OldWfn;
+  int iState;
+  int jState;
+  int FirstCall;
+  int FMSRestart;
+  bool* Derivs;
+  int iCall;
+
+  fms_directive();
+  ~fms_directive();
+};
+
+// All data that FMS/ABIN wants
+struct fms_data {
+  // Sizing
+  // DH: Not sure why natoms is here, it's also in fms_directive
+  // int natoms;
+  int nbf;
+  int nci;
+  int nblob;
+
+  // State information
+  double *Energy;
+  double *Dip;
+  double *TDip;
+  double *Chg;
+  double *DerivMat;
+
+  // Electronic structure info
+  double *MOs;
+  double *CIvecs;
+  double *SMatrix;
+  double *Blob;
+  double sim_time;
+
+  // GAIMS
+  double* SOMat;
+
+  fms_data();
+  ~fms_data();
+};
+
 class TCServerMock {
   public:
     TCServerMock(char *);
@@ -48,6 +101,20 @@ class TCServerMock {
     void sendQMDipoleMoment();
     void sendQMGradients();
 
+    // FMS Interface
+    int fmsinit_receive();
+    void fmsinit_send();
+    int fms_receive();
+    void fms_send();
+
+    void allocate_fms_data();
+    void populate_fms_data();
+
+    // Unfortunately, the number of FMS/SH states are given in TC input,
+    // NOT via MPI interface. So we have no way to pass this from ABIN directly.
+    // As a workaround, this value needs to be set manually in tc_server.cpp
+    int FMSNumStates;
+
     MPI_Comm* getABINCommunicator();
 
   private:
@@ -64,6 +131,11 @@ class TCServerMock {
     double *gradients;
     double *coordinates;
 
+    // FMS / Surface Hopping stuff
+    fms_data Data_;
+    fms_data OldData_;
+    fms_directive FMS_;
+
     MPI_Comm abin_client;
     MPI_Status mpiStatus;
 
@@ -79,4 +151,9 @@ class TCServerMock {
     void validateScrDir(char*);
     void checkRecvCount(MPI_Status*, MPI_Datatype, int);
     void checkRecvTag(MPI_Status&);
+
+    void populate_array(double*, int, double, double);
+    void populate_CIvecs(double*, int);
+    void check_array_equality(double*, double*, int);
+    void print_array(double*, int);
 };

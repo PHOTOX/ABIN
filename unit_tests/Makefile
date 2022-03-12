@@ -42,6 +42,13 @@ plumed_EXTRA_USE := throw_with_pfunit_mod
 plumed_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,plumed))
 
+terapi_TESTS := test_terapi.pf
+terapi_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+terapi_OTHER_SRCS := throw_with_pfunit.F90
+terapi_EXTRA_USE := throw_with_pfunit_mod
+terapi_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,terapi))
+
 fftw_TESTS := test_fftw.pf
 fftw_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
 fftw_OTHER_SRCS := throw_with_pfunit.F90
@@ -49,22 +56,26 @@ fftw_EXTRA_USE := throw_with_pfunit_mod
 fftw_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,fftw))
 
-all : utils masses plumed fftw
+all : utils masses plumed fftw terapi
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
 
-test : clean_plumed_output
+test : clean_plumed_output clean_terapi_output
 	./utils
 	./masses
 	./plumed
 	./fftw
+	./terapi
 
-clean : clean_plumed_output
-	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 masses utils plumed fftw
+clean : clean_plumed_output clean_terapi_output
+	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 masses utils plumed fftw terapi
 
 clean_plumed_output :
 	/bin/rm -f bck.* plumed_*.dat
+
+clean_terapi_output :
+	/bin/rm -f wfn.bin*
  
 .PHONY: clean test
 

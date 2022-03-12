@@ -213,8 +213,12 @@ contains
       logical :: file_exists
       character(len=200) :: chout, chsystem, chformat
 
-      if (pot == '_tera_' .and. ipimd == 2) call write_wfn()
-      if (pot == '_tera_' .and. ipimd == 5) call write_wfn()
+      if (pot == '_tera_' .and. ipimd == 2) then
+         call write_wfn()
+      end if
+      if (pot == '_tera_' .and. ipimd == 5) then
+         call write_wfn()
+      end if
 
       if (iremd == 1) then
          write (chout, '(A,I2.2)') 'restart.xyz.', my_rank
@@ -477,8 +481,12 @@ contains
 
       close (111)
 
-      if (pot == '_tera_' .and. ipimd == 2) call read_wfn()
-      if (pot == '_tera_' .and. ipimd == 5) call read_wfn()
+      if (pot == '_tera_' .and. ipimd == 2) then
+         call read_wfn()
+      end if
+      if (pot == '_tera_' .and. ipimd == 5) then
+         call read_wfn()
+      end if
 
    contains
 

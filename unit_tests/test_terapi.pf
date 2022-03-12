@@ -1,0 +1,87 @@
+! Testing TeraChem MPI interface
+module test_terapi
+   use funit
+   use mod_const, only: DP
+   use mod_terampi
+   use mod_terampi_sh
+   implicit none
+   integer, parameter :: NATOMS = 2, NBEADS = 1
+   real(DP) :: x(NATOMS, NBEADS), y(NATOMS, NBEADS), z(NATOMS, NBEADS)
+   real(DP) :: fx(NATOMS, NBEADS), fy(NATOMS, NBEADS), fz(NATOMS, NBEADS)
+   save
+
+contains
+
+   @test
+   subroutine test_wfn_restart()
+      use mod_general, only: narchive, it
+      use mod_sh_integ, only: nstate
+      integer :: ci_size = 10
+      integer :: blob_size = 15
+      integer :: nbf = 2
+
+      narchive = 10
+      it = 1
+      nstate = 3
+
+      call set_nbf(-1)
+      @assertExceptionRaised('invalid array size in set_nbf')
+
+      call set_civec_size(-1)
+      @assertExceptionRaised('invalid array size in set_civec_size')
+
+      call set_blob_size(-1)
+      @assertExceptionRaised('invalid array size in set_blob_size')
+
+      call set_nbf(nbf)
+      call set_blob_size(blob_size)
+      call set_civec_size(ci_size)
+
+      call allocate_tc_arrays(nstate, NATOMS)
+
+      call read_wfn()
+      @assertExceptionRaised('missing restart file wfn.bin')
+
+      call write_wfn()
+
+      call set_nbf(nbf - 1)
+      call read_wfn()
+      @assertExceptionRaised('Number of MOs in restart file wfn.bin is inconsistent')
+
+      call set_nbf(nbf)
+      call set_blob_size(blob_size - 1)
+      call read_wfn()
+      @assertExceptionRaised('Size of blob in restart file wfn.bin is inconsistent')
+
+      call set_blob_size(blob_size)
+      call set_civec_size(ci_size - 1)
+      call read_wfn()
+      @assertExceptionRaised('Size of CI vectors in restart file wfn.bin is inconsistent')
+
+      call set_civec_size(ci_size)
+      nstate = nstate - 1
+      call read_wfn()
+      @assertExceptionRaised('Number of states in restart file wfn.bin is inconsistent')
+   end subroutine test_wfn_restart
+
+#ifndef USE_MPI
+
+   @test(ifndef=USE_MPI)
+   subroutine test_not_compiled_with_mpi()
+      real(DP) :: eclas
+
+      call initialize_tc_servers()
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+
+      call initialize_terachem_interface('dummy')
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+
+      call init_terash(x, y, z)
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+
+      call force_terash(x, y, z, fx, fy, fz, eclas)
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+   end subroutine test_not_compiled_with_mpi
+
+#endif
+end module test_terapi

@@ -1,7 +1,7 @@
 ! Implementations of various MD integrators.
 ! - Velocity Verlet with thermostatting for classical MD.
 ! - RESPA for PIMD
-! - RESPA for multiple time-step MD with reference potentials.
+! - RESPA for multiple time-step MD with reference potential.
 module mod_mdstep
    use mod_const, only: DP
    use mod_kinetic, only: ekin_p
@@ -192,7 +192,7 @@ contains
    subroutine respashake(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, &
                          fxc, fyc, fzc, fxq, fyq, fzq)
       use mod_general, only: nabin, pot
-      use mod_nhc, only: inose, shiftNHC_yosh, shiftNHC_yosh_mass
+      use mod_nhc, only: inose, shiftNHC_yosh
       use mod_shake, only: shake, nshake
       use mod_interfaces, only: force_clas, force_quantum
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
@@ -251,7 +251,7 @@ contains
 
    end subroutine respashake
 
-   ! Double RESPA ALGORITHM using reference semiempirical potential (or any other potential)
+   ! Double RESPA algorithm using reference low-cost potential pot_ref with smaller time step
    subroutine doublerespastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, &
                               fxc, fyc, fzc, fxq, fyq, fzq)
       use mod_general, only: nabin, pot, pot_ref, nstep_ref
