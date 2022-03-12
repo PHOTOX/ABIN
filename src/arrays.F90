@@ -29,10 +29,6 @@ module mod_arrays
    ! for multiple time-stepping and ring contraction ala O. Marsalek
    real(DP), allocatable :: fxc_diff(:, :), fyc_diff(:, :), fzc_diff(:, :)
    real(DP) :: epot_diff = 0.0D0 ! not really array, but for now let's keep it here
-   !ehrenfest forces
-   real(DP), allocatable :: fxeh(:, :), fyeh(:, :), fzeh(:, :) ! interpolation forces
-   real(DP), allocatable :: fxeh_old(:, :), fyeh_old(:, :), fzeh_old(:, :) ! interpolation forces
-   real(DP), allocatable :: fxmid(:, :), fymid(:, :), fzmid(:, :) ! mid step approximative forces
    save
 contains
 
@@ -83,9 +79,6 @@ contains
       vx_old = vx; vy_old = vx_old; vz_old = vx_old
       transxv = vx; transyv = transxv; transzv = transxv
 
-      ! TODO-EH: we need to allocate fxc according to the number of states
-      ! but this subroutine is called before we now the number of states
-      ! so leave this as is and reallocate elsewhere
       allocate (fxc(natomalloc, nwalkalloc))
       allocate (fyc(natomalloc, nwalkalloc))
       allocate (fzc(natomalloc, nwalkalloc))
@@ -114,30 +107,6 @@ contains
 
    end subroutine allocate_arrays
 
-   !EHRENFEST gradients and midstep approximative forces for all states
-   subroutine allocate_ehrenfest(natom, nstate)
-      integer, intent(in) :: nstate
-      integer, intent(in) :: natom
-      allocate (fxeh(natom, nstate))
-      allocate (fyeh(natom, nstate))
-      allocate (fzeh(natom, nstate))
-      allocate (fxeh_old(natom, nstate))
-      allocate (fyeh_old(natom, nstate))
-      allocate (fzeh_old(natom, nstate))
-      allocate (fxmid(natom, nstate))
-      allocate (fymid(natom, nstate))
-      allocate (fzmid(natom, nstate))
-      fxeh = 0.0D0
-      fyeh = 0.0D0
-      fzeh = 0.0D0
-      fxeh_old = 0.0D0
-      fyeh_old = 0.0D0
-      fzeh_old = 0.0D0
-      fxmid = 0.0D0
-      fymid = 0.0D0
-      fzmid = 0.0D0
-   end subroutine allocate_ehrenfest
-
    subroutine deallocate_arrays
       ! If x is allocated, all of them should be.
       ! If not, something is horribly wrong anyway
@@ -158,20 +127,6 @@ contains
       end if
       if (allocated(fxc_diff)) then
          deallocate (fxc_diff); deallocate (fyc_diff); deallocate (fzc_diff); 
-      end if
-
-      ! Ehrenfest variables (hmm, are these really needed??
-      ! Would be better to just use the existing ones...
-      if (allocated(fxeh)) then
-         deallocate (fxeh)
-         deallocate (fyeh)
-         deallocate (fzeh)
-         deallocate (fxeh_old)
-         deallocate (fyeh_old)
-         deallocate (fzeh_old)
-         deallocate (fxmid)
-         deallocate (fymid)
-         deallocate (fzmid)
       end if
    end subroutine deallocate_arrays
 

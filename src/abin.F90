@@ -62,7 +62,7 @@ program abin
    end if
 
    ! Surface hopping initialization
-   if (ipimd == 2 .or. ipimd == 4) then
+   if (ipimd == 2) then
       call sh_init(x, y, z, vx, vy, vz)
    else if (ipimd == 5 .and. pot == '_tera_') then
       call sh_init(x, y, z, vx, vy, vz)
@@ -117,12 +117,16 @@ program abin
          call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
       end if
 
-      ! setting initial values for SURFACE HOPPING
-      if (ipimd == 2 .or. ipimd == 4) then
+      ! setting initial values for surface hopping
+      if (ipimd == 2) then
          do itrj = 1, ntraj
-            if (irest /= 1) call get_nacm(itrj)
+            if (irest /= 1) then
+               call get_nacm(itrj)
+            end if
             call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
-            if (pot == '_tera_' .or. restrain_pot == '_tera_') call move_new2old_terash()
+            if (pot == '_tera_' .or. restrain_pot == '_tera_') then
+               call move_new2old_terash()
+            end if
          end do
       else if (ipimd == 5 .and. pot == '_tera_') then
          call move_new2old_terash()

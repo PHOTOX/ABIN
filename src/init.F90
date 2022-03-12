@@ -16,6 +16,7 @@ subroutine init(dt)
    use mod_const
    use mod_interfaces, only: print_compile_info, omp_set_num_threads, print_runtime_info
    use mod_cmdline, only: get_cmdline
+   use mod_error, only: fatal_error
    use mod_files
    use mod_arrays
    use mod_array_size
@@ -222,10 +223,10 @@ subroutine init(dt)
          ipimd = 2
       case ('minimization')
          ipimd = 3
-      case ('ehrenfest')
-         ipimd = 4
       case ('landau_zener')
          ipimd = 5
+      case default
+         call fatal_error(__FILE__, __LINE__, 'invalid mdtype in '//trim(chinput))
       end select
    end if
 
@@ -265,8 +266,6 @@ subroutine init(dt)
          print '(a)', '           Surface Hopping MD                 '
       case (3)
          print '(a)', '              Minimization                    '
-      case (4)
-         print '(a)', '              Ehrenfest MD                    '
       case (5)
          print '(a)', '             Landau Zener MD                  '
       end select
@@ -348,9 +347,6 @@ subroutine init(dt)
 
 !  allocate all basic arrays and set them to 0.0d0
    call allocate_arrays(natom, nwalk + 1)
-!  Ehrenfest require larger array since gradients for all of the states are need
-!  TODO: We should really make this differently..
-   if (ipimd == 4) call allocate_ehrenfest(natom, nstate)
 
    if (iplumed == 1) then
       call plumed_init()
@@ -417,7 +413,7 @@ subroutine init(dt)
    read (150, nhcopt)
    rewind (150)
 
-   if (ipimd == 2 .or. ipimd == 4) then
+   if (ipimd == 2) then
       read (150, sh)
       rewind (150)
       integ = tolower(integ)
@@ -445,15 +441,15 @@ subroutine init(dt)
 
    if (pot == '_tera_' .or. restrain_pot == '_tera_') then
       call initialize_tc_servers()
-      if (ipimd == 2 .or. ipimd == 4 .or. ipimd == 5) then
+      if (ipimd == 2 .or. ipimd == 5) then
          call init_terash(x, y, z)
       end if
    end if
 
-!-----HERE WE CHECK FOR ERRORS IN INPUT-----------
+   ! Check whether input parameters make sense
    call check_inputsanity()
 
-!     resetting number of walkers to 1 in case of classical simulation
+   ! resetting number of walkers to 1 in case of classical simulation
    if (ipimd == 0) then
       if (my_rank == 0) then
          write (*, *) 'Using velocity Verlet integrator'
@@ -465,8 +461,9 @@ subroutine init(dt)
       ! algorithm as well
    end if
 
-!for surface hopping and ehrenfest
-   if (ipimd == 2 .or. ipimd == 4 .or. ipimd == 5) then
+   ! Selecting proper integrator for a given MD type
+   ! (controlled by variable 'md')
+   if (ipimd == 2 .or. ipimd == 5) then
       nwalk = ntraj !currently 1
       md = 2 ! velocity verlet
       nabin = 1
@@ -648,7 +645,7 @@ subroutine init(dt)
          write (*, nml=nhcopt, delim='APOSTROPHE')
          write (*, *)
       end if
-      if (ipimd == 2 .or. ipimd == 4) then
+      if (ipimd == 2) then
          write (*, nml=sh, delim='APOSTROPHE')
          write (*, *)
       end if
@@ -911,7 +908,7 @@ contains
          write (*, *) chknow
          if (iknow /= 1) error = 1
       end if
-      if (inose == 1 .and. (ipimd == 2 .or. ipimd == 4) .and. en_restraint == 0) then
+      if (inose == 1 .and. (ipimd == 2) .and. en_restraint == 0) then
          write (*, *) 'Thermostating is not meaningful for surface hopping simulation.'
          write (*, *) chknow
          if (iknow /= 1) error = 1
