@@ -24,8 +24,6 @@ irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working
 isbc=1,			! spherical boundary conditions
 rb_sbc=10.9d0,              ! radius of the cluster for sbc
 kb_sbc=0.1d0,		! force constant for spherical potential,in A
-icv=1
-natom=3,		!number of atoms
 /
 
 &nhcopt
@@ -34,4 +32,3 @@ nchain=4,		! number of nose-hoover chains
 temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 rem_comrot=.false.
 /
-

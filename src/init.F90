@@ -24,7 +24,7 @@ subroutine init(dt)
    use mod_system
    use mod_nhc
    use mod_estimators
-   use mod_harmon
+   use mod_potentials
    use mod_sh_integ, only: nstate, integ, phase, popsumthr, correct_decoherence
    use mod_sh
    use mod_lz
@@ -105,7 +105,7 @@ subroutine init(dt)
 
    namelist /system/ masses, massnames, ndist, dist1, dist2, &
       nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &
-      k, r0, k1, k2, k3, De, a, D0_dw, lambda_dw, k_dw, r0_dw, &
+      k, r0, kx, ky, kz, dissociation_energy, D0_dw, lambda_dw, k_dw, r0_dw, &
       Nshake, ishake1, ishake2, shake_tol
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
@@ -137,7 +137,7 @@ subroutine init(dt)
    rewind (150)
    pot = tolower(pot)
 
-   if (pot == 'splined_grid') then
+   if (pot == '_splined_grid_') then
       natom = 1
       dime = 1
       f = 0
@@ -557,7 +557,7 @@ subroutine init(dt)
       call restin(x, y, z, vx, vy, vz, it)
    end if
 
-   if (pot == '2dho') then
+   if (pot == '_harmonic_oscillator_') then
       f = 0 !temporary hack
    end if
    if (nchain > 1) then
@@ -833,11 +833,19 @@ contains
          error = 1
       end if
       if (icv /= 0 .and. icv /= 1) then
-         write (*, *) 'Input error: icv must be 1 or zero.'
+         write (*, *) 'Input error: icv must be 1 or 0.'
          error = 1
       end if
       if (temp < 0) then
-         write (*, *) 'Input error: temp must be positive.'
+         write (*, *) 'Input error: temperature must be positive.'
+         error = 1
+      end if
+      if (icv == 1 .and. temp <= 0.0D0) then
+         write (*, *) 'Cannot compute heat capacity for zero temperature.'
+         error = 1
+      end if
+      if (icv == 1 .and. inose == 0) then
+         write (*, *) 'Cannot compute heat capacity for NVE simulation.'
          error = 1
       end if
       if (dt <= 0) then
@@ -1031,7 +1039,7 @@ contains
          error = 1
       end if
 
-      if (pot == '2dho' .and. natom > 1) then
+      if (pot == '_harmonic_oscillator_' .and. natom > 1) then
          write (*, *) 'Only 1 particle is allowed for 2D harmonic oscillator!'
          error = 1
       end if
@@ -1163,7 +1171,7 @@ subroutine finish(error_code)
    use mod_nhc !,   only: finalize_nhc
    use mod_gle, only: finalize_gle
    use mod_estimators, only: h
-   use mod_harmon, only: hess
+   use mod_potentials, only: hess
    use mod_lz, only: lz_finalize
    use mod_transform, only: finalize_normalmodes
    use mod_cp2k, only: finalize_cp2k

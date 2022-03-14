@@ -119,7 +119,7 @@ if [[ $TESTS = "all" ]];then
    # TODO: Re-enable GLE and PIGLE tests!
    folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
             LZ_SS LZ_ST LZ_ENE \
-            PIMD SHAKE HARMON MINI QMMM \
+            PIMD SHAKE HARMON MORSE MINI QMMM \
             ANALYZE_EXT CMDLINE WATER_FAIL)
 
    let index=${#folders[@]}+1
@@ -225,14 +225,14 @@ do
 
    else
       if [[ -f "velocities.in" ]];then
-         $ABINEXE -v "velocities.in" > $ABINOUT || true
+         $ABINEXE -v "velocities.in" > $ABINOUT 2>&1 || true
       else
-         $ABINEXE > $ABINOUT || true
+         $ABINEXE > $ABINOUT 2>&1 || true
       fi
 
       #for testing restart
       if [[ -e input.in2 ]];then
-         $ABINEXE -i input.in2 >> $ABINOUT || true
+         $ABINEXE -i input.in2 >> $ABINOUT 2>&1 || true
       fi
    fi
 

@@ -3,7 +3,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_files, only: MAXUNITS
    use mod_general, only: ihess, ipimd, iqmmm, it, iremd, my_rank
    use mod_system, only: names
-   use mod_harmon, only: hess
+   use mod_potentials, only: hess
    use mod_sh_integ, only: nstate
    use mod_sh, only: tocalc, en_array, istate
    use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
