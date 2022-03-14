@@ -20,5 +20,5 @@ nrest=1,		! how often we print restart files?
 &nhcopt
 inose=2,		! GLE thermostat
 temp=200,		! initial temperature for Maxwell-Boltzmann sampling [au]
-gle_test=.false.
+gle_test=.true.
 /

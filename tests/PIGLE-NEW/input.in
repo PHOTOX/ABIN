@@ -21,5 +21,5 @@ nrest=1,
 inose=2,
 temp=200,
 rem_comrot=.false.
-gle_test=.false.
+gle_test=.true.
 /
