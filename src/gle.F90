@@ -310,6 +310,7 @@ contains
 
    subroutine initialize_momenta(C, iw)
       !use mod_arrays,  only: px, py, pz, vx, vy, vz, amt
+      use mod_error, only: fatal_error
       use mod_general, only: natom
       use mod_utils, only: abinerror
       real(DP), intent(in) :: C(:, :)
@@ -318,8 +319,7 @@ contains
       integer :: i, j
       ! WARNING: this routine must be called after arrays are allocated!
       if (.not. allocated(ps)) then
-         write (*, *) "WHOOOPS: Fatal programming error in gle.F90!"
-         call abinerror("initialize_momenta")
+         call fatal_error(__FILE__, __LINE__, "oh no, programming error in gle.F90!")
       end if
 
       allocate (gr(ns + 1))
@@ -382,6 +382,7 @@ contains
 
    ! Matrix A is rewritten on output
    subroutine read_propagator(T, S, dt, ns)
+      use mod_error, only: fatal_error
       real(DP), intent(out) :: T(:, :), S(:, :)
       real(DP), intent(in) :: dt
       integer, intent(in) :: ns
@@ -392,11 +393,23 @@ contains
       print*, "Reading GLE propagators"
       open (newunit=u, file='GLE-T', action="read", status="old", access="sequential", form="unformatted") 
       read (u) dt_read, ns_read
+      if (dt /= dt_read) then
+         call fatal_error(__FILE__, __LINE__, "dt read from GLE-T does not match")
+      end if
+      if (ns /= ns_read) then
+         call fatal_error(__FILE__, __LINE__, "ns read from GLE-T does not match")
+      end if
       read (u) T
       close (u)
 
       open (newunit=u, file='GLE-S', action="read", status="old", access="sequential", form="unformatted") 
       read (u) dt_read, ns_read
+      if (dt /= dt_read) then
+         call fatal_error(__FILE__, __LINE__, "dt read from GLE-T does not match")
+      end if
+      if (ns /= ns_read) then
+         call fatal_error(__FILE__, __LINE__, "ns read from GLE-T does not match")
+      end if
       read (u) S
       close (u)
    end subroutine read_propagator
