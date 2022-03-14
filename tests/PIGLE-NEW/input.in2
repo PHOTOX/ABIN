@@ -6,7 +6,7 @@ pot='mmwater'
 mdtype='pimd'
 nwalk=4,		!number of random walkers 
 
-dt=5.,			! number of steps and timestep
+dt=20.,			! number of steps and timestep
 irandom=131313,  	! random seed
 nabin=60,		! what is the gap between ab initio calculations?
 
