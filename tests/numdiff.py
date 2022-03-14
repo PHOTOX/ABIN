@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 from optparse import OptionParser
 import decimal
-from sys import argv, exit 
-# Workaround for STDIN problem for CP2K tests
-import readline
+import os.path
+from sys import argv, exit
 
 # This scripts is compares differences between files
 # while disregarding insignificant numerical differences.
@@ -11,25 +10,38 @@ import readline
 # This script parses output from command:
 # diff -y file1 file2
 
-# It returns 1 when difference is found and 0 otherwise
+# It returns exit code 1 when difference is found and 0 otherwise
 
 decimal.getcontext().prec = 17
-
-# TODO: Relative delta
-DELTA=1e-13
 #decimal.getcontext().rounding = "ROUND_DOWN"
 
-usage = "USAGE: %prog input_diff_file"
-parser = OptionParser(usage)
-options, args = parser.parse_args(argv[1:])
-try:
-   inpfile = args[0]
-except:
-   print("Error: You need to provide input file as an argument.")
-   print("Type -h for help")
-   exit(1)
+# TODO: Relative delta
+DELTA = 1e-15
+THR_FNAME = "NUM_THRE"
 
-print("Comparing numerical differences in file "+inpfile)
+def read_cmd():
+   # TODO: Update this with argparse
+   usage = "USAGE: %prog input_diff_file"
+   parser = OptionParser(usage)
+   options, args = parser.parse_args(argv[1:])
+   try:
+      inpfile = args[0]
+   except:
+      print("Error: You need to provide input file as an argument.")
+      print("Type -h for help")
+      exit(1)
+   return inpfile
+
+def read_custom_threshold(fname):
+   """Reads a custom absolute threshold exponent from a file in a test folder"""
+   with open(fname, "r") as f:
+      thr = int(f.read().strip())
+
+   if thr < 5 or thr > 50:
+      print("ERROR: Threshold 10^-%d read from %s is out of range" % (thr, fname))
+      exit(1)
+
+   return 10**(-thr)
 
 def failed(test, reference):
    delta = abs(float(reference) - float(test))
@@ -43,6 +55,7 @@ def failed(test, reference):
    print('Reference: ' + reference)
    print('Test: ' + test)
    print('Delta = ' + str(delta))
+   print('DELTA = ', DELTA)
    exit(1)
 
 def compare(numbers1, numbers2):
@@ -84,6 +97,13 @@ def compare(numbers1, numbers2):
              failed(numbers1[i], numbers2[i])
 
 
+if os.path.isfile(THR_FNAME):
+   DELTA = read_custom_threshold(THR_FNAME)
+
+inpfile = read_cmd()
+print("Comparing numerical differences in file " + inpfile)
+print(DELTA)
+
 with open(inpfile, 'r') as f:
    # If the file is empty something is wrong 
    # (e.g. file for comparison was not even generated)
@@ -112,4 +132,3 @@ with open(inpfile, 'r') as f:
       compare(diff1, diff2)
 
 exit(0)
-
