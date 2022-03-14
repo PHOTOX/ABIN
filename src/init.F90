@@ -100,7 +100,7 @@ subroutine init(dt)
    namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
 
    namelist /nhcopt/ inose, temp, temp0, nchain, ams, tau0, tau0_langevin, imasst, nrespnose, nyosh, &
-      scaleveloc, readNHC, readQT, initNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel
+      scaleveloc, readNHC, readQT, initNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel, gle_test
 
    namelist /system/ masses, massnames, ndist, dist1, dist2, &
       nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &

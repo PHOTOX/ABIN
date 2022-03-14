@@ -21,4 +21,5 @@ nrest=1,		! how often we print restart files?
 inose=2,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
 temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 rem_comrot=.false.
+gle_test=.true.
 /

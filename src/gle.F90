@@ -19,6 +19,7 @@ module mod_gle
    implicit none
    private
    public :: readQT, ns, ps, langham, tau0_langevin
+   public :: gle_test
    public :: gle_step, pile_step, pile_init, gle_init, finalize_gle, finalize_pile
    real(DP), allocatable :: gS(:, :), gT(:, :)
    real(DP), allocatable :: ps(:, :, :)
@@ -31,6 +32,7 @@ module mod_gle
    real(DP) :: tau0_langevin = -1.0D0
    real(DP) :: langham = 0.0D0
    integer :: ns, ns_centroid, readQT = 1
+   logical :: gle_test
    real(DP), allocatable :: c1(:), c2(:)
    save
 
@@ -255,7 +257,12 @@ contains
 
       ! WARNING: gA is rewritten here
       ! TODO: do not overwrite gA
-      call compute_propagator(gA, gC, gT, gS, dt)
+      if (gle_test) then
+         call read_propagator(gT, gS, dt, ns)
+      else
+         call compute_propagator(gA, gC, gT, gS, dt)
+      end if
+
 
       ! Initialize the auxiliary vectors.
       ! we keep general - as we might be using non-diagonal C
@@ -293,6 +300,11 @@ contains
          call abinerror('gle_init')
       end if
 #endif
+
+      ! Temporary generation of propagators for tests
+      if (.not. gle_test) then
+         call write_propagator(gT, gS, dt, ns)
+      end if
 
    end subroutine gle_init
 
@@ -348,6 +360,46 @@ contains
       if (allocated(ran)) deallocate (ran)
 
    end subroutine finalize_gle
+
+   ! Matrix A is rewritten on output
+   subroutine write_propagator(T, S, dt, ns)
+      real(DP), intent(out) :: T(:, :), S(:, :)
+      real(DP), intent(in) :: dt
+      integer, intent(in) :: ns
+      integer :: u
+
+      print*, "Writing GLE propagators"
+      open (newunit=u, file='GLE-T', action="write", access="sequential", form="unformatted") 
+      write (u) dt, ns
+      write (u) T
+      close (u)
+
+      open (newunit=u, file='GLE-S', action="write", access="sequential", form="unformatted") 
+      write (u) dt, ns
+      write (u) S
+      close (u)
+   end subroutine write_propagator
+
+   ! Matrix A is rewritten on output
+   subroutine read_propagator(T, S, dt, ns)
+      real(DP), intent(out) :: T(:, :), S(:, :)
+      real(DP), intent(in) :: dt
+      integer, intent(in) :: ns
+      real(DP) :: dt_read
+      integer :: ns_read
+      integer :: u
+      ! TODO: verify dt and ns, maybe temperature?
+      print*, "Reading GLE propagators"
+      open (newunit=u, file='GLE-T', action="read", status="old", access="sequential", form="unformatted") 
+      read (u) dt_read, ns_read
+      read (u) T
+      close (u)
+
+      open (newunit=u, file='GLE-S', action="read", status="old", access="sequential", form="unformatted") 
+      read (u) dt_read, ns_read
+      read (u) S
+      close (u)
+   end subroutine read_propagator
 
    ! Matrix A is rewritten on output
    subroutine compute_propagator(A, C, T, S, dt)
