@@ -55,7 +55,6 @@ def failed(test, reference):
    print('Reference: ' + reference)
    print('Test: ' + test)
    print('Delta = ' + str(delta))
-   print('DELTA = ', DELTA)
    exit(1)
 
 def compare(numbers1, numbers2):
@@ -102,7 +101,6 @@ if os.path.isfile(THR_FNAME):
 
 inpfile = read_cmd()
 print("Comparing numerical differences in file " + inpfile)
-print(DELTA)
 
 with open(inpfile, 'r') as f:
    # If the file is empty something is wrong 
