@@ -8,7 +8,7 @@ nwalk=4,		!number of random walkers
 
 dt=10.,			! number of steps and timestep
 irandom=131313,  	! random seed
-nabin=60,		! what is the gap between ab initio calculations?
+nabin=5,		! what is the gap between ab initio calculations?
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?
