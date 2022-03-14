@@ -6,9 +6,9 @@ pot='mmwater'
 mdtype='pimd'
 nwalk=4,
 
-dt=10.,
+dt=7.,
 irandom=131313,
-nabin=5,
+nabin=2,
 
 nwrite=1,
 nwritex=1,
