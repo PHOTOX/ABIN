@@ -196,7 +196,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    case ("_cp2k_")
       call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_tera_")
-      if (ipimd == 2 .or. ipimd == 4 .or. ipimd == 5) then
+      if (ipimd == 2 .or. ipimd == 5) then
          call force_terash(x, y, z, fx, fy, fz, eclas)
       else
          call force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
