@@ -78,7 +78,7 @@ jobs:
   optimized_build:
     name: Optimized build
     runs-on: ubuntu-18.04
-  # needs: basic_build
+    needs: basic_build
     strategy:
       matrix:
          gcc_v: [7, 9, 10]
