@@ -4,7 +4,7 @@ irest=1,
 
 pot='mmwater'
 mdtype='pimd'
-nwalk=4,		!number of random walkers 
+nwalk=3,		!number of random walkers 
 
 dt=7.,			! number of steps and timestep
 irandom=131313,  	! random seed

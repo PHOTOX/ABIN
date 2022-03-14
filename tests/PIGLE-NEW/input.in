@@ -4,7 +4,7 @@ irest=0,
 
 pot='mmwater'
 mdtype='pimd'
-nwalk=4,
+nwalk=3,
 
 dt=7.,
 irandom=131313,
