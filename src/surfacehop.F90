@@ -12,8 +12,6 @@ module mod_sh
    ! and we should check input sanity here, not in input.F90
    public :: istate_init, substep, deltaE, inac, nohop, decoh_alpha, popthr, nac_accu1, nac_accu2
    public :: surfacehop, sh_init
-   ! Not implemented yet
-   !public :: ehrenfest_forces
    public :: istate, ntraj, tocalc, en_array
    public :: nacx, nacy, nacz
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
@@ -110,18 +108,9 @@ contains
 
       ! Determining the initial state
       if (irest /= 1) then
-
          do itrj = 1, ntraj
-
-            ! Automatic determination of initial state based on osc. strenght
-            if (istate_init == -1) then
-               call choose_initial_state(itrj)
-            else
-               istate(itrj) = istate_init
-            end if
-
+            istate(itrj) = istate_init
          end do
-
       end if
 
       ! computing only energies, used for subsequent
@@ -226,8 +215,6 @@ contains
       ! The diagonal holds information about gradients that we need
       ! for SH, we just need the gradient of the current state
       tocalc(istate(itrj), istate(itrj)) = 1
-
-      ! TODO-EH: For Ehrenfest, we need gradients of all states
    end subroutine set_tocalc
 
    subroutine Write_nacmrest()
@@ -490,50 +477,6 @@ contains
       end if
 
    end subroutine move_vars
-
-   !*************************************
-   ! This is the main Ehrenfest routine !
-   !     !!   NOT IMPLEMENTED YET !!    !
-   !*************************************
-!   subroutine ehrenfest_forces(x, y, z, fxc, fyc, fzc, px, py, pz, dt, eclas)
-!   This subroutine must be called midstep in velocity verlet, after we call force_clas
-!    use mod_arrays, only: vx, vy, vz, vx_old, vy_old, vz_old
-!    real(DP),intent(in) :: x(:,:), y(:,:), z(:,:)
-!    real(DP),intent(in) :: px(:,:), py(:,:), pz(:,:)
-!    real(DP),intent(in) :: fxc(:,:), fyc(:,:), fzc(:,:)
-!    real(DP), intent(in) :: dt
-!    real(DP), intent(inout) :: eclas
-
-!    vx = px  ! these are momenta from time dt/2 !
-!    vy = py
-!    vz = pz
-
-!   call GET_NACME() ! calculate NACM at time DT
-
-!   It has to extrapolate velocities from v(dt/2) to v(dt)
-!   This extrapolation can be quite accurate, since we can calculate approximate ehrenfest forces
-!   from eq XX simply by taking cel_re and cel_im from previous time step
-
-!   or better yet, we can propagate cel_re to cel_re(dt/2) and use these to calculate approximate forces
-!   then extrapolate velocities, and the propagate cel_re from dt/2 to dt
-
-!   do itp=1, substep / 2
-!     call interpolate() ! to dt/2
-!     call sh_integrate_wf(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
-!   end do
-!
-
-!   call eh_calc_forces(fxc, fyz, fzc, fx_eh, fy_eh, fz_eh, nacx, nacy, nacz)
-!   call eh_extrapolate_velocities(vx_old, vy_old, vz_old, vx, vy, vz, fx_eh, fy_eh, fz_eh)
-!   do itp=1, substep / 2
-!     call interpolate() ! interpolate to dt, need to be carefull here
-!     call sh_integrate_wf(en_array_int,en_array_newint,dotproduct_int,dotproduct_newint,itrj)
-!   end do
-
-!   At the end, don't forget to move ehrenfest forces to fxc(:,1) etc.
-!   fxc(:,1) = fx_eh
-
-!   end subroutine ehrenfest_forces
 
    !******************************
    ! This is the main SH routine !
@@ -1107,26 +1050,5 @@ contains
       check_CIVector = 0
       return
    end function check_CIVector
-
-   ! Choose initial state according to oscillator strength
-   subroutine choose_initial_state(itrj)
-      integer, intent(in) :: itrj
-      real(DP) :: pom, maxosc
-      integer :: ist1
-      open (500, file='oscil.dat')
-
-      pom = 0.0D0
-      maxosc = 0.0D0
-
-      do ist1 = 1, nstate
-         read (500, *) pom
-         if (pom > maxosc) then
-            istate(itrj) = ist1
-            maxosc = pom
-         end if
-      end do
-
-      close (500)
-   end subroutine choose_initial_state
 
 end module mod_sh
