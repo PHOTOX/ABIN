@@ -1,23 +1,23 @@
 &general
-nstep=10,
+nstep=1,
 irest=0,
-idebug=0,
-iknow=0,
 
 pot='mmwater'		
-watpot=1
-mdtype='md',		!classical simulation 0, quantum simulation 1
+watpot=1,
+mdtype='md',
 
-dt=20.,			!number of steps and timestep
-irandom=131313,  	!random seed
+dt=10.,
+irandom=131313,
 
-nwrite=1,		! how often some output should be printed (estimators etc.)
-nwritex=1,		! how often should we print coordinates?
-nrest=1,		! how often we print restart files?
+nwrite=1,
+nwritex=1,
+nrest=1,
+nwritev=1,
+nwritef=1,
 /
 
 &nhcopt
-inose=2,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+inose=2,
 rem_comrot=.false.
-temp=100.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+temp=100.15,
 /
