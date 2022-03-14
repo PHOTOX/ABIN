@@ -19,7 +19,7 @@ nrest=1,
 
 &nhcopt
 inose=2,
-temp=298.15,
+temp=200,
 rem_comrot=.false.
 gle_test=.true.
 /
