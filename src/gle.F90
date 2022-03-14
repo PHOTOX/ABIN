@@ -596,7 +596,7 @@ contains
          if (D(i, i) >= 0.0D0) then
             D(i, i) = dsqrt(D(i, i))
          else
-            write (0, *) "Warning: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
+            write (*, *) "Warning: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
             D(i, i) = 0.0D0
          end if
       end do
