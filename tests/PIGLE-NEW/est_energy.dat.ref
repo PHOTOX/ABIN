@@ -1,2 +1,4 @@
  #     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir
-           0.17    0.3862577348E-02    0.2084661669E-01    0.8134574981E-02    0.0000000000E+00    0.0000000000E+00
+           0.12    0.3425780625E-02    0.2041548422E-01    0.7687582153E-02    0.0000000000E+00    0.0000000000E+00
+ #     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir
+           0.24    0.4259272251E-02    0.2121784797E-01    0.8575116433E-02    0.0000000000E+00    0.0000000000E+00
