@@ -19,6 +19,7 @@ contains
       integer :: ci_size = 10
       integer :: blob_size = 15
       integer :: nbf = 2
+      integer :: u
 
       narchive = 10
       it = 1
@@ -62,6 +63,8 @@ contains
       nstate = nstate - 1
       call read_wfn()
       @assertExceptionRaised('Number of states in restart file wfn.bin is inconsistent')
+      open(newunit=u, file='wfn.bin', status="old")
+      close(u, status='delete')
    end subroutine test_wfn_restart
 
 #ifndef USE_MPI
