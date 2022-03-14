@@ -3,7 +3,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_files, only: MAXUNITS
    use mod_general, only: ihess, ipimd, iqmmm, it, iremd, my_rank
    use mod_system, only: names
-   use mod_harmon, only: hess
+   use mod_potentials, only: hess
    use mod_sh_integ, only: nstate
    use mod_sh, only: tocalc, en_array, istate
    use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
@@ -61,15 +61,14 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       end do
       close (unit=MAXUNITS + iw)
 
-!     Surface hopping or Ehrenfest
-      if (ipimd == 2 .or. ipimd == 4) then
+      if (ipimd == 2) then
 
          open (unit=MAXUNITS + iw + 2 * walkmax, file='state.dat')
          write (MAXUNITS + iw + 2 * walkmax, '(I2)') nstate
 
-!        Diagonal of tocalc holds info about needed forces
-!        tocalc(x,x)= 1 -> compute forces for electronic state X
-!        totalc for Ehrenfest muset be set just for required states according to c coef. TO-DO in ehrenfest enrehfest_forces
+         ! Diagonal of tocalc holds info about needed forces
+         ! tocalc(x,x) = 1 -> compute forces for electronic state X
+         ! off-diagonal elements correspond to non-adiabatic couplings
          do ist1 = 1, nstate
             write (MAXUNITS + iw + 2 * walkmax, '(I1,A1)', advance='no') tocalc(ist1, ist1), ' '
          end do
@@ -82,10 +81,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          open (unit=MAXUNITS + iw + 2 * walkmax, file='state.dat')
          write (MAXUNITS + iw + 2 * walkmax, '(I2)') nstate_lz !How many el. states
 
-         !do ist1=1,nstate_lz
-         !   write(MAXUNITS+iw+2*walkmax,'(I1,A1)',advance='no')tocalc_lz(ist1),' '
-         !end do
-         !First we have singlets, then triplets
+         ! First we have singlets, then triplets
          do ist1 = 1, nstate_lz
             if (tocalc_lz(ist1) == 1) write (MAXUNITS + iw + 2 * walkmax, '(I2,A1)') ist1, ' ' !Number of gradient state
          end do
@@ -114,7 +110,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 
 !     for SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)
 !     TODO: This should not be hard-coded
-      if (ipimd == 2 .or. ipimd == 4 .or. ipimd == 5) then
+      if (ipimd == 2 .or. ipimd == 5) then
          write (chsystem, '(A60,I3,A12)') chsystem, 7, ' < state.dat'
       end if
 
@@ -163,12 +159,11 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       eclas = eclas + temp1
 ! SH
       ! TODO: Have each state in different file?
-      if (ipimd == 2 .or. ipimd == 4) then
+      if (ipimd == 2) then
          en_array(1, iw) = temp1
          do ist1 = 2, nstate
             read (MAXUNITS + iw, *) en_array(ist1, iw)
          end do
-         ! TODO-EH: eclas must be correctly overwritten later
          eclas = en_array(istate(iw), iw)
       end if
 ! LZ
@@ -189,11 +184,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          eclas = en_array_lz(istate_lz, 1)
       end if
 
-!     TODO-EH: Read additional forces probably somewhere here, use second index (iw) for different states
-!     Actually, we should make a routine read_engrad() and make it general for both EH and SH
-!     always read energies, read forces based on tocalc
-
-      if (ipimd == 2 .or. ipimd == 4) then
+      if (ipimd == 2) then
          iost = read_forces(fx, fy, fz, natqm, tocalc(istate(iw), istate(iw)), MAXUNITS + iw)
       else if (ipimd == 5) then
          iost = read_forces(fx, fy, fz, natqm, tocalc_lz(istate_lz), MAXUNITS + iw) !Save only the computed state

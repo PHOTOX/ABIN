@@ -14,13 +14,15 @@ module mod_estimators
 contains
    ! Expecting cartesian coordinates and forces!
    subroutine estimators(x, y, z, fxab, fyab, fzab, eclas)
-      use mod_general, only: pot, natom, nwalk, it, sim_time, &
+      use mod_general, only: ipimd, pot, natom, nwalk, it, sim_time, &
                            & ncalc, nwrite, inormalmodes, imini, ihess, icv
       use mod_nhc, only: temp, inose
       use mod_system, only: am, dime
-      use mod_harmon, only: hess_harmon, hess_morse, hess_2dho, hess
+      use mod_potentials, only: hessian_harmonic_oscillator, hessian_morse, hessian_harmonic_rotor, hess
       use mod_shake, only: nshake
+      use mod_error, only: fatal_error
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
+      ! fxab array is classical force in cartesian coordinates
       real(DP), intent(in) :: fxab(:, :), fyab(:, :), fzab(:, :)
       real(DP), intent(in) :: eclas
       real(DP) :: xc(size(x, 1)), yc(size(x, 1)), zc(size(x, 1))
@@ -29,19 +31,24 @@ contains
       integer :: iat, iw, ipom, iat1, iat2, nf
       real(DP) :: it2, itnc
 
-      if (inormalmodes == 1 .and. inose == 1) temp = temp / nwalk
+      if (inormalmodes == 1 .and. inose == 1) then
+         temp = temp / nwalk
+      end if
 
-      ! fxab array is classical force in cartesian coordinates
-
-      ! dummy variable that controls output (cumulative averaging) if imini>0
-      ! we begin to accumulate averages of heat capacities  if it > imini
-      it2 = (it - imini) / ncalc
-
-      ! we calculate all quantities only every ncalc steps
+      ! We calculate all quantities only every ncalc steps
       ! also we begin to accumulate energies only after first enmini steps to avoid
       ! large initial oscilations
       itnc = (it - enmini) / ncalc
       nf = dime * natom - nshake !degrees of freedom
+
+      ! We begin to accumulate averages of heat capacities only after it > imini
+      ! This auxiliary variable is for cumulative averaging if imini > 0
+      it2 = (it - imini) / ncalc
+
+      ! We cannot accumulate heat capacity without accumulating energy first
+      if (enmini > imini .and. icv == 1) then
+         call fatal_error(__FILE__, __LINE__, 'enmini > imini not allowed')
+      end if
 
       do iat = 1, natom
          x(iat, nwalk + 1) = x(iat, 1)
@@ -116,18 +123,17 @@ contains
          cv_vir = cv_vir / temp**2 + 0.5D0 * nf
          cv_vir_cumul = cv_vir_cumul + cv_vir
 
-! PROJECTED CENTROID VIRIAL CV ESTIMATOR
-! if(it.gt.imini)then
-!     call est_cvpcv()
-! endif
-
          ! DOUBLE centroid virial Cv estimator
          ! external hessian is read in force_abin because of parallelization and through mod_estimators
          if (ihess == 1) then
 
-            if (pot == 'harm') call hess_harmon(x, y, z)
-            if (pot == 'morse') call hess_morse(x, y, z)
-            if (pot == '2dho') call hess_2dho()
+            if (pot == '_harmonic_rotor_') then
+               call hessian_harmonic_rotor(x, y, z)
+            else if (pot == '_morse_') then
+               call hessian_morse(x, y, z)
+            else if (pot == '_harmonic_oscillator_') then
+               call hessian_harmonic_oscillator()
+            end if
 
             cv_dcv = 0.0D0
             do iw = 1, nwalk
@@ -149,7 +155,9 @@ contains
                   cvhess(iw) = cvhess(iw) - (z(iat, iw) - zc(iat)) * fzab(iat, iw) * 1.5D0
                end do
                ! PIGLE --- different hamiltonian, fxc not divided by nwalk
-               if (inose == 2 .or. inormalmodes == 1) cvhess(iw) = cvhess(iw) / nwalk
+               if (inose == 2 .or. inormalmodes == 1) then
+                  cvhess(iw) = cvhess(iw) / nwalk
+               end if
 
                do iat1 = 1, natom * 3
                   do iat2 = 1, natom * 3
@@ -168,9 +176,9 @@ contains
             cv_dcv = cv_dcv / temp**2
             cv_dcv_cumul = cv_dcv_cumul + cv_dcv
 
-!     ihess endif
+            ! ihess endif
          end if
-!     icv endif
+         ! icv endif
       end if
 
       ! END OF VIRIAL ESTIMATORS CALCULATIONS
@@ -210,71 +218,18 @@ contains
             ! icv endif
          end if
 
-         write (UESTENERGY, '(F15.2,5E20.10)') sim_time * AUtoFS, eclas, &
-                                             & est_prim, est_vir, &
-                                             & est_prim_cumul / itnc, est_vir_cumul / itnc
+         if (ipimd == 1) then
+            write (UESTENERGY, '(F15.2,5E20.10)') sim_time * AUtoFS, eclas, &
+                                                & est_prim, est_vir, &
+                                                & est_prim_cumul / itnc, est_vir_cumul / itnc
+         end if
 
       end if
 
-      if (inormalmodes == 1 .and. inose == 1) temp = temp * nwalk
-
-      return
+      if (inormalmodes == 1 .and. inose == 1) then
+         temp = temp * nwalk
+      end if
 
    end subroutine estimators
 
 end module mod_estimators
-
-!cccccDH:projected centroid virial Cv estimator according to :Glaesemann, Fried JCP,2002,vol 117,7
-!cccc It requiers one extra classical energy calculation for centroid variable
-
-!      subroutine est_cvpcv(temp,it2,  &
-!        est_vir_cumul,cv_vir,eclas,xc,yc,zc,  &
-!        cv_pcv,f_cumul,ex_cumul,fj,f2,rj_cumul)
-!      use mod_array_size
-!      use mod_general
-!      implicit real(DP)(a-h,o-z)
-!      real(DP) xc(:),yc(:),zc(:)
-!
-!      G=(9*natom*natom+6*natom)*0.25d0*temp**2
-!
-!      Vq=0.0d0
-!      if(pot.ne.'harm')then
-!       call system('./G09.DFT/energy.g09')
-!       open(124,file='en_centroid.dat')
-!       read(124,*)Vq
-!       close(124)
-!      endif
-!   CALCULATION OF ENERGY OF THE CENTROID FOR HARMONIC OSCILATOR ccc
-!      if(pot.eq.'harm')then
-!        aa=0.302
-!        r0=1.412*1.89
-!        dx=xc(2)-xc(1)
-!        dy=yc(2)-yc(1)
-!        dz=zc(2)-zc(1)
-!        r=dx**2+dy**2+dz**2
-!        r=dsqrt(r)
-!        Vq=0.5*aa*(r-r0)**2
-!      endif
-
-!      TO think through: musime si nejak predavat j, ktere tvori pouze cast cv_vir
-
-!      rj=cv_vir*temp**2+(est_vir_cumul/it)**2
-!      rj_cumul=rj_cumul+rj
-
-!ccccccccccccccccccccccc
-!      dV=Vq-eclas
-!      ex=exp(-dV/temp)
-!      ex_cumul=ex_cumul+ex
-
-!     gf = g ..see the article
-!     DH: not really sure about the gf...
-!      gf=(1.5d0*natom*temp)**2+1.5d0*natom*temp**2
-!      f=gf*ex
-!      f_cumul=f_cumul+f
-!      f2=f2+f*f
-!      fj=fj+f*rj
-!      alfa=(fj/it2-rj_cumul/it2*f_cumul/it2)/(f2/it2-(f_cumul/it2)**2)
-!      bigJ=rj_cumul/it2-alfa*f_cumul/it2+alfa*G*ex_cumul/it2
-!      cv_pcv=(bigJ-(est_vir_cumul/it)**2)/temp**2
-
-!      end

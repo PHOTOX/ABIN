@@ -161,7 +161,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_general, only: natom, ipimd
    use mod_water, only: watpot
    use mod_force_mm, only: force_LJ_Coulomb
-   use mod_harmon, only: force_harmon, force_2dho, force_morse, force_doublewell
+   use mod_potentials, only: force_harmonic_rotor, force_harmonic_oscillator, force_morse, force_doublewell
    use mod_splined_grid
    use mod_cp2k, only: force_cp2k
    use mod_force_tera, only: force_tera
@@ -175,30 +175,28 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    real(DP) :: eclas
 
    eclas = 0.0D0
-!  Here we decide which forces we want.
-!  By default we call external program in force_abin routine
-!  TODO: All keywords for internal potentials should begin and end by '_'
-!  such as pot='_tera_'
+   ! Here we decide which forces we want.
+   ! By default we call an external program in force_abin routine
    select case (chpot)
    case ("mm")
       call force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas)
    case ("mmwater")
       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
-   case ("splined_grid")
+   case ("_splined_grid_")
       ! Only 1D spline grid supported at the moment
       call force_splined_grid(x, fx, eclas)
-   case ("harm")
-      call force_harmon(x, y, z, fx, fy, fz, eclas)
-   case ("2dho")
-      call force_2dho(x, y, z, fx, fy, fz, eclas)
-   case ("morse")
+   case ("_harmonic_rotor_")
+      call force_harmonic_rotor(x, y, z, fx, fy, fz, eclas)
+   case ("_harmonic_oscillator_")
+      call force_harmonic_oscillator(x, y, z, fx, fy, fz, eclas)
+   case ("_morse_")
       call force_morse(x, y, z, fx, fy, fz, eclas)
-   case ("doublewell")
+   case ("_doublewell_")
       call force_doublewell(x, y, fx, fy, eclas)
    case ("_cp2k_")
       call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_tera_")
-      if (ipimd == 2 .or. ipimd == 4 .or. ipimd == 5) then
+      if (ipimd == 2 .or. ipimd == 5) then
          call force_terash(x, y, z, fx, fy, fz, eclas)
       else
          call force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
@@ -214,7 +212,7 @@ end subroutine force_wrapper
 subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
    use mod_const, only: DP
    use mod_array_size
-   use mod_general, only: nwalk, inormalmodes, istage, natom, idebug
+   use mod_general, only: nwalk, inormalmodes, istage, natom
    use mod_nhc, only: temp, inose
    implicit none
    real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
@@ -298,10 +296,6 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
 
    deallocate (ak)
    energy = equant
-
-   if (idebug == 1) then
-      write (*, *) 'EQUANT', equant
-   end if
 end subroutine force_quantum
 
 ! Based on:
