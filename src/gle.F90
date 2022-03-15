@@ -300,12 +300,6 @@ contains
          call abinerror('gle_init')
       end if
 #endif
-
-      ! Temporary generation of propagators for tests
-      if (.not. gle_test) then
-         call write_propagator(gT, gS, dt, ns)
-      end if
-
    end subroutine gle_init
 
    subroutine initialize_momenta(C, iw)
