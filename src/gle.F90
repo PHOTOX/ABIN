@@ -265,7 +265,6 @@ contains
          call compute_propagator(gA, gC, gT, gS, dt)
       end if
 
-
       ! Initialize the auxiliary vectors.
       ! we keep general - as we might be using non-diagonal C
       ! to break detailed balance - and we use cholesky decomposition of C
@@ -363,12 +362,12 @@ contains
       integer, intent(in) :: ns
       integer :: u
 
-      open (newunit=u, file='GLE-T', action="write", access="sequential", form="unformatted") 
+      open (newunit=u, file='GLE-T', action="write", access="sequential", form="unformatted")
       write (u) dt, ns
       write (u) T
       close (u)
 
-      open (newunit=u, file='GLE-S', action="write", access="sequential", form="unformatted") 
+      open (newunit=u, file='GLE-S', action="write", access="sequential", form="unformatted")
       write (u) dt, ns
       write (u) S
       close (u)
@@ -383,7 +382,7 @@ contains
       integer :: ns_read
       integer :: u
 
-      open (newunit=u, file='GLE-T', action="read", status="old", access="sequential", form="unformatted") 
+      open (newunit=u, file='GLE-T', action="read", status="old", access="sequential", form="unformatted")
       read (u) dt_read, ns_read
       if (dt /= dt_read) then
          close (u)
@@ -398,7 +397,7 @@ contains
       read (u) T
       close (u)
 
-      open (newunit=u, file='GLE-S', action="read", status="old", access="sequential", form="unformatted") 
+      open (newunit=u, file='GLE-S', action="read", status="old", access="sequential", form="unformatted")
       read (u) dt_read, ns_read
       if (dt /= dt_read) then
          close (u)
