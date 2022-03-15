@@ -24,11 +24,10 @@ contains
       integer, intent(in) :: nwalk
       real(C_DOUBLE), dimension(:), allocatable :: x_tmp
       complex(C_DOUBLE_COMPLEX), dimension(:), allocatable :: cx_tmp
-      character, allocatable :: error_msg
 
       if (DP /= C_DOUBLE) then
-         error_msg = 'Kind DP is not equal to C_DOUBLE. Normal mode transform not possible.'
-         call fatal_error(__FILE__, __LINE__, error_msg)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Kind DP is not equal to C_DOUBLE. Normal mode transform not possible.')
       end if
 
       allocate (x_tmp(nwalk + 1))
