@@ -436,6 +436,7 @@ contains
       if (inose == 2 .and. readQT == 1) then
          read (111, '(A)') chtemp
          call checkchar(chtemp, chqt)
+         ! TODO: Move this inside GLE module
          write (chformat, '(A1,I1,A7)') '(', ns, 'E25.16)'
          do iw = 1, nwalk
             do iat = 1, natom * 3

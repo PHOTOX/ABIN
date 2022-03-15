@@ -21,6 +21,8 @@ module mod_gle
    public :: readQT, ns, ps, langham, tau0_langevin
    public :: gle_test
    public :: gle_step, pile_step, pile_init, gle_init, finalize_gle, finalize_pile
+   ! Public for unit tests
+   public :: read_propagator, write_propagator
    real(DP), allocatable :: gS(:, :), gT(:, :)
    real(DP), allocatable :: ps(:, :, :)
    ! For PIGLET
@@ -355,14 +357,12 @@ contains
 
    end subroutine finalize_gle
 
-   ! Matrix A is rewritten on output
    subroutine write_propagator(T, S, dt, ns)
       real(DP), intent(out) :: T(:, :), S(:, :)
       real(DP), intent(in) :: dt
       integer, intent(in) :: ns
       integer :: u
 
-      print*, "Writing GLE propagators"
       open (newunit=u, file='GLE-T', action="write", access="sequential", form="unformatted") 
       write (u) dt, ns
       write (u) T
@@ -374,7 +374,6 @@ contains
       close (u)
    end subroutine write_propagator
 
-   ! Matrix A is rewritten on output
    subroutine read_propagator(T, S, dt, ns)
       use mod_error, only: fatal_error
       real(DP), intent(out) :: T(:, :), S(:, :)
@@ -383,15 +382,16 @@ contains
       real(DP) :: dt_read
       integer :: ns_read
       integer :: u
-      ! TODO: verify dt and ns, maybe temperature?
-      print*, "Reading GLE propagators"
+
       open (newunit=u, file='GLE-T', action="read", status="old", access="sequential", form="unformatted") 
       read (u) dt_read, ns_read
       if (dt /= dt_read) then
          call fatal_error(__FILE__, __LINE__, "dt read from GLE-T does not match")
+         return
       end if
       if (ns /= ns_read) then
          call fatal_error(__FILE__, __LINE__, "ns read from GLE-T does not match")
+         return
       end if
       read (u) T
       close (u)
@@ -399,10 +399,12 @@ contains
       open (newunit=u, file='GLE-S', action="read", status="old", access="sequential", form="unformatted") 
       read (u) dt_read, ns_read
       if (dt /= dt_read) then
-         call fatal_error(__FILE__, __LINE__, "dt read from GLE-T does not match")
+         call fatal_error(__FILE__, __LINE__, "dt read from GLE-S does not match")
+         return
       end if
       if (ns /= ns_read) then
-         call fatal_error(__FILE__, __LINE__, "ns read from GLE-T does not match")
+         call fatal_error(__FILE__, __LINE__, "ns read from GLE-S does not match")
+         return
       end if
       read (u) S
       close (u)

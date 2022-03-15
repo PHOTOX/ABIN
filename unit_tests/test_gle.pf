@@ -1,0 +1,53 @@
+! Testing GLE thermostat
+module test_gle
+   use funit
+   use mod_gle
+   use mod_const, only: DP
+   implicit none
+
+contains
+
+   @test
+   subroutine test_write_read_propagator()
+      use mod_gle, only: write_propagator, read_propagator
+      integer, parameter :: ns = 2
+      real(DP), parameter :: dt = 5.0D0
+      real(DP) :: S(ns+1, ns+1), T(ns+1, ns+1)
+      real(DP) :: Sread(ns+1, ns+1), Tread(ns+1, ns+1)
+
+      ! TODO: Populate matrices by random numbers
+      S = 0.0D0
+      T = 1.0D0
+      call write_propagator(T, S, dt, ns)
+      call read_propagator(Tread, Sread, dt, ns)
+
+      ! TODO: Verify that read matrices are equal to originals element by element
+   end subroutine test_write_read_propagator
+
+   @test
+   subroutine test_read_propagator_errors()
+      use mod_gle, only: write_propagator, read_propagator
+      integer, parameter :: ns = 2
+      real(DP), parameter :: dt = 5.0D0
+      real(DP) :: S(ns+1, ns+1), T(ns+1, ns+1)
+      real(DP) :: Sread(ns+1, ns+1), Tread(ns+1, ns+1)
+      S = 0.0D0
+      T = 1.0D0
+      call write_propagator(T, S, dt, ns)
+      call read_propagator(Tread, Sread, dt + 1.D0, ns)
+      @assertExceptionRaised('dt read from GLE-T does not match')
+
+      call read_propagator(Tread, Sread, dt, ns + 1)
+      @assertExceptionRaised('ns read from GLE-T does not match')
+      
+      ! TODO: Write a different GLE-S file
+      !@assertExceptionRaised('dt read from GLE-S does not match')
+      !@assertExceptionRaised('ns read from GLE-S does not match')
+   end subroutine test_read_propagator_errors
+
+   @test
+   subroutine test_compute_propagator()
+   ! TODO: Test compute_propagator()
+   end subroutine test_compute_propagator
+
+end module test_gle

@@ -56,7 +56,14 @@ fftw_EXTRA_USE := throw_with_pfunit_mod
 fftw_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,fftw))
 
-all : utils masses plumed fftw terapi
+gle_TESTS := test_gle.pf
+gle_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+gle_OTHER_SRCS := throw_with_pfunit.F90
+gle_EXTRA_USE := throw_with_pfunit_mod
+gle_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,gle))
+
+all : utils masses plumed fftw terapi gle
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
@@ -67,9 +74,11 @@ test : clean_plumed_output clean_terapi_output
 	./plumed
 	./fftw
 	./terapi
+	./gle
 
 clean : clean_plumed_output clean_terapi_output
-	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 masses utils plumed fftw terapi
+	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90
+	/bin/rm -f masses utils plumed fftw terapi gle
 
 clean_plumed_output :
 	/bin/rm -f bck.* plumed_*.dat
@@ -77,6 +86,6 @@ clean_plumed_output :
 clean_terapi_output :
 	/bin/rm -f wfn.bin*
  
-.PHONY: clean test
+.PHONY: clean test clean_plumed_output clean_terapi_output
 
 .SUFFIXES: .F90
