@@ -386,10 +386,12 @@ contains
       open (newunit=u, file='GLE-T', action="read", status="old", access="sequential", form="unformatted") 
       read (u) dt_read, ns_read
       if (dt /= dt_read) then
+         close (u)
          call fatal_error(__FILE__, __LINE__, "dt read from GLE-T does not match")
          return
       end if
       if (ns /= ns_read) then
+         close (u)
          call fatal_error(__FILE__, __LINE__, "ns read from GLE-T does not match")
          return
       end if
@@ -399,10 +401,12 @@ contains
       open (newunit=u, file='GLE-S', action="read", status="old", access="sequential", form="unformatted") 
       read (u) dt_read, ns_read
       if (dt /= dt_read) then
+         close (u)
          call fatal_error(__FILE__, __LINE__, "dt read from GLE-S does not match")
          return
       end if
       if (ns /= ns_read) then
+         close (u)
          call fatal_error(__FILE__, __LINE__, "ns read from GLE-S does not match")
          return
       end if
