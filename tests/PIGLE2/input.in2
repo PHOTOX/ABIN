@@ -1,0 +1,29 @@
+&general
+nstep=2,
+irest=1,
+
+pot='mmwater'
+mdtype='pimd'
+nwalk=2,		!number of random walkers 
+
+dt=7.,			! number of steps and timestep
+irandom=131313,  	! random seed
+nabin=2,		! what is the gap between ab initio calculations?
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=1,		! how often should we print coordinates?
+nwritev=1,
+nwritef=1,
+nrest=1,		! how often we print restart files?
+/
+
+&nhcopt
+inose=2,		! GLE thermostat
+temp=200,		! initial temperature for Maxwell-Boltzmann sampling [au]
+
+! Unlike in the PIGLE test, we're running a normal PIGLE here,
+! where propagator matrices S and T are computed from A and C
+! matrices read from GLE-A and GLE-C files.
+! Because of that, the numerical threshold in NUM_THRE file is lower.
+gle_test=.false.
+/

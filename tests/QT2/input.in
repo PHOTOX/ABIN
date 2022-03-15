@@ -1,0 +1,28 @@
+&general
+nstep=1,
+irest=0,
+
+pot='mmwater'		
+watpot=1,
+mdtype='md',
+
+dt=10.,
+irandom=131313,
+
+nwrite=1,
+nwritex=1,
+nrest=1,
+nwritev=1,
+nwritef=1,
+/
+
+&nhcopt
+inose=2,
+rem_comrot=.false.
+temp=100.15,
+! Unlike in the PIGLE test, we're running a normal PIGLE here,
+! where propagator matrices S and T are computed from A and C
+! matrices read from GLE-A and GLE-C files.
+! Because of that, the numerical threshold in NUM_THRE file is lower.
+gle_test=.false.
+/
