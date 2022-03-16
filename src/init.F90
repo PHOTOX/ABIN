@@ -1168,8 +1168,8 @@ subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general
    use mod_files, only: MAXUNITS
-   use mod_nhc !,   only: finalize_nhc
-   use mod_gle, only: finalize_gle
+   use mod_nhc, only: inose, finalize_nhc
+   use mod_gle, only: finalize_gle, finalize_pile
    use mod_estimators, only: h
    use mod_potentials, only: hess
    use mod_lz, only: lz_finalize
@@ -1224,9 +1224,10 @@ subroutine finish(error_code)
 
    if (inose == 1) then
       call finalize_nhc()
-   end if
-   if (inose > 1 .and. inose < 5) then
+   else if (inose == 2) then
       call finalize_gle()
+   else if (inose == 3) then
+      call finalize_pile()
    end if
 
    if (iplumed == 1) then

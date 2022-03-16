@@ -353,7 +353,6 @@ contains
       end if
 
       if (allocated(ran)) deallocate (ran)
-
    end subroutine finalize_gle
 
    subroutine write_propagator(T, S, dt, ns)
