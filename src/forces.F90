@@ -209,7 +209,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    e_pot = eclas
 end subroutine force_wrapper
 
-subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
+subroutine force_quantum(fx, fy, fz, x, y, z, amg, quantum_energy)
    use mod_const, only: DP
    use mod_array_size
    use mod_general, only: nwalk, inormalmodes, istage, natom
@@ -218,8 +218,8 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
    real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
    real(DP), intent(in) :: amg(:, :)
    real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
-   real(DP), intent(out) :: energy
-   real(DP), allocatable :: ak(:, :)
+   real(DP), intent(out) :: quantum_energy
+   real(DP) :: ak(natom, nwalk)
    real(DP) :: equant
    integer :: i, j, kplus, kminus
 
@@ -227,32 +227,30 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
    fy = 0.0D0
    fz = 0.0D0
 
-!  TODO: we should not calculate ak params each step...
-!  Setting the quantum force constants
-!  ak is defined is m*P/(beta^2*hbar^2)
-   allocate (ak(natom, nwalk))
+   ! Setting the quantum force constants
+   ! ak is defined as m*P/(beta^2*hbar^2)
+   ak = 0.0D0
    do j = 1, nwalk
       do i = 1, natom
          ak(i, j) = nwalk * amg(i, j) * TEMP**2
       end do
    end do
 
-!  for PI+GLE we have different hamiltonian
+   ! for PI+GLE we have different hamiltonian
    if (inose == 2) then
       ak = nwalk * ak
    end if
 
-!   if(inormalmodes.eq.2)then
-!      ak = ak / dsqrt(nwalk*1.0d0)
-!   end if
    ! Tuckerman normal modes Hamiltonian
+   ! Not tested
    if (inormalmodes == 2) then
       ak = NWALK * TEMP**2 * amg / dsqrt(nwalk * 1.0D0)
    end if
 
+   ! This is the energy coming from the Path Integral harmonic forces
    equant = 0.0D0
 
-!  If the staging transformation is not used
+   ! If the staging transformation is not used
    if (istage == 0 .and. inormalmodes == 0) then
       do j = 1, natom
          do i = 1, nwalk
@@ -280,7 +278,7 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
       end do
    end if
 
-!  If the staging or normal mode transformation is used
+   ! If staging or normal mode transformation is used
    if (istage == 1 .or. inormalmodes > 0) then
       do j = 1, natom
          do i = 1, nwalk
@@ -294,8 +292,7 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
       end do
    end if
 
-   deallocate (ak)
-   energy = equant
+   quantum_energy = equant
 end subroutine force_quantum
 
 ! Based on:
