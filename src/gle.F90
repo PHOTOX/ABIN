@@ -120,40 +120,40 @@ contains
       integer, intent(in) :: inose
       integer, intent(in) :: ipimd
       integer, intent(in) :: inormalmodes
-      print*, ""
-      print*, "Initialization of GLE thermostat."
-      print*, "Please cite the following review paper about the GLE methodology"
-      print*, "M. Ceriotti, G. Bussi and M. Parrinello"
-      print*, "J. Chem. Theory Comput. 6, 1170 (2010)"
-      print*, "Colored-noise thermostats a la carte"
-      print*, "http://dx.doi.org/10.1021/ct900563s"
-      print*, ""
-      print*, "The citations for specific GLE use cases is at"
-      print*, "http://gle4md.org/index.html?page=refs"
-      print*, ""
+      print*,""
+      print*,"Initialization of GLE thermostat."
+      print*,"Please cite the following review paper about the GLE methodology"
+      print*,"M. Ceriotti, G. Bussi and M. Parrinello"
+      print*,"J. Chem. Theory Comput. 6, 1170 (2010)"
+      print*,"Colored-noise thermostats a la carte"
+      print*,"http://dx.doi.org/10.1021/ct900563s"
+      print*,""
+      print*,"The citations for specific GLE use cases is at"
+      print*,"http://gle4md.org/index.html?page=refs"
+      print*,""
 
       if (inose == 2 .and. ipimd == 0) then
-         print *, "Using Quantum Thermostat, please cite"
-         print*, "M. Ceriotti, G. Bussi and M. Parrinello"
-         print*, "Phy. Rev. Lett. 103, 030603 (2009)"
-         print*, "Nuclear quantum effects in solids using a colored-noise thermostat"
-         print*, "http://dx.doi.org/10.1103/PhysRevLett.103.030603"
-         print*, ""
+         print*,"Using Quantum Thermostat, please cite"
+         print*,"M. Ceriotti, G. Bussi and M. Parrinello"
+         print*,"Phy. Rev. Lett. 103, 030603 (2009)"
+         print*,"Nuclear quantum effects in solids using a colored-noise thermostat"
+         print*,"http://dx.doi.org/10.1103/PhysRevLett.103.030603"
+         print*,""
       else if (inose == 2 .and. ipimd == 1 .and. inormalmodes == 0) then
-         print *, "Using PI+GLE thermostat, please cite:"
-         print*, "M. Ceriotti, D. E. Manolopoulos, and M. Parrinello"
-         print*, "J. Chem. Phys. 134, 084104 (2011)"
-         print*, "Accelerating the convergence of path integral dynamics"
-         print*, "with a generalized Langevin equation"
-         print*, "http://dx.doi.org/10.1063/1.3556661"
-         print*, ""
+         print*,"Using PI+GLE thermostat, please cite:"
+         print*,"M. Ceriotti, D. E. Manolopoulos, and M. Parrinello"
+         print*,"J. Chem. Phys. 134, 084104 (2011)"
+         print*,"Accelerating the convergence of path integral dynamics"
+         print*,"with a generalized Langevin equation"
+         print*,"http://dx.doi.org/10.1063/1.3556661"
+         print*,""
       else if (inose == 2 .and. ipimd == 1 .and. inormalmodes == 1) then
-         print *, "Using PIGLET thermostat, please cite"
-         print*, "M. Ceriotti, D. E. Manolopoulos, Rev. Lett. 109, 100604 (2012)"
-         print*, "Efficient first-principles calculation of the"
-         print*, "quantum kinetic energy and momentum distribution of nuclei"
-         print*, "http://dx.doi.org/10.1103/PhysRevLett.109.100604"
-         print*, ""
+         print*,"Using PIGLET thermostat, please cite"
+         print*,"M. Ceriotti, D. E. Manolopoulos, Rev. Lett. 109, 100604 (2012)"
+         print*,"Efficient first-principles calculation of the"
+         print*,"quantum kinetic energy and momentum distribution of nuclei"
+         print*,"http://dx.doi.org/10.1103/PhysRevLett.109.100604"
+         print*,""
       end if
    end subroutine print_gle_header
 
@@ -261,7 +261,7 @@ contains
       allocate (gr(ns + 1))
       allocate (ps(natom * 3, ns, nwalk)) !each bead has to have its additional momenta
 
-      if (my_rank == 0) print*, 'Reading A-matrix. Expecting a.u. units!'
+      if (my_rank == 0) print*,'Reading A-matrix. Expecting a.u. units!'
       do i = 1, ns + 1
          read (121, *) gA(i, :)
       end do
@@ -270,13 +270,13 @@ contains
 
       ! reads C (in eV!), or init to kT
       if (inose == 4) then
-         if (my_rank == 0) print*, "Using canonical-sampling, Cp=kT"
+         if (my_rank == 0) print*,"Using canonical-sampling, Cp=kT"
          gC = 0.0D0
          do i = 1, ns + 1
             gC(i, i) = temp
          end do
       else
-         if (my_rank == 0) print*, 'Reading specialized Cp matrix. Expecting eV units!'
+         if (my_rank == 0) print*,'Reading specialized Cp matrix. Expecting eV units!'
          read (122, *) cns
          if (cns /= ns) then
             write (*, *) "Error: size mismatch matrices in GLE-A and GLE-C!"

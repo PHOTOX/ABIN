@@ -12,8 +12,8 @@ contains
       use mod_gle, only: write_propagator, read_propagator
       integer, parameter :: ns = 2
       real(DP), parameter :: dt = 5.0D0
-      real(DP) :: S(ns+1, ns+1), T(ns+1, ns+1)
-      real(DP) :: Sread(ns+1, ns+1), Tread(ns+1, ns+1)
+      real(DP) :: S(ns + 1, ns + 1), T(ns + 1, ns + 1)
+      real(DP) :: Sread(ns + 1, ns + 1), Tread(ns + 1, ns + 1)
       integer :: i, j
 
       call random_seed()
@@ -37,8 +37,8 @@ contains
       use mod_gle, only: write_propagator, read_propagator
       integer, parameter :: ns = 3
       real(DP), parameter :: dt = 5.0D0
-      real(DP) :: S(ns+1, ns+1), T(ns+1, ns+1)
-      real(DP) :: Sread(ns+1, ns+1), Tread(ns+1, ns+1)
+      real(DP) :: S(ns + 1, ns + 1), T(ns + 1, ns + 1)
+      real(DP) :: Sread(ns + 1, ns + 1), Tread(ns + 1, ns + 1)
       integer :: u
 
       call random_seed()
@@ -52,7 +52,7 @@ contains
 
       call read_propagator(Tread, Sread, dt, ns + 1)
       @assertExceptionRaised('ns read from GLE-T.bin does not match')
-      
+
       open (newunit=u, file='GLE-S.bin', action="write", access="sequential", form="unformatted")
       write (u) dt + 1.0D0, ns
       close (u)
