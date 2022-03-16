@@ -14,7 +14,7 @@ contains
 
    @test
    subroutine test_wfn_restart()
-      use mod_general, only: narchive, it
+      use mod_general, only: narchive, it, my_rank
       use mod_sh_integ, only: nstate
       integer :: ci_size = 10
       integer :: blob_size = 15
@@ -24,6 +24,8 @@ contains
       narchive = 10
       it = 1
       nstate = 3
+      ! To suppress stdout printing
+      my_rank = 1
 
       call set_nbf(-1)
       @assertExceptionRaised('invalid array size in set_nbf')

@@ -10,7 +10,7 @@
 ! * e-mail me at michele dot ceriotti at gmail dot com    *
 ! *********************************************************
 
-! The original code was modified to allow for PI+GLE and PIGLET simulation
+! The original code was modified to allow for PI+GLE and PIGLET simulations
 ! in ABIN by Daniel Hollas, danekhollas at gmail dot com
 
 module mod_gle
@@ -416,12 +416,12 @@ contains
       read (u) dt_read, ns_read
       if (dt /= dt_read) then
          close (u)
-         call fatal_error(__FILE__, __LINE__, "dt read from GLE-T does not match")
+         call fatal_error(__FILE__, __LINE__, "dt read from GLE-T.bin does not match")
          return
       end if
       if (ns /= ns_read) then
          close (u)
-         call fatal_error(__FILE__, __LINE__, "ns read from GLE-T does not match")
+         call fatal_error(__FILE__, __LINE__, "ns read from GLE-T.bin does not match")
          return
       end if
       read (u) T
@@ -431,12 +431,12 @@ contains
       read (u) dt_read, ns_read
       if (dt /= dt_read) then
          close (u)
-         call fatal_error(__FILE__, __LINE__, "dt read from GLE-S does not match")
+         call fatal_error(__FILE__, __LINE__, "dt read from GLE-S.bin does not match")
          return
       end if
       if (ns /= ns_read) then
          close (u)
-         call fatal_error(__FILE__, __LINE__, "ns read from GLE-S does not match")
+         call fatal_error(__FILE__, __LINE__, "ns read from GLE-S.bin does not match")
          return
       end if
       read (u) S

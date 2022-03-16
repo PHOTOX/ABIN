@@ -14,40 +14,84 @@ contains
       real(DP), parameter :: dt = 5.0D0
       real(DP) :: S(ns+1, ns+1), T(ns+1, ns+1)
       real(DP) :: Sread(ns+1, ns+1), Tread(ns+1, ns+1)
+      integer :: i, j
 
-      ! TODO: Populate matrices by random numbers
-      S = 0.0D0
-      T = 1.0D0
+      call random_seed()
+      call random_number(S)
+      call random_number(T)
+
       call write_propagator(T, S, dt, ns)
       call read_propagator(Tread, Sread, dt, ns)
 
-      ! TODO: Verify that read matrices are equal to originals element by element
+      do i = 1, ns + 1
+         do j = 1, ns + 1
+            call assertEqual(S(i, j), Sread(i, j), 'S matrix elements')
+            call assertEqual(T(i, j), Tread(i, j), 'T matrix elements')
+         end do
+      end do
+      call system('rm GLE-S.bin GLE-T.bin')
    end subroutine test_write_read_propagator
 
    @test
    subroutine test_read_propagator_errors()
       use mod_gle, only: write_propagator, read_propagator
-      integer, parameter :: ns = 2
+      integer, parameter :: ns = 3
       real(DP), parameter :: dt = 5.0D0
       real(DP) :: S(ns+1, ns+1), T(ns+1, ns+1)
       real(DP) :: Sread(ns+1, ns+1), Tread(ns+1, ns+1)
-      S = 0.0D0
-      T = 1.0D0
+      integer :: u
+
+      call random_seed()
+      call random_number(S)
+      call random_number(T)
+
       call write_propagator(T, S, dt, ns)
+
       call read_propagator(Tread, Sread, dt + 1.D0, ns)
-      @assertExceptionRaised('dt read from GLE-T does not match')
+      @assertExceptionRaised('dt read from GLE-T.bin does not match')
 
       call read_propagator(Tread, Sread, dt, ns + 1)
-      @assertExceptionRaised('ns read from GLE-T does not match')
+      @assertExceptionRaised('ns read from GLE-T.bin does not match')
       
-      ! TODO: Write a different GLE-S file
-      !@assertExceptionRaised('dt read from GLE-S does not match')
-      !@assertExceptionRaised('ns read from GLE-S does not match')
+      open (newunit=u, file='GLE-S.bin', action="write", access="sequential", form="unformatted")
+      write (u) dt + 1.0D0, ns
+      close (u)
+      call read_propagator(Tread, Sread, dt, ns)
+      @assertExceptionRaised('dt read from GLE-S.bin does not match')
+
+      open (newunit=u, file='GLE-S.bin', action="write", access="sequential", form="unformatted")
+      write (u) dt, ns + 1
+      close (u)
+      call read_propagator(Tread, Sread, dt, ns)
+      @assertExceptionRaised('ns read from GLE-S.bin does not match')
+
+      call system('rm GLE-S.bin GLE-T.bin')
    end subroutine test_read_propagator_errors
 
    @test
+   @disable
    subroutine test_compute_propagator()
-   ! TODO: Test compute_propagator()
+      !use mod_gle, only: read_propagator, compute_propagator
+      !integer, parameter :: ns = 2
+      !real(DP), parameter :: dt = 2.0D0
+      !real(DP) :: A(ns+1, ns + 1), C(ns+1, ns + 1)
+      !real(DP) :: S(ns+1, ns+1), T(ns+1, ns+1)
+      !real(DP) :: Sread(ns+1, ns+1), Tread(ns+1, ns+1)
+      !integer :: i, j
+      ! TODO: Test compute_propagator()
+      ! TODO: Need to create these subroutines and refactor gle_init
+      ! call read_gle_matrix(A, ns, 'GLE-A')
+      ! call read_gle_matrix(C, ns, 'GLE-A')
+      !call compute_propagator(dt, A, C, S, T)
+      ! call system('cp GLE-S.bin.ref GLE-S.bin')
+      ! call system('cp GLE-T.bin.ref GLE-T.bin')
+      !call read_propagator(Tread, Sread, dt, ns)
+      !do i = 1, ns + 1
+      !   do j = 1, ns + 1
+      !      call assertEqual(S(i, j), Sread(i, j), 'computed S matrix elements', tolerance=1e-14)
+      !      call assertEqual(T(i, j), Tread(i, j), 'computed T matrix elements', tolerance=1e-14)
+      !   end do
+      !end do
    end subroutine test_compute_propagator
 
 end module test_gle
