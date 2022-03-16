@@ -270,8 +270,8 @@ subroutine init(dt)
          print '(a)', '             Landau Zener MD                  '
       end select
 
-      write (*, *) '    using potential: ', toupper(pot)
-      print '(a)', '                                              '
+      print '(a)', '    using potential: '//toupper(trim(pot))
+      print '(a)', ''
       print '(a)', chdivider
    end if
 
@@ -345,14 +345,15 @@ subroutine init(dt)
       rem_comvel = .true.
    end if
 
-!  allocate all basic arrays and set them to 0.0d0
+   ! Allocate all basic arrays and set them to 0.0d0
    call allocate_arrays(natom, nwalk + 1)
 
    if (iplumed == 1) then
       call plumed_init()
    end if
 
-!  READING GEOMETRY
+   ! Read initial geometry
+   ! TODO: Move to a separate function
    read (111, *)
    do iat = 1, natom
 
@@ -372,6 +373,7 @@ subroutine init(dt)
    end do
    close (111)
 
+   ! Initialize all PIMD beads to the same initial geometry
    do iw = 1, nwalk
       do iat = 1, natom
          x(iat, iw) = x(iat, 1)
@@ -638,8 +640,9 @@ subroutine init(dt)
    end if
 
    if (my_rank == 0) then
-      write (*, *)
-      write (*, *) '--------------SIMULATION PARAMETERS--------------'
+      print*, chdivider
+      print*, ''
+      print*, '                SIMULATION PARAMETERS'
       write (*, nml=general, delim='APOSTROPHE')
       write (*, *)
       write (*, nml=system, delim='APOSTROPHE')
