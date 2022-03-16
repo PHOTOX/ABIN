@@ -4,6 +4,7 @@
 *.o
 *.mod
 *.inc
+*.bin
 bck.*
 masses
 utils

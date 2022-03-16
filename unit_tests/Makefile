@@ -68,7 +68,7 @@ all : utils masses plumed fftw terapi gle
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
 
-test : clean_plumed_output clean_terapi_output
+test : clean_plumed_output clean_terapi_output clean_gle_output
 	./utils
 	./masses
 	./plumed
@@ -76,7 +76,7 @@ test : clean_plumed_output clean_terapi_output
 	./terapi
 	./gle
 
-clean : clean_plumed_output clean_terapi_output
+clean : clean_plumed_output clean_terapi_output clean_gle_output
 	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90
 	/bin/rm -f masses utils plumed fftw terapi gle
 
@@ -85,6 +85,9 @@ clean_plumed_output :
 
 clean_terapi_output :
 	/bin/rm -f wfn.bin*
+
+clean_gle_output :
+	/bin/rm -f GLE-S.bin GLE-T.bin
  
 .PHONY: clean test clean_plumed_output clean_terapi_output
 
