@@ -492,12 +492,7 @@ contains
       ! ran and ngp arrays are allocated in gle_init,
       ! maybe we should move the allocation here
 
-#ifdef USELIBS
-      call dgemm('n', 't', natom * 3, ns + 1, ns + 1, 1.0D0, p, &
-                & natom * 3, T, ns + 1, 0.0D0, ngp, natom * 3)
-#else
       ngp = transpose(matmul(T, transpose(p)))
-#endif
 
       ! now, must compute random part.
       ! first, fill up p of random n
@@ -512,14 +507,7 @@ contains
          end do
       end do
 
-#ifdef USELIBS
-      call dgemm('n', 't', natom * 3, ns + 1, ns + 1, 1.0D0, p, &
-                & natom * 3, S, ns + 1, 1.0D0, ngp, natom * 3)
-      p = ngp
-#else
       p = ngp + transpose(matmul(S, transpose(p)))
-#endif
-
    end subroutine gle_propagate
 
    ! matrix exponential by scale & square.
