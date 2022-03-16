@@ -4,22 +4,22 @@ irest=1,
 
 pot='mmwater'
 mdtype='pimd'
-nwalk=2,		!number of random walkers 
+nwalk=2,
 
-dt=7.,			! number of steps and timestep
-irandom=131313,  	! random seed
-nabin=2,		! what is the gap between ab initio calculations?
+dt=7.,
+irandom=131313,
+nabin=2,
 
-nwrite=1,		! how often some output should be printed (estimators etc.)
-nwritex=1,		! how often should we print coordinates?
+nwrite=1,
+nwritex=1,
 nwritev=1,
 nwritef=1,
-nrest=1,		! how often we print restart files?
+nrest=1,
 /
 
 &nhcopt
-inose=2,		! GLE thermostat
-temp=200,		! initial temperature for Maxwell-Boltzmann sampling [au]
+inose=2,
+temp=200,
 
 ! Unlike in the PIGLE test, we're running a normal PIGLE here,
 ! where propagator matrices S and T are computed from A and C
