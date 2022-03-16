@@ -545,6 +545,9 @@ subroutine init(dt)
       call gle_init(dt * 0.5 / nabin / nstep_ref) !nabin is set to 1 unless ipimd=1
    else if (inose == 3) then
       call pile_init(dt * 0.5, tau0_langevin)
+   ! Canonical sampling with GLE not yet tested
+   !else if (inose == 4) then
+   !   call gle_init(dt * 0.5 / nstep_ref)
    else if (inose == 0) then
       write (*, '(A)') 'No thermostat. NVE ensemble.'
    else
@@ -1224,7 +1227,7 @@ subroutine finish(error_code)
 
    if (inose == 1) then
       call finalize_nhc()
-   else if (inose == 2) then
+   else if (inose == 2 .or. inose == 4) then
       call finalize_gle()
    else if (inose == 3) then
       call finalize_pile()
