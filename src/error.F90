@@ -86,9 +86,11 @@ contains
 
       base_name = get_base_name(filename)
 
+      call flush (OUTPUT_UNIT)
       write (ERROR_UNIT, '(a9, a, a1, i0, a)') &
            & 'ERROR at ', base_name, ':', line, &
            & ' '//adjustl(trim(message))
+      call flush (ERROR_UNIT)
 
       ! We do not print line number in the ERROR file,
       ! because we check the ERROR file in tests, and any change
@@ -98,9 +100,6 @@ contains
       open (newunit=iunit, file=ERROR_FILE, action='write')
       write (iunit, '(a)') 'ERROR in '//base_name//': '//adjustl(trim(message))
       close (unit=iunit)
-
-      call flush (OUTPUT_UNIT)
-      call flush (ERROR_UNIT)
    end subroutine print_error
 
    ! Get get base filename from the full path.
