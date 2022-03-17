@@ -439,7 +439,7 @@ subroutine init(dt)
    end if
 
    close (150)
-!--END OF READING INPUT---------------
+   ! END OF READING INPUT
 
    if (pot == '_tera_' .or. restrain_pot == '_tera_') then
       call initialize_tc_servers()
@@ -476,7 +476,6 @@ subroutine init(dt)
       md = 2
    end if
 
-   ! we should include shake into the verlet routine
    if (nshake /= 0) then
       md = 3
    end if
@@ -499,7 +498,7 @@ subroutine init(dt)
       if (inose /= 0) write (*, *) 'Target temperature [K] =', temp
    end if
 
-   ! conversion of temperature from K to au
+   ! Convert temperature from Kelvins to atomic units
    temp = temp / AUtoK
    temp0 = temp0 / AUtoK
 
@@ -509,11 +508,8 @@ subroutine init(dt)
       cvhess_cumul = 0.0D0
    end if
 
-!     SHAKE initialization, determining the constrained bond lenghts
+   ! Initialize SHAKE, determine the constrained bond lenghts
    if (nshake /= 0) then
-      if (my_rank == 0) then
-         write (*, *) 'Setting distances for SHAKE from XYZ coordinates'
-      end if
       call shake_init(x, y, z)
    end if
 
@@ -537,19 +533,21 @@ subroutine init(dt)
       end do
    end if
 
-   ! MUST BE BEFORE RESTART DUE TO ARRAY ALOCATION
-   call gautrg(rans, 0, IRandom) !initialize prng, maybe rewritten during restart
+   ! Initialize pseudo-random number generator.
+   ! This call has to happen before we read restart file
+   ! to allocate internal arrays.
+   ! If we are restarting, the PRNG state initialized here is overwritten.
+   call gautrg(rans, 0, irandom)
 
-!    THERMOSTAT INITIALIZATION
+   ! Initialize thermostat
    if (inose == 1) then
       call nhc_init()
    else if (inose == 2) then
       call gle_init(dt * 0.5 / nabin / nstep_ref) !nabin is set to 1 unless ipimd=1
    else if (inose == 3) then
       call pile_init(dt * 0.5, tau0_langevin)
-      ! Canonical sampling with GLE not yet tested
-      !else if (inose == 4) then
-      !   call gle_init(dt * 0.5 / nstep_ref)
+   else if (inose == 4) then
+      call gle_init(dt * 0.5 / nstep_ref)
    else if (inose == 0) then
       write (*, '(A)') 'No thermostat. NVE ensemble.'
    else
@@ -567,12 +565,11 @@ subroutine init(dt)
    end if
    if (nchain > 1) then
       f = 0 !what about nchain=1?
-      ! what about massive therm?
+      ! what about massive thermostat?
    end if
 
-!     SETTING initial velocities according to the Maxwell-Boltzmann distribution
+   ! Set initial velocities according to the Maxwell-Boltzmann distribution
    if (irest == 0 .and. chveloc == '') then
-      ! TODO: GLE thermostat, initialize momenta in gle_init
       if (temp0 >= 0) then
          call vinit(temp0, am, vx, vy, vz)
       else
@@ -614,17 +611,25 @@ subroutine init(dt)
 !     END OF READING VELOCITIES--------------------
 
    ! doing this here so that we can do it even when reading velocities from file
-   if (rem_comvel) call remove_comvel(vx, vy, vz, am, rem_comvel)
-   if (rem_comrot) call remove_rotations(x, y, z, vx, vy, vz, am, rem_comrot)
+   if (rem_comvel) then
+      call remove_comvel(vx, vy, vz, am, rem_comvel)
+   end if
+   if (rem_comrot) then
+      call remove_rotations(x, y, z, vx, vy, vz, am, rem_comrot)
+   end if
 
-   if (conatom > 0) call constrainP(vx, vy, vz, conatom)
+   if (conatom > 0) then
+      call constrainP(vx, vy, vz, conatom)
+   end if
 
    ! If scaleveloc=1, scale initial velocitites to match the temperature
    ! Otherwise, just print the temperature.
    call ScaleVelocities(vx, vy, vz)
 
    ! Initialize spherical boundary onditions
-   if (isbc == 1) call sbc_init(x, y, z)
+   if (isbc == 1) then
+      call sbc_init(x, y, z)
+   end if
 
    ! inames initialization for the MM part.
    ! We do this also because string comparison is very costly
