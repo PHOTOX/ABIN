@@ -302,8 +302,6 @@ contains
       ! to break detailed balance - and we use cholesky decomposition of C
       ! since one would like to initialize correctly the velocities in
 
-      ! DH: ps rewritten in init.f90 if irest.eq.1
-
       ! TODO: Do not overwrite gA
       gA = gC
       call cholesky(gA, gC, ns + 1)
