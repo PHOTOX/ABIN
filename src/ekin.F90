@@ -52,7 +52,7 @@ contains
          if (inose == 1) then
             call calc_nhcham()
             write (UTEMPER, '(E20.10)', advance="no") nhcham + ekin_mom + eclas
-         else if (inose == 2 .or. inose == 3) then
+         else if (inose == 2 .or. inose == 3 .or. inose == 4) then
             write (UTEMPER, '(E20.10)', advance="no") langham + ekin_mom + eclas
          end if
 
