@@ -309,9 +309,9 @@ contains
       do iw = 1, nwalk
          ! Centroid was already initialized
          if (inormalmodes == 1 .and. iw == 1) then
-            call initialize_momenta(gC_centroid, 1)
+            call initialize_momenta(gC_centroid, 1, natom)
          else
-            call initialize_momenta(gC, iw)
+            call initialize_momenta(gC, iw, natom)
          end if
       end do
 
@@ -332,13 +332,11 @@ contains
 #endif
    end subroutine gle_init
 
-   subroutine initialize_momenta(C, iw)
+   subroutine initialize_momenta(C, iw, natom)
       !use mod_arrays,  only: px, py, pz, vx, vy, vz, amt
       use mod_error, only: fatal_error
-      use mod_general, only: natom
-      use mod_utils, only: abinerror
       real(DP), intent(in) :: C(:, :)
-      integer, intent(in) :: iw
+      integer, intent(in) :: iw, natom
       real(DP), allocatable :: gr(:)
       integer :: i, j
       ! WARNING: this routine must be called after arrays are allocated!
@@ -529,7 +527,6 @@ contains
          call gautrg(ran, natom * 3)
          do j = 1, natom
             sqm = dsqrt(mass(j, iw))
-            !<-- if m!= 1, alternatively one could perform the scaling here (check also init!)
             p(j, i) = ran(j) * sqm
             p(j + natom, i) = ran(j + natom) * sqm
             p(j + natom * 2, i) = ran(j + natom * 2) * sqm
