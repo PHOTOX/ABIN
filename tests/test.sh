@@ -161,9 +161,10 @@ if [[ $TESTS = "all" ]];then
 
    if [[ $FFTW = "TRUE" ]];then
       let index=${#folders[@]}+1
-      # TODO: Reactivate PIGLET test once we figure out the origin of why it's failing
-      #folders[index]=PIGLET
-      #let index++
+      folders[index]=PIGLET
+      let index++
+      folders[index]=PIGLET2
+      let index++
       folders[index]=PILE
    else
       let index=${#folders[@]}+1
@@ -248,9 +249,9 @@ do
       diff_files || current_error=$?
       if [[ $current_error -ne 0 ]];then
         global_error=1
-        echo "$dir FAILED"
+        echo -e "$dir \033[0;31mFAILED\033[0m"
       else
-        echo "PASSED"
+        echo -e "\033[0;32mPASSED\033[0m"
       fi
    fi
 
@@ -262,9 +263,9 @@ done
 echo " "
 
 if [[ ${global_error} -ne 0 ]];then
-   echo "Some tests DID NOT PASS."
+   echo -e "Some tests \033[0;31mFAILED\033[0m."
 else
-   echo "All tests PASSED."
+   echo -e "\033[0;32mAll tests PASSED.\033[0m"
 fi
 
 exit $global_error

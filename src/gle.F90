@@ -91,10 +91,10 @@ contains
    ! white-noise propagator. time-step has been set in wn_init
    subroutine pile_step(px, py, pz, m)
       use mod_general, only: natom, nwalk
-      real*8, intent(inout) :: px(:, :)
-      real*8, intent(inout) :: py(:, :)
-      real*8, intent(inout) :: pz(:, :)
-      real*8, intent(in) :: m(:, :)
+      real(DP), intent(inout) :: px(:, :)
+      real(DP), intent(inout) :: py(:, :)
+      real(DP), intent(inout) :: pz(:, :)
+      real(DP), intent(in) :: m(:, :)
       integer :: iat, iw, pom
 
       pom = 1
@@ -292,7 +292,13 @@ contains
       ! WARNING: gA is rewritten here
       ! TODO: do not overwrite gA
       if (gle_test) then
-         call read_propagator(gT, gS, dt, ns)
+         call read_propagator(dt, ns, 'GLE-S.bin', gS)
+         call read_propagator(dt, ns, 'GLE-T.bin', gT)
+         ! TODO: Refactor this
+         if (inormalmodes == 1) then
+            call read_propagator(dt, ns, 'GLE-S.centroid.bin', gS_centroid)
+            call read_propagator(dt, ns, 'GLE-T.centroid.bin', gT_centroid)
+         end if
       else
          call compute_propagator(gA, gC, gT, gS, dt)
       end if
@@ -330,6 +336,14 @@ contains
          call abinerror('gle_init')
       end if
 #endif
+      if (.not. gle_test) then
+         call write_propagator(gT, dt, ns, 'GLE-T.bin')
+         call write_propagator(gS, dt, ns, 'GLE-S.bin')
+         if (inormalmodes == 1) then
+            call write_propagator(gT_centroid, dt, ns, 'GLE-T.centroid.bin')
+            call write_propagator(gS_centroid, dt, ns, 'GLE-S.centroid.bin')
+         end if
+      end if
    end subroutine gle_init
 
    subroutine initialize_momenta(C, iw, natom)
@@ -382,60 +396,42 @@ contains
       if (allocated(ran)) deallocate (ran)
    end subroutine finalize_gle
 
-   subroutine write_propagator(T, S, dt, ns)
-      real(DP), intent(out) :: T(:, :), S(:, :)
+   subroutine write_propagator(M, dt, ns, fname)
+      real(DP), intent(in) :: M(:, :)
       real(DP), intent(in) :: dt
       integer, intent(in) :: ns
+      character(len=*), intent(in) :: fname
       integer :: u
 
-      open (newunit=u, file='GLE-T.bin', action="write", access="sequential", form="unformatted")
+      open (newunit=u, file=fname, action="write", access="sequential", form="unformatted")
       write (u) dt, ns
-      write (u) T
-      close (u)
-
-      open (newunit=u, file='GLE-S.bin', action="write", access="sequential", form="unformatted")
-      write (u) dt, ns
-      write (u) S
+      write (u) M
       close (u)
    end subroutine write_propagator
 
-   subroutine read_propagator(T, S, dt, ns)
+   subroutine read_propagator(dt, ns, fname, M)
       use mod_error, only: fatal_error
-      real(DP), intent(out) :: T(:, :), S(:, :)
+      real(DP), intent(out) :: M(:, :)
       real(DP), intent(in) :: dt
       integer, intent(in) :: ns
+      character(len=*), intent(in) :: fname
       real(DP) :: dt_read
       integer :: ns_read
       integer :: u
 
-      open (newunit=u, file='GLE-T.bin', action="read", status="old", access="sequential", form="unformatted")
+      open (newunit=u, file=fname, action="read", status="old", access="sequential", form="unformatted")
       read (u) dt_read, ns_read
       if (dt /= dt_read) then
          close (u)
-         call fatal_error(__FILE__, __LINE__, "dt read from GLE-T.bin does not match")
+         call fatal_error(__FILE__, __LINE__, "dt read from file "//fname//" does not match")
          return
       end if
       if (ns /= ns_read) then
          close (u)
-         call fatal_error(__FILE__, __LINE__, "ns read from GLE-T.bin does not match")
+         call fatal_error(__FILE__, __LINE__, "ns read from file "//fname//" does not match")
          return
       end if
-      read (u) T
-      close (u)
-
-      open (newunit=u, file='GLE-S.bin', action="read", status="old", access="sequential", form="unformatted")
-      read (u) dt_read, ns_read
-      if (dt /= dt_read) then
-         close (u)
-         call fatal_error(__FILE__, __LINE__, "dt read from GLE-S.bin does not match")
-         return
-      end if
-      if (ns /= ns_read) then
-         close (u)
-         call fatal_error(__FILE__, __LINE__, "ns read from GLE-S.bin does not match")
-         return
-      end if
-      read (u) S
+      read (u) M
       close (u)
    end subroutine read_propagator
 
@@ -541,10 +537,10 @@ contains
    ! we call this routine only once!
    subroutine matrix_exp(M, n, j, k, EM)
       integer, intent(in) :: n, j, k
-      real*8, intent(in) :: M(n, n)
-      real*8, intent(out) :: EM(n, n)
+      real(DP), intent(in) :: M(n, n)
+      real(DP), intent(out) :: EM(n, n)
 
-      real*8 :: tc(j + 1), SM(n, n)
+      real(DP) :: tc(j + 1), SM(n, n)
       integer p, i
       tc(1) = 1
       do i = 1, j
@@ -578,9 +574,9 @@ contains
    ! to zero negative eigenvalues.
    subroutine cholesky(SST, S, n)
       integer, intent(in) :: n
-      real*8, intent(in) :: SST(n, n)
-      real*8, intent(out) :: S(n, n)
-      real*8 :: L(n, n), D(n, n)
+      real(DP), intent(in) :: SST(n, n)
+      real(DP), intent(out) :: S(n, n)
+      real(DP) :: L(n, n), D(n, n)
       integer i, j, k
       S = 0.D0
       L = 0.D0
