@@ -117,7 +117,7 @@ restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.
 if [[ $TESTS = "all" ]];then
    folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
             LZ_SS LZ_ST LZ_ENE \
-            PIMD QT QT2 PIGLE PIGLE2 \
+            PIMD QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
             SHAKE HARMON MORSE MINI QMMM \
             ANALYZE_EXT CMDLINE WATER_FAIL)
 

@@ -203,7 +203,7 @@ contains
       use mod_sh_integ, only: sh_write_wf
       use mod_sh, only: write_nacmrest, ntraj, istate
       use mod_lz, only: lz_restout
-      use mod_gle
+      use mod_gle, only: ns, ps, langham
       use mod_random
       use mod_terampi_sh, only: write_wfn
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
@@ -296,7 +296,7 @@ contains
 
       end if
 
-      if (inose == 2) then
+      if (inose == 2 .or. inose == 4) then
          write (102, *) chQT
          write (chformat, '(A1,I1,A7)') '(', ns, 'E25.16)'
          do iw = 1, nwalk
@@ -433,7 +433,7 @@ contains
 
       end if
 
-      if (inose == 2 .and. readQT == 1) then
+      if ((inose == 2 .or. inose == 4) .and. readQT == 1) then
          read (111, '(A)') chtemp
          call checkchar(chtemp, chqt)
          ! TODO: Move this inside GLE module

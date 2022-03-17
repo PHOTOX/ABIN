@@ -79,11 +79,16 @@ contains
    end subroutine find_hbonds
 
    subroutine shake_init(x, y, z)
+      use mod_general, only: my_rank
       real(DP) x(:, :), y(:, :), z(:, :)
       real(DP) xi, yi, zi, xj, yj, zj
       integer :: ixshake, i, j
 
-      ! TODO: This is a temporary swith for SHAKEing H atoms
+      if (my_rank == 0) then
+         write (*, *) 'Setting distances for SHAKE from XYZ coordinates'
+      end if
+
+      ! TODO: This is an experimental switch for SHAKing all hydrogens
       if (nshake == -1) then
          call find_hbonds(x, y, z, nshake)
       end if
