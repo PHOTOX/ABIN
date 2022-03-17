@@ -18,18 +18,16 @@ contains
 
       call random_seed()
       call random_number(S)
-      call random_number(T)
 
-      call write_propagator(T, S, dt, ns)
-      call read_propagator(Tread, Sread, dt, ns)
+      call write_propagator(S, dt, ns, 'GLE-S.bin')
+      call read_propagator(dt, ns, 'GLE-S.bin', Sread)
 
       do i = 1, ns + 1
          do j = 1, ns + 1
             call assertEqual(S(i, j), Sread(i, j), 'S matrix elements')
-            call assertEqual(T(i, j), Tread(i, j), 'T matrix elements')
          end do
       end do
-      call system('rm GLE-S.bin GLE-T.bin')
+      call system('rm GLE-S.bin')
    end subroutine test_write_read_propagator
 
    @test
@@ -43,29 +41,16 @@ contains
 
       call random_seed()
       call random_number(S)
-      call random_number(T)
 
-      call write_propagator(T, S, dt, ns)
+      call write_propagator(S, dt, ns, 'GLE-S.bin')
 
-      call read_propagator(Tread, Sread, dt + 1.D0, ns)
-      @assertExceptionRaised('dt read from GLE-T.bin does not match')
+      call read_propagator(dt + 1.D0, ns, 'GLE-S.bin', Sread)
+      @assertExceptionRaised('dt read from file GLE-S.bin does not match')
 
-      call read_propagator(Tread, Sread, dt, ns + 1)
-      @assertExceptionRaised('ns read from GLE-T.bin does not match')
+      call read_propagator(dt, ns + 1, 'GLE-S.bin', Sread)
+      @assertExceptionRaised('ns read from file GLE-S.bin does not match')
 
-      open (newunit=u, file='GLE-S.bin', action="write", access="sequential", form="unformatted")
-      write (u) dt + 1.0D0, ns
-      close (u)
-      call read_propagator(Tread, Sread, dt, ns)
-      @assertExceptionRaised('dt read from GLE-S.bin does not match')
-
-      open (newunit=u, file='GLE-S.bin', action="write", access="sequential", form="unformatted")
-      write (u) dt, ns + 1
-      close (u)
-      call read_propagator(Tread, Sread, dt, ns)
-      @assertExceptionRaised('ns read from GLE-S.bin does not match')
-
-      call system('rm GLE-S.bin GLE-T.bin')
+      call system('rm GLE-S.bin')
    end subroutine test_read_propagator_errors
 
    @test

@@ -1,6 +1,6 @@
 &general
-nstep=1,
-irest=0,
+nstep=2,
+irest=1,
 pot='mmwater'
 ipimd=1,!
 nwalk=4,
@@ -21,5 +21,5 @@ nrest=1,
 &nhcopt
 inose=2,
 temp=300,
-gle_test=.true.
+gle_test=.false.
 /

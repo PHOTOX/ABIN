@@ -1,26 +1,25 @@
 &general
-nstep=20,
-irest=1,		
-pot='mmwater'		!
-ipimd=1,		!
-nwalk=4,		!number of random walkers 
-imini=0,		!
-istage=0,		!
+nstep=2,
+irest=1,
+pot='mmwater'
+ipimd=1,!
+nwalk=4,
+imini=0,
+istage=0,
 inormalmodes=1
 
-dt=20.,			!number of steps and timestep
-irandom=131313,  	!random seed
+dt=10.,
+irandom=3478932,
 
-nwrite=1,		! how often some output should be printed (estimators etc.)
-nwritex=1,		! how often should we print coordinates?
-nrest=1,		! how often we print restart files?
-
-natom=3,		!number of atoms
+nwrite=1,
+nwritex=1,
+nwritev=1
+nwritef=1
+nrest=1,
 /
-
 
 &nhcopt
-inose=2,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
-temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+inose=2,
+temp=300,
+gle_test=.true.
 /
-
