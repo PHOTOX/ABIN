@@ -14,15 +14,18 @@ contains
 
    @test
    subroutine test_wfn_restart()
-      use mod_general, only: narchive, it
+      use mod_general, only: narchive, it, my_rank
       use mod_sh_integ, only: nstate
       integer :: ci_size = 10
       integer :: blob_size = 15
       integer :: nbf = 2
+      integer :: u
 
       narchive = 10
       it = 1
       nstate = 3
+      ! To suppress stdout printing
+      my_rank = 1
 
       call set_nbf(-1)
       @assertExceptionRaised('invalid array size in set_nbf')
@@ -62,6 +65,8 @@ contains
       nstate = nstate - 1
       call read_wfn()
       @assertExceptionRaised('Number of states in restart file wfn.bin is inconsistent')
+      open (newunit=u, file='wfn.bin', status="old")
+      close (u, status='delete')
    end subroutine test_wfn_restart
 
 #ifndef USE_MPI

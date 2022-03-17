@@ -57,7 +57,7 @@ function diff_files {
     fi
 
     error_code=0
-    diff -q $test_file $ref_file || error_code=$?
+    diff -q $test_file $ref_file > /dev/null || error_code=$?
     if [[ $error_code -ne 0 ]];then
        # The reference file is different, but maybe it's just numerical noise?
        error_code=0
@@ -68,7 +68,6 @@ function diff_files {
        if [[ $error_code -ne 0 ]];then
           # The changes were bigger that the thresholds specified in numdiff.py
           return_status=$error_code
-          echo "File $test_file differs from the reference."
        fi
     fi
   done
@@ -116,10 +115,10 @@ restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.
 
 # Run all tests
 if [[ $TESTS = "all" ]];then
-   # TODO: Re-enable GLE and PIGLE tests!
    folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
             LZ_SS LZ_ST LZ_ENE \
-            PIMD SHAKE HARMON MORSE MINI QMMM \
+            PIMD QT QT2 PIGLE PIGLE2 \
+            SHAKE HARMON MORSE MINI QMMM \
             ANALYZE_EXT CMDLINE WATER_FAIL)
 
    let index=${#folders[@]}+1

@@ -4,6 +4,7 @@
 *.o
 *.mod
 *.inc
+*.bin
 bck.*
 masses
 utils
@@ -12,3 +13,4 @@ terapi
 plumed.out
 fftw
 plumed_*.dat
+gle

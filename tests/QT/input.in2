@@ -1,25 +1,24 @@
 &general
-nstep=1,
-irest=0,
+nstep=2,
+irest=1,
 
-pot='mmwater'
-mdtype='pimd'
-nwalk=2,
+pot='mmwater'		
+watpot=1,
+mdtype='md',
 
-dt=7.,
+dt=10.,
 irandom=131313,
-nabin=2,
 
 nwrite=1,
 nwritex=1,
+nrest=1,
 nwritev=1,
 nwritef=1,
-nrest=1,
 /
 
 &nhcopt
 inose=2,
-temp=200,
 rem_comrot=.false.
+temp=100.15,
 gle_test=.true.
 /

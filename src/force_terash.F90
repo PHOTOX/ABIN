@@ -462,7 +462,7 @@ contains
    end subroutine write_wfn
 
    subroutine read_wfn()
-      use mod_general, only: iknow, it
+      use mod_general, only: iknow, it, my_rank
       use mod_chars, only: chknow
       use mod_error, only: fatal_error
       use mod_utils, only: archive_file
@@ -476,9 +476,9 @@ contains
       inquire (file=fname, exist=file_exists)
       if (.not. file_exists) then
          close (uwfn)
-         print*,'ERROR: Wavefunction restart file '//trim(fname)//' does not exist!'
+         if (my_rank == 0) print*,'ERROR: Wavefunction restart file '//trim(fname)//' does not exist!'
          if (iknow /= 1) then
-            print*,chknow
+            if (my_rank == 0) print*,chknow
             call fatal_error(__FILE__, __LINE__, &
                & 'missing restart file '//trim(fname))
          end if

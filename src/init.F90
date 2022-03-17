@@ -101,7 +101,7 @@ subroutine init(dt)
    namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
 
    namelist /nhcopt/ inose, temp, temp0, nchain, ams, tau0, tau0_langevin, imasst, nrespnose, nyosh, &
-      scaleveloc, readNHC, readQT, initNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel
+      scaleveloc, readNHC, readQT, initNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel, gle_test
 
    namelist /system/ masses, massnames, ndist, dist1, dist2, &
       nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &
@@ -270,8 +270,8 @@ subroutine init(dt)
          print '(a)', '             Landau Zener MD                  '
       end select
 
-      write (*, *) '    using potential: ', toupper(pot)
-      print '(a)', '                                              '
+      print '(a)', '    using potential: '//toupper(trim(pot))
+      print '(a)', ''
       print '(a)', chdivider
    end if
 
@@ -345,14 +345,15 @@ subroutine init(dt)
       rem_comvel = .true.
    end if
 
-!  allocate all basic arrays and set them to 0.0d0
+   ! Allocate all basic arrays and set them to 0.0d0
    call allocate_arrays(natom, nwalk + 1)
 
    if (iplumed == 1) then
       call plumed_init()
    end if
 
-!  READING GEOMETRY
+   ! Read initial geometry
+   ! TODO: Move to a separate function
    read (111, *)
    do iat = 1, natom
 
@@ -372,6 +373,7 @@ subroutine init(dt)
    end do
    close (111)
 
+   ! Initialize all PIMD beads to the same initial geometry
    do iw = 1, nwalk
       do iat = 1, natom
          x(iat, iw) = x(iat, 1)
@@ -545,6 +547,9 @@ subroutine init(dt)
       call gle_init(dt * 0.5 / nabin / nstep_ref) !nabin is set to 1 unless ipimd=1
    else if (inose == 3) then
       call pile_init(dt * 0.5, tau0_langevin)
+      ! Canonical sampling with GLE not yet tested
+      !else if (inose == 4) then
+      !   call gle_init(dt * 0.5 / nstep_ref)
    else if (inose == 0) then
       write (*, '(A)') 'No thermostat. NVE ensemble.'
    else
@@ -635,8 +640,9 @@ subroutine init(dt)
    end if
 
    if (my_rank == 0) then
-      write (*, *)
-      write (*, *) '--------------SIMULATION PARAMETERS--------------'
+      print*,chdivider
+      print*,''
+      print*,'                SIMULATION PARAMETERS'
       write (*, nml=general, delim='APOSTROPHE')
       write (*, *)
       write (*, nml=system, delim='APOSTROPHE')
@@ -1168,8 +1174,8 @@ subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general
    use mod_files, only: MAXUNITS
-   use mod_nhc !,   only: finalize_nhc
-   use mod_gle, only: finalize_gle
+   use mod_nhc, only: inose, finalize_nhc
+   use mod_gle, only: finalize_gle, finalize_pile
    use mod_estimators, only: h
    use mod_potentials, only: hess
    use mod_lz, only: lz_finalize
@@ -1224,9 +1230,10 @@ subroutine finish(error_code)
 
    if (inose == 1) then
       call finalize_nhc()
-   end if
-   if (inose > 1 .and. inose < 5) then
+   else if (inose == 2 .or. inose == 4) then
       call finalize_gle()
+   else if (inose == 3) then
+      call finalize_pile()
    end if
 
    if (iplumed == 1) then

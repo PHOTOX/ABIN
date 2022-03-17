@@ -340,14 +340,14 @@ contains
 
       if (natom <= 100 .and. my_rank == 0) then
          print*,''
-         print*,'------------------ ATOMIC MASSES ---------------------------'
+         print*,'                        ATOMIC MASSES'
          do i = 1, natom
             write (*, '(A2, A1)', advance='no') names(i), ' '
          end do
          write (*, *)
          print*,'The corresponding relative atomic masses are:'
          write (*, *) (am(i), i=1, natom)
-         print*,'------------------------------------------------------------'
+         print*,''
       end if
 
       ! Finally, convert masses to atomic units

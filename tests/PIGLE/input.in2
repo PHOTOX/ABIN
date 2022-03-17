@@ -1,37 +1,24 @@
-This is a sample input file for ABIN 
-NOTE: order of input sections matters!!
-
 &general
-nstep=20,
-irest=1,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
-idebug=0
-iknow=0
+nstep=2,
+irest=1,
 
-pot='mmwater'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
-ipimd=1,		!classical simulation 0, quantum simulation 1
-nwalk=4,		!number of random walkers 
-imini=0,		!equilibration period,!not properly implemented yet
-istage=0,		!staging transformation (1), without staging (0)
+pot='mmwater'
+mdtype='pimd'
+nwalk=2,		!number of random walkers 
 
-dt=20.,			!number of steps and timestep
-irandom=131313,  	!random seed
-nabin=60,		! what is the gap between ab initio calculations?
+dt=7.,			! number of steps and timestep
+irandom=131313,  	! random seed
+nabin=2,		! what is the gap between ab initio calculations?
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?
+nwritev=1,
+nwritef=1,
 nrest=1,		! how often we print restart files?
-
-isbc=0,			! spherical boundary conditions
-rb_sbc=10.9d0,              ! radius of the cluster for sbc
-kb_sbc=0.1d0,		! force constant for spherical potential,in A
-
-icv=0,			! do we compute heat capacities? meaningfull only with hessian
-ihess=0,		! do we have hessian?
-anal_ext=0,		! do we call user-defined function analyze_ext?
-natom=3,		!number of atoms
 /
 
 &nhcopt
-inose=2,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
-temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+inose=2,		! GLE thermostat
+temp=200,		! initial temperature for Maxwell-Boltzmann sampling [au]
+gle_test=.true.
 /

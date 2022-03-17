@@ -53,7 +53,7 @@ contains
          call abinerror('check_water')
       end if
 
-      write (*, '(A,I8,A)') 'Detected ', nO, ' water molecules'
+      print '(A,I0,A)', 'Detected ', nO, ' water molecules'
    end subroutine check_water
 
 end module mod_water

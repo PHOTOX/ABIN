@@ -10,7 +10,7 @@
 ! * e-mail me at michele dot ceriotti at gmail dot com    *
 ! *********************************************************
 
-! The original code was modified to allow for PI+GLE and PIGLET simulation
+! The original code was modified to allow for PI+GLE and PIGLET simulations
 ! in ABIN by Daniel Hollas, danekhollas at gmail dot com
 
 module mod_gle
@@ -19,7 +19,10 @@ module mod_gle
    implicit none
    private
    public :: readQT, ns, ps, langham, tau0_langevin
+   public :: gle_test
    public :: gle_step, pile_step, pile_init, gle_init, finalize_gle, finalize_pile
+   ! Public for unit tests
+   public :: read_propagator, write_propagator
    real(DP), allocatable :: gS(:, :), gT(:, :)
    real(DP), allocatable :: ps(:, :, :)
    ! For PIGLET
@@ -31,6 +34,7 @@ module mod_gle
    real(DP) :: tau0_langevin = -1.0D0
    real(DP) :: langham = 0.0D0
    integer :: ns, ns_centroid, readQT = 1
+   logical :: gle_test
    real(DP), allocatable :: c1(:), c2(:)
    save
 
@@ -112,9 +116,50 @@ contains
       if (allocated(ran)) deallocate (ran, c1, c2)
    end subroutine finalize_pile
 
+   subroutine print_gle_header(inose, ipimd, inormalmodes)
+      integer, intent(in) :: inose
+      integer, intent(in) :: ipimd
+      integer, intent(in) :: inormalmodes
+      print*,""
+      print*,"Initialization of GLE thermostat."
+      print*,"Please cite the following review paper about the GLE methodology"
+      print*,"M. Ceriotti, G. Bussi and M. Parrinello"
+      print*,"J. Chem. Theory Comput. 6, 1170 (2010)"
+      print*,"Colored-noise thermostats a la carte"
+      print*,"http://dx.doi.org/10.1021/ct900563s"
+      print*,""
+      print*,"The citations for specific GLE use cases is at"
+      print*,"http://gle4md.org/index.html?page=refs"
+      print*,""
+
+      if (inose == 2 .and. ipimd == 0) then
+         print*,"Using Quantum Thermostat, please cite"
+         print*,"M. Ceriotti, G. Bussi and M. Parrinello"
+         print*,"Phy. Rev. Lett. 103, 030603 (2009)"
+         print*,"Nuclear quantum effects in solids using a colored-noise thermostat"
+         print*,"http://dx.doi.org/10.1103/PhysRevLett.103.030603"
+         print*,""
+      else if (inose == 2 .and. ipimd == 1 .and. inormalmodes == 0) then
+         print*,"Using PI+GLE thermostat, please cite:"
+         print*,"M. Ceriotti, D. E. Manolopoulos, and M. Parrinello"
+         print*,"J. Chem. Phys. 134, 084104 (2011)"
+         print*,"Accelerating the convergence of path integral dynamics"
+         print*,"with a generalized Langevin equation"
+         print*,"http://dx.doi.org/10.1063/1.3556661"
+         print*,""
+      else if (inose == 2 .and. ipimd == 1 .and. inormalmodes == 1) then
+         print*,"Using PIGLET thermostat, please cite"
+         print*,"M. Ceriotti, D. E. Manolopoulos, Rev. Lett. 109, 100604 (2012)"
+         print*,"Efficient first-principles calculation of the"
+         print*,"quantum kinetic energy and momentum distribution of nuclei"
+         print*,"http://dx.doi.org/10.1103/PhysRevLett.109.100604"
+         print*,""
+      end if
+   end subroutine print_gle_header
+
    subroutine gle_init(dt)
       use mod_const, only: AUtoEV
-      use mod_general, only: natom, nwalk, inormalmodes, my_rank, iremd
+      use mod_general, only: natom, nwalk, ipimd, inormalmodes, my_rank, iremd
 #if __GNUC__ == 0
       use mod_general, only: irest
 #endif
@@ -127,15 +172,9 @@ contains
       integer :: i, cns, ios, iw
       character(len=10) :: glea, glec
       character(len=2) :: char_my_rank
+
       if (my_rank == 0) then
-         write (*, *) "# Initialization of GLE thermostat.        "
-         write (*, *) "# Please cite the relevant works among:    "
-         write (*, *) "#                                          "
-         write (*, *) "# M. Ceriotti, G. Bussi and M. Parrinello  "
-         write (*, *) "# Phy. Rev. Lett. 102, 020601 (2009)       "
-         write (*, *) "#                                          "
-         write (*, *) "# M. Ceriotti, G. Bussi and M. Parrinello  "
-         write (*, *) "# Phy. Rev. Lett. 103, 030603 (2009)       "
+         call print_gle_header(inose, ipimd, inormalmodes)
       end if
 
       ! reads in matrices
@@ -222,7 +261,7 @@ contains
       allocate (gr(ns + 1))
       allocate (ps(natom * 3, ns, nwalk)) !each bead has to have its additional momenta
 
-      if (my_rank == 0) write (6, *) '# Reading A-matrix. Expecting a.u. units!!!!'
+      if (my_rank == 0) print*,'Reading A-matrix. Expecting a.u. units!'
       do i = 1, ns + 1
          read (121, *) gA(i, :)
       end do
@@ -231,19 +270,16 @@ contains
 
       ! reads C (in eV!), or init to kT
       if (inose == 4) then
-         if (my_rank == 0) write (6, *) "# Using canonical-sampling, Cp=kT"
+         if (my_rank == 0) print*,"Using canonical-sampling, Cp=kT"
          gC = 0.0D0
          do i = 1, ns + 1
             gC(i, i) = temp
          end do
       else
-         if (my_rank == 0) then
-            write (6, *) "# Reading specialized Cp matrix."
-            write (6, *) '# Expecting eV units!!!'
-         end if
+         if (my_rank == 0) print*,'Reading specialized Cp matrix. Expecting eV units!'
          read (122, *) cns
          if (cns /= ns) then
-            write (0, *) " Error: size mismatch matrices in GLE-A and GLE-C!"
+            write (*, *) "Error: size mismatch matrices in GLE-A and GLE-C!"
             call abinerror('gle_init')
          end if
          do i = 1, ns + 1
@@ -255,7 +291,11 @@ contains
 
       ! WARNING: gA is rewritten here
       ! TODO: do not overwrite gA
-      call compute_propagator(gA, gC, gT, gS, dt)
+      if (gle_test) then
+         call read_propagator(gT, gS, dt, ns)
+      else
+         call compute_propagator(gA, gC, gT, gS, dt)
+      end if
 
       ! Initialize the auxiliary vectors.
       ! we keep general - as we might be using non-diagonal C
@@ -265,7 +305,6 @@ contains
       ! DH: ps rewritten in init.f90 if irest.eq.1
 
       ! TODO: Do not overwrite gA
-      ! TODO: Move this inside initialize_momenta
       gA = gC
       call cholesky(gA, gC, ns + 1)
 
@@ -293,11 +332,11 @@ contains
          call abinerror('gle_init')
       end if
 #endif
-
    end subroutine gle_init
 
    subroutine initialize_momenta(C, iw)
       !use mod_arrays,  only: px, py, pz, vx, vy, vz, amt
+      use mod_error, only: fatal_error
       use mod_general, only: natom
       use mod_utils, only: abinerror
       real(DP), intent(in) :: C(:, :)
@@ -306,8 +345,7 @@ contains
       integer :: i, j
       ! WARNING: this routine must be called after arrays are allocated!
       if (.not. allocated(ps)) then
-         write (*, *) "WHOOOPS: Fatal programming error in gle.F90!"
-         call abinerror("initialize_momenta")
+         call fatal_error(__FILE__, __LINE__, "oh no, programming error in gle.F90!")
       end if
 
       allocate (gr(ns + 1))
@@ -346,8 +384,64 @@ contains
       end if
 
       if (allocated(ran)) deallocate (ran)
-
    end subroutine finalize_gle
+
+   subroutine write_propagator(T, S, dt, ns)
+      real(DP), intent(out) :: T(:, :), S(:, :)
+      real(DP), intent(in) :: dt
+      integer, intent(in) :: ns
+      integer :: u
+
+      open (newunit=u, file='GLE-T.bin', action="write", access="sequential", form="unformatted")
+      write (u) dt, ns
+      write (u) T
+      close (u)
+
+      open (newunit=u, file='GLE-S.bin', action="write", access="sequential", form="unformatted")
+      write (u) dt, ns
+      write (u) S
+      close (u)
+   end subroutine write_propagator
+
+   subroutine read_propagator(T, S, dt, ns)
+      use mod_error, only: fatal_error
+      real(DP), intent(out) :: T(:, :), S(:, :)
+      real(DP), intent(in) :: dt
+      integer, intent(in) :: ns
+      real(DP) :: dt_read
+      integer :: ns_read
+      integer :: u
+
+      open (newunit=u, file='GLE-T.bin', action="read", status="old", access="sequential", form="unformatted")
+      read (u) dt_read, ns_read
+      if (dt /= dt_read) then
+         close (u)
+         call fatal_error(__FILE__, __LINE__, "dt read from GLE-T.bin does not match")
+         return
+      end if
+      if (ns /= ns_read) then
+         close (u)
+         call fatal_error(__FILE__, __LINE__, "ns read from GLE-T.bin does not match")
+         return
+      end if
+      read (u) T
+      close (u)
+
+      open (newunit=u, file='GLE-S.bin', action="read", status="old", access="sequential", form="unformatted")
+      read (u) dt_read, ns_read
+      if (dt /= dt_read) then
+         close (u)
+         call fatal_error(__FILE__, __LINE__, "dt read from GLE-S.bin does not match")
+         return
+      end if
+      if (ns /= ns_read) then
+         close (u)
+         call fatal_error(__FILE__, __LINE__, "ns read from GLE-S.bin does not match")
+         return
+      end if
+      read (u) S
+      close (u)
+   end subroutine read_propagator
 
    ! Matrix A is rewritten on output
    subroutine compute_propagator(A, C, T, S, dt)
@@ -429,12 +523,7 @@ contains
       ! ran and ngp arrays are allocated in gle_init,
       ! maybe we should move the allocation here
 
-#ifdef USELIBS
-      call dgemm('n', 't', natom * 3, ns + 1, ns + 1, 1.0D0, p, &
-                & natom * 3, T, ns + 1, 0.0D0, ngp, natom * 3)
-#else
       ngp = transpose(matmul(T, transpose(p)))
-#endif
 
       ! now, must compute random part.
       ! first, fill up p of random n
@@ -449,14 +538,7 @@ contains
          end do
       end do
 
-#ifdef USELIBS
-      call dgemm('n', 't', natom * 3, ns + 1, ns + 1, 1.0D0, p, &
-                & natom * 3, S, ns + 1, 1.0D0, ngp, natom * 3)
-      p = ngp
-#else
       p = ngp + transpose(matmul(S, transpose(p)))
-#endif
-
    end subroutine gle_propagate
 
    ! matrix exponential by scale & square.
@@ -531,7 +613,7 @@ contains
          if (D(i, i) >= 0.0D0) then
             D(i, i) = dsqrt(D(i, i))
          else
-            write (0, *) "Warning: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
+            write (*, *) "Warning: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
             D(i, i) = 0.0D0
          end if
       end do
