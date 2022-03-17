@@ -56,7 +56,7 @@ contains
          end if
 
          ! colored-noise thermostats
-      else if (inose == 2) then
+      else if (inose == 2 .or. inose == 4) then
 
          langham = langham + ekin_p(px, py, pz)
          call gle_step(px, py, pz, amt)
