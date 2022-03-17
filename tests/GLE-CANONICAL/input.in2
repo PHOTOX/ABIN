@@ -20,5 +20,5 @@ nwritef=1,
 inose=4,
 rem_comrot=.false.
 temp=300.,
-gle_test=.false.
+gle_test=.true.
 /
