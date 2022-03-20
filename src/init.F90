@@ -101,7 +101,7 @@ subroutine init(dt)
    namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
 
    namelist /nhcopt/ inose, temp, temp0, nchain, ams, tau0, tau0_langevin, imasst, nrespnose, nyosh, &
-      scaleveloc, readNHC, readQT, initNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel, gle_test
+      scaleveloc, readNHC, initNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel, gle_test
 
    namelist /system/ masses, massnames, ndist, dist1, dist2, &
       nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &
@@ -304,12 +304,10 @@ subroutine init(dt)
 
    if (irest == 1) then
       readnhc = 1 !readnhc has precedence before initNHC
-      readQT = 1
       initNHC = 0 !i.e. if(readnhc.eq.1.and.initNHC.eq.1)
       scaleveloc = 0 !do not scale velocities when restarting a job
    else !then nhc momenta from restart.xyz will be used
       readnhc = 0
-      readQT = 0
       initNHC = 1
       scaleveloc = 1
    end if

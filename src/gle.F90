@@ -32,7 +32,6 @@ module mod_gle_private
    real(DP) :: tau0_langevin = -1.0D0
    real(DP) :: langham = 0.0D0
    integer :: ns
-   integer :: readQT = 1
    logical :: gle_test
    ! internal arrays for PILE thermostat
    real(DP), allocatable :: c1(:), c2(:)
@@ -512,6 +511,7 @@ contains
 
          if (inormalmodes == 1 .and. iw == 1) then
             ! PIGLET centroid propagation
+            print*,m
             call gle_propagate(gp, gT_centroid, gS_centroid, m, iw)
          else
             call gle_propagate(gp, gT, gS, m, iw)
@@ -650,7 +650,6 @@ module mod_gle
    implicit none
    private
    ! Input keywords
-   public :: readQT
    public :: tau0_langevin
    public :: gle_test
    ! Public subroutines
