@@ -62,14 +62,13 @@ contains
       ! Initialize FFTW library
       call fftw_normalmodes_init(nwalk)
 
-      ! TODO: Why are we initializing for nwalk+1?
-      allocate (x_in(nwalk + 1))
-      allocate (y_in(nwalk + 1))
-      allocate (z_in(nwalk + 1))
+      allocate (x_in(nwalk))
+      allocate (y_in(nwalk))
+      allocate (z_in(nwalk))
 
-      allocate (cx(nwalk + 1))
-      allocate (cy(nwalk + 1))
-      allocate (cz(nwalk + 1))
+      allocate (cx(nwalk))
+      allocate (cy(nwalk))
+      allocate (cz(nwalk))
    end subroutine initialize_normalmodes
 
    subroutine finalize_normalmodes()
@@ -88,23 +87,24 @@ contains
    ! This routine transforms staging coordinates to cartesian coordinates, which are stored
    ! in trans matrices, values in x, y and z matrices are NOT modified!!
    subroutine QtoX(x, y, z, transx, transy, transz)
-      real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: transx(:, :), transy(:, :), transz(:, :)
       integer :: iat, iw
 
       do iat = 1, natom
-         x(iat, nwalk + 1) = x(iat, 1)
-         y(iat, nwalk + 1) = y(iat, 1)
-         z(iat, nwalk + 1) = z(iat, 1)
 
          transx(iat, 1) = x(iat, 1)
          transy(iat, 1) = y(iat, 1)
          transz(iat, 1) = z(iat, 1)
-         transx(iat, nwalk + 1) = x(iat, 1)
-         transy(iat, nwalk + 1) = y(iat, 1)
-         transz(iat, nwalk + 1) = z(iat, 1)
 
-         do iw = nwalk, 2, -1
+         transx(iat, nwalk) = x(iat, nwalk) + ((nwalk - 1.0D0) / nwalk) * &
+                           transx(iat, 1) + x(iat, 1) / nwalk
+         transy(iat, nwalk) = y(iat, nwalk) + ((nwalk - 1.0D0) / nwalk) * &
+                           transy(iat, 1) + y(iat, 1) / nwalk
+         transz(iat, nwalk) = z(iat, nwalk) + ((nwalk - 1.0D0) / nwalk) * &
+                           transz(iat, 1) + z(iat, 1) / nwalk
+
+         do iw = nwalk - 1, 2, -1
             transx(iat, iw) = x(iat, iw) + ((iw - 1.0D0) / iw) * &
                               transx(iat, iw + 1) + x(iat, 1) / iw
             transy(iat, iw) = y(iat, iw) + ((iw - 1.0D0) / iw) * &
@@ -114,24 +114,14 @@ contains
          end do
 
       end do
-
    end subroutine QtoX
 
    ! This routine transforms cartesian to staging coordinates, which are stored
    ! in trans matrices, values in x,y and z matrices are NOT modified!
    subroutine XtoQ(x, y, z, transx, transy, transz)
-      real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: transx(:, :), transy(:, :), transz(:, :)
       integer :: iat, iw
-
-      ! (nwalk+1)th walker is identical to the first one in the polymer
-      ! TODO: Allocate new temporary array for this,
-      ! so that we don't have to allocate nwalk+1 size, which is very confusing.
-      do iat = 1, natom
-         x(iat, nwalk + 1) = x(iat, 1)
-         y(iat, nwalk + 1) = y(iat, 1)
-         z(iat, nwalk + 1) = z(iat, 1)
-      end do
 
       do iat = 1, natom
 
@@ -139,7 +129,7 @@ contains
          transy(iat, 1) = y(iat, 1)
          transz(iat, 1) = z(iat, 1)
 
-         do iw = 2, nwalk
+         do iw = 2, nwalk - 1
             transx(iat, iw) = ((iw - 1.0D0) * x(iat, iw + 1) + x(iat, 1)) / iw
             transx(iat, iw) = x(iat, iw) - transx(iat, iw)
             transy(iat, iw) = ((iw - 1.0D0) * y(iat, iw + 1) + y(iat, 1)) / iw
@@ -147,6 +137,10 @@ contains
             transz(iat, iw) = ((iw - 1.0D0) * z(iat, iw + 1) + z(iat, 1)) / iw
             transz(iat, iw) = z(iat, iw) - transz(iat, iw)
          end do
+
+         transx(iat, nwalk) = x(iat, nwalk) - ((nwalk - 1.0D0) * x(iat, 1) + x(iat, 1)) / nwalk
+         transy(iat, nwalk) = y(iat, nwalk) - ((nwalk - 1.0D0) * y(iat, 1) + y(iat, 1)) / nwalk
+         transz(iat, nwalk) = z(iat, nwalk) - ((nwalk - 1.0D0) * z(iat, 1) + z(iat, 1)) / nwalk
 
       end do
 
@@ -255,9 +249,6 @@ contains
          transfz(iat, 1) = fz(iat, 1) - sumz
 
       end do
-
-      return
-
    end subroutine FQtoFX
 
    ! This routine transforms cartesian forces to staging forces, which are stored
@@ -266,23 +257,21 @@ contains
    ! The classical force calculated in cartesian coordinates is transformed
    ! into staging coordinates.
    ! CAUTION, the formula 94 in Quantum simulations (Tuckermann) is incorrect
-   ! dphi/dui on the output should be divided by P  (nwalk) both for the i=1 and the others
+   ! dphi/dui on the output should be divided by P (nwalk) both for the i=1 and the others
    ! futhermore, the dphi/dx(i-1) should actually be dphi/du(i-1)
    ! See Tuckerman's lecture notes. The force is therefore transformed
    ! recursively. sumux-z contains the (i-1) force used for this purpose.
    subroutine FXtoFQ(fxab, fyab, fzab, fx, fy, fz)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(in) :: fxab(:, :), fyab(:, :), fzab(:, :)
-      real(DP) :: sumux(size(fx, 2)), sumuy(size(fx, 2)), sumuz(size(fx, 2))
+      real(DP) :: sumux(nwalk), sumuy(nwalk), sumuz(nwalk)
       integer :: iat, iw
 
       do iat = 1, natom
 
-         do iw = 1, nwalk
-            sumux(iw) = 0.0D0
-            sumuy(iw) = 0.0D0
-            sumuz(iw) = 0.0D0
-         end do
+         sumux = 0.0D0
+         sumuy = 0.0D0
+         sumuz = 0.0D0
 
          do iw = 1, nwalk
             fx(iat, 1) = fx(iat, 1) + fxab(iat, iw) / nwalk
@@ -309,8 +298,6 @@ contains
                         & ) / nwalk
          end do
       end do
-
-      return
    end subroutine FXtoFQ
 
    ! This routine transforms normal mode coordinates to cartesian coordinates,
@@ -467,19 +454,16 @@ contains
       equantz = 0.0D0
 
       do iat = 1, natom
-         x(iat, nwalk + 1) = x(iat, 1)
-         y(iat, nwalk + 1) = y(iat, 1)
-         z(iat, nwalk + 1) = z(iat, 1)
-      end do
-
-      do iat = 1, natom
-         do iw = 1, nwalk
+         do iw = 1, nwalk - 1
             equantx = equantx + 0.5D0 * am(iat) * omega_n**2 * (x(iat, iw) - x(iat, iw + 1))**2
             equanty = equanty + 0.5D0 * am(iat) * omega_n**2 * (y(iat, iw) - y(iat, iw + 1))**2
             equantz = equantz + 0.5D0 * am(iat) * omega_n**2 * (z(iat, iw) - z(iat, iw + 1))**2
          end do
-!      write(*,*)"Quantum energy per atom in cartesian coordinates"
-!      write(*,*)equantx, equanty, equantz, equantx+equanty+equantz
+         equantx = equantx + 0.5D0 * am(iat) * omega_n**2 * (x(iat, nwalk) - x(iat, 1))**2
+         equanty = equanty + 0.5D0 * am(iat) * omega_n**2 * (y(iat, nwalk) - y(iat, 1))**2
+         equantz = equantz + 0.5D0 * am(iat) * omega_n**2 * (z(iat, nwalk) - z(iat, 1))**2
+         ! write(*,*)"Quantum energy per atom in cartesian coordinates"
+         ! write(*,*)equantx, equanty, equantz, equantx+equanty+equantz
       end do
 
       equant = equantx + equanty + equantz
