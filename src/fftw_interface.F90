@@ -30,8 +30,8 @@ contains
             & 'Kind DP is not equal to C_DOUBLE. Normal mode transform not possible.')
       end if
 
-      allocate (x_tmp(nwalk + 1))
-      allocate (cx_tmp(nwalk + 1))
+      allocate (x_tmp(nwalk))
+      allocate (cx_tmp(nwalk))
 
       plan_xtou = fftw_plan_dft_r2c_1d(nwalk, x_tmp, cx_tmp, FFTW_MEASURE)
       plan_utox = fftw_plan_dft_c2r_1d(nwalk, cx_tmp, x_tmp, FFTW_MEASURE)

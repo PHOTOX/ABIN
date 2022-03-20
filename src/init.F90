@@ -344,7 +344,7 @@ subroutine init(dt)
    end if
 
    ! Allocate all basic arrays and set them to 0.0d0
-   call allocate_arrays(natom, nwalk + 1)
+   call allocate_arrays(natom, nwalk)
 
    if (iplumed == 1) then
       call plumed_init()

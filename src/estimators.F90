@@ -50,22 +50,19 @@ contains
          call fatal_error(__FILE__, __LINE__, 'enmini > imini not allowed')
       end if
 
-      do iat = 1, natom
-         x(iat, nwalk + 1) = x(iat, 1)
-         y(iat, nwalk + 1) = y(iat, 1)
-         z(iat, nwalk + 1) = z(iat, 1)
-      end do
-
       ! CALCULATING PRIMITIVE ESTIMATORS
       est_prim = 0.0D0
       cv_prim = 0.0D0
 
       do iat = 1, natom
-         do iw = 1, nwalk
+         do iw = 1, nwalk - 1
             est_prim = est_prim + am(iat) * (x(iat, iw) - x(iat, iw + 1))**2
             est_prim = est_prim + am(iat) * (y(iat, iw) - y(iat, iw + 1))**2
             est_prim = est_prim + am(iat) * (z(iat, iw) - z(iat, iw + 1))**2
          end do
+         est_prim = est_prim + am(iat) * (x(iat, nwalk) - x(iat, 1))**2
+         est_prim = est_prim + am(iat) * (y(iat, nwalk) - y(iat, 1))**2
+         est_prim = est_prim + am(iat) * (z(iat, nwalk) - z(iat, 1))**2
       end do
 
       cv_prim = (nwalk * temp * temp**2) * est_prim
