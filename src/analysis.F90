@@ -203,7 +203,7 @@ contains
       use mod_sh_integ, only: sh_write_wf
       use mod_sh, only: write_nacmrest, ntraj, istate
       use mod_lz, only: lz_restout
-      use mod_gle, only: ns, ps, langham
+      use mod_gle, only: gle_restout, pile_restout
       use mod_random
       use mod_terampi_sh, only: write_wfn
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
@@ -298,17 +298,11 @@ contains
 
       if (inose == 2 .or. inose == 4) then
          write (102, *) chQT
-         write (chformat, '(A1,I1,A7)') '(', ns, 'E25.16)'
-         do iw = 1, nwalk
-            do iat = 1, natom * 3
-               write (102, fmt=chformat) (ps(iat, is, iw), is=1, ns)
-            end do
-         end do
-         write (102, *) langham
+         call gle_restout(102)
       end if
       if (inose == 3) then
          write (102, *) chLT
-         write (102, *) langham
+         call pile_restout(102)
       end if
 
       write (102, *) chAVG
@@ -349,7 +343,7 @@ contains
       use mod_sh_integ, only: sh_read_wf
       use mod_sh, only: write_nacmrest, ntraj, istate
       use mod_lz, only: lz_restin
-      use mod_gle
+      use mod_gle, only: readQT, gle_restin, pile_restin
       use mod_random
       use mod_terampi_sh, only: read_wfn
       real(DP), intent(out) :: x(:, :), y(:, :), z(:, :)
@@ -436,24 +430,13 @@ contains
       if ((inose == 2 .or. inose == 4) .and. readQT == 1) then
          read (111, '(A)') chtemp
          call checkchar(chtemp, chqt)
-         ! TODO: Move this inside GLE module
-         write (chformat, '(A1,I1,A7)') '(', ns, 'E25.16)'
-         do iw = 1, nwalk
-            do iat = 1, natom * 3
-               do is = 1, ns - 1
-                  !read(111, fmt=chformat)(ps(iat, is, iw), is = 1, ns)
-                  read (111, '(1E25.16)', advance="no") ps(iat, is, iw)
-               end do
-               read (111, '(1E25.16)') ps(iat, ns, iw)
-            end do
-         end do
-         read (111, *) langham
+         call gle_restin(111)
       end if
 
       if (inose == 3 .and. readQT == 1) then
          read (111, '(A)') chtemp
          call checkchar(chtemp, chLT)
-         read (111, *) langham
+         call pile_restin(111)
       end if
 
       ! reading cumulative averages of various estimators
