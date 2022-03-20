@@ -209,9 +209,9 @@ contains
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(in) :: time_step
-      integer :: iat, iw, inh, itrj, is
+      integer :: iat, iw, inh, itrj
       logical :: file_exists
-      character(len=200) :: chout, chsystem, chformat
+      character(len=200) :: chout, chsystem
 
       if (pot == '_tera_' .and. ipimd == 2) then
          call write_wfn()
@@ -343,15 +343,14 @@ contains
       use mod_sh_integ, only: sh_read_wf
       use mod_sh, only: write_nacmrest, ntraj, istate
       use mod_lz, only: lz_restin
-      use mod_gle, only: readQT, gle_restin, pile_restin
+      use mod_gle, only: gle_restin, pile_restin
       use mod_random
       use mod_terampi_sh, only: read_wfn
       real(DP), intent(out) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(out) :: it
-      integer :: iat, iw, inh, itrj, is
+      integer :: iat, iw, inh, itrj
       character(len=100) :: chtemp
-      character(len=200) :: chformat
       logical :: prngread
       character(len=20) :: chin
 
@@ -427,13 +426,13 @@ contains
 
       end if
 
-      if ((inose == 2 .or. inose == 4) .and. readQT == 1) then
+      if (inose == 2 .or. inose == 4) then
          read (111, '(A)') chtemp
          call checkchar(chtemp, chqt)
          call gle_restin(111)
       end if
 
-      if (inose == 3 .and. readQT == 1) then
+      if (inose == 3) then
          read (111, '(A)') chtemp
          call checkchar(chtemp, chLT)
          call pile_restin(111)
