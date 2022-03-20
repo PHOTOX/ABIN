@@ -31,7 +31,7 @@ def read_custom_threshold(fname):
    with open(fname, "r") as f:
       thr = int(f.read().strip())
 
-   if thr < 5 or thr > 50:
+   if thr < 2 or thr > 50:
       print("ERROR: Threshold 10^-%d read from %s is out of range" % (thr, fname))
       exit(1)
 

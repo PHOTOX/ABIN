@@ -4,7 +4,6 @@
 ! - RESPA for multiple time-step MD with reference potential.
 module mod_mdstep
    use mod_const, only: DP
-   use mod_kinetic, only: ekin_p
    use mod_utils, only: abinerror
    use mod_transform
    implicit none
@@ -42,7 +41,7 @@ contains
 
    subroutine thermostat(px, py, pz, amt, dt)
       use mod_nhc, only: inose, shiftNHC_yosh, shiftNHC_yosh_mass, imasst
-      use mod_gle, only: gle_step, pile_step, langham
+      use mod_gle, only: gle_step, pile_step
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
       real(DP), intent(in) :: amt(:, :)
       real(DP), intent(in) :: dt
@@ -55,19 +54,15 @@ contains
             call shiftNHC_yosh(px, py, pz, amt, dt)
          end if
 
-         ! colored-noise thermostats
       else if (inose == 2 .or. inose == 4) then
 
-         langham = langham + ekin_p(px, py, pz)
+         ! colored-noise thermostats
          call gle_step(px, py, pz, amt)
-         langham = langham - ekin_p(px, py, pz)
 
-         ! white-noise thermostat (PILE)
       else if (inose == 3) then
 
-         langham = langham + ekin_p(px, py, pz)
+         ! white-noise thermostat (Langevin, PILE)
          call pile_step(px, py, pz, amt)
-         langham = langham - ekin_p(px, py, pz)
 
       end if
 

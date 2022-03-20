@@ -1,7 +1,7 @@
 ! Testing GLE thermostat
 module test_gle
    use funit
-   use mod_gle
+   use mod_gle_private
    use mod_const, only: DP
    implicit none
 
@@ -9,11 +9,10 @@ contains
 
    @test
    subroutine test_write_read_propagator()
-      use mod_gle, only: write_propagator, read_propagator
       integer, parameter :: ns = 2
       real(DP), parameter :: dt = 5.0D0
-      real(DP) :: S(ns + 1, ns + 1), T(ns + 1, ns + 1)
-      real(DP) :: Sread(ns + 1, ns + 1), Tread(ns + 1, ns + 1)
+      real(DP) :: S(ns + 1, ns + 1)
+      real(DP) :: Sread(ns + 1, ns + 1)
       integer :: i, j
 
       call random_seed()
@@ -24,7 +23,7 @@ contains
 
       do i = 1, ns + 1
          do j = 1, ns + 1
-            call assertEqual(S(i, j), Sread(i, j), 'S matrix elements')
+            @assertEqual(S(i, j), Sread(i, j), 'S matrix elements')
          end do
       end do
       call system('rm GLE-S.bin')
@@ -32,12 +31,10 @@ contains
 
    @test
    subroutine test_read_propagator_errors()
-      use mod_gle, only: write_propagator, read_propagator
       integer, parameter :: ns = 3
       real(DP), parameter :: dt = 5.0D0
-      real(DP) :: S(ns + 1, ns + 1), T(ns + 1, ns + 1)
-      real(DP) :: Sread(ns + 1, ns + 1), Tread(ns + 1, ns + 1)
-      integer :: u
+      real(DP) :: S(ns + 1, ns + 1)
+      real(DP) :: Sread(ns + 1, ns + 1)
 
       call random_seed()
       call random_number(S)
@@ -54,29 +51,105 @@ contains
    end subroutine test_read_propagator_errors
 
    @test
-   @disable
+   subroutine test_read_ns()
+      integer, parameter :: ns = 4
+      integer :: ns_read
+      integer :: u
+      open (newunit=u, file='GLE-TEST', action='write')
+      write (u, *) ns
+      close (u)
+
+      ns_read = read_ns('GLE-TEST')
+      @assertEqual(ns, ns_read)
+
+      open (newunit=u, file='GLE-TEST', action='write')
+      write (u, *) 'bad_input'
+      close (u)
+      ns_read = read_ns('GLE-TEST')
+      @assertExceptionRaised('Could not read ns from the first line of file GLE-TEST')
+
+      call system('rm GLE-TEST')
+   end subroutine test_read_ns
+
+   @test
+   subroutine test_read_gle_matrix()
+      integer, parameter :: ns = 3
+      character(len=*), parameter :: fname = 'GLE-A'
+      real(DP) :: A(ns + 1, ns + 1)
+      real(DP) :: Aread(ns + 1, ns + 1)
+      integer :: i, j, u
+
+      call random_seed()
+      call random_number(A)
+
+      open (newunit=u, file=fname, action='write')
+      write (u, '(I0)') ns
+      do i = 1, ns + 1
+         write (u, *) A(i, :)
+      end do
+      close (u)
+
+      call read_gle_matrix(ns, fname, Aread)
+
+      do i = 1, ns + 1
+         do j = 1, ns + 1
+            @assertEqual(A(i, j), Aread(i, j), 'A matrix elements')
+         end do
+      end do
+      open (newunit=u, file=fname)
+      close (u, status='delete')
+   end subroutine
+
+   @test
+   subroutine test_read_gle_matrix_errors()
+      integer, parameter :: ns = 4
+      character(len=*), parameter :: fname = 'GLE-M'
+      real(DP) :: M(ns + 1, ns + 1)
+      integer :: u
+
+      open (newunit=u, file=fname, action='write')
+      write (u, '(A)') 'bad_input'
+      close (u)
+      call read_gle_matrix(ns, fname, M)
+      @assertExceptionRaised('Could not read ns from the first line of file '//fname)
+
+      open (newunit=u, file=fname, action='write')
+      write (u, '(I0)') ns + 1
+      close (u)
+      call read_gle_matrix(ns, fname, M)
+      @assertExceptionRaised('ns read from the first line of file '//fname//' does not match')
+
+      open (newunit=u, file=fname)
+      close (u, status='delete')
+   end subroutine
+
+   @test
    subroutine test_compute_propagator()
-      !use mod_gle, only: read_propagator, compute_propagator
-      !integer, parameter :: ns = 2
-      !real(DP), parameter :: dt = 2.0D0
-      !real(DP) :: A(ns+1, ns + 1), C(ns+1, ns + 1)
-      !real(DP) :: S(ns+1, ns+1), T(ns+1, ns+1)
-      !real(DP) :: Sread(ns+1, ns+1), Tread(ns+1, ns+1)
-      !integer :: i, j
-      ! TODO: Test compute_propagator()
-      ! TODO: Need to create these subroutines and refactor gle_init
-      ! call read_gle_matrix(A, ns, 'GLE-A')
-      ! call read_gle_matrix(C, ns, 'GLE-A')
-      !call compute_propagator(dt, A, C, S, T)
-      ! call system('cp GLE-S.bin.ref GLE-S.bin')
-      ! call system('cp GLE-T.bin.ref GLE-T.bin')
-      !call read_propagator(Tread, Sread, dt, ns)
-      !do i = 1, ns + 1
-      !   do j = 1, ns + 1
-      !      call assertEqual(S(i, j), Sread(i, j), 'computed S matrix elements', tolerance=1e-14)
-      !      call assertEqual(T(i, j), Tread(i, j), 'computed T matrix elements', tolerance=1e-14)
-      !   end do
-      !end do
+      use mod_const, only: AUtoEV
+      use mod_general, only: my_rank
+      integer, parameter :: ns = 8
+      real(DP), parameter :: dt = 1.75D0
+      real(DP) :: A(ns + 1, ns + 1), C(ns + 1, ns + 1)
+      real(DP) :: S(ns + 1, ns + 1), T(ns + 1, ns + 1)
+      real(DP) :: Sread(ns + 1, ns + 1), Tread(ns + 1, ns + 1)
+      integer :: i, j
+
+      ! Suppresing output
+      my_rank = 1
+
+      call read_gle_matrix(ns, 'GLE-A.ref', A)
+      call read_gle_matrix(ns, 'GLE-C.ref', C)
+      C = C / AUtoEV
+
+      call compute_propagator(A, C, ns, dt, T, S)
+      call read_propagator(dt, ns, 'GLE-S.bin.ref', Sread)
+      call read_propagator(dt, ns, 'GLE-T.bin.ref', Tread)
+      do i = 1, ns + 1
+         do j = 1, ns + 1
+            @assertEqual(S(i, j), Sread(i, j), message='computed S matrix elements', tolerance=1D-7)
+            @assertEqual(T(i, j), Tread(i, j), message='computed T matrix elements', tolerance=1D-8)
+         end do
+      end do
    end subroutine test_compute_propagator
 
 end module test_gle

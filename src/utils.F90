@@ -289,4 +289,24 @@ contains
          time_data(1)
    end function get_formatted_date_and_time
 
+   ! TODO: Pass masses as a parameter,
+   ! handle also non-canonical masses for PIMD
+   real(DP) function ekin_p(px, py, pz)
+      use mod_general, only: nwalk, natom
+      use mod_system, only: am
+      implicit none
+      real(DP), intent(in) :: px(:, :), py(:, :), pz(:, :)
+      real(DP) :: tmp
+      integer :: iw, iat
+
+      ekin_p = 0.0D0
+
+      do iw = 1, nwalk
+         do iat = 1, natom
+            tmp = px(iat, iw)**2 + py(iat, iw)**2 + pz(iat, iw)**2
+            ekin_p = ekin_p + 0.5D0 * tmp / am(iat)
+         end do
+      end do
+   end function ekin_p
+
 end module mod_utils

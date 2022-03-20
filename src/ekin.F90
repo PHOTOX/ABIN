@@ -1,11 +1,9 @@
 ! initial version                         P. Slavicek a kol., Mar 25, 2009
-!
-!--------------------------------------------------------------------------
 module mod_kinetic
    use mod_const, only: DP
    implicit none
    private
-   public :: temperature, ekin_v, ekin_p, est_temp_cumul, entot_cumul
+   public :: temperature, ekin_v, est_temp_cumul, entot_cumul
    real(DP) :: est_temp_cumul = 0.0D0, entot_cumul = 0.0D0
    save
 contains
@@ -15,7 +13,7 @@ contains
       use mod_system, only: dime, f, conatom
       use mod_files, only: UTEMPER, UENERGY
       use mod_nhc, only: inose, nhcham, calc_nhcham
-      use mod_gle, only: langham
+      use mod_gle, only: get_langham
       use mod_shake, only: nshake
       implicit none
       integer :: iw, iat
@@ -53,7 +51,7 @@ contains
             call calc_nhcham()
             write (UTEMPER, '(E20.10)', advance="no") nhcham + ekin_mom + eclas
          else if (inose == 2 .or. inose == 3 .or. inose == 4) then
-            write (UTEMPER, '(E20.10)', advance="no") langham + ekin_mom + eclas
+            write (UTEMPER, '(E20.10)', advance="no") get_langham() + ekin_mom + eclas
          end if
 
          write (UTEMPER, *)
@@ -67,8 +65,6 @@ contains
          end if
 
       end if
-
-      return
    end subroutine temperature
 
    real(DP) function ekin_v(vx, vy, vz)
@@ -90,31 +86,6 @@ contains
       end do
 
       ekin_v = ekin_mom
-
-      return
    end function ekin_v
-!
-   real(DP) function ekin_p(px, py, pz)
-      use mod_general, only: nwalk, natom
-      use mod_system, only: am
-      implicit none
-      real(DP), intent(in) :: px(:, :), py(:, :), pz(:, :)
-      real(DP) :: temp1, ekin_mom
-      integer :: iw, iat
-
-      ekin_mom = 0.0D0
-
-      do iw = 1, nwalk
-         do iat = 1, natom
-            temp1 = px(iat, iw)**2 + py(iat, iw)**2 + pz(iat, iw)**2
-            temp1 = 0.5D0 * temp1 / am(iat)
-            ekin_mom = ekin_mom + temp1
-         end do
-      end do
-
-      ekin_p = ekin_mom
-
-      return
-   end function ekin_p
 
 end module mod_kinetic

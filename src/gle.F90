@@ -13,57 +13,63 @@
 ! The original code was modified to allow for PI+GLE and PIGLET simulations
 ! in ABIN by Daniel Hollas, danekhollas at gmail dot com
 
-module mod_gle
+! NOTE: In the ABIN code, use mod_gle, defined at the end of this
+! file, which exports public interface to the GLE module.
+! mod_gle_private should be used only in unit tests (test_gle.pf).
+module mod_gle_private
    use mod_const, only: DP
    use mod_random, only: gautrg
    implicit none
-   private
-   public :: readQT, ns, ps, langham, tau0_langevin
-   public :: gle_test
-   public :: gle_step, pile_step, pile_init, gle_init, finalize_gle, finalize_pile
-   ! Public for unit tests
-   public :: read_propagator, write_propagator
+   public
    real(DP), allocatable :: gS(:, :), gT(:, :)
    real(DP), allocatable :: ps(:, :, :)
    ! For PIGLET
    real(DP), allocatable :: gS_centroid(:, :), gT_centroid(:, :)
-   ! the following are only temporary helper arrays
-   real(DP), allocatable :: gp(:, :), ngp(:, :), ran(:)
+   ! Temporary helper array
+   real(DP), allocatable :: gp(:, :)
    ! Relaxation time of the white noise Langevin thermostat (PILE)
    ! In ABIN input, it should be set in picoseconds
    real(DP) :: tau0_langevin = -1.0D0
    real(DP) :: langham = 0.0D0
-   integer :: ns, ns_centroid, readQT = 1
+   integer :: ns
+   integer :: readQT = 1
    logical :: gle_test
+   ! internal arrays for PILE thermostat
    real(DP), allocatable :: c1(:), c2(:)
    save
 
 contains
+
+   ! Getter for a conserved quantity
+   ! Used both by white-noise and GLE thermostats.
+   real(DP) function get_langham()
+      get_langham = langham
+   end function
+
    ! Initialize white-noise PILE thermostat,
    ! which can be used both for classical MD and PIMD.
    subroutine pile_init(dt, tau0)
       use mod_const, only: PI, AUtoFS
-      use mod_general, only: natom, nwalk, ipimd, inormalmodes
+      use mod_general, only: nwalk, ipimd, inormalmodes
       use mod_nhc, only: temp
-      use mod_utils, only: abinerror
+      use mod_error, only: fatal_error
       real(DP), intent(in) :: dt, tau0
       real(DP) :: gam, omega, tau
       integer :: iw
 
-      ! Sanity check
+      ! Sanity checks
       if (ipimd == 1 .and. inormalmodes <= 0) then
-         write (*, *) 'ERROR: You must use normal mode coordinates with PILE thermostat.'
-         call abinerror('pile_init')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'You must use normal mode coordinates with PILE thermostat.')
       end if
 
       if (tau0 <= 0.0D0) then
          write (*, *) 'ERROR: tau0_langevin for PILE thermostat was not set or was negative.'
          write (*, *) 'Set "tau0_langevin" in picoseconds in the ABIN input in section "nhcopt".'
-         call abinerror('pile_init')
+         call fatal_error(__FILE__, __LINE__, 'invalid tau0_langevin')
       end if
 
       langham = 0.D0 ! sets to zero accumulator for langevin 'conserved' quantity
-      allocate (ran(natom * 3 * nwalk)) !allocating arrays for random numbers produced by gautrg
 
       ! c1 and c2 as defined in the paper, but
       ! c2 is further multiplied by sqrt(temp*nwalk)
@@ -82,20 +88,20 @@ contains
          c1(iw) = exp(-dt * gam)
          c2(iw) = dsqrt(1 - c1(iw)**2) * dsqrt(temp * nwalk)
       end do
-
-      write (*, *) 'C1', (c1(iw), iw=1, nwalk)
-      write (*, *) 'C2', (c2(iw), iw=1, nwalk)
-
    end subroutine
 
-   ! white-noise propagator. time-step has been set in wn_init
+   ! White-noise propagator. time-step has been set in pile_init
    subroutine pile_step(px, py, pz, m)
       use mod_general, only: natom, nwalk
+      use mod_utils, only: ekin_p
       real(DP), intent(inout) :: px(:, :)
       real(DP), intent(inout) :: py(:, :)
       real(DP), intent(inout) :: pz(:, :)
       real(DP), intent(in) :: m(:, :)
+      real(DP) :: ran(natom * 3 * nwalk)
       integer :: iat, iw, pom
+
+      langham = langham + ekin_p(px, py, pz)
 
       pom = 1
       call gautrg(ran, natom * 3 * nwalk)
@@ -110,10 +116,12 @@ contains
             pom = pom + 3
          end do
       end do
+
+      langham = langham - ekin_p(px, py, pz)
    end subroutine
 
    subroutine finalize_pile()
-      if (allocated(ran)) deallocate (ran, c1, c2)
+      if (allocated(c1)) deallocate (c1, c2)
    end subroutine finalize_pile
 
    subroutine print_gle_header(inose, ipimd, inormalmodes)
@@ -157,118 +165,93 @@ contains
       end if
    end subroutine print_gle_header
 
+   integer function read_ns(fname)
+      use mod_error, only: fatal_error
+      character(len=*), intent(in) :: fname
+      integer :: u, i
+      open (newunit=u, file=fname, action="read", status="old")
+      read (u, *, iostat=i) read_ns
+      if (i /= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Could not read ns from the first line of file '//fname)
+      end if
+      close (u)
+   end function read_ns
+
+   subroutine read_gle_matrix(ns, fname, M)
+      use mod_error, only: fatal_error
+      integer, intent(in) :: ns
+      character(len=*), intent(in) :: fname
+      real(DP), intent(out) :: M(:, :)
+      integer :: ns_read
+      integer :: u, i
+
+      open (newunit=u, file=fname, action='read', form='formatted', access='sequential')
+
+      read (u, *, iostat=i) ns_read
+      if (i /= 0) then
+         close (u)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Could not read ns from the first line of file '//fname)
+         return
+      end if
+      if (ns_read /= ns) then
+         close (u)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'ns read from the first line of file '//fname//' does not match')
+         return
+      end if
+
+      do i = 1, ns + 1
+         read (u, *) M(i, :)
+      end do
+      close (u)
+   end subroutine read_gle_matrix
+
    subroutine gle_init(dt)
       use mod_const, only: AUtoEV
+      use mod_error, only: fatal_error
       use mod_general, only: natom, nwalk, ipimd, inormalmodes, my_rank, iremd
 #if __GNUC__ == 0
       use mod_general, only: irest
 #endif
-      use mod_utils, only: abinerror
       use mod_nhc, only: temp, inose
       implicit none
       real(DP), intent(in) :: dt
-      real(DP), allocatable :: gA(:, :), gC(:, :), gr(:)
-      real(DP), allocatable :: gA_centroid(:, :), gC_centroid(:, :)
-      integer :: i, cns, ios, iw
-      character(len=10) :: glea, glec
+      real(DP), allocatable :: gA(:, :), gC(:, :)
+      character(len=50) :: glea, glec
+      character(len=*), parameter :: glea_centroid = 'GLE-A.centroid'
+      character(len=*), parameter :: glec_centroid = 'GLE-C.centroid'
       character(len=2) :: char_my_rank
+      integer :: i, iw
 
       if (my_rank == 0) then
          call print_gle_header(inose, ipimd, inormalmodes)
       end if
 
-      ! reads in matrices
-      ! reads A (in a.u. units)
+      langham = 0.D0 ! sets to zero accumulator for langevin 'conserved' quantity
+
+      glea = 'GLE-A'
+      glec = 'GLE-C'
       if (iremd == 1) then
          if (my_rank == 0) then
-            write (*, *) "iremd=1 - Expecting matrices in form:"//&
-                        &" GLE-A.id_of_replica, GLE-C.id_of_replica (ie ./GLE-A.00)"
+            print*,"REMD with GLE: Expecting matrices in form:"//&
+                        &" GLE-A.id_of_replica, GLE-C.id_of_replica (e.g. GLE-A.00)"
          end if
          write (char_my_rank, '(I0.2)') my_rank
          glea = 'GLE-A.'//char_my_rank
          glec = 'GLE-C.'//char_my_rank
-      else
-         glea = 'GLE-A'
-         glec = 'GLE-C'
       end if
 
-      open (121, file=glea, status='OLD', iostat=ios, action='read')
-      if (ios /= 0) then
-         write (0, *) "Error: could not read GLE-A file!"
-         write (0, *) "Exiting..."
-         call abinerror('gle_init')
-      end if
-
-      ! try to open GLE-C file
-      open (122, file=glec, status='OLD', action='read', iostat=ios)
-      if (ios /= 0 .and. inose == 2) then
-         write (0, *) "Error: could not read GLE-C file!"
-         call abinerror("gle_init")
-      end if
-
-      if (inormalmodes == 1) then
-         read (121, *) ns
-         allocate (gA_centroid(ns + 1, ns + 1))
-         allocate (gC_centroid(ns + 1, ns + 1))
-         allocate (gS_centroid(ns + 1, ns + 1))
-         allocate (gT_centroid(ns + 1, ns + 1))
-         if (my_rank == 0) write (6, *) '# Reading A-matrix for centroid. Expecting a.u. units!'
-         do i = 1, ns + 1
-            read (121, *) gA_centroid(i, :)
-         end do
-         ns_centroid = ns
-
-         ! Read C matrix for centroid
-         read (122, *) ns
-         if (ns /= ns_centroid) then
-            write (*, *) 'ERROR: Inconsistent size of A and C matrices for centroid.'
-            call abinerror("gle_init")
-         end if
-         if (my_rank == 0) write (6, *) '# Reading C-matrix for centroid. Expecting eV units!'
-         do i = 1, ns + 1
-            read (122, *) gC_centroid(i, :)
-            gC_centroid(i, :) = gC_centroid(i, :) / AUtoEV
-         end do
-
-         call compute_propagator(gA_centroid, gC_centroid, gT_centroid, gS_centroid, dt)
-
-         ! For initialization of momenta, see below
-         gA_centroid = gC_centroid
-         call cholesky(gA_centroid, gC_centroid, ns + 1)
-      end if
-
-      read (121, *) ns
-
-      if (inormalmodes == 1 .and. ns /= ns_centroid) then
-         write (*, *) 'ERROR: Size of A matrix for centroid and other normal modes does not match!'
-         write (*, *) 'Please, double check file GLE-A!'
-         call abinerror('gle_init')
-      end if
-
-      !allocate everything we need
-      if (natom * 3 > ns + 1) then
-         allocate (ran(natom * 3)) !allocating arrays for random numbers produced by gautrg
-      else
-         allocate (ran(ns + 1))
-      end if
+      ns = read_ns(glea)
 
       allocate (gA(ns + 1, ns + 1))
       allocate (gC(ns + 1, ns + 1))
-      allocate (gS(ns + 1, ns + 1))
-      allocate (gT(ns + 1, ns + 1))
-      allocate (gp(natom * 3, ns + 1))
-      allocate (ngp(natom * 3, ns + 1))
-      allocate (gr(ns + 1))
-      allocate (ps(natom * 3, ns, nwalk)) !each bead has to have its additional momenta
 
       if (my_rank == 0) print*,'Reading A-matrix. Expecting a.u. units!'
-      do i = 1, ns + 1
-         read (121, *) gA(i, :)
-      end do
+      call read_gle_matrix(ns, glea, gA)
 
-      close (121)
-
-      ! reads C (in eV!), or init to kT
+      ! read C (in eV!), or init to kT
       if (inose == 4) then
          if (my_rank == 0) print*,"Using canonical-sampling, Cp=kT"
          gC = 0.0D0
@@ -277,65 +260,67 @@ contains
          end do
       else
          if (my_rank == 0) print*,'Reading specialized Cp matrix. Expecting eV units!'
-         read (122, *) cns
-         if (cns /= ns) then
-            write (*, *) "Error: size mismatch matrices in GLE-A and GLE-C!"
-            call abinerror('gle_init')
-         end if
-         do i = 1, ns + 1
-            read (122, *) gC(i, :)
-            gC(i, :) = gC(i, :) / AUtoEV
-         end do
+         call read_gle_matrix(ns, glec, gC)
+         gC = gC / AUtoEV
       end if
-      close (122)
 
-      ! WARNING: gA is rewritten here
-      ! TODO: do not overwrite gA
+      ! Propagator matrices
+      allocate (gS(ns + 1, ns + 1))
+      allocate (gT(ns + 1, ns + 1))
+      call compute_propagator(gA, gC, ns, dt, gT, gS)
+
+      ! This is the main array holding auxiliary GLE momemta
+      allocate (ps(natom * 3, ns, nwalk))
+      ! Temporary array
+      allocate (gp(natom * 3, ns + 1))
+      ! Initialize the auxiliary vectors.
+      ! We keep general - as we might be using non-diagonal C
+      ! to break detailed balance - and we use cholesky decomposition of C
+      ! since one would like to initialize correctly the velocities in
+      ! gA used as a temporary array here
+      call cholesky(gC, gA, ns + 1)
+      do iw = 1, nwalk
+         call initialize_momenta(gA, iw, natom, ps)
+      end do
+
+      ! For PIGLET, we repeat the procedure with separate
+      ! GLE matrices for the Path Integral centroid.
+      if (inormalmodes == 1) then
+         if (my_rank == 0) print*,'Reading A matrix for centroid. Expecting a.u. units!'
+         call read_gle_matrix(ns, glea_centroid, gA)
+
+         if (my_rank == 0) print*,'Reading specialized Cp matrix for centroid. Expecting eV units!'
+         call read_gle_matrix(ns, glec_centroid, gC)
+         gC = gC / AUtoEV
+
+         allocate (gS_centroid(ns + 1, ns + 1))
+         allocate (gT_centroid(ns + 1, ns + 1))
+         call compute_propagator(gA, gC, ns, dt, gT_centroid, gS_centroid)
+
+         call cholesky(gC, gA, ns + 1)
+         call initialize_momenta(gA, 1, natom, ps)
+      end if
+
+      deallocate (gA)
+      deallocate (gC)
+
+#if __GNUC__ == 0
+      if (irest /= 0 .and. ns > 6) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Restarting GLE thermostat with ns > 6&
+            & is not supported with non-GNU compilers.'
+      end if
+#endif
+
       if (gle_test) then
          call read_propagator(dt, ns, 'GLE-S.bin', gS)
          call read_propagator(dt, ns, 'GLE-T.bin', gT)
-         ! TODO: Refactor this
          if (inormalmodes == 1) then
             call read_propagator(dt, ns, 'GLE-S.centroid.bin', gS_centroid)
             call read_propagator(dt, ns, 'GLE-T.centroid.bin', gT_centroid)
          end if
-      else
-         call compute_propagator(gA, gC, gT, gS, dt)
       end if
 
-      ! Initialize the auxiliary vectors.
-      ! we keep general - as we might be using non-diagonal C
-      ! to break detailed balance - and we use cholesky decomposition of C
-      ! since one would like to initialize correctly the velocities in
-
-      ! TODO: Do not overwrite gA
-      gA = gC
-      call cholesky(gA, gC, ns + 1)
-
-      do iw = 1, nwalk
-         ! Centroid was already initialized
-         if (inormalmodes == 1 .and. iw == 1) then
-            call initialize_momenta(gC_centroid, 1, natom)
-         else
-            call initialize_momenta(gC, iw, natom)
-         end if
-      end do
-
-      langham = 0.D0 ! sets to zero accumulator for langevin 'conserved' quantity
-
-      deallocate (gA)
-      deallocate (gC)
-      if (inormalmodes == 1) then
-         deallocate (gA_centroid)
-         deallocate (gC_centroid)
-      end if
-#if __GNUC__ == 0
-      if (irest /= 0 .and. ns > 6) then
-         write (*, *) 'ERROR: Restarting GLE thermostat with ns>6&
-          & is not supported with non-GNU compilers.'
-         call abinerror('gle_init')
-      end if
-#endif
       if (.not. gle_test) then
          call write_propagator(gT, dt, ns, 'GLE-T.bin')
          call write_propagator(gS, dt, ns, 'GLE-S.bin')
@@ -346,17 +331,14 @@ contains
       end if
    end subroutine gle_init
 
-   subroutine initialize_momenta(C, iw, natom)
+   subroutine initialize_momenta(C, iw, natom, ps)
       !use mod_arrays,  only: px, py, pz, vx, vy, vz, amt
       use mod_error, only: fatal_error
       real(DP), intent(in) :: C(:, :)
       integer, intent(in) :: iw, natom
+      real(DP), intent(inout) :: ps(:, :, :)
       real(DP), allocatable :: gr(:)
       integer :: i, j
-      ! WARNING: this routine must be called after arrays are allocated!
-      if (.not. allocated(ps)) then
-         call fatal_error(__FILE__, __LINE__, "oh no, programming error in gle.F90!")
-      end if
 
       allocate (gr(ns + 1))
 
@@ -385,15 +367,60 @@ contains
       deallocate (gr)
    end subroutine initialize_momenta
 
+   subroutine pile_restin(u)
+      ! Restart file unit
+      integer, intent(in) :: u
+      read (u, *) langham
+   end subroutine
+
+   subroutine pile_restout(u)
+      integer, intent(in) :: u
+      write (u, *) langham
+   end subroutine
+
+   subroutine gle_restin(u)
+      use mod_general, only: natom, nwalk
+      ! Restart file unit
+      integer, intent(in) :: u
+      character(len=50) :: chformat
+      integer :: iat, iw, is
+
+      write (chformat, '(A1,I1,A7)') '(', ns, 'E25.16)'
+      do iw = 1, nwalk
+         do iat = 1, natom * 3
+            do is = 1, ns - 1
+               !read(u, fmt=chformat)(ps(iat, is, iw), is = 1, ns)
+               read (u, '(1E25.16)', advance="no") ps(iat, is, iw)
+            end do
+            read (u, '(1E25.16)') ps(iat, ns, iw)
+         end do
+      end do
+      read (u, *) langham
+   end subroutine
+
+   subroutine gle_restout(u)
+      use mod_general, only: natom, nwalk
+      ! Restart file unit
+      integer, intent(in) :: u
+      character(len=50) :: chformat
+      integer :: iat, iw, is
+
+      write (chformat, '(A1,I0,A7)') '(', ns, 'E25.16)'
+      do iw = 1, nwalk
+         do iat = 1, natom * 3
+            write (u, fmt=trim(chformat)) (ps(iat, is, iw), is=1, ns)
+         end do
+      end do
+      write (u, *) langham
+   end subroutine
+
    subroutine finalize_gle()
       if (allocated(gS)) then
-         deallocate (gS, gT, ps, gp, ngp, ran)
+         deallocate (gS, gT, ps, gp)
       end if
       if (allocated(gS_centroid)) then
          deallocate (gS_centroid, gT_centroid)
       end if
-
-      if (allocated(ran)) deallocate (ran)
    end subroutine finalize_gle
 
    subroutine write_propagator(M, dt, ns, fname)
@@ -411,10 +438,10 @@ contains
 
    subroutine read_propagator(dt, ns, fname, M)
       use mod_error, only: fatal_error
-      real(DP), intent(out) :: M(:, :)
       real(DP), intent(in) :: dt
       integer, intent(in) :: ns
       character(len=*), intent(in) :: fname
+      real(DP), intent(out) :: M(:, :)
       real(DP) :: dt_read
       integer :: ns_read
       integer :: u
@@ -435,21 +462,21 @@ contains
       close (u)
    end subroutine read_propagator
 
-   ! Matrix A is rewritten on output
-   subroutine compute_propagator(A, C, T, S, dt)
-      real(DP), intent(inout) :: A(:, :)
-      real(DP), intent(in) :: C(:, :)
-      real(DP), intent(out) :: T(:, :), S(:, :)
+   subroutine compute_propagator(A, C, ns, dt, T, S)
+      real(DP), intent(in) :: A(ns + 1, ns + 1)
+      real(DP), intent(in) :: C(ns + 1, ns + 1)
+      integer, intent(in) :: ns
       real(DP), intent(in) :: dt
+      real(DP), intent(out) :: T(ns + 1, ns + 1)
+      real(DP), intent(out) :: S(ns + 1, ns + 1)
+      real(DP) :: TMP(ns + 1, ns + 1)
 
       ! the deterministic part of the propagator
       call matrix_exp(-dt * A, ns + 1, 15, 15, T)
 
-      ! the stochastic part, we use A as a temporary array
-      ! TODO: Do not overwrite A, makes things confusing
-      A = C - matmul(T, matmul(C, transpose(T)))
-      call cholesky(A, S, ns + 1)
-
+      ! the stochastic part
+      TMP = C - matmul(T, matmul(C, transpose(T)))
+      call cholesky(TMP, S, ns + 1)
    end subroutine compute_propagator
 
    ! The GLE propagator.
@@ -460,11 +487,14 @@ contains
    ! is passed back to the caller, while the new s's are kept stored in ps.
    subroutine gle_step(px, py, pz, m)
       use mod_general, only: natom, nwalk, inormalmodes
+      use mod_utils, only: ekin_p
       real(DP), intent(inout) :: px(:, :)
       real(DP), intent(inout) :: py(:, :)
       real(DP), intent(inout) :: pz(:, :)
       real(DP), intent(in) :: m(:, :)
       integer :: i, iat, iw
+
+      langham = langham + ekin_p(px, py, pz)
 
       do iw = 1, nwalk
 
@@ -500,20 +530,20 @@ contains
             end do
          end do
 
-         !iw enddo
       end do
 
+      langham = langham - ekin_p(px, py, pz)
    end subroutine gle_step
 
    subroutine gle_propagate(p, T, S, mass, iw)
       use mod_general, only: natom
       real(DP), intent(inout) :: p(:, :)
       real(DP), intent(in) :: T(:, :), S(:, :), mass(:, :)
+      integer, intent(in) :: iw
+      real(DP) :: ngp(natom * 3, ns + 1)
+      real(DP) :: ran(natom * 3)
       real(DP) :: sqm
-      integer, intent(in) :: iw ! this one is stupid
       integer :: i, j
-      ! ran and ngp arrays are allocated in gle_init,
-      ! maybe we should move the allocation here
 
       ngp = transpose(matmul(T, transpose(p)))
 
@@ -573,6 +603,7 @@ contains
    ! in practice, we compute LDL^T decomposition, and force
    ! to zero negative eigenvalues.
    subroutine cholesky(SST, S, n)
+      use mod_general, only: my_rank
       integer, intent(in) :: n
       real(DP), intent(in) :: SST(n, n)
       real(DP), intent(out) :: S(n, n)
@@ -591,7 +622,7 @@ contains
             if (D(j, j) > 1.0D-10) then
                L(i, j) = L(i, j) / D(j, j)
             else
-               write (*, *) "Warning: zero eigenvalue in LDL^T decomposition."
+               if (my_rank == 0) print*,"Warning: zero eigenvalue in LDL^T decomposition."
                L(i, j) = 0.D0
             end if
          end do
@@ -604,11 +635,30 @@ contains
          if (D(i, i) >= 0.0D0) then
             D(i, i) = dsqrt(D(i, i))
          else
-            write (*, *) "Warning: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
+            if (my_rank == 0) print*,"WARNING: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
             D(i, i) = 0.0D0
          end if
       end do
       S = matmul(L, D)
    end subroutine cholesky
 
+end module mod_gle_private
+
+! Public interface
+module mod_gle
+   use mod_gle_private
+   implicit none
+   private
+   ! Input keywords
+   public :: readQT
+   public :: tau0_langevin
+   public :: gle_test
+   ! Public subroutines
+   public :: pile_init, gle_init
+   public :: finalize_gle, finalize_pile
+   public :: gle_step, pile_step
+   public :: gle_restout, gle_restin
+   public :: pile_restout, pile_restin
+   ! Public functions
+   public :: get_langham
 end module mod_gle
