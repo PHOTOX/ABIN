@@ -680,7 +680,7 @@ subroutine init(dt)
 
    ! Open files for writing
    ! TODO: It's strange that we're passing these random params here...
-   call files_init(isbc, phase, ndist, nang, ndist)
+   call files_init(isbc, phase, ndist, nang, ndih)
 
    call flush (6)
 

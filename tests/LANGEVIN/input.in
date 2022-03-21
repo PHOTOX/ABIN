@@ -1,10 +1,10 @@
 &general
-irest=1,
+irest=0,
 pot='mmwater'
 mdtype='MD',
 
 dt=20.,	
-nstep=2,
+nstep=1,
 irandom=53478953,
 
 nwrite=1,
@@ -12,10 +12,10 @@ nwritex=1,
 nrest=1,
 nwritev=1,
 nwritef=1,
-idebug=1,
 /
 
 &nhcopt
-inose=0,
-temp=298.15,
+inose=3,
+temp=300.0
+tau0_langevin=0.001
 /
