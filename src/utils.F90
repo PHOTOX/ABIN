@@ -309,4 +309,22 @@ contains
       end do
    end function ekin_p
 
+   subroutine check_real_nonnegative(a, varname)
+      real(DP), intent(in) :: a
+      character(len=*), intent(in) :: varname
+      if (a < 0.0D0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'parameter '//varname//' must be >= 0.0')
+      end if
+   end subroutine check_real_nonnegative
+
+   subroutine check_real_positive(a, varname)
+      real(DP), intent(in) :: a
+      character(len=*), intent(in) :: varname
+      if (a <= 0.0D0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'parameter '//varname//' must be > 0.0')
+      end if
+   end subroutine check_real_positive
+
 end module mod_utils

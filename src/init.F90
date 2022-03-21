@@ -53,6 +53,11 @@ subroutine init(dt)
 #endif
    implicit none
    real(DP), intent(out) :: dt
+   ! Input parameters for analytical potentials
+   real(DP) :: lambda_dw = -1.0D0, D0_dw = -1.0D0, k_dw = -1.0D0, r0_dw = -1.D0
+   real(DP) :: r0_morse = -1, d0_morse = -1, k_morse = -1
+   real(DP) :: k = -1, r0 = -1
+   real(DP) :: kx = -1, ky = -1, kz = -1
    real(DP) :: masses(MAXTYPES)
    real(DP) :: rans(10)
    integer :: ipom, iw, iat, natom_xyz, imol, iost
@@ -105,7 +110,7 @@ subroutine init(dt)
 
    namelist /system/ masses, massnames, ndist, dist1, dist2, &
       nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &
-      k, r0, kx, ky, kz, dissociation_energy, D0_dw, lambda_dw, k_dw, r0_dw, &
+      k, r0, kx, ky, kz, r0_morse, d0_morse, k_morse, D0_dw, lambda_dw, k_dw, r0_dw, &
       Nshake, ishake1, ishake2, shake_tol
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
@@ -505,7 +510,6 @@ subroutine init(dt)
    temp0 = temp0 / AUtoK
 
    if (ihess == 1) then
-      allocate (hess(natom * 3, natom * 3, nwalk))
       allocate (cvhess_cumul(nwalk))
       cvhess_cumul = 0.0D0
    end if
@@ -562,9 +566,6 @@ subroutine init(dt)
       call restin(x, y, z, vx, vy, vz, it)
    end if
 
-   if (pot == '_harmonic_oscillator_') then
-      f = 0 !temporary hack
-   end if
    if (nchain > 1) then
       f = 0 !what about nchain=1?
       ! what about massive thermostat?
@@ -631,6 +632,19 @@ subroutine init(dt)
    ! Initialize spherical boundary onditions
    if (isbc == 1) then
       call sbc_init(x, y, z)
+   end if
+
+   if (pot == '_doublewell_' .or. pot_ref == '_doublewell_') then
+      call doublewell_init(natom, lambda_dw, D0_dw, k_dw, r0_dw, vy, vz)
+   end if
+   if (pot == '_harmonic_oscillator_' .or. pot_ref == '_harmonic_oscillator_') then
+      call harmonic_oscillator_init(natom, kx, ky, kz, vx, vy, vz)
+   end if
+   if (pot == '_harmonic_rotor_' .or. pot_ref == '_harmonic_rotor_') then
+      call harmonic_rotor_init(natom, k, r0)
+   end if
+   if (pot == '_morse_' .or. pot_ref == '_morse_') then
+      call morse_init(natom, k_morse, r0_morse, d0_morse)
    end if
 
    ! inames initialization for the MM part.
@@ -1051,11 +1065,6 @@ contains
          write (*, *) 'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
          error = 1
       end if
-
-      if (pot == '_harmonic_oscillator_' .and. natom > 1) then
-         write (*, *) 'Only 1 particle is allowed for 2D harmonic oscillator!'
-         error = 1
-      end if
       if (pot == 'mm' .and. iqmmm > 0) then
          write (*, *) 'Pot="mm"is not compatible with iqmmm>0!'
          error = 1
@@ -1183,8 +1192,6 @@ subroutine finish(error_code)
    use mod_files, only: MAXUNITS
    use mod_nhc, only: inose, finalize_nhc
    use mod_gle, only: finalize_gle, finalize_pile
-   use mod_estimators, only: h
-   use mod_potentials, only: hess
    use mod_lz, only: lz_finalize
    use mod_transform, only: finalize_normalmodes
    use mod_cp2k, only: finalize_cp2k
@@ -1223,13 +1230,6 @@ subroutine finish(error_code)
          close (i)
       end if
    end do
-
-   if (allocated(hess)) then
-      deallocate (hess)
-   end if
-   if (allocated(h)) then
-      deallocate (h)
-   end if
 
    if (inormalmodes > 0) then
       call finalize_normalmodes()

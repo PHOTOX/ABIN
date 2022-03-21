@@ -1,0 +1,172 @@
+! Testing functions for analytical potentials.
+module test_potentials
+   use funit
+   use mod_const, only: DP
+   implicit none
+
+contains
+
+   @test
+   subroutine test_morse_energy()
+      !@assertEqual(1.008D0 * AMU, am(1), "hydrogen mass")
+   end subroutine test_morse_energy
+
+   @test
+   subroutine test_morse_errors()
+      use mod_potentials, only: morse_init
+      use mod_potentials, only: harmonic_rotor_init
+      integer :: natom
+      real(DP) :: k, r0, d0 
+      k = 1
+      d0 = 1
+      r0 = 1
+
+      natom = 1
+      call morse_init(natom, k, r0, d0)
+      @assertExceptionRaised('Morse potential is only for 2 particles')
+
+      call harmonic_rotor_init(natom, k, r0)
+      @assertExceptionRaised('Harmonic rotor is only for 2 particles')
+
+      natom = 2
+      k = 0.0D0
+      call morse_init(natom, k, r0, d0)
+      @assertExceptionRaised('parameter k_morse must be > 0.0')
+   end subroutine test_morse_errors
+
+   @test
+   subroutine test_harmonic_oscillator_init()
+      use mod_potentials, only: harmonic_oscillator_init
+      real(DP), dimension(1, 2) :: vx, vy, vz 
+      integer :: natom
+      real(DP) :: kx, ky, kz
+
+      kx = 1
+      ky = 0.0D0
+      kz = 0.0D0
+      call random_number(vx)
+      call random_number(vy)
+      call random_number(vz)
+
+      natom = 2
+      call harmonic_oscillator_init(natom, kx, ky, kz, vx, vy, vz)
+      @assertExceptionRaised('Harmonic potential is only for 1 particle')
+
+      natom = 1
+      call harmonic_oscillator_init(natom, kx, ky, kz, vx, vy, vz)
+      @assertEqual(vy, vz, 'vy == vz = 0.0D0')
+      ! TODO: See TODO in init
+      !@assertNotEqual(vx, vy, 'vx != 0.0D0')
+   end subroutine
+
+   @test
+   subroutine test_doublewell_errors()
+      use mod_potentials, only: doublewell_init
+      real(DP), dimension(1,1) :: vy, vz
+      integer :: natom
+      real(DP) :: lambda, k, r0, d0 
+      natom = 1
+      lambda = 1
+      k = 1
+      r0 = 1
+      d0 = 1
+      call doublewell_init(natom, lambda, d0, k, r0, vy, vz)
+
+      natom = 2
+      call doublewell_init(natom, lambda, d0, k, r0, vy, vz)
+      @assertExceptionRaised('Double-well potential is only for 1 particle')
+
+      natom = 1
+      k = -1.0D0
+      call doublewell_init(natom, lambda, d0, k, r0, vy, vz)
+      @assertExceptionRaised('parameter k_dw must be >= 0.0')
+   end subroutine test_doublewell_errors
+
+   @test
+   subroutine test_harmonic_oscillator_hessian()
+      use mod_potentials, only: hessian_harmonic_oscillator
+      use mod_potentials, only: harmonic_oscillator_init
+      integer, parameter :: NATOM = 1
+      integer, parameter :: NWALK = 2
+      real(DP), dimension(NATOM * 3, NATOM * 3, NWALK) :: hess 
+      real(DP), dimension(NATOM, NATOM) :: x, y, z
+      real(DP), dimension(NATOM, NATOM) :: vx, vy, vz
+      real(DP) :: kx, ky, kz
+
+      call random_seed()
+      call random_number(x)
+      call random_number(y)
+      call random_number(z)
+      call random_number(kx)
+      call random_number(ky)
+      call random_number(kz)
+
+      call harmonic_oscillator_init(1, kx, ky, kz, vx, vy, vz)
+
+      call hessian_harmonic_oscillator(nwalk, hess)
+      call check_hessian_symmetry(natom, nwalk, hess)
+
+   end subroutine
+
+   @test
+   subroutine test_harmonic_rotor_and_morse_hessian()
+      use mod_potentials, only: hessian_harmonic_rotor, hessian_morse
+      use mod_potentials, only: harmonic_rotor_init, morse_init
+      integer, parameter :: NATOM = 2
+      integer, parameter :: NWALK = 2
+      real(DP), dimension(NATOM * 3, NATOM * 3, NWALK) :: hess 
+      real(DP), dimension(NATOM, NATOM) :: x, y, z
+      real(DP) :: k, r0, d0
+      !integer :: i, j
+
+      call random_number(x)
+      call random_number(y)
+      call random_number(z)
+
+      call random_number(k)
+      call random_number(r0)
+      call random_number(d0)
+      call harmonic_rotor_init(natom, k, r0)
+      call morse_init(natom, k, r0, d0)
+
+      call hessian_harmonic_rotor(x, y, z, nwalk, hess)
+      call check_hessian_symmetry(natom, nwalk, hess)
+      call check_hessian_twoparticle_diagonal_symmetry(nwalk, hess)
+
+      call hessian_morse(x, y, z, nwalk, hess)
+      call check_hessian_symmetry(natom, nwalk, hess)
+      !print *, ''
+      !do i = 1, 6
+      !   print '(6E15.3)', (hess(i, j, 1), j = 1, 6)
+      !end do
+      !call check_hessian_twoparticle_diagonal_symmetry(nwalk, hess)
+   end subroutine
+
+   ! Helper subroutine
+   subroutine check_hessian_symmetry(natom, nwalk, hess)
+      integer, intent(in) :: natom, nwalk
+      real(DP), intent(in) :: hess(:, :, :)
+      integer :: i, j, iw
+
+      do iw = 1, nwalk
+         do i = 1, natom * 3
+            do j = i + 1, natom * 3
+               @assertEqual(hess(i, j, iw), hess(j, i, iw), 'hessian symmetry')
+            end do
+         end do
+      end do
+   end subroutine
+
+   subroutine check_hessian_twoparticle_diagonal_symmetry(nwalk, hess)
+      integer, intent(in) :: nwalk
+      real(DP), intent(in) :: hess(:, :, :)
+      integer :: i, iw
+
+      do iw = 1, nwalk
+         do i = 1, 3
+            @assertEqual(hess(i, i, iw), hess(i + 3, i + 3, iw), 'hessian diagonal symmetry')
+         end do
+      end do
+   end subroutine
+
+end module test_potentials

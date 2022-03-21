@@ -63,7 +63,14 @@ gle_EXTRA_USE := throw_with_pfunit_mod
 gle_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,gle))
 
-all : utils masses plumed fftw terapi gle
+pot_TESTS := test_potentials.pf
+pot_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+pot_OTHER_SRCS := throw_with_pfunit.F90
+pot_EXTRA_USE := throw_with_pfunit_mod
+pot_EXTRA_INITIALIZE := initialize_throw
+
+$(eval $(call make_pfunit_test,pot))
+all : utils masses plumed fftw terapi gle pot
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
@@ -75,10 +82,11 @@ test : clean_plumed_output clean_terapi_output clean_gle_output
 	./fftw
 	./terapi
 	./gle
+	./pot
 
 clean : clean_plumed_output clean_terapi_output clean_gle_output
 	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90
-	/bin/rm -f masses utils plumed fftw terapi gle
+	/bin/rm -f masses utils plumed fftw terapi gle pot
 
 clean_plumed_output :
 	/bin/rm -f bck.* plumed_*.dat

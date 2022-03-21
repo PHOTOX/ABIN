@@ -22,9 +22,9 @@ ihess=1
 /
 
 &system
-k=1.47497D0
-r0=2.04D0
-dissociation_energy=0.363965D0
+k_morse=1.47497D0
+r0_morse=2.04D0
+d0_morse=0.363965D0
 /
 
 &nhcopt

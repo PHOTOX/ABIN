@@ -66,12 +66,6 @@ contains
 
          end do
 
-         if (pot == '_harmonic_oscillator_') then
-            vx(1, iw) = 0.0D0
-            vy(1, iw) = 0.0D0
-            vz(1, iw) = 0.0D0
-         end if
-
       end do
 
    end subroutine vinit
