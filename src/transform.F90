@@ -98,19 +98,19 @@ contains
          transz(iat, 1) = z(iat, 1)
 
          transx(iat, nwalk) = x(iat, nwalk) + ((nwalk - 1.0D0) / nwalk) * &
-                           transx(iat, 1) + x(iat, 1) / nwalk
+                            & transx(iat, 1) + x(iat, 1) / nwalk
          transy(iat, nwalk) = y(iat, nwalk) + ((nwalk - 1.0D0) / nwalk) * &
-                           transy(iat, 1) + y(iat, 1) / nwalk
+                            & transy(iat, 1) + y(iat, 1) / nwalk
          transz(iat, nwalk) = z(iat, nwalk) + ((nwalk - 1.0D0) / nwalk) * &
-                           transz(iat, 1) + z(iat, 1) / nwalk
+                            & transz(iat, 1) + z(iat, 1) / nwalk
 
          do iw = nwalk - 1, 2, -1
             transx(iat, iw) = x(iat, iw) + ((iw - 1.0D0) / iw) * &
-                              transx(iat, iw + 1) + x(iat, 1) / iw
+                            & transx(iat, iw + 1) + x(iat, 1) / iw
             transy(iat, iw) = y(iat, iw) + ((iw - 1.0D0) / iw) * &
-                              transy(iat, iw + 1) + y(iat, 1) / iw
+                            & transy(iat, iw + 1) + y(iat, 1) / iw
             transz(iat, iw) = z(iat, iw) + ((iw - 1.0D0) / iw) * &
-                              transz(iat, iw + 1) + z(iat, 1) / iw
+                            & transz(iat, iw + 1) + z(iat, 1) / iw
          end do
 
       end do

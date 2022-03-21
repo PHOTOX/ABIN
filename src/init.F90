@@ -471,6 +471,10 @@ subroutine init(dt)
       if (my_rank == 0) write (*, *) 'Using RESPA integrator.'
       md = 1
    else if (ipimd == 1 .and. inormalmodes == 1) then
+      if (my_rank == 0) then
+         print*,'Using velocity Verlet propagator with analytical PI normal mode propagation.'
+      end if
+      nabin = 1
       md = 2
    end if
 
