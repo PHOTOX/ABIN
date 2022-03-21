@@ -21,18 +21,23 @@ module mod_gle_private
    use mod_random, only: gautrg
    implicit none
    public
-   real(DP), allocatable :: gS(:, :), gT(:, :)
-   real(DP), allocatable :: ps(:, :, :)
-   ! For PIGLET
-   real(DP), allocatable :: gS_centroid(:, :), gT_centroid(:, :)
-   ! Temporary helper array
-   real(DP), allocatable :: gp(:, :)
    ! Relaxation time of the white noise Langevin thermostat (PILE)
    ! In ABIN input, it should be set in picoseconds
    real(DP) :: tau0_langevin = -1.0D0
-   real(DP) :: langham = 0.0D0
-   integer :: ns
+   ! Special input flag for GLE tests
    logical :: gle_test
+   ! Size of the GLE auxiliary arrays
+   integer :: ns
+   ! GLE auxiliary array
+   real(DP), allocatable :: ps(:, :, :)
+   ! GLE propagators
+   real(DP), allocatable :: gS(:, :), gT(:, :)
+   ! PIGLET propagators for path integral centroid
+   real(DP), allocatable :: gS_centroid(:, :), gT_centroid(:, :)
+   ! Temporary helper array
+   real(DP), allocatable :: gp(:, :)
+   ! Cumulative conserved quantity
+   real(DP) :: langham = 0.0D0
    ! internal arrays for PILE thermostat
    real(DP), allocatable :: c1(:), c2(:)
    save
@@ -311,21 +316,14 @@ contains
       end if
 #endif
 
+      ! To ensure numerical stability of End-to-end GLE tests,
+      ! we read precomputed propagators.
       if (gle_test) then
          call read_propagator(dt, ns, 'GLE-S.bin', gS)
          call read_propagator(dt, ns, 'GLE-T.bin', gT)
          if (inormalmodes == 1) then
             call read_propagator(dt, ns, 'GLE-S.centroid.bin', gS_centroid)
             call read_propagator(dt, ns, 'GLE-T.centroid.bin', gT_centroid)
-         end if
-      end if
-
-      if (.not. gle_test) then
-         call write_propagator(gT, dt, ns, 'GLE-T.bin')
-         call write_propagator(gS, dt, ns, 'GLE-S.bin')
-         if (inormalmodes == 1) then
-            call write_propagator(gT_centroid, dt, ns, 'GLE-T.centroid.bin')
-            call write_propagator(gS_centroid, dt, ns, 'GLE-S.centroid.bin')
          end if
       end if
    end subroutine gle_init
@@ -388,7 +386,6 @@ contains
       do iw = 1, nwalk
          do iat = 1, natom * 3
             do is = 1, ns - 1
-               !read(u, fmt=chformat)(ps(iat, is, iw), is = 1, ns)
                read (u, '(1E25.16)', advance="no") ps(iat, is, iw)
             end do
             read (u, '(1E25.16)') ps(iat, ns, iw)
@@ -511,7 +508,6 @@ contains
 
          if (inormalmodes == 1 .and. iw == 1) then
             ! PIGLET centroid propagation
-            print*,m
             call gle_propagate(gp, gT_centroid, gS_centroid, m, iw)
          else
             call gle_propagate(gp, gT, gS, m, iw)

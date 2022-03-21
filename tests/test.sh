@@ -117,15 +117,9 @@ restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.
 if [[ $TESTS = "all" ]];then
    folders=(CMD SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
             LZ_SS LZ_ST LZ_ENE \
-            PIMD QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
+            PIMD ABINITIO LANGEVIN QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
             SHAKE HARMON MORSE MINI QMMM \
             ANALYZE_EXT CMDLINE WATER_FAIL)
-
-   let index=${#folders[@]}+1
-   # TODO: Split this test, test OpenMP separately
-   # We assume we always compile with -fopenmp
-   # We should actually try to determine that somehow
-   folders[index]=ABINITIO
 
    if [[ $MPI = "TRUE" ]];then
       let index=${#folders[@]}+1
