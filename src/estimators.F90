@@ -7,8 +7,6 @@ module mod_estimators
    real(DP) :: est_prim2_cumul = 0.0D0, est_prim_vir = 0.0D0, est_vir2_cumul = 0.0D0
    real(DP) :: cv_prim_cumul = 0.0D0, cv_vir_cumul = 0.0D0, cv_dcv_cumul = 0.0D0
    real(DP), allocatable :: cvhess_cumul(:)
-   real(DP), allocatable :: h(:)
-!!$OMP threadprivate(h)
    integer :: enmini = 100
    save
 contains
@@ -18,9 +16,10 @@ contains
                            & ncalc, nwrite, inormalmodes, imini, ihess, icv
       use mod_nhc, only: temp, inose
       use mod_system, only: am, dime
-      use mod_potentials, only: hessian_harmonic_oscillator, hessian_morse, hessian_harmonic_rotor, hess
+      use mod_potentials, only: hessian_harmonic_oscillator, hessian_morse, hessian_harmonic_rotor
       use mod_shake, only: nshake
       use mod_error, only: fatal_error
+      use mod_arrays, only: hess
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       ! fxab array is classical force in cartesian coordinates
       real(DP), intent(in) :: fxab(:, :), fyab(:, :), fzab(:, :)
@@ -125,11 +124,11 @@ contains
          if (ihess == 1) then
 
             if (pot == '_harmonic_rotor_') then
-               call hessian_harmonic_rotor(x, y, z)
+               call hessian_harmonic_rotor(x, y, z, nwalk, hess)
             else if (pot == '_morse_') then
-               call hessian_morse(x, y, z)
+               call hessian_morse(x, y, z, nwalk, hess)
             else if (pot == '_harmonic_oscillator_') then
-               call hessian_harmonic_oscillator()
+               call hessian_harmonic_oscillator(nwalk, hess)
             end if
 
             cv_dcv = 0.0D0

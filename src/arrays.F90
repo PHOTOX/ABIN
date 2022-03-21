@@ -29,11 +29,13 @@ module mod_arrays
    ! for multiple time-stepping and ring contraction ala O. Marsalek
    real(DP), allocatable :: fxc_diff(:, :), fyc_diff(:, :), fzc_diff(:, :)
    real(DP) :: epot_diff = 0.0D0 ! not really array, but for now let's keep it here
+   ! Array holding the hessian matrix
+   real(DP), allocatable :: hess(:, :, :)
    save
 contains
 
    subroutine allocate_arrays(natomalloc, nwalkalloc)
-      use mod_general, only: pot_ref
+      use mod_general, only: pot_ref, ihess
       integer, intent(in) :: nwalkalloc
       integer, intent(in) :: natomalloc
 
@@ -105,6 +107,9 @@ contains
          fxc_diff = 0.0D0; fyc_diff = 0.0D0; fzc_diff = 0.0D0
       end if
 
+      if (ihess == 1) then
+         allocate (hess(natomalloc * 3, natomalloc * 3, nwalkalloc))
+      end if
    end subroutine allocate_arrays
 
    subroutine deallocate_arrays
@@ -127,6 +132,9 @@ contains
       end if
       if (allocated(fxc_diff)) then
          deallocate (fxc_diff); deallocate (fyc_diff); deallocate (fzc_diff); 
+      end if
+      if (allocated(hess)) then
+         deallocate (hess)
       end if
    end subroutine deallocate_arrays
 
