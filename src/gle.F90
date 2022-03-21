@@ -216,9 +216,6 @@ contains
       use mod_const, only: AUtoEV
       use mod_error, only: fatal_error
       use mod_general, only: natom, nwalk, ipimd, inormalmodes, my_rank, iremd
-#if __GNUC__ == 0
-      use mod_general, only: irest
-#endif
       use mod_nhc, only: temp, inose
       implicit none
       real(DP), intent(in) :: dt
@@ -307,14 +304,6 @@ contains
 
       deallocate (gA)
       deallocate (gC)
-
-#if __GNUC__ == 0
-      if (irest /= 0 .and. ns > 6) then
-         call fatal_error(__FILE__, __LINE__, &
-            & 'Restarting GLE thermostat with ns > 6&
-            & is not supported with non-GNU compilers.'
-      end if
-#endif
 
       ! To ensure numerical stability of End-to-end GLE tests,
       ! we read precomputed propagators.
