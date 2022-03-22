@@ -89,14 +89,9 @@ contains
       integer, parameter :: NATOM = 1
       integer, parameter :: NWALK = 2
       real(DP), dimension(NATOM * 3, NATOM * 3, NWALK) :: hess 
-      real(DP), dimension(NATOM, NATOM) :: x, y, z
       real(DP), dimension(NATOM, NATOM) :: vx, vy, vz
       real(DP) :: kx, ky, kz
 
-      call random_seed()
-      call random_number(x)
-      call random_number(y)
-      call random_number(z)
       call random_number(kx)
       call random_number(ky)
       call random_number(kz)
@@ -105,7 +100,6 @@ contains
 
       call hessian_harmonic_oscillator(nwalk, hess)
       call check_hessian_symmetry(natom, nwalk, hess)
-
    end subroutine
 
    @test
@@ -117,7 +111,6 @@ contains
       real(DP), dimension(NATOM * 3, NATOM * 3, NWALK) :: hess 
       real(DP), dimension(NATOM, NATOM) :: x, y, z
       real(DP) :: k, r0, d0
-      !integer :: i, j
 
       call random_number(x)
       call random_number(y)
@@ -135,14 +128,10 @@ contains
 
       call hessian_morse(x, y, z, nwalk, hess)
       call check_hessian_symmetry(natom, nwalk, hess)
-      !print *, ''
-      !do i = 1, 6
-      !   print '(6E15.3)', (hess(i, j, 1), j = 1, 6)
-      !end do
-      !call check_hessian_twoparticle_diagonal_symmetry(nwalk, hess)
+      call check_hessian_twoparticle_diagonal_symmetry(nwalk, hess)
    end subroutine
 
-   ! Helper subroutine
+   ! Helper subroutines
    subroutine check_hessian_symmetry(natom, nwalk, hess)
       integer, intent(in) :: natom, nwalk
       real(DP), intent(in) :: hess(:, :, :)
@@ -166,6 +155,17 @@ contains
          do i = 1, 3
             @assertEqual(hess(i, i, iw), hess(i + 3, i + 3, iw), 'hessian diagonal symmetry')
          end do
+      end do
+   end subroutine
+
+   subroutine print_hessian(hess, natom, iw)
+      real(DP), intent(in) :: hess(:, :, :)
+      integer, intent(in) :: natom, iw
+      integer :: i, j
+
+      print *, ''
+      do i = 1, natom * 3
+         print '(6E15.3)', (hess(i, j, iw), j = 1, natom * 3)
       end do
    end subroutine
 
