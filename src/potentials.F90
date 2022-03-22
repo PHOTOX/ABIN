@@ -371,9 +371,9 @@ contains
          hess(2, 1, i) = fac2 * dx * dy - (fac * dx * dy) / r**2 - fac * a * dx * dy / r
          hess(3, 1, i) = fac2 * dx * dz - (fac * dx * dz) / r**2 - fac * a * dx * dz / r
          hess(3, 2, i) = fac2 * dz * dy - (fac * dz * dy) / r**2 - fac * a * dz * dy / r
-         hess(1, 1, i) = hess(2, 1, i) / nwalk
-         hess(2, 2, i) = hess(3, 1, i) / nwalk
-         hess(3, 3, i) = hess(3, 2, i) / nwalk
+         hess(2, 1, i) = hess(2, 1, i) / nwalk
+         hess(3, 1, i) = hess(3, 1, i) / nwalk
+         hess(3, 2, i) = hess(3, 2, i) / nwalk
          hess(4, 1, i) = -hess(1, 1, i)
          hess(4, 2, i) = -hess(2, 1, i)
          hess(4, 3, i) = -hess(3, 1, i)
