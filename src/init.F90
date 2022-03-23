@@ -635,7 +635,7 @@ subroutine init(dt)
    end if
 
    if (pot == '_doublewell_' .or. pot_ref == '_doublewell_') then
-      call doublewell_init(natom, lambda_dw, D0_dw, k_dw, r0_dw, vy, vz)
+      call doublewell_init(natom, lambda_dw, d0_dw, k_dw, r0_dw, vy, vz)
    end if
    if (pot == '_harmonic_oscillator_' .or. pot_ref == '_harmonic_oscillator_') then
       call harmonic_oscillator_init(natom, kx, ky, kz, vx, vy, vz)

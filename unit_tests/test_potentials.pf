@@ -7,16 +7,190 @@ module test_potentials
 contains
 
    @test
-   subroutine test_morse_energy()
-      !@assertEqual(1.008D0 * AMU, am(1), "hydrogen mass")
-   end subroutine test_morse_energy
+   subroutine test_harmosc_force()
+      use mod_potentials, only: harmonic_oscillator_init, force_harmonic_oscillator
+      integer, parameter :: NATOM = 1, NWALK = 2
+      real(DP), dimension(NATOM, NWALK) :: x, y, z
+      real(DP), dimension(NATOM, NWALK) :: vx, vy, vz
+      real(DP), dimension(NATOM, NWALK) :: fx, fy, fz
+      real(DP), dimension(NATOM, NWALK) :: fx1, fy1, fz1
+      real(DP), dimension(NATOM, NWALK) :: fzero = 0.0D0
+      real(DP) :: eclas, eclas1
+      real(DP) :: kx, ky, kz
+      integer :: i
+
+      call random_number(kx)
+      call random_number(ky)
+      call random_number(kz)
+      call harmonic_oscillator_init(NATOM, kx, ky, kz, vx, vy, vz)
+
+      ! At energy minimum
+      x = 0.0D0
+      y = 0.0D0
+      z = 0.0D0
+      call force_harmonic_oscillator(x, y, z, fx, fy, fz, eclas, NWALK)
+      @assertEqual(0.0D0, eclas, 'zero energy in minimum')
+      @assertEqual(fzero, fx, 'zero fx in minimum')
+      @assertEqual(fzero, fy, 'zero fy in minimum')
+      @assertEqual(fzero, fz, 'zero fz in minimum')
+
+      ! At random coordinates
+      call random_number(x)
+      call random_number(y)
+      call random_number(z)
+      ! Two beads have the same coordinates
+      x(:, 2) = x(:, 1)
+      y(:, 2) = y(:, 1)
+      z(:, 2) = z(:, 1)
+
+      ! Compare 1 and 2 beads, both having the same coordinates
+      call force_harmonic_oscillator(x, y, z, fx, fy, fz, eclas, NWALK)
+      call force_harmonic_oscillator(x, y, z, fx1, fy1, fz1, eclas1, 1)
+      @assertEqual(eclas, eclas1, 'Energy independent of nwalk')
+      do i = 1, NWALK
+         @assertEqual(fx1(1, 1), fx(1, i), message='fx independent of nwalk', tolerance=1E-15)
+         @assertEqual(fy1(1, 1), fy(1, i), message='fy independent of nwalk', tolerance=1E-15)
+         @assertEqual(fz1(1, 1), fz(1, i), message='fz independent of nwalk', tolerance=1E-15)
+      end do
+   end subroutine test_harmosc_force
 
    @test
-   subroutine test_morse_errors()
+   subroutine test_double_well_force()
+      use mod_potentials, only: doublewell_init, force_doublewell
+      integer, parameter :: NATOM = 1, NWALK = 3
+      real(DP), dimension(NATOM, NWALK) :: x, y
+      real(DP), dimension(NATOM, NWALK) :: vy, vz
+      real(DP), dimension(NATOM, NWALK) :: fx, fy
+      real(DP), dimension(NATOM, NWALK) :: fx1, fy1
+      real(DP), dimension(NATOM, NWALK) :: fzero = 0.0D0
+      real(DP) :: eclas, eclas1
+      real(DP) :: lambda, k, d0, r0
+      integer :: i
+
+      call random_number(lambda)
+      call random_number(k)
+      call random_number(d0)
+      call random_number(r0)
+      call doublewell_init(NATOM, lambda, d0, k, r0, vy, vz)
+
+      ! At double-well energy minima and maxima
+      ! for y == 0.0
+      x = r0
+      y = 0.0D0
+      call force_doublewell(x, y, fx, fy, eclas, NWALK)
+      @assertEqual(0.0D0, eclas, 'zero energy in minimum')
+      @assertEqual(fzero, fx, 'zero fx in minimum')
+      fy1 = -lambda * x
+      @assertEqual(fy1, fy, 'fy for y=0.0')
+
+      x = -r0
+      call force_doublewell(x, y, fx, fy, eclas, NWALK)
+      @assertEqual(0.0D0, eclas, 'zero energy in minimum')
+      @assertEqual(fzero, fx, 'zero fx in minimum')
+      fy1 = -lambda * x
+      @assertEqual(fy1, fy, 'fy for y=0.0')
+
+      ! At double-well energy maximum
+      x = 0.0D0
+      y = 0.0D0
+      call force_doublewell(x, y, fx, fy, eclas, NWALK)
+      @assertEqual(d0 * r0**4, eclas, message='energy of double-well barrier', tolerance=1E-15)
+      @assertEqual(fzero, fx, 'zero fx in maximum')
+      @assertEqual(fzero, fy, 'zero fy in maximum')
+
+      ! Scaling with number of beads
+      call random_number(x(1, 1))
+      call random_number(y(1, 1))
+      x(1, :) = x(1, 1)
+      y(1, :) = y(1, 1)
+      call force_doublewell(x, y, fx, fy, eclas, NWALK)
+      call force_doublewell(x, y, fx1, fy1, eclas1, 1)
+      @assertEqual(eclas1, eclas, message='energy independent of nwalk', tolerance=1E-15)
+      do i = 1, NWALK
+         @assertEqual(fx1(1, 1), fx(1, i), message='fx independent of nwalk', tolerance=1E-15)
+         @assertEqual(fy1(1, 1), fy(1, i), message='fy independent of nwalk', tolerance=1E-15)
+      end do
+   end subroutine test_double_well_force
+
+   @test
+   subroutine test_harmrot_morse_force()
+      use mod_potentials, only: morse_init, force_morse
+      use mod_potentials, only: harmonic_rotor_init, force_harmonic_rotor
+      integer, parameter :: NATOM = 2, NWALK = 2
+      real(DP), dimension(NATOM, NWALK) :: x, y, z
+      real(DP), dimension(NATOM, NWALK) :: fx, fy, fz
+      real(DP), dimension(NATOM, 1) :: fx1, fy1, fz1
+      real(DP), dimension(NATOM, NWALK) :: fzero = 0.0D0
+      real(DP) :: eclas, eclas1
+      real(DP) :: r0, d0, k
+      integer :: i
+
+      call random_number(r0)
+      call random_number(d0)
+      call random_number(k)
+      call morse_init(NATOM, k, r0, d0)
+      call harmonic_rotor_init(NATOM, k, r0)
+
+      ! Test potential at the minimum
+      eclas = -1.0D0
+      x = 0.0D0; y = 0.0D0; z = 0.0D0
+      fx = -1.0D0; fy = -1.0D0; fz = -1.0D0
+      x(2, 1) = r0
+      x(2, 2) = r0
+      call force_morse(x, y, z, fx, fy, fz, eclas, NWALK)
+      @assertEqual(fzero, fx, 'fx zero in minimum')
+      @assertEqual(fzero, fy, 'fy zero in minimum')
+      @assertEqual(fzero, fz, 'fz zero in minimum')
+      @assertEqual(0.0D0, eclas, 'e=0.0 in minimum')
+
+      call force_harmonic_rotor(x, y, z, fx, fy, fz, eclas, NWALK)
+      @assertEqual(fzero, fx, 'fx zero in minimum')
+      @assertEqual(fzero, fy, 'fy zero in minimum')
+      @assertEqual(fzero, fz, 'fz zero in minimum')
+      @assertEqual(0.0D0, eclas, 'e=0.0 in minimum')
+
+      ! Large distance asymptote
+      eclas = -1.0D0
+      fx = -1.0D0; fy = -1.0D0; fz = -1.0D0
+      x(2, :) = 1000000 * r0
+      call force_morse(x, y, z, fx, fy, fz, eclas, NWALK)
+      @assertEqual(fzero, fx, message='fx zero for large r', tolerance=1E-30)
+      @assertEqual(fzero, fy, message='fy zero for large r', tolerance=1E-30)
+      @assertEqual(fzero, fz, message='fz zero for large r', tolerance=1E-30)
+      @assertEqual(d0, eclas, message='e==D0 for large r', tolerance=1E-30)
+
+      ! Scaling with number of beads
+      call random_number(x)
+      call random_number(y)
+      call random_number(z)
+      x(:, 2) = x(:, 1)
+      y(:, 2) = y(:, 1)
+      z(:, 2) = z(:, 1)
+      call force_harmonic_rotor(x, y, z, fx, fy, fz, eclas, NWALK)
+      call force_harmonic_rotor(x, y, z, fx1, fy1, fz1, eclas1, 1)
+      @assertEqual(eclas, eclas1, message='energy independent of nwalk', tolerance=1E-15)
+      do i = 1, NWALK
+         @assertEqual(fx1(1, 1), fx(1, i), message='fx independent of nwalk', tolerance=1E-15)
+         @assertEqual(fy1(1, 1), fy(1, i), message='fy independent of nwalk', tolerance=1E-15)
+         @assertEqual(fz1(1, 1), fz(1, i), message='fz independent of nwalk', tolerance=1E-15)
+      end do
+
+      call force_morse(x, y, z, fx, fy, fz, eclas, NWALK)
+      call force_morse(x, y, z, fx1, fy1, fz1, eclas1, 1)
+      @assertEqual(eclas, eclas1, message='energy independent of nwalk', tolerance=1E-15)
+      do i = 1, NWALK
+         @assertEqual(fx1(1, 1), fx(1, i), message='fx independent of nwalk', tolerance=1E-15)
+         @assertEqual(fy1(1, 1), fy(1, i), message='fy independent of nwalk', tolerance=1E-15)
+         @assertEqual(fz1(1, 1), fz(1, i), message='fz independent of nwalk', tolerance=1E-15)
+      end do
+   end subroutine test_harmrot_morse_force
+
+   @test
+   subroutine test_morse_init()
       use mod_potentials, only: morse_init
       use mod_potentials, only: harmonic_rotor_init
       integer :: natom
-      real(DP) :: k, r0, d0 
+      real(DP) :: k, r0, d0
       k = 1
       d0 = 1
       r0 = 1
@@ -32,16 +206,23 @@ contains
       k = 0.0D0
       call morse_init(natom, k, r0, d0)
       @assertExceptionRaised('parameter k_morse must be > 0.0')
-   end subroutine test_morse_errors
+
+      k = 1
+      r0 = 0.0D0
+      call morse_init(natom, k, r0, d0)
+      @assertExceptionRaised('parameter r0_morse must be > 0.0')
+   end subroutine test_morse_init
 
    @test
    subroutine test_harmonic_oscillator_init()
       use mod_potentials, only: harmonic_oscillator_init
-      real(DP), dimension(1, 2) :: vx, vy, vz 
+      use mod_general, only: irest
+      real(DP), dimension(1, 2) :: vx, vy, vz
+      real(DP), dimension(1, 2) :: vzero = 0.0D0
       integer :: natom
       real(DP) :: kx, ky, kz
 
-      kx = 1
+      call random_number(kx)
       ky = 0.0D0
       kz = 0.0D0
       call random_number(vx)
@@ -53,24 +234,50 @@ contains
       @assertExceptionRaised('Harmonic potential is only for 1 particle')
 
       natom = 1
+      irest = 0
       call harmonic_oscillator_init(natom, kx, ky, kz, vx, vy, vz)
-      @assertEqual(vy, vz, 'vy == vz = 0.0D0')
-      ! TODO: See TODO in init
-      !@assertNotEqual(vx, vy, 'vx != 0.0D0')
+      @assertNotEqual(vx, vzero, 'vx != 0.0D0')
+      @assertEqual(vy, vzero, 'vy == 0.0D0')
+      @assertEqual(vz, vzero, 'vz == 0.0D0')
+
+      kx = 0.0D0
+      call random_number(ky)
+      call random_number(kz)
+      call random_number(vx)
+      call random_number(vy)
+      call random_number(vz)
+
+      call harmonic_oscillator_init(natom, kx, ky, kz, vx, vy, vz)
+      @assertEqual(vx, vzero, 'vx == 0.0D0')
+      @assertNotEqual(vy, vzero, 'vy != 0.0D0')
+      @assertNotEqual(vz, vzero, 'vz != 0.0D0')
+
+      kx = 0.0D0
+      ky = 0.0D0
+      kz = 0.0D0
+      call harmonic_oscillator_init(natom, kx, ky, kz, vx, vy, vz)
+      @assertExceptionRaised('At least one of kx, ky or kz must be non-zero')
    end subroutine
 
    @test
-   subroutine test_doublewell_errors()
+   subroutine test_doublewell_init()
       use mod_potentials, only: doublewell_init
-      real(DP), dimension(1,1) :: vy, vz
+      use mod_system, only: dime
+      real(DP), dimension(1, 1) :: vy, vz
+      real(DP), dimension(1, 1), parameter :: v_zero = 0.0D0
       integer :: natom
-      real(DP) :: lambda, k, r0, d0 
+      real(DP) :: lambda, k, r0, d0
       natom = 1
       lambda = 1
       k = 1
       r0 = 1
       d0 = 1
+      call random_number(vy)
+      call random_number(vz)
       call doublewell_init(natom, lambda, d0, k, r0, vy, vz)
+      @assertEqual(dime, 2)
+      @assertEqual(vz, v_zero, 'vz zeroed')
+      @assertNotEqual(vy, v_zero, 'vy not zeroed')
 
       natom = 2
       call doublewell_init(natom, lambda, d0, k, r0, vy, vz)
@@ -80,7 +287,14 @@ contains
       k = -1.0D0
       call doublewell_init(natom, lambda, d0, k, r0, vy, vz)
       @assertExceptionRaised('parameter k_dw must be >= 0.0')
-   end subroutine test_doublewell_errors
+
+      k = 0.0D0
+      lambda = 0.0D0
+      call doublewell_init(natom, lambda, d0, k, r0, vy, vz)
+      @assertEqual(dime, 1, '1D potential')
+      @assertEqual(vy, v_zero, 'vy zeroed')
+      @assertEqual(vz, v_zero, 'vy zeroed')
+   end subroutine test_doublewell_init
 
    @test
    subroutine test_harmonic_oscillator_hessian()
@@ -88,7 +302,7 @@ contains
       use mod_potentials, only: harmonic_oscillator_init
       integer, parameter :: NATOM = 1
       integer, parameter :: NWALK = 2
-      real(DP), dimension(NATOM * 3, NATOM * 3, NWALK) :: hess 
+      real(DP), dimension(NATOM*3, NATOM*3, NWALK) :: hess
       real(DP), dimension(NATOM, NATOM) :: vx, vy, vz
       real(DP) :: kx, ky, kz
 
@@ -108,7 +322,7 @@ contains
       use mod_potentials, only: harmonic_rotor_init, morse_init
       integer, parameter :: NATOM = 2
       integer, parameter :: NWALK = 2
-      real(DP), dimension(NATOM * 3, NATOM * 3, NWALK) :: hess 
+      real(DP), dimension(NATOM*3, NATOM*3, NWALK) :: hess
       real(DP), dimension(NATOM, NATOM) :: x, y, z
       real(DP) :: k, r0, d0
 
@@ -163,9 +377,9 @@ contains
       integer, intent(in) :: natom, iw
       integer :: i, j
 
-      print *, ''
+      print*,''
       do i = 1, natom * 3
-         print '(6E15.3)', (hess(i, j, iw), j = 1, natom * 3)
+         print '(6E15.3)', (hess(i, j, iw), j=1, natom * 3)
       end do
    end subroutine
 

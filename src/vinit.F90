@@ -32,7 +32,7 @@ contains
 !
 !------------------------------------------------------------------------
    subroutine vinit(TEMP, MASS, vx, vy, vz)
-      use mod_general, only: natom, pot, nwalk
+      use mod_general, only: natom, nwalk
       use mod_random, only: gautrg
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: mass(:)

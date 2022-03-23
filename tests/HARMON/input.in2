@@ -1,7 +1,6 @@
 &general
-nstep=20,
+nstep=2,
 irest=1,
-idebug=0
 pot='_harmonic_oscillator_'
 mdtype='pimd'
 nwalk=10,
@@ -31,10 +30,9 @@ dist2=1
 /
 
 &nhcopt
-inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
-temp=50.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+inose=1,
+temp=50.15,
 tau0=0.0015
 nrespnose=3
 nyosh=7
 /
-
