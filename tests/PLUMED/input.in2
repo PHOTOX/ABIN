@@ -1,33 +1,33 @@
 &general
 nstep=3,
-irest=1,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+irest=1,
 
-pot='_harmonic_rotor_'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
-ipimd=0,		!classical simulation 0, quantum simulation 1
-nwalk=1,		!number of random walkers 
-imini=0,		!equilibration period,!not properly implemented yet
-istage=0,		!staging transformation (1), without staging (0)
+pot='_harmonic_rotor_'
+mdtype='md'
+dt=20.,
+irandom=131313,
 
-dt=20.,			!number of steps and timestep
-irandom=131313,  	!random seed
+nwrite=1,
+nwritex=1,
+nrest=1,
 
-nwrite=1,		! how often some output should be printed (estimators etc.)
-nwritex=1,		! how often should we print coordinates?
-nrest=50,		! how often we print restart files?
+iplumed=1,
+plumedfile='plumed.in',
 
-iplumed=1,		! turn on PLUMED (metadynamics)
-plumedfile='plumed.in'  ! plumed input file
+icv=1
+ihess=1
+enmini=0
 /
 
 &system
-r0=5.66917796,                  ! [BOHR] = 3.0A
-k=0.05,                     ! Ha*bohr-2 
+r0=5.66917796,          ! [BOHR] = 3.0A
+k=0.05,                 ! Ha*bohr-2 
 ndist=1,
 dist1=1,
 dist2=2,
 /
 
 &nhcopt
-inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
-temp=300.0,		! initial temperature for Maxwell-Boltzmann sampling [au]
+inose=1,
+temp=300.0,
 /

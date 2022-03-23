@@ -2,12 +2,12 @@
 ! - one particle in harmonic potential well
 ! - two-particle harmonic rotor
 ! - two particles bound by Morse potential
-! - one particle in a 2D double well potential
+! - one particle in a double well potential
+!   linearly coupled to harmonic oscillator
 !   (originally used for testing PLUMED interface,
 !    see MSc thesis of Jirka Suchan)
 
-! Parameters are set in input section 'system'
-
+! User-definer parameters are set input section 'system'
 module mod_potentials
    use mod_const, only: DP
    implicit none
@@ -17,7 +17,13 @@ module mod_potentials
    ! We use derived types to encapsulate potential parameters
    ! https://fortran-lang.org/learn/quickstart/derived_types
 
-   ! Parameters for a 2D double-well potential
+   ! Parameters for a double-well potential in x dimension
+   ! linearly coupled to harmonic potential in y dimension
+   ! See Mark E. Tuckerman, Statistical Mechanics:
+   ! Theory and Molecular simulation,
+   ! Chapter 8: Free energy calculations,
+   ! Section 8.10, Adiabatic dynamics, p. 353, eq. 8.10.21
+   ! V(x,y) = D0*(x^2 - r0^2)^2 + 1/2*k*y^2 + lambda*x*y
    type :: dw_params
       real(DP) :: lambda
       real(DP) :: d0
@@ -37,14 +43,14 @@ module mod_potentials
    type(morse_params) :: morse
 
    ! 3D harmonic oscillator
-   ! E = kx * x**2 + ky * y**2 + kz * z**2
+   ! E = 1/2 * (kx * x^2 + ky * y^2 + kz * z^2)
    type :: harm_osc_params
       real(DP) :: kx, ky, kz
    end type
    type(harm_osc_params) :: ho
 
    ! Two particles bound by harmonic potential
-   ! E = k * (r - r0)**2
+   ! E = 1/2 * k * (r - r0)^2
    type :: harm_rotor_params
       real(DP) :: k, r0
    end type
@@ -60,7 +66,7 @@ contains
       use mod_system, only: dime, f
       integer, intent(in) :: natom
       real(DP), intent(in) :: kx, ky, kz
-      real(DP), dimension(:,:), intent(inout) :: vx, vy, vz
+      real(DP), dimension(:, :), intent(inout) :: vx, vy, vz
 
       if (natom /= 1) then
          call fatal_error(__FILE__, __LINE__, &
@@ -72,35 +78,40 @@ contains
       call check_real_nonnegative(kz, 'kz')
       ho = harm_osc_params(kx=kx, ky=ky, kz=kz)
 
-      if (irest /= 1) then
+      ! Zero-out velocity in inactive dimensions
+      if (kx == 0.0D0 .and. irest == 0) then
          vx = 0.0D0
+      end if
+      if (ky == 0.0D0 .and. irest == 0) then
          vy = 0.0D0
+      end if
+      if (kz == 0.0D0 .and. irest == 0) then
          vz = 0.0D0
       end if
 
-      dime = 3
       f = 0
-      ! TODO: Update test to make this work
-      ! dime = 0
-      !if (kx /= 0.0D0) then
-      !   vx = 0.0D0
-      !   dime = dime + 1
-      !end if
-      !if (ky /= 0.0D0) then
-      !   vy = 0.0D0
-      !   dime = dime + 1
-      !end if
-      !if (kz /= 0.0D0) then
-      !   vz = 0.0D0
-      !   dime = dime + 1
-      !end if
+      dime = 0
+      ! Determine number of dimensions
+      if (kx /= 0.0D0) then
+         dime = dime + 1
+      end if
+      if (ky /= 0.0D0) then
+         dime = dime + 1
+      end if
+      if (kz /= 0.0D0) then
+         dime = dime + 1
+      end if
+      if (dime == 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'At least one of kx, ky or kz must be non-zero')
+      end if
    end subroutine harmonic_oscillator_init
 
-   subroutine force_harmonic_oscillator(x, y, z, fx, fy, fz, eclas)
-      use mod_general, only: nwalk
+   subroutine force_harmonic_oscillator(x, y, z, fx, fy, fz, eclas, nwalk)
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(out) :: eclas
+      integer, intent(in) :: nwalk
       integer :: iw
 
       eclas = 0.0D0
@@ -136,8 +147,6 @@ contains
       end do
    end subroutine hessian_harmonic_oscillator
 
-   ! 2D DOUBLE WELL potential
-   ! According to: Tuckerman, Statistical Mechanics, page 350
    subroutine doublewell_init(natom, lambda, d0, k, r0, vy, vz)
       use mod_error, only: fatal_error
       use mod_utils, only: check_real_nonnegative
@@ -147,33 +156,33 @@ contains
       real(DP), intent(in) :: d0
       real(DP), intent(in) :: k
       real(DP), intent(in) :: r0
-      real(DP), dimension(:,:), intent(inout) :: vy, vz
+      real(DP), dimension(:, :), intent(inout) :: vy, vz
 
       if (natom /= 1) then
          call fatal_error(__FILE__, __LINE__, &
             & 'Double-well potential is only for 1 particle')
       end if
 
-      ! TODO: I am not sure what are the constraints on the parameters
       call check_real_nonnegative(k, 'k_dw')
+      call check_real_nonnegative(d0, 'd0_dw')
 
       dw = dw_params(lambda=lambda, k=k, d0=d0, r0=r0)
 
       ! This particular double-well is 2D, unless we make it 1D
       dime = 2
       vz = 0.0D0
-      if (dw%lambda == 0.0D0 .and. dw%k == 0.0D0 ) then
+      if (dw%lambda == 0.0D0 .and. dw%k == 0.0D0) then
          dime = 1
          vy = 0.0D0
       end if
       f = 0
    end subroutine doublewell_init
 
-   subroutine force_doublewell(x, y, fx, fy, eclas)
-      use mod_general, only: nwalk
+   subroutine force_doublewell(x, y, fx, fy, eclas, nwalk)
       real(DP), intent(in) :: x(:, :), y(:, :)
       real(DP), intent(out) :: fx(:, :), fy(:, :)
       real(DP), intent(out) :: eclas
+      integer, intent(in) :: nwalk
       integer :: i
 
       eclas = 0.0D0
@@ -182,7 +191,7 @@ contains
          fx(1, i) = -4 * dw%d0 * x(1, i) * (x(1, i)**2 - dw%r0**2) - dw%lambda * y(1, i)
          fy(1, i) = -dw%k * y(1, i) - dw%lambda * x(1, i)
          eclas = eclas + dw%d0 * (x(1, i)**2 - dw%r0**2)**2 + &
-                 0.5 * dw%k * y(1, i)**2 + dw%lambda * x(1, i) * y(1, i)
+                 0.5D0 * dw%k * y(1, i)**2 + dw%lambda * x(1, i) * y(1, i)
       end do
 
       eclas = eclas / nwalk
@@ -192,7 +201,7 @@ contains
    ! Diatomic molecule bound by harmonic potential
    subroutine harmonic_rotor_init(natom, k, r0)
       use mod_error, only: fatal_error
-      use mod_utils, onlY: check_real_positive
+      use mod_utils, only: check_real_positive
       integer, intent(in) :: natom
       real(DP), intent(in) :: k, r0
 
@@ -207,11 +216,11 @@ contains
       hrot = harm_rotor_params(k=k, r0=r0)
    end subroutine harmonic_rotor_init
 
-   subroutine force_harmonic_rotor(x, y, z, fx, fy, fz, eclas)
-      use mod_general, only: nwalk
+   subroutine force_harmonic_rotor(x, y, z, fx, fy, fz, eclas, nwalk)
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(out) :: eclas
+      integer, intent(in) :: nwalk
       real(DP) :: dx, dy, dz, r, fac
       integer :: i
 
@@ -290,7 +299,7 @@ contains
    ! Here we actually use the harmonic constant as an input parameter.
    subroutine morse_init(natom, k_morse, r0, d0)
       use mod_error, only: fatal_error
-      use mod_utils, onlY: check_real_positive
+      use mod_utils, only: check_real_positive
       integer, intent(in) :: natom
       real(DP), intent(in) :: k_morse, r0, d0
       real(DP) :: a
@@ -308,11 +317,11 @@ contains
       morse = morse_params(d0=d0, a=a, r0=r0)
    end subroutine morse_init
 
-   subroutine force_morse(x, y, z, fx, fy, fz, eclas)
-      use mod_general, only: nwalk
+   subroutine force_morse(x, y, z, fx, fy, fz, eclas, nwalk)
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(out) :: eclas
+      integer, intent(in) :: nwalk
       real(DP) :: dx, dy, dz, r, fac, ex
       integer :: i
 
