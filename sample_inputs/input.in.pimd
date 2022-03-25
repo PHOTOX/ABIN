@@ -1,25 +1,23 @@
-This is a sample input file for ABIN for GLE simulation (quantum thermostat).
+This is a sample input file for PIMD simulation in ABIN,
+using staging transformation and Nose-Hoover Chain thermostat
 
 &general
-pot='g09'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,qchem 
+pot='g09'
 mdtype='pimd',		
-nwalk=20,               ! 4 is usually sufficient for PIGLE simulations
-istage=1,               ! istage must be 1 for PIMD
+nwalk=20,               ! number of path integral beads
+istage=1,               ! turn on staging transformation (this must be ON)
 nstep=50000,		! number of steps
 dt=20.,			! timestep [au]
 irandom=1651563,  	! random seed
-irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
+irest=0,		! should we restart from restart.xyz?
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=5,		! how often should we print coordinates?
 nrest=5,		! how often we print restart files?
-nwritev=0,		! how often we print velocities?
 /
-
 
 &nhcopt
 temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
-inose=1,		! NHC  thermostat 
-tau0=0.001,             ! 
+inose=1,		! NHC thermostat 
+tau0=0.001,             ! thermostat relaxation time (in picoseconds)
 /
-

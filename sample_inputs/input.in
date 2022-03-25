@@ -9,45 +9,18 @@ irest=0,		! Should we restart from restart.xyz? (ignoring mini.dat)
 
 mdtype='md',		! 'md' = classical MD
 nwalk=1,		! number of random walkers 
-istage=0,		! staging transformation (1), without staging (0)
 nstep=5000,		! number of steps
 dt=20.,			! timestep [au]
 irandom=111313,  	! random seed
-nabin=50,		! what is the gap between ab initio calculations?(RESPA ONLY)
-iqmmm=0,		! 0 - QM/MM OFF, 1 - QM/MM ON
 
 nwrite=10,		! how often some output should be printed (estimators etc.)
 nwritex=5,		! how often should we print coordinates?
 nrest=10,		! how often we print restart files?
 nwritev=0,		! how often we print velocities?
-
-isbc=1,			! spherical boundary conditions
-!rb_sbc=27.5d0,          ! radius of the cluster for sbc
-kb_sbc=0.2d0,		! force constant for spherical potential [au]
+nwritef=0,		! how often we print forces?
 /
 
-&system
-massnames='X','Y'       ! assign atom named X and Y
-masses=16,13            ! with masses 16 and 13.
-! - Monitor the distance between atoms 1 and 2
-ndist=1,		! number of bonds for which we calculate density
-dist1=1,		! first atoms for binning
-dist2=2,		! second atoms for binning (i.e. bond between natfirst[1] and natsecond[1])
-xmin=0.5,		! minimum values for analyzed bonds 
-xmax=2.5,		! maximum values for analyzed bonds
-! - Monitor an angle between atoms 1, 2 and 3
-nang=1,
-ang1=1,		! angle definition: first atoms
-ang2=1,		! angle definition: second atoms
-ang3=1,		! angle definition: third  atoms
-! - Monitor a dihedral angle between atoms 1, 2, 3 and 4
-ndih=1,			! number of analyzed dihedrals
-dih1=1,		! dihedral def: first atoms
-dih2=2,		! dihedral def: second atoms
-dih3=3,		! dihedral def: third atoms
-dih4=4,		! dihedral def: fourth atoms
-/
-
+! Thermostat options
 &nhcopt
 temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
 inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, Langevin 3
@@ -55,6 +28,7 @@ nchain=4,		! number of nose-hoover chains
 tau0=0.0015,		! relaxation time of NHC thermostat
 /
 
+! Surface hopping options
 &sh
 istate_init=2,		! initial electronic state
 nstate=3,		! number of electronic states
@@ -68,73 +42,30 @@ alpha=0.1		! parameter for decoherence correction
 revmom=0,               ! Do not reverse momentum in case of frustrated hops.
 /
 
+&system
+massnames='X','Y'       ! assign atom named X and Y
+masses=16,13            ! with masses 16 and 13.
+! - Monitor the distance between atoms 1 and 2
+ndist=1,		! number of bonds for which we calculate density
+dist1=1,		! first atoms for binning
+dist2=2,		! second atoms for binning (i.e. bond between natfirst[1] and natsecond[1])
+! - Monitor an angle between atoms 1, 2 and 3
+nang=1,
+ang1=1,		! angle definition: first atoms
+ang2=2,		! angle definition: second atoms
+ang3=3,		! angle definition: third  atoms
+! - Monitor a dihedral angle between atoms 1, 2, 3 and 4
+ndih=1,         ! number of analyzed dihedrals
+dih1=1,		! dihedral def: first atoms
+dih2=2,		! dihedral def: second atoms
+dih3=3,		! dihedral def: third atoms
+dih4=4,		! dihedral def: fourth atoms
+/
+
 ! QMMM input read only if iqmmm=1 in section general
 ! This is not well tested!!!
 &qmmm
 natqm=0,		! number of atoms in QM part,set to 0 for MM calculation
 natmm=27,		! number of atoms in MM part
 attypes='O','H','Ar'	! atom types
-q=-0.834,+0.417,0	! atomic charges (TIP3P WATER)
-rmin=3.5364,0.0,3.822,	! L-J atomic radius [A]
-eps=0.0002423919,0.0,0.00037954	! L-J well depth [au]
 /
-
-&nab
-cutoff=100.0,	! non-bonded cutoff (both LJ and coulomb)
-nsnb=10,	! update non-bonded list every nsnb steps	
-
-ipbc=0,		!not tested: turns on periodic boundary conditions
-alpha_pme=0,	! parameter for ewald(TO DO)
-kappa_pme=0,	! parameter for ewald(TO DO)
-!ips=0,		!deprecated:  isotropic periodic sum 1-both LJ and coul, 2-coul 3- LJ
-/
-
-----------------------END OF INPUT---------------------------------------------
-
-
-
-
-------------------OTHER OPTIONS (if needed, move them to their namelists)------- 
-
-GENERAL
-gamm=100,		! first coefficient for minimization
-gammthr=1e-11,		! lowest gamma for minimization
-idebug=0,		! printing out some debugging info
-anal_ext=0,		! do we call user-defined function analyze_ext?
-nproc=1,		! number of processors, only for PIMD
-icv=0,			! do we compute heat capacities? 
-ihess=0,		! do we calculate hessian for heat capacities?
-enmini=0,		! number of steps for which we do not cumulate energy(PIMD only)
-END GENERAL
-
-SYSTEM
-!---------SHAKE OPTIONS  (see manual for complete description)
-nshake=0,		! Number of bond constrains
-shake_tol=0.0001	! Shake tolerance
-ishake1=2,2		! list of bond constraints
-ishake2=7,8		!
-nmol=1,			! number of "molecules"
-nshakemol=0,            ! number of constraints in molecules
-
-!---ANGLE and Dihedral analysis
-nbin=2000,		! number of bins for densities
-nang=2,			! number of analyzed angles
-ang1=1,		! angle definition: first atoms
-ang2=1,		! angle definition: second atoms
-ang3=1,		! angle definition: third  atoms
-ndih=2,			! number of analyzed dihedrals
-dih1=1,		! dihedral def: first atoms
-dih2=2,		! dihedral def: second atoms
-dih3=3,		! dihedral def: third atoms
-dih4=4,		! dihedral def: fourth atoms
-nbin_ang=700,		! number of bins for angles and dihedrals
-shiftdih=360.0d0 	! 0 for dihs between (-180,180); 360 for (0,360)
-
-
-END SYSTEM
-
-NHCOPT
-ams=0.02,		! Nose-Hoove mass (this is rewritten anyway if ipimd=1)
-imasst=0,		! 1 - Massive thermostating , 0- Global thermostatt
-END NHCOPT
-
