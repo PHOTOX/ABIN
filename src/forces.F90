@@ -68,19 +68,23 @@ subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
    ! The ab initio interface is still deeper in force_abin()
    call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, chpot, nwalk)
 
-   ! TODO: Change all one-line ifs to multiline to fix code coverage.
-
    ! TODO: It would probably make sense to put the following additional forces
    ! and QM/MM inside the force_wrapper as well.
    ! Spherical harmonic potential
-   if (isbc == 1) call force_sbc(transx, transy, transz, fxab, fyab, fzab)
+   if (isbc == 1) then
+      call force_sbc(transx, transy, transz, fxab, fyab, fzab)
+   end if
 
    ! QMMM SECTION
    ! ONIOM method (iqmmm=1) is called in force_abin
    ! The following are not working at the moment
-   if (iqmmm == 3) call force_LJ_Coulomb(transx, transy, transz, fxab, fyab, fzab, eclas)
+   if (iqmmm == 3) then
+      call force_LJ_Coulomb(transx, transy, transz, fxab, fyab, fzab, eclas)
+   end if
 
-   if (iplumed == 1) call force_plumed(transx, transy, transz, fxab, fyab, fzab, eclas)
+   if (iplumed == 1) then
+      call force_plumed(transx, transy, transz, fxab, fyab, fzab, eclas)
+   end if
 
    ! For reference potential and ring-polymer contraction
    if (pot_ref /= '_none_' .and. chpot == pot) then
@@ -92,9 +96,15 @@ subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
       eclas = 0.0D0
 
       call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, pot_ref, nwalk)
-      if (isbc == 1) call force_sbc(transx, transy, transz, fxab, fyab, fzab)
-      if (iqmmm == 3) call force_LJ_Coulomb(transx, transy, transz, fxab, fyab, fzab, eclas)
-      if (iplumed == 1) call force_plumed(transx, transy, transz, fxab, fyab, fzab, eclas)
+      if (isbc == 1) then
+         call force_sbc(transx, transy, transz, fxab, fyab, fzab)
+      end if
+      if (iqmmm == 3) then
+         call force_LJ_Coulomb(transx, transy, transz, fxab, fyab, fzab, eclas)
+      end if
+      if (iplumed == 1) then
+         call force_plumed(transx, transy, transz, fxab, fyab, fzab, eclas)
+      end if
 
       fxab = fx - fxab
       fyab = fy - fyab
