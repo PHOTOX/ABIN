@@ -244,8 +244,8 @@ jobs:
       CFLAGS: -O0
       GCC_V: ${{ matrix.gcc_v}}
       CODECOV_NAME: ${{format('{0} GCC-{1} OpenMPI-4.0', github.job, matrix.gcc_v)}}
-      OPENMPI_V: "4.0"
-      OPENMPI_PATCH: "0"
+      OPENMPI_V: "4.1"
+      OPENMPI_PATCH: "2"
 
     steps:
     - uses: actions/checkout@v2
