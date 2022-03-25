@@ -489,7 +489,7 @@ subroutine init(dt)
 
    if (pot_ref /= '_none_') then
       md = 4
-      write (*, '(A)') 'Using Multiple Time-Step RESPA integrator!'
+      write (*, '(A)') 'Using Multiple Time-Step RESPA integrator'
       write (*, '(A)') "Reference (cheap) potential is "//trim(pot_ref)
       write (*, '(A, F6.2)') "with timestep [fs] ", dt / nstep_ref * AUtoFS
       write (*, '(A)') "Full potential is "//trim(pot)
