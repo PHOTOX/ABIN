@@ -1,4 +1,6 @@
 ! 1D user-defined numerical potential with cubic splines
+! Original code taken from QDYN
+! https://github.com/PHOTOX/qdyn
 module mod_splined_grid
    use mod_const, only: DP
    implicit none
@@ -8,7 +10,7 @@ module mod_splined_grid
    real(DP), allocatable :: second_derivatives(:)
    real(DP) :: x_grid(MAX_GRID_SIZE)
    real(DP) :: y_grid(MAX_GRID_SIZE)
-   real(DP) :: x_max, x_min
+
    character(len=256) :: potential_file = 'potential.dat'
 
    public :: potential_file
@@ -17,7 +19,7 @@ module mod_splined_grid
 contains
 
    real(DP) function potential_cubic_spline(x) result(y)
-      real(DP), intent(IN) :: X
+      real(DP), intent(in) :: x
       call splint(x_grid, y_grid, second_derivatives, grid_size, x, y)
    end function potential_cubic_spline
 
@@ -27,13 +29,15 @@ contains
       real(DP), intent(out) :: fx(:, :)
       real(DP), intent(out) :: eclas
       integer, intent(in) :: walkmax
-      real(DP) :: en_1, en_2, dx = 0.0001D0
+      ! Displacement for numerical forces
+      real(DP), parameter:: DX = 0.0001D0
+      real(DP) :: en_1, en_2
       integer :: iw
 
       eclas = 0.0D0
       do iw = 1, walkmax
 
-         if (x(1, iw) < x_min .or. x(1, iw) > x_max) then
+         if (x(1, iw) < x_grid(1) .or. x(1, iw) > x_grid(grid_size)) then
             call fatal_error(__FILE__, __LINE__, "Particle got out of the grid!")
          end if
 
@@ -41,9 +45,9 @@ contains
 
          ! Let's just do numerical forces for now!
          ! use 3-point numerical derivative
-         en_1 = potential_cubic_spline(x(1, iw) - dx)
-         en_2 = potential_cubic_spline(x(1, iw) + dx)
-         fx(1, iw) = (en_1 - en_2) / 2 / dx
+         en_1 = potential_cubic_spline(x(1, iw) - DX)
+         en_2 = potential_cubic_spline(x(1, iw) + DX)
+         fx(1, iw) = (en_1 - en_2) / 2 / DX
 
       end do
 
@@ -51,53 +55,76 @@ contains
 
    end subroutine force_splined_grid
 
-   subroutine initialize_spline()
-      use mod_general, only: idebug
+   subroutine initialize_spline(natom)
+      use mod_system, only: dime, f
+      use mod_error, only: fatal_error
+      integer, intent(in) :: natom
       real(DP) :: yp1, ypn ! first derivatives at the grid edges
-      integer :: IUNIT, i
-      real(DP) :: x, dx
 
-      grid_size = 0
-
-      open (newunit=IUNIT, file=potential_file, status='old', action='read')
-      do
-         read (IUNIT, *, end=51) x_grid(grid_size + 1), y_grid(grid_size + 1)
-         grid_size = grid_size + 1
-      end do
-51    close (IUNIT)
-
-      if (grid_size < 3) then
-         write (*, *) "ERROR: Could not find grid in "//potential_file
-         stop 1
+      if (natom /= 1) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Harmonic potential is only for 1 particle')
       end if
+      dime = 1
+      f = 0
+
+      call read_grid(potential_file, x_grid, y_grid, grid_size)
 
       allocate (second_derivatives(grid_size))
-      x_min = x_grid(1)
-      x_max = x_grid(grid_size)
 
-      ! Settings for natural cubic spline
       yp1 = 1E31
       ypn = 1E31
-      ! On second thought, let's just set the first derivatives the same
-      ! as at the boundaries
-      !  yp1 = (xa(2)-xa(1)) / (ya(1)-ya(2))
-      !  ypn = 1e31
       call spline(x_grid, y_grid, grid_size, yp1, ypn, second_derivatives)
 
-      ! Print out the splined potential just to be sure
-      if (idebug == 1) then
-         x = x_min
-         dx = (x_max - x_min) / grid_size / 5
-         open (newunit=IUNIT, file="potential_splined.dat", action="write")
-         do i = 1, grid_size * 5
-            write (IUNIT, *) x, potential_cubic_spline(x)
-            x = x + dx
-         end do
-         close (IUNIT)
-      end if
+      call print_splined_potential("potential_splined.dat", x_grid, grid_size)
    end subroutine initialize_spline
 
-   ! From numerical recipies, sliglty modified
+   subroutine read_grid(fname, x_grid, y_grid, grid_size)
+      use mod_error, only: fatal_error
+      use mod_general, only: my_rank
+      character(len=*), intent(in) :: fname
+      real(DP), dimension(:), intent(out) :: x_grid, y_grid
+      integer, intent(out) :: grid_size
+      integer :: u
+
+      grid_size = 0
+      if (my_rank == 0) then
+         print*,''
+         print*,'Reading numerical potential grid from file '//trim(fname)
+         print*,'First column: x-coordinate / bohrs'
+         print*,'Second column: potential energy / atomic units'
+      end if
+
+      open (newunit=u, file=fname, status='old', action='read')
+      do
+         read (u, *, end=51) x_grid(grid_size + 1), y_grid(grid_size + 1)
+         grid_size = grid_size + 1
+      end do
+51    close (u)
+
+      if (grid_size < 3) then
+         call fatal_error(__FILE__, __LINE__, "Invalid potential grid in file "//fname)
+      end if
+   end subroutine
+
+   subroutine print_splined_potential(fname, x_grid, grid_size)
+      character(len=*), intent(in) :: fname
+      real(DP), intent(in) :: x_grid(:)
+      integer, intent(in) :: grid_size
+      real(DP) :: x, dx
+      integer :: u, i
+
+      x = x_grid(1)
+      dx = (x_grid(grid_size) - x_grid(1)) / grid_size / 5
+      open (newunit=u, file=fname, action="write")
+      do i = 1, grid_size * 5
+         write (u, *) x, potential_cubic_spline(x)
+         x = x + dx
+      end do
+      close (u)
+   end subroutine
+
+   ! From numerical recipies, slightly modified
    ! TODO: implement first derivative
    subroutine splint(xa, ya, y2a, n, x, y)
       use mod_error, only: fatal_error
