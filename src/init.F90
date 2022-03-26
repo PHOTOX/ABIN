@@ -33,7 +33,7 @@ subroutine init(dt)
    use mod_gle
    use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
-   use mod_splined_grid, only: initialize_spline
+   use mod_splined_grid, only: initialize_spline, potential_file
    use mod_utils, only: toupper, tolower, normalize_atom_name, file_exists_or_exit
    use mod_vinit
    use mod_analyze_geometry
@@ -111,7 +111,7 @@ subroutine init(dt)
    namelist /system/ masses, massnames, ndist, dist1, dist2, &
       nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &
       k, r0, kx, ky, kz, r0_morse, d0_morse, k_morse, D0_dw, lambda_dw, k_dw, r0_dw, &
-      Nshake, ishake1, ishake2, shake_tol
+      Nshake, ishake1, ishake2, shake_tol, potential_file
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
       nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
@@ -141,13 +141,6 @@ subroutine init(dt)
    read (150, general)
    rewind (150)
    pot = tolower(pot)
-
-   if (pot == '_splined_grid_') then
-      natom = 1
-      dime = 1
-      f = 0
-      call initialize_spline()
-   end if
 
    if (pot == "_cp2k_" .or. pot_ref == "_cp2k_") then
       call init_cp2k()
@@ -649,6 +642,11 @@ subroutine init(dt)
    end if
    if (pot == '_morse_' .or. pot_ref == '_morse_') then
       call morse_init(natom, k_morse, r0_morse, d0_morse)
+   end if
+   if (pot == '_splined_grid_' .or. pot_ref == '_splined_grid_') then
+      dime = 1
+      f = 0
+      call initialize_spline()
    end if
 
    if (pot == 'mm') then

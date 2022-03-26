@@ -133,7 +133,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_sbc, only: force_sbc, isbc
    use mod_plumed, only: iplumed, force_plumed
    use mod_potentials, only: force_harmonic_rotor, force_harmonic_oscillator, force_morse, force_doublewell
-   use mod_splined_grid
+   use mod_splined_grid, only: force_splined_grid
    use mod_cp2k, only: force_cp2k
    use mod_force_tera, only: force_tera
    use mod_terampi_sh, only: force_terash
@@ -154,7 +154,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    case ("mmwater")
       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
    case ("_splined_grid_")
-      call force_splined_grid(x, fx, eclas)
+      ! Only 1D spline grid supported at the moment
+      call force_splined_grid(x, fx, eclas, walkmax)
    case ("_harmonic_rotor_")
       call force_harmonic_rotor(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_harmonic_oscillator_")

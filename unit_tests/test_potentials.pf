@@ -383,4 +383,43 @@ contains
       end do
    end subroutine
 
+   ! Helper function if you want to check the potential
+   !@test
+   subroutine print_potential()
+      use mod_potentials, only: morse_init, force_morse
+      integer, parameter :: NATOM = 2, NWALK = 1
+      real(DP), dimension(NATOM, NWALK) :: x, y, z
+      real(DP), dimension(NATOM, NWALK) :: fx, fy, fz
+      real(DP) :: energy
+      real(DP) :: k, r0, d0
+      real(DP) :: rmin, rmax, dr, r
+      integer :: u
+
+      k = 1.47497D0
+      r0 = 2.04D0
+      d0 = 0.363965D0
+
+      call morse_init(natom, k, r0, d0)
+
+      open (newunit=u, file='potential.dat', action='write')
+
+      x = 0.0D0
+      y = 0.0D0
+      z = 0.0D0
+
+      rmin = 1.0D0
+      rmax = 10.0D0
+      dr = 0.1
+      r = rmin
+      x(2, 1) = r
+      do while (r < rmax)
+         r = r + dr
+         x(2, 1) = r
+         call force_morse(x, y, z, fx, fy, fz, energy, nwalk)
+         write (u, *) r, energy
+      end do
+
+      close (u)
+   end subroutine
+
 end module test_potentials
