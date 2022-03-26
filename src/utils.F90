@@ -210,6 +210,7 @@ contains
    !
    ! In any case, mod_utils should not depend on anything outside of mod_const and mod_general!
    subroutine abinerror(chcaller)
+      use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
       use mod_general, only: my_rank
       character(len=*), intent(in) :: chcaller
       integer, dimension(8) :: time_end
@@ -227,7 +228,7 @@ contains
             time_end(6), ':', time_end(7), '  ', time_end(3), '.', time_end(2), '.', &
             time_end(1)
       end if
-      call flush (6)
+      call flush (OUTPUT_UNIT)
       call finish(1)
       stop 1
    end subroutine abinerror

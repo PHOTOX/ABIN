@@ -17,6 +17,7 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program in the file LICENSE. If not, see <http://www.gnu.org/licenses/>.
 program abin
+   use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
    use mod_const, only: DP, AUtoFS
    use mod_arrays
    use mod_general
@@ -256,7 +257,7 @@ program abin
 
          if (modulo(it, nwrite) == 0 .and. my_rank == 0) then
             write (*, '(I20,F15.2)') it, sim_time * AUtoFS
-            call flush (6)
+            call flush (OUTPUT_UNIT)
          end if
 
          ! Time step loop
