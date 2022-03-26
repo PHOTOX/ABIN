@@ -1,29 +1,22 @@
 Very naive steepest descent minimization.
 
 &general
-nstep=100,
-irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+pot='mmwater'
+mdtype='minimization'
 
-pot='mmwater'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
-ipimd=3,		!classical simulation 0, quantum simulation 1
-nwalk=1,		!number of random walkers 
-! TODO: Reduce the number of steps to reduce numerical differences between compilers.
-nstep=200,		!equilibration period,!not properly implemented yet
-istage=0,		!staging transformation (1), without staging (0)
+nstep=200,
 
-dt=20.,			!number of steps and timestep
-irandom=131313,  	!random seed
+dt=20.,
+irandom=131313,
 
-nwrite=1,		! how often some output should be printed (estimators etc.)
-nwritex=1,		! how often should we print coordinates?
-nrest=1,		! how often we print restart files?
+nwrite=1,
+nwritex=1,
+nrest=1,
 
 gamm=20
-gammthr=0.1
-natom=3,		!number of atoms
+gammthr=1.3
 /
 
 &nhcopt
-inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
-temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+inose=0,
 /
