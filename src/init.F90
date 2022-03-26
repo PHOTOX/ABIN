@@ -494,6 +494,10 @@ subroutine init(dt)
       write (*, '(A, F6.2)') "with timestep [fs] ", dt / nstep_ref * AUtoFS
       write (*, '(A)') "Full potential is "//trim(pot)
       write (*, '(A, F6.2)') "with timestep [fs] ", dt * AUtoFS
+      if (ipimd /= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'ab initio MTS is implemented only for classical MD')
+      end if
    end if
 
    if (my_rank == 0) then
@@ -648,6 +652,7 @@ subroutine init(dt)
    end if
 
    if (pot == 'mm') then
+      ! TODO: Move this to a single subroutine in force_mm.F90
       allocate (inames(natom))
       do iat = 1, MAXTYPES
          if (attypes(iat) == '') exit
