@@ -3,6 +3,7 @@
 ! Note that we're not trying to explicitly handle I/O errors here.
 ! If open() or write fails, we crash ungracefully.
 module mod_files
+   use, intrinsic :: iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
    implicit none
    public
    private :: CHFILES, MAXFILENAME
@@ -33,10 +34,24 @@ contains
 
    subroutine files_init(isbc, phase, ndist, nang, ndih)
       use mod_general
+      use mod_error, only: fatal_error
       use mod_system, only: names
       integer, intent(in) :: isbc, phase, ndist, nang, ndih
       character(len=10) :: chaccess
       integer :: i
+
+      ! In this code we assume ERROR_UNIT == 0 and OUTPUT_UNIT == 6
+      ! Other values might conflict from hard-coded values defined above,
+      ! so we just stop early in that case.
+      if (ERROR_UNIT /= 0) then
+         print *, ERROR_UNIT, OUTPUT_UNIT
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Non-standard stderr unit, compiler not supported')
+      end if
+      if (OUTPUT_UNIT /= 6) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Non-standard stdout unit, compiler not supported')
+      end if
 
       do i = 1, MAXUNITS
          chfiles(i) = ''
@@ -206,7 +221,6 @@ contains
    end subroutine files_init
 
    subroutine close_files()
-      use, intrinsic :: iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
       integer :: i
       logical :: lopen
 
