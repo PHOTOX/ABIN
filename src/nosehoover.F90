@@ -1,4 +1,5 @@
-! This module contains both massive and global version of the Nosé-Hoover chain thermostat
+! This module contains both massive and global version
+! of the Nosé-Hoover chain (NHC) thermostat.
 module mod_nhc
    use mod_const, only: DP
    implicit none
@@ -57,6 +58,7 @@ module mod_nhc
    save
 contains
 
+   ! Calculate conserved quantity of the NHC thermostat
    subroutine calc_nhcham()
       use mod_general, only: natom, nwalk
       use mod_system, only: dime
@@ -110,8 +112,6 @@ contains
       error = .false.
       if (nchain > maxchain) then
          print*,'Maximum number of Nose-Hoover chains exceeded'
-         print*,maxchain
-         print*,'Adjust variable maxchain in modules.f90'
          error = .true.
       end if
       if (nrespnose < 3 .and. inose == 1) then
@@ -134,11 +134,11 @@ contains
          error = .true.
       end if
       if (imasst == 0 .and. ipimd == 1) then
-         write (*, *) 'PIMD simulations must use massive thermostat ( imasst=1)! '
+         write (*, *) 'PIMD simulations must use massive thermostat (imasst=1)!'
          error = .true.
       end if
       if (imasst == 0 .and. nmolt <= 0) then
-         write (*, *) 'Number of molecules coupled to separate NH chains not specified!Set nmolt > 0.'
+         write (*, *) 'Number of molecules coupled to separate NH chains not specified! Set nmolt > 0.'
          error = .true.
       end if
       if (nmolt > natom) then
@@ -159,7 +159,7 @@ contains
             ipom = ipom + natmolt(iat)
          end do
          if (ipom /= natom) then
-            write (*, *) 'Number of atoms in thermostated molecules (natmolt) doesnt match natom.'
+            write (*, *) 'Number of atoms in thermostated molecules (natmolt) does not match natom.'
             write (*, *) chknow
             if (iknow /= 1) error = .true.
          end if
@@ -354,6 +354,7 @@ contains
       end select
    end subroutine set_yoshida_weights
 
+   ! Read NHC momenta from the restart file
    subroutine nhc_restin(u)
       use mod_general, only: natom, nwalk
       ! Restart file unit
@@ -382,6 +383,7 @@ contains
       end if
    end subroutine nhc_restin
 
+   ! Write NHC momenta to the restart file
    subroutine nhc_restout(u)
       use mod_general, only: natom, nwalk
       ! Restart file unit
@@ -422,8 +424,7 @@ contains
    end subroutine finalize_nhc
 
    ! Calculate temperature of thermostat auxiliary momenta
-   ! of the massive NHC thermostat.
-   ! Currently not in use
+   ! Currently not in use, works only for massive thermostat
    real(DP) function nhc_temp(natom, nwalk)
       integer, intent(in) :: natom, nwalk
       real(DP) :: ekin
@@ -440,6 +441,7 @@ contains
       nhc_temp = 2 * ekin / 3 / natom / nwalk
    end function nhc_temp
 
+   ! Suzuki-Yoshida split-operator integrator for global NHC
    subroutine shiftNHC_yosh(px, py, pz, amt, dt)
       use mod_array_size
       use mod_general
@@ -523,6 +525,7 @@ contains
       return
    end subroutine shiftNHC_yosh
 
+   ! Suzuki-Yoshida split-operator integrator for massive NHC
    subroutine shiftNHC_yosh_mass(px, py, pz, amt, dt)
       use mod_general
       use mod_shake, only: nshake
