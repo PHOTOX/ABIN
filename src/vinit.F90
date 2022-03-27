@@ -3,6 +3,10 @@ module mod_vinit
    implicit none
    private
    public :: vinit, scalevelocities, remove_rotations, remove_comvel, constrainP
+   ! This parameter is read from namelist nhcopt
+   public :: scaleveloc
+   ! Whether to scale velocities to target temperature
+   integer :: scaleveloc
 contains
 !------------------------------------------------------------------------
 !
@@ -76,7 +80,7 @@ contains
       use mod_const, only: autok
       use mod_general, only: natom, nwalk, my_rank
       use mod_system, only: dime, f, conatom
-      use mod_nhc, only: scaleveloc, temp
+      use mod_nhc, only: temp
       use mod_kinetic, only: ekin_v
       use mod_shake, only: nshake
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)

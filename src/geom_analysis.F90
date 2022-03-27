@@ -1,6 +1,5 @@
 module mod_analyze_geometry
    use mod_const, only: DP, ANG, AUtoFS
-   use mod_array_size, only: NDISTMAX
    use mod_general, only: sim_time, nwalk
    implicit none
    private
@@ -8,7 +7,7 @@ module mod_analyze_geometry
    public :: dist1, dist2, ang1, ang2, ang3, dih1, dih2, dih3, dih4
    public :: print_distances, print_angles, print_dihedrals
 
-   ! TODO: Make all these allocatable, instead of using NDISTMAX
+   integer, parameter :: NDISTMAX = 50
    integer :: ndist = 0, dist1(NDISTMAX), dist2(NDISTMAX)
    integer :: nang = 0, ang1(NDISTMAX), ang2(NDISTMAX), ang3(NDISTMAX)
    integer :: ndih = 0, dih1(NDISTMAX), dih2(NDISTMAX), dih3(NDISTMAX), dih4(NDISTMAX)

@@ -1,30 +1,59 @@
 ! This module contains both massive and global version of the Nosé-Hoover chain thermostat
-! It also contains all necessary variables and initialization routines.
 module mod_nhc
    use mod_const, only: DP
-   use mod_array_size, only: maxchain
    implicit none
-   public :: ams, tau0, nhcham, inose, nchain, temp, temp0
-   public :: nrespnose, nyosh, scaleveloc, readNHC, initNHC
+   private
+   public :: ams, tau0, nhcham, inose, nchain, temp
+   public :: nrespnose, nyosh
+   public :: readNHC, initNHC
    public :: imasst, nmolt, natmolt, nshakemol
+   public :: nhc_init, finalize_nhc
+   public :: calc_nhcham, nhc_temp
+   public :: shiftNHC_yosh_mass, shiftNHC_yosh
+   public :: pnhx, pnhy, pnhz
 
-   real(DP) :: ams = -1, nhcham = 0.0D0, tau0 = -1, tau ! in picoseconds
-   real(DP) :: temp0 = -1, temp = 0.0D0
-   integer :: inose = -1, nchain = 4, initNHC = -1
-   integer :: imasst = 1 ! switch for massive thermostatting
-   integer :: nrespnose = 3, nyosh = 7, nmolt = 1
-   integer :: scaleveloc, readNHC = 1
-#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4
+   ! Temperature (read in Kelvins and converted to a.u. in init.F90)
+   real(DP) :: temp = 0.0D0
+   ! Thermostat relaxation time in picoseconds
+   real(DP) :: tau0 = -1
+   ! Thermostat mass (determined explicitly or computed from tau0)
+   real(DP) :: ams = -1
+
+   ! Main switch for different thermostats
+   ! inose == 1 turns on Nose-Hoover
+   integer :: inose = -1
+   ! Number of Nosé=Hoover chains
+   integer :: nchain = 4
+   ! Parameters for the Suzuki-Yoshida RESPA integration
+   integer :: nrespnose = 3, nyosh = 7
+   ! switch for massive thermostatting
+   ! imasst == 0 turns on global thermostat
+   integer :: imasst = 1
+   ! for global thermostat, we can choose to thermostat
+   ! molecules individually.
+   integer :: nmolt = 1
    integer, allocatable :: natmolt(:)
    integer, allocatable :: nshakemol(:)
-#else
-   integer, parameter :: MAXMOL = 3000
-   integer :: natmolt(MAXMOL)
-   integer :: nshakemol(MAXMOL)
-#endif
+
+   integer :: initNHC = -1
+   ! Whether to read NHC params from the restart file
+   integer :: readNHC = 1
+
+   ! Internal variables and arrays
+   integer, parameter :: MAXCHAIN = 10
+   ! Conserved quantity of the thermostat
+   real(DP) :: nhcham = 0.0D0
+   ! Thermostat relaxation time in atomic units
+   real(DP) :: tau
+   ! Auxiliary thermostat momenta
    real(DP), allocatable :: pnhx(:, :, :), pnhy(:, :, :), pnhz(:, :, :)
    real(DP), allocatable :: xi_x(:, :, :), xi_y(:, :, :), xi_z(:, :, :)
-   real(DP), allocatable :: w(:), ms(:, :), Qm(:)
+   ! Suzuki-Yoshida weights
+   real(DP), allocatable :: w(:)
+   ! Thermostat masses for global thermostat
+   real(DP), allocatable :: ms(:, :)
+   ! Thermostat masses for massive thermostat
+   real(DP), allocatable :: Qm(:)
    save
 contains
 
@@ -69,7 +98,89 @@ contains
       end if
    end subroutine
 
+   subroutine check_nhc_parameters()
+      use mod_general, only: natom, ipimd, irest
+      use mod_const, only: AUTOK
+      use mod_error, only: fatal_error
+      use mod_chars, only: chknow
+      use mod_general, only: iknow
+      integer :: imol, ipom, iat
+      logical :: error
+
+      error = .false.
+      if (nchain > maxchain) then
+         print*,'Maximum number of Nose-Hoover chains exceeded'
+         print*,maxchain
+         print*,'Adjust variable maxchain in modules.f90'
+         error = .true.
+      end if
+      if (nrespnose < 3 .and. inose == 1) then
+         write (*, *) 'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
+         write (*, *) 'Such low value would probably not produce stable results.'
+         write (*, *) chknow
+         if (iknow /= 1) error = .true.
+      end if
+      if (nrespnose <= 0) then
+         write (*, *) 'Variable nrespnose must be positive integer'
+         error = .true.
+      end if
+      if (nyosh <= 1 .and. inose == 1) then
+         write (*, *) 'It is strongly reccommended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh=3 or 7).'
+         write (*, *) iknow, error, chknow
+         if (iknow /= 1) error = .true.
+      end if
+      if (imasst /= 0 .and. imasst /= 1) then
+         write (*, *) 'Input error: imasst must be 1 or zero.'
+         error = .true.
+      end if
+      if (imasst == 0 .and. ipimd == 1) then
+         write (*, *) 'PIMD simulations must use massive thermostat ( imasst=1)! '
+         error = .true.
+      end if
+      if (imasst == 0 .and. nmolt <= 0) then
+         write (*, *) 'Number of molecules coupled to separate NH chains not specified!Set nmolt > 0.'
+         error = .true.
+      end if
+      if (nmolt > natom) then
+         write (*, *) 'Input error: nmolt > natom, which is not possible. Consult the manual.'
+         error = .true.
+      end if
+      if (imasst == 0) then
+         do imol = 1, nmolt
+            if (natmolt(imol) <= 0) then
+               write (*, *) 'Number of atoms in molecules not specified! Set array natmolt properly.'
+               error = .true.
+            end if
+         end do
+      end if
+      if (readnhc == 1 .and. irest == 0) then
+         write (*, *) 'WARNING: Ignoring readnhc=1 since irest=0.'
+      end if
+      if (inose == 1 .and. imasst == 0) then
+         ipom = 0
+         do iat = 1, nmolt
+            ipom = ipom + natmolt(iat)
+         end do
+         if (ipom /= natom) then
+            write (*, *) 'Number of atoms in thermostated molecules (natmolt) doesnt match natom.'
+            write (*, *) chknow
+            if (iknow /= 1) error = .true.
+         end if
+      end if
+      if (temp * AUTOK < 1 .and. inose > 0) then
+         write (*, *) 'Temperature below 1 Kelvin. Are you sure?'
+         write (*, *) chknow
+         if (iknow /= 1) error = .true.
+      end if
+
+      if (error) then
+         call fatal_error(__FILE__, __LINE__, &
+            'Invalid NHC thermostat parameter')
+      end if
+   end subroutine check_nhc_parameters
+
    subroutine nhc_init()
+      use mod_error, only: fatal_error
       use mod_const, only: AMU, AUtoFS, PI
       use mod_general, only: my_rank, ipimd, nwalk, natom, inormalmodes
       use mod_system, only: dime
@@ -78,6 +189,15 @@ contains
       real(DP), allocatable :: ran(:)
       real(DP) :: omega
       integer :: inh, iw, iat, ipom, imol
+
+      print*,''
+      if (imasst == 1) then
+         print*,'Initializing massive Nosé-Hoover Chain thermostat'
+      else
+         print*,'Initializing global Nosé-Hoover Chain thermostat'
+      end if
+
+      call check_nhc_parameters()
 
       if (imasst == 1) then
          allocate (pnhx(natom, nwalk, nchain)); pnhx = 0.0D0
@@ -91,10 +211,14 @@ contains
          allocate (xi_x(nmolt, nwalk, nchain)); xi_x = 0.0D0
       end if
 
-      allocate (w(nyosh))
       allocate (Qm(nwalk))
       allocate (ms(nmolt, nchain))
       allocate (ran(natom * 3))
+
+      call set_yoshida_weights(nyosh)
+
+      ! TODO:
+      ! call set_nhc_masses(ams, tau0)
 
       ! SETTING THERMOSTAT MASSES
       ams = ams * amu
@@ -107,8 +231,9 @@ contains
       else
          tau = tau0 / AUtoFS * 1000
       end if
-      ! pokud neni ams v inputu, tak ji pro clasickou simulaci priradime take
-      ! automaticky, viz tuckermann, Statistical mechanics p.190
+
+      ! If the thermostat mass is not given explicitly in the input,
+      ! we calculate it from tau, see M. E. Tuckerman, Statistical mechanics, p.190
       if (ams < 0) then
          ams = temp * tau * tau
       end if
@@ -121,7 +246,8 @@ contains
             ms(imol, inh) = ams
          end do
       end do
-      ! in pimd the Nose-Hoover mass is set within the code as
+
+      ! For PIMD the Nose-Hoover mass is set within the code as
       ! 1/(beta*omega_p^2)
       ! where
       ! omega_p=sqrt(P)/(beta*hbar)
@@ -144,17 +270,11 @@ contains
 
       end if
 
-      if (nmolt <= 50 .and. my_rank == 0) then
-         write (*, *) 'Thermostat masses'
-         if (imasst == 1) write (*, *) (Qm(iw), iw=1, nwalk)
-         if (imasst == 0) then
-            do imol = 1, nmolt
-               write (*, *) (ms(imol, inh), inh=1, nchain)
-            end do
-         end if
-      end if
-
       ! Initialize thermostat momenta
+      ! TODO: We should always initialize, and then
+      ! optionally overwrite during restart.
+      ! TODO
+      ! call initialize_nhc_momenta(temp)
       if (initNHC == 1 .and. imasst == 1) then
          do inh = 1, nchain
             do iw = 1, nwalk
@@ -183,14 +303,25 @@ contains
 
       end if
 
-      ! SET SUZUKI-YOSHIDA WEIGHTS
-      if (nyosh == 3) then
+      deallocate (ran)
+   end subroutine nhc_init
+
+   ! Set weights for Suzuki-Yoshida integrator,
+   ! depending on the integration order nyosh
+   subroutine set_yoshida_weights(nyosh)
+      use mod_error, only: fatal_error
+      integer, intent(in) :: nyosh
+
+      allocate (w(nyosh))
+
+      select case (nyosh)
+      case (1)
+         w(1) = 1
+      case (3)
          w(1) = 1.0D0 / (2.0D0 - 2**(1.0D0 / 3.0D0))
          w(3) = w(1)
          w(2) = 1 - w(1) - w(3)
-      else if (nyosh == 1) then
-         w(1) = 1
-      else if (nyosh == 7) then
+      case (7)
          w(1) = 0.784513610477560_DP
          w(7) = w(1)
          w(2) = 0.235573213359357_DP
@@ -198,13 +329,11 @@ contains
          w(3) = -1.17767998417887_DP
          w(5) = w(3)
          w(4) = 1 - w(1) - w(2) - w(3) - w(5) - w(6) - w(7)
-      end if
-
-      ! open(100,file='temper_nhc')
-      ! close(100,status='delete')
-
-      deallocate (ran)
-   end subroutine
+      case default
+         call fatal_error(__FILE__, __LINE__, &
+            'Invalid nyosh parameter. Allowed values are 1, 3 or 7')
+      end select
+   end subroutine set_yoshida_weights
 
    subroutine finalize_nhc()
       if (allocated(w)) deallocate (w)
@@ -218,22 +347,24 @@ contains
       if (allocated(xi_z)) deallocate (xi_z)
    end subroutine finalize_nhc
 
-   subroutine nhc_temp() !currently not in use
-      use mod_general, only: nwalk, natom
-      implicit none
+   ! Calculate temperature of thermostat auxiliary momenta
+   ! of the massive NHC thermostat.
+   ! Currently not in use
+   real(DP) function nhc_temp(natom, nwalk)
+      integer, intent(in) :: natom, nwalk
+      real(DP) :: ekin
       integer :: iw, iat
-      real(DP) :: ekin_mom = 0.0D0, temp1 = 0.0D0
+
+      ekin = 0.0D0
       do iw = 1, nwalk
          do iat = 1, natom
-            temp1 = pnhx(iat, iw, 1)**2 + pnhy(iat, iw, 1)**2 + pnhz(iat, iw, 1)**2
-            temp1 = 0.5 * temp1 / ams
-            ekin_mom = ekin_mom + temp1
+            ekin = 0.5D0 / ams * (pnhx(iat, iw, 1)**2 + &
+                                & pnhy(iat, iw, 1)**2 + &
+                                & pnhz(iat, iw, 1)**2)
          end do
       end do
-      open (100, file='temper_nhc.dat', access='append')
-      write (100, *) 2 * ekin_mom / 3 / natom / nwalk
-      close (100)
-   end subroutine
+      nhc_temp = 2 * ekin / 3 / natom / nwalk
+   end function nhc_temp
 
    subroutine shiftNHC_yosh(px, py, pz, amt, dt)
       use mod_array_size
@@ -241,7 +372,7 @@ contains
       use mod_system, only: dime
       implicit none
       real(DP) :: px(:, :), py(:, :), pz(:, :)
-      real(DP) :: amt(:, :), G(maxchain)
+      real(DP) :: amt(:, :), G(MAXCHAIN)
       real(DP) :: dt, ekin2, AA
       real(DP) :: wdt, wdt2, wdt4, pscale
       integer :: iw, iat, inh
@@ -320,7 +451,6 @@ contains
    end subroutine shiftNHC_yosh
 
    subroutine shiftNHC_yosh_mass(px, py, pz, amt, dt)
-      use mod_array_size, only: MAXCHAIN
       use mod_general
       use mod_shake, only: nshake
       implicit none
