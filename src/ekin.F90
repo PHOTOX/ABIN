@@ -12,7 +12,7 @@ contains
       use mod_general, only: it, ncalc, sim_time, natom, nwalk, nwrite, inormalmodes, ipimd
       use mod_system, only: dime, f, conatom
       use mod_files, only: UTEMPER, UENERGY
-      use mod_nhc, only: inose, nhcham, calc_nhcham
+      use mod_nhc, only: inose, get_nhcham
       use mod_gle, only: get_langham
       use mod_shake, only: nshake
       implicit none
@@ -48,8 +48,7 @@ contains
          if (ipimd /= 2) write (UTEMPER, '(F10.2)', advance="no") est_temp_cumul * autok / it2
 
          if (inose == 1) then
-            call calc_nhcham()
-            write (UTEMPER, '(E20.10)', advance="no") nhcham + ekin_mom + eclas
+            write (UTEMPER, '(E20.10)', advance="no") get_nhcham(natom, nwalk) + ekin_mom + eclas
          else if (inose == 2 .or. inose == 3 .or. inose == 4) then
             write (UTEMPER, '(E20.10)', advance="no") get_langham() + ekin_mom + eclas
          end if

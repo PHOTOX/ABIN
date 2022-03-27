@@ -4,22 +4,19 @@ module mod_nhc
    use mod_const, only: DP
    implicit none
    private
-   public :: ams, tau0, nhcham, inose, nchain, temp
+   public :: tau0, inose, nchain, temp
    public :: nrespnose, nyosh
    public :: readNHC
    public :: imasst, nmolt, natmolt, nshakemol
    public :: nhc_init, finalize_nhc
-   public :: calc_nhcham, nhc_temp
+   public :: get_nhcham, get_nhc_temp
    public :: shiftNHC_yosh_mass, shiftNHC_yosh
    public :: nhc_restout, nhc_restin
-   public :: pnhx, pnhy, pnhz
 
    ! Temperature (read in Kelvins and converted to a.u. in init.F90)
    real(DP) :: temp = 0.0D0
    ! Thermostat relaxation time in picoseconds
    real(DP) :: tau0 = -1
-   ! Thermostat mass (determined explicitly or computed from tau0)
-   real(DP) :: ams = -1
 
    ! Main switch for different thermostats
    ! inose == 1 turns on Nose-Hoover
@@ -44,8 +41,6 @@ module mod_nhc
 
    ! Internal variables and arrays
    integer, parameter :: MAXCHAIN = 10
-   ! Conserved quantity of the thermostat
-   real(DP) :: nhcham = 0.0D0
    ! Auxiliary thermostat momenta
    real(DP), allocatable :: pnhx(:, :, :), pnhy(:, :, :), pnhz(:, :, :)
    real(DP), allocatable :: xi_x(:, :, :), xi_y(:, :, :), xi_z(:, :, :)
@@ -59,9 +54,9 @@ module mod_nhc
 contains
 
    ! Calculate conserved quantity of the NHC thermostat
-   subroutine calc_nhcham()
-      use mod_general, only: natom, nwalk
+   real(DP) function get_nhcham(natom, nwalk) result(nhcham)
       use mod_system, only: dime
+      integer, intent(in) :: natom, nwalk
       integer iat, inh, iw
 
       nhcham = 0.0D0
@@ -98,7 +93,7 @@ contains
          end do
 
       end if
-   end subroutine
+   end function get_nhcham
 
    subroutine check_nhc_parameters()
       use mod_general, only: natom, ipimd
@@ -203,33 +198,33 @@ contains
       call initialize_nhc_momenta(temp)
    end subroutine nhc_init
 
-   subroutine set_nhc_masses(tau0)
+   subroutine set_nhc_masses(tau_ps)
       use mod_const, only: AUtoFS
-      real(DP), intent(in) :: tau0
-      real(DP) :: tau_au
+      real(DP), intent(in) :: tau_ps
+      real(DP) :: tau_au, nhc_mass
 
-      tau_au = tau0 / AUtoFS * 1000
+      tau_au = tau_ps / AUtoFS * 1000
 
       ! See M. E. Tuckerman, Statistical mechanics, p.190
-      ams = temp * tau_au * tau_au
+      nhc_mass = temp * tau_au * tau_au
 
       if (imasst == 0) then
-         call set_nhc_global_masses(ams)
+         call set_nhc_global_masses(nhc_mass)
       else if (imasst == 1) then
-         call set_nhc_massive_masses(ams)
+         call set_nhc_massive_masses(nhc_mass)
       end if
    end subroutine set_nhc_masses
 
-   subroutine set_nhc_massive_masses(ams)
+   subroutine set_nhc_massive_masses(nhc_mass)
       use mod_const, only: PI
       use mod_general, only: ipimd, nwalk, inormalmodes
-      real(DP), intent(in) :: ams
+      real(DP), intent(in) :: nhc_mass
       real(DP) :: omega
       integer :: iw
 
       allocate (Qm(nwalk))
       do iw = 1, nwalk
-         Qm(iw) = ams
+         Qm(iw) = nhc_mass
       end do
 
       ! For PIMD the Nose-Hoover mass is set within the code as
@@ -239,7 +234,7 @@ contains
       if (ipimd == 1 .and. inormalmodes /= 1) then
 
          ! TODO: Is this optimal both with/wo staging transform?
-         Qm(1) = ams ! see tuckermann,stat.mech.
+         Qm(1) = nhc_mass ! see tuckermann,stat.mech.
          do iw = 2, nwalk
             Qm(iw) = 1 / (temp * nwalk)
          end do
@@ -248,14 +243,13 @@ contains
 
          ! so far, NHC with normal modes does not work
          temp = temp * nwalk
-         Qm(1) = ams * 4
+         Qm(1) = nhc_mass * 4
          do iw = 2, nwalk
             omega = 2 * temp * sin((iw - 1) * PI / nwalk)
             Qm(iw) = 1 / temp / omega**2
          end do
 
       end if
-
    end subroutine
 
    subroutine set_nhc_global_masses(mass)
@@ -423,9 +417,9 @@ contains
       if (allocated(xi_z)) deallocate (xi_z)
    end subroutine finalize_nhc
 
-   ! Calculate temperature of thermostat auxiliary momenta
+   ! Calculate the temperature of thermostat auxiliary momenta
    ! Currently not in use, works only for massive thermostat
-   real(DP) function nhc_temp(natom, nwalk)
+   real(DP) function get_nhc_temp(natom, nwalk) result(nhc_temp)
       integer, intent(in) :: natom, nwalk
       real(DP) :: ekin
       integer :: iw, iat
@@ -433,13 +427,13 @@ contains
       ekin = 0.0D0
       do iw = 1, nwalk
          do iat = 1, natom
-            ekin = 0.5D0 / ams * (pnhx(iat, iw, 1)**2 + &
+            ekin = 0.5D0 / Qm(iw) * (pnhx(iat, iw, 1)**2 + &
                                 & pnhy(iat, iw, 1)**2 + &
                                 & pnhz(iat, iw, 1)**2)
          end do
       end do
       nhc_temp = 2 * ekin / 3 / natom / nwalk
-   end function nhc_temp
+   end function get_nhc_temp
 
    ! Suzuki-Yoshida split-operator integrator for global NHC
    subroutine shiftNHC_yosh(px, py, pz, amt, dt)
