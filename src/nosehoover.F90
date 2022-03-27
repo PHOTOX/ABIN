@@ -43,8 +43,6 @@ module mod_nhc
    integer, parameter :: MAXCHAIN = 10
    ! Conserved quantity of the thermostat
    real(DP) :: nhcham = 0.0D0
-   ! Thermostat relaxation time in atomic units
-   real(DP) :: tau
    ! Auxiliary thermostat momenta
    real(DP), allocatable :: pnhx(:, :, :), pnhy(:, :, :), pnhz(:, :, :)
    real(DP), allocatable :: xi_x(:, :, :), xi_y(:, :, :), xi_z(:, :, :)
@@ -180,24 +178,108 @@ contains
    end subroutine check_nhc_parameters
 
    subroutine nhc_init()
-      use mod_error, only: fatal_error
-      use mod_const, only: AMU, AUtoFS, PI
-      use mod_general, only: my_rank, ipimd, nwalk, natom, inormalmodes
-      use mod_system, only: dime
-      use mod_random, only: gautrg
-      implicit none
-      real(DP), allocatable :: ran(:)
-      real(DP) :: omega
-      integer :: inh, iw, iat, ipom, imol
+      use mod_general, only: my_rank
 
       print*,''
       if (imasst == 1) then
-         print*,'Initializing massive Nosé-Hoover Chain thermostat'
+         if (my_rank == 0) print*,'Initializing massive Nosé-Hoover Chain thermostat'
       else
-         print*,'Initializing global Nosé-Hoover Chain thermostat'
+         if (my_rank == 0) print*,'Initializing global Nosé-Hoover Chain thermostat'
       end if
 
       call check_nhc_parameters()
+
+      call set_yoshida_weights(nyosh)
+
+      ! Not sure if we should have this default value
+      if (tau0 < 0) then
+         if (my_rank == 0) then
+            write (*, *) 'WARNING: tau0 not set.'
+            write (*, *) 'Using default value tau0=0.001 picoseconds'
+         end if
+         tau0 = 0.001D0
+      end if
+      call set_nhc_masses(tau0)
+
+      call initialize_nhc_momenta(temp)
+   end subroutine nhc_init
+
+   subroutine set_nhc_masses(tau0)
+      use mod_const, only: AUtoFS
+      real(DP), intent(in) :: tau0
+      real(DP) :: tau_au
+
+      tau_au = tau0 / AUtoFS * 1000
+
+      ! See M. E. Tuckerman, Statistical mechanics, p.190
+      ams = temp * tau_au * tau_au
+
+      if (imasst == 0) then
+         call set_nhc_global_masses(ams)
+      else if (imasst == 1) then
+         call set_nhc_massive_masses(ams)
+      end if
+   end subroutine set_nhc_masses
+
+   subroutine set_nhc_massive_masses(ams)
+      use mod_const, only: PI
+      use mod_general, only: ipimd, nwalk, inormalmodes
+      real(DP), intent(in) :: ams
+      real(DP) :: omega
+      integer :: iw
+
+      allocate (Qm(nwalk))
+      do iw = 1, nwalk
+         Qm(iw) = ams
+      end do
+
+      ! For PIMD the Nose-Hoover mass is set within the code as
+      ! 1/(beta*omega_p^2)
+      ! where
+      ! omega_p=sqrt(P)/(beta*hbar)
+      if (ipimd == 1 .and. inormalmodes /= 1) then
+
+         ! TODO: Is this optimal both with/wo staging transform?
+         Qm(1) = ams ! see tuckermann,stat.mech.
+         do iw = 2, nwalk
+            Qm(iw) = 1 / (temp * nwalk)
+         end do
+
+      else if (ipimd == 1 .and. inormalmodes == 1) then
+
+         ! so far, NHC with normal modes does not work
+         temp = temp * nwalk
+         Qm(1) = ams * 4
+         do iw = 2, nwalk
+            omega = 2 * temp * sin((iw - 1) * PI / nwalk)
+            Qm(iw) = 1 / temp / omega**2
+         end do
+
+      end if
+
+   end subroutine
+
+   subroutine set_nhc_global_masses(mass)
+      use mod_system, only: dime
+      real(DP), intent(in) :: mass
+      integer :: imol, inh
+
+      allocate (ms(nmolt, nchain))
+
+      do imol = 1, nmolt
+         ms(imol, 1) = (dime * natmolt(imol) - nshakemol(imol)) * mass
+         do inh = 2, nchain
+            ms(imol, inh) = mass
+         end do
+      end do
+   end subroutine
+
+   subroutine initialize_nhc_momenta(temp)
+      use mod_general, only: natom, nwalk
+      use mod_random, only: gautrg
+      real(DP), intent(in) :: temp
+      real(DP), allocatable :: ran(:)
+      integer :: inh, iw, iat, ipom, imol
 
       if (imasst == 1) then
          allocate (pnhx(natom, nwalk, nchain)); pnhx = 0.0D0
@@ -211,70 +293,8 @@ contains
          allocate (xi_x(nmolt, nwalk, nchain)); xi_x = 0.0D0
       end if
 
-      allocate (Qm(nwalk))
-      allocate (ms(nmolt, nchain))
       allocate (ran(natom * 3))
 
-      call set_yoshida_weights(nyosh)
-
-      ! TODO:
-      ! call set_nhc_masses(ams, tau0)
-
-      ! SETTING THERMOSTAT MASSES
-      ams = ams * amu
-      if (ams < 0 .and. tau0 < 0) then
-         if (my_rank == 0) then
-            write (*, *) 'Warning. Ams and tau0 not set.'
-            write (*, *) 'Using default value tau0=0.001'
-         end if
-         tau = 0.001D0 / AUtoFS * 1000
-      else
-         tau = tau0 / AUtoFS * 1000
-      end if
-
-      ! If the thermostat mass is not given explicitly in the input,
-      ! we calculate it from tau, see M. E. Tuckerman, Statistical mechanics, p.190
-      if (ams < 0) then
-         ams = temp * tau * tau
-      end if
-      do iw = 1, nwalk
-         Qm(iw) = ams
-      end do
-      do imol = 1, nmolt
-         ms(imol, 1) = (dime * natmolt(imol) - nshakemol(imol)) * ams
-         do inh = 2, nchain
-            ms(imol, inh) = ams
-         end do
-      end do
-
-      ! For PIMD the Nose-Hoover mass is set within the code as
-      ! 1/(beta*omega_p^2)
-      ! where
-      ! omega_p=sqrt(P)/(beta*hbar)
-      if (ipimd == 1 .and. inormalmodes /= 1) then
-
-         do iw = 1, nwalk
-            Qm(iw) = 1 / (TEMP * NWALK)
-         end do
-         if (tau0 > 0) Qm(1) = ams ! see tuckermann,stat.mech.
-
-      else if (ipimd == 1 .and. inormalmodes == 1) then
-
-         ! so far, NHC with normal modes does not work
-         temp = temp * nwalk
-         Qm(1) = temp * tau * tau * 4
-         do iw = 2, nwalk
-            omega = 2 * TEMP * sin((iw - 1) * PI / NWALK)
-            Qm(iw) = 1 / TEMP / omega**2
-         end do
-
-      end if
-
-      ! Initialize thermostat momenta
-      ! TODO: We should always initialize, and then
-      ! optionally overwrite during restart.
-      ! TODO
-      ! call initialize_nhc_momenta(temp)
       if (initNHC == 1 .and. imasst == 1) then
          do inh = 1, nchain
             do iw = 1, nwalk
@@ -304,7 +324,7 @@ contains
       end if
 
       deallocate (ran)
-   end subroutine nhc_init
+   end subroutine initialize_nhc_momenta
 
    ! Set weights for Suzuki-Yoshida integrator,
    ! depending on the integration order nyosh
@@ -370,7 +390,6 @@ contains
       use mod_array_size
       use mod_general
       use mod_system, only: dime
-      implicit none
       real(DP) :: px(:, :), py(:, :), pz(:, :)
       real(DP) :: amt(:, :), G(MAXCHAIN)
       real(DP) :: dt, ekin2, AA
@@ -453,7 +472,6 @@ contains
    subroutine shiftNHC_yosh_mass(px, py, pz, amt, dt)
       use mod_general
       use mod_shake, only: nshake
-      implicit none
       real(DP) :: px(:, :), py(:, :), pz(:, :)
       real(DP) :: amt(:, :)
       real(DP) :: Gx(MAXCHAIN), Gy(MAXCHAIN), Gz(MAXCHAIN)

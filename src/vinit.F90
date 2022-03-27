@@ -140,7 +140,7 @@ contains
 
          ! Shift velocities such that momentum of center of mass is zero
          if (lremove) then
-            if (my_rank == 0) write (*, *) 'Removing center of mass velocity.'
+            if (my_rank == 0 .and. iw == 1) write (*, *) 'Removing center of mass velocity.'
             do iat = 1, natom
                vx(iat, iw) = vx(iat, iw) - vcmx
                vy(iat, iw) = vy(iat, iw) - vcmy
