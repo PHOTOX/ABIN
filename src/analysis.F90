@@ -197,7 +197,7 @@ contains
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
                              iremd, my_rank, pot, narchive, sim_time
       use mod_utils, only: archive_file
-      use mod_nhc, only: inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
+      use mod_nhc, only: inose, nhc_restout
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
       use mod_sh_integ, only: sh_write_wf
@@ -209,7 +209,7 @@ contains
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(in) :: time_step
-      integer :: iat, iw, inh, itrj
+      integer :: iat, iw, itrj
       logical :: file_exists
       character(len=200) :: chout, chsystem
 
@@ -273,27 +273,7 @@ contains
 
       if (inose == 1) then
          write (102, *) chnose
-
-         if (imasst == 1) then
-            do inh = 1, nchain
-               do iw = 1, nwalk
-                  do iat = 1, natom
-                     write (102, *) pnhx(iat, iw, inh), pnhy(iat, iw, inh), pnhz(iat, iw, inh)
-                  end do
-               end do
-            end do
-
-         else
-
-            do inh = 1, nchain
-               do iw = 1, nwalk
-                  do iat = 1, nmolt
-                     write (102, *) pnhx(iat, iw, inh)
-                  end do
-               end do
-            end do
-         end if
-
+         call nhc_restout(102)
       end if
 
       if (inose == 2 .or. inose == 4) then
@@ -337,7 +317,7 @@ contains
    subroutine restin(x, y, z, vx, vy, vz, it)
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
                              iremd, my_rank, pot, sim_time
-      use mod_nhc, only: readNHC, inose, pnhx, pnhy, pnhz, imasst, nmolt, nchain
+      use mod_nhc, only: readNHC, inose, nhc_restin
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
       use mod_sh_integ, only: sh_read_wf
@@ -349,7 +329,7 @@ contains
       real(DP), intent(out) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(out) :: it
-      integer :: iat, iw, inh, itrj
+      integer :: iat, iw, itrj
       character(len=100) :: chtemp
       logical :: prngread
       character(len=20) :: chin
@@ -366,7 +346,6 @@ contains
          write (*, *) 'irest=1, Reading geometry, velocities and other information from restart.xyz'
       end if
 
-      ! open(111, file=chin, status = "OLD", action = "READ", recl=1500)
       open (111, file=chin, status="OLD", action="READ")
       read (111, *) it, sim_time
       read (111, '(A)') chtemp
@@ -403,27 +382,7 @@ contains
       if (inose == 1 .and. readNHC == 1) then
          read (111, '(A)') chtemp
          call checkchar(chtemp, chnose)
-         if (imasst == 1) then
-            do inh = 1, nchain
-               do iw = 1, nwalk
-                  do iat = 1, natom
-                     read (111, *) pnhx(iat, iw, inh), pnhy(iat, iw, inh), pnhz(iat, iw, inh)
-                  end do
-               end do
-            end do
-
-         else
-
-            do inh = 1, nchain
-               do iw = 1, nwalk
-                  do iat = 1, nmolt
-                     read (111, *) pnhx(iat, iw, inh)
-                  end do
-               end do
-            end do
-
-         end if
-
+         call nhc_restin(111)
       end if
 
       if (inose == 2 .or. inose == 4) then

@@ -5,11 +5,12 @@ module mod_nhc
    private
    public :: ams, tau0, nhcham, inose, nchain, temp
    public :: nrespnose, nyosh
-   public :: readNHC, initNHC
+   public :: readNHC
    public :: imasst, nmolt, natmolt, nshakemol
    public :: nhc_init, finalize_nhc
    public :: calc_nhcham, nhc_temp
    public :: shiftNHC_yosh_mass, shiftNHC_yosh
+   public :: nhc_restout, nhc_restin
    public :: pnhx, pnhy, pnhz
 
    ! Temperature (read in Kelvins and converted to a.u. in init.F90)
@@ -35,8 +36,9 @@ module mod_nhc
    integer, allocatable :: natmolt(:)
    integer, allocatable :: nshakemol(:)
 
-   integer :: initNHC = -1
    ! Whether to read NHC params from the restart file
+   ! Useful e.g. if we want to restart NVE simulation
+   ! and turn on the thermostat.
    integer :: readNHC = 1
 
    ! Internal variables and arrays
@@ -97,7 +99,7 @@ contains
    end subroutine
 
    subroutine check_nhc_parameters()
-      use mod_general, only: natom, ipimd, irest
+      use mod_general, only: natom, ipimd
       use mod_const, only: AUTOK
       use mod_error, only: fatal_error
       use mod_chars, only: chknow
@@ -150,9 +152,6 @@ contains
                error = .true.
             end if
          end do
-      end if
-      if (readnhc == 1 .and. irest == 0) then
-         write (*, *) 'WARNING: Ignoring readnhc=1 since irest=0.'
       end if
       if (inose == 1 .and. imasst == 0) then
          ipom = 0
@@ -295,7 +294,7 @@ contains
 
       allocate (ran(natom * 3))
 
-      if (initNHC == 1 .and. imasst == 1) then
+      if (imasst == 1) then
          do inh = 1, nchain
             do iw = 1, nwalk
                call gautrg(ran, natom * 3)
@@ -309,7 +308,7 @@ contains
             end do
          end do
 
-      else if (initNHC == 1 .and. imasst == 0) then
+      else if (imasst == 0) then
 
          do inh = 1, nchain
             do iw = 1, nwalk
@@ -354,6 +353,61 @@ contains
             'Invalid nyosh parameter. Allowed values are 1, 3 or 7')
       end select
    end subroutine set_yoshida_weights
+
+   subroutine nhc_restin(u)
+      use mod_general, only: natom, nwalk
+      ! Restart file unit
+      integer, intent(in) :: u
+      integer :: iat, iw, inh
+
+      if (imasst == 1) then
+         do inh = 1, nchain
+            do iw = 1, nwalk
+               do iat = 1, natom
+                  read (u, *) pnhx(iat, iw, inh), pnhy(iat, iw, inh), pnhz(iat, iw, inh)
+               end do
+            end do
+         end do
+
+      else
+
+         do inh = 1, nchain
+            do iw = 1, nwalk
+               do iat = 1, nmolt
+                  read (u, *) pnhx(iat, iw, inh)
+               end do
+            end do
+         end do
+
+      end if
+   end subroutine nhc_restin
+
+   subroutine nhc_restout(u)
+      use mod_general, only: natom, nwalk
+      ! Restart file unit
+      integer, intent(in) :: u
+      integer :: iat, iw, inh
+      if (imasst == 1) then
+
+         do inh = 1, nchain
+            do iw = 1, nwalk
+               do iat = 1, natom
+                  write (u, *) pnhx(iat, iw, inh), pnhy(iat, iw, inh), pnhz(iat, iw, inh)
+               end do
+            end do
+         end do
+
+      else
+
+         do inh = 1, nchain
+            do iw = 1, nwalk
+               do iat = 1, nmolt
+                  write (u, *) pnhx(iat, iw, inh)
+               end do
+            end do
+         end do
+      end if
+   end subroutine nhc_restout
 
    subroutine finalize_nhc()
       if (allocated(w)) deallocate (w)
