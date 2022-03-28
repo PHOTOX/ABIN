@@ -1,9 +1,8 @@
 subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_const, only: DP, ANG
    use mod_files, only: MAXUNITS
-   use mod_general, only: ihess, ipimd, iqmmm, it, iremd, my_rank
+   use mod_general, only: ipimd, iqmmm, it, iremd, my_rank
    use mod_system, only: names
-   use mod_arrays, only: hess
    use mod_sh_integ, only: nstate
    use mod_sh, only: tocalc, en_array, istate
    use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
@@ -19,33 +18,27 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    character(len=*), intent(in) :: chpot
    real(DP) :: temp1
    character(len=100) :: chsystem
-   character(len=30) :: chgeom, chforce, chhess, fgeom
+   character(len=30) :: chgeom, chforce, fgeom
    logical :: file_exists
-   integer :: iat, iw, iat1, iat2, itest !,nthreads=1, ithread
+   integer :: iat, iw, itest
    integer :: ist1, iost, ISTATUS
    integer :: system
-!!$ integer :: omp_get_max_threads,OMP_get_thread_num
-
-!!$ nthreads=omp_get_max_threads()
 
    eclas = 0.0D0
 
-!  Format for geom.dat; needed, so that Molpro can read it
+   ! Format for geom.dat; needed, so that Molpro can read it
    fgeom = '(A2,3E25.17E2)'
 
 !$OMP PARALLEL ! REDUCTION(+:eclas) alternativa k atomic
-!$OMP DO PRIVATE(temp1,chsystem,chgeom,chforce,chhess,itest,file_exists,iost)
+!$OMP DO PRIVATE(temp1,chsystem,chgeom,chforce,itest,file_exists,iost)
 
    do iw = 1, walkmax
 
-!!$   ithread=OMP_get_thread_num()
       write (chgeom, '(A,I3.3)') 'geom.dat.', iw
       write (chforce, '(A,I3.3)') 'engrad.dat.', iw
-      write (chhess, '(A,I3.3)') 'hessian.dat.', iw
       if (iremd == 1) then
          write (chgeom, '(A,I2.2)') trim(chgeom)//'.', my_rank
          write (chforce, '(A,I2.2)') trim(chforce)//'.', my_rank
-         write (chhess, '(A,I2.2)') trim(chhess)//'.', my_rank
       end if
 
 !     Delete the last geometry
@@ -189,7 +182,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       else if (ipimd == 5) then
          iost = read_forces(fx, fy, fz, natqm, tocalc_lz(istate_lz), MAXUNITS + iw) !Save only the computed state
       else
-!     reading energy gradients from engrad.dat
+         ! reading energy gradients from engrad.dat
          iost = read_forces(fx, fy, fz, natqm, iw, MAXUNITS + iw)
       end if
       if (iost /= 0) then
@@ -201,36 +194,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
          call abinerror('force_abin')
       end if
 
-      ! READING of HESSIAN
-      if (ihess == 1) then
-
-         inquire (FILE=chhess, EXIST=file_exists)
-         do while (.not. file_exists .and. itest < 10)
-            write (*, *) 'WARNING:File ', chhess, ' does not exist. Waiting..'
-            ISTATUS = system('sync') !mel by zajistit flush diskoveho bufferu
-            inquire (FILE=chhess, EXIST=file_exists)
-            itest = itest + 1
-         end do
-
-         open (unit=MAXUNITS + iw + walkmax, file=chhess, status='old', ACTION='READ')
-
-         do iat2 = 1, natqm * 3
-            do iat1 = 1, natqm * 3, 3
-               read (MAXUNITS + iw + walkmax, *) hess(iat1, iat2, iw), &
-                                               & hess(iat1 + 1, iat2, iw), &
-                                               & hess(iat1 + 2, iat2, iw)
-               hess(iat1, iat2, iw) = hess(iat1, iat2, iw) / walkmax
-               hess(iat1 + 1, iat2, iw) = hess(iat1 + 1, iat2, iw) / walkmax
-               hess(iat1 + 2, iat2, iw) = hess(iat1 + 2, iat2, iw) / walkmax
-            end do
-         end do
-
-      end if
-
       close (unit=MAXUNITS + iw, status='delete')
-      if (ihess == 1) then
-         close (unit=MAXUNITS + iw + walkmax, status='delete')
-      end if
 
       if (iqmmm == 1) then
          call oniom(x, y, z, fx, fy, fz, eclas, iw)

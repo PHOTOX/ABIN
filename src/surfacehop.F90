@@ -48,13 +48,11 @@ module mod_sh
    real(DP), allocatable :: nacx(:, :, :, :), nacy(:, :, :, :), nacz(:, :, :, :)
    ! *old variables holds data from the previous step
    real(DP), allocatable :: nacx_old(:, :, :, :), nacy_old(:, :, :, :), nacz_old(:, :, :, :)
-   real(DP), allocatable :: dotproduct(:, :, :), dotproduct_old(:, :, :) !for inac=1
    real(DP), allocatable :: en_array(:, :), en_array_old(:, :)
    ! Initial absolute electronic energy, needed for monitoring energy drift
    real(DP) :: entot0
    ! nstatexnstate matrix, off-diagonal elements determine NAC, diagonal elements = electronic gradients
    integer, allocatable :: tocalc(:, :)
-   ! TODO: Make this allocatable
    integer :: istate(NTRAJMAX)
    ! for ethylene 2-state SA3 dynamics
    integer :: ignore_state = 0
@@ -62,7 +60,7 @@ module mod_sh
 
 contains
 
-!  INITIALIZATION ROUTINE (ugly, but works)
+   ! Initialization routine (ugly, but works)
    subroutine sh_init(x, y, z, vx, vy, vz)
       use mod_const, only: AUtoEV
       use mod_general, only: irest, natom, pot, ipimd
@@ -90,16 +88,6 @@ contains
       nacx_old = nacx
       nacy_old = nacx
       nacz_old = nacx
-      if (inac == 1) then
-         allocate (dotproduct_old(nstate, nstate, NTRAJMAX))
-         allocate (dotproduct(nstate, nstate, NTRAJMAX))
-         dotproduct = 0.0D0
-
-         ! setting this to -10000 to indicate the first step for time-derivative couplings
-         ! see function get_tdc
-         dotproduct_old = -10000D0
-         adjmom = 1
-      end if
 
       allocate (en_array(nstate, ntraj))
       allocate (en_array_old(nstate, ntraj))
@@ -134,7 +122,9 @@ contains
 
       end do
 
-      if (irest == 1 .and. ipimd /= 5) call read_nacmrest()
+      if (irest == 1 .and. ipimd /= 5) then
+         call read_nacmrest()
+      end if
 
    end subroutine sh_init
 
@@ -174,7 +164,7 @@ contains
          ! we always have to set tocalc because we change it in readnacm
          call set_tocalc(itrj)
       end if
-   end subroutine Get_Nacm
+   end subroutine get_nacm
 
    ! In this routine, we decide which gradients and which NACME we need to compute
    ! TOCALC is a symmetric matrix, upper-triangle defines NACME,
@@ -217,23 +207,21 @@ contains
       tocalc(istate(itrj), istate(itrj)) = 1
    end subroutine set_tocalc
 
-   subroutine Write_nacmrest()
+   subroutine write_nacmrest()
       use mod_general, only: narchive, it
       use mod_qmmm, only: natqm
       use mod_utils, only: archive_file
       integer :: ist1, ist2, iat, itrj
       integer :: iunit1
       logical :: file_exists
-      character(len=20) :: chout
+      character(len=*), parameter :: restart_file='restart_sh.bin'
       character(len=200) :: chsystem
-      iunit1 = 600
-      chout = 'restart_sh.bin'
 
-      inquire (FILE=chout, EXIST=file_exists)
-      chsystem = 'mv '//trim(chout)//'  '//trim(chout)//'.old'
+      inquire (FILE=restart_file, EXIST=file_exists)
+      chsystem = 'mv '//trim(restart_file)//'  '//trim(restart_file)//'.old'
       if (file_exists) call system(chsystem)
 
-      open (iunit1, file=chout, action='WRITE', status="NEW", access="Sequential", form="UNFORMATTED")
+      open (newunit=iunit1, file=restart_file, action='write', status="new", access="sequential", form="unformatted")
 
       do itrj = 1, ntraj
 
@@ -259,14 +247,18 @@ contains
          ! For now, energy jump check is not handled well.
          write (iunit1) entot0
 
-         if (phase == 1) call sh_write_phase_bin(iunit1, itrj)
+         if (phase == 1) then
+            call sh_write_phase_bin(iunit1, itrj)
+         end if
 
          ! ntraj enddo
       end do
 
       close (iunit1)
 
-      if (modulo(it, narchive) == 0) call archive_file(chout, it)
+      if (modulo(it, narchive) == 0) then
+         call archive_file(restart_file, it)
+      end if
 
    end subroutine write_nacmrest
 
@@ -274,22 +266,20 @@ contains
       use mod_general, only: it
       use mod_qmmm, only: natqm
       use mod_utils, only: archive_file
+      character(len=*), parameter :: restart_file='restart_sh.bin'
       integer :: iost, ist1, ist2, iat, itrj
       integer :: iunit1
       logical :: file_exists
       character(len=200) :: chmsg
-      character(len=20) :: chin
-      chin = 'restart_sh.bin'
-      iunit1 = 600
 
-      write (*, *) 'Reading SH restart data from '//trim(chin)
-      inquire (FILE=chin, EXIST=file_exists)
+      print*,'Reading Surface Hopping restart data from file '//trim(restart_file)
+      inquire (file=restart_file, exist=file_exists)
       if (.not. file_exists) then
-         write (*, *) 'ERROR: Surface Hopping restart file does not exist! '//trim(chin)
+         write (*, *) 'ERROR: Surface Hopping restart file does not exist! '//trim(restart_file)
          call abinerror('read_nacmrest')
       end if
 
-      open (iunit1, file=chin, action="read", status="old", access="sequential", form="unformatted")
+      open (newunit=iunit1, file=restart_file, action="read", status="old", access="sequential", form="unformatted")
 
       do itrj = 1, ntraj
 
@@ -304,7 +294,7 @@ contains
                                                            & nacy(iat, itrj, ist1, ist2), &
                                                            & nacz(iat, itrj, ist1, ist2)
                      if (iost /= 0) then
-                        write (*, *) 'Error reading NACME from restart file '//trim(chin)
+                        write (*, *) 'Error reading NACME from restart file '//trim(restart_file)
                         write (*, *) chmsg
                         call abinerror('read_nacmrest')
                      end if
@@ -323,12 +313,14 @@ contains
          ! For now, energy jump check is not handled well.
          read (iunit1) entot0
 
-         if (phase == 1) call sh_read_phase_bin(iunit1, itrj)
+         if (phase == 1) then
+            call sh_read_phase_bin(iunit1, itrj)
+         end if
 
       end do
 
       close (iunit1)
-      call archive_file(chin, it)
+      call archive_file(restart_file, it)
 
    end subroutine read_nacmrest
 
@@ -337,8 +329,7 @@ contains
       integer :: iost, ist1, ist2, iat, itrj, iunit
 
       iost = 0 ! needed if each tocalc=0
-      iunit = 600
-      open (iunit, file='nacm.dat')
+      open (newunit=iunit, file='nacm.dat')
       do ist1 = 1, nstate - 1
          do ist2 = ist1 + 1, nstate
 
@@ -361,7 +352,7 @@ contains
                   end if
                end do
 
-               !--------if tocalc
+               ! if tocalc
             end if
 
          end do
@@ -369,31 +360,30 @@ contains
 
       close (iunit, status='delete')
       read_nacm = iost
-      return
    end function read_nacm
 
    subroutine calc_nacm(itrj, nac_accu)
       use mod_utils, only: toupper
       use mod_general, only: it, pot
       integer, intent(in) :: itrj, nac_accu
-      integer :: ist1, ist2
+      integer :: ist1, ist2, u
       character(len=100) :: chsystem
-      open (unit=510, file='state.dat')
-      write (510, '(I2)') nstate
-      ! tocalc is upper triangular part of a matrix without diagonal
-      ! tocalc(,)=1 -> calculate NACME
-      ! tocalc(,)=0 -> don't calculate NACME
+      open (newunit=u, file='state.dat')
+      write (u, '(I2)') nstate
+      ! we print upper triangular part of tocalc matrix to file state.dat
+      ! tocalc(i,j)==1 -> calculate NACME between states i and j
+      ! tocalc(,)==0 -> don't calculate NACME
       do ist1 = 1, nstate - 1
          do ist2 = ist1 + 1, nstate
-            write (510, '(I1,A1)', advance='no') tocalc(ist1, ist2), ' '
+            write (u, '(I1,A1)', advance='no') tocalc(ist1, ist2), ' '
          end do
       end do
-      close (510)
+      close (u)
 
       chsystem = './'//trim(toupper(pot))//'/r.'//trim(pot)//'.nacm '
       ! TODO: move the following line somwhere else
-!   write(*,*)'WARNING: Some NACMs not computed. Trying with decreased accuracy...'
-!   write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu
+      ! write(*,*)'WARNING: Some NACMs not computed. Trying with decreased accuracy...'
+      ! write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu
       write (chsystem, '(A30,I13,I4.3,I3,A12)') chsystem, it, itrj, nac_accu, ' < state.dat'
 
       call system(chsystem)
@@ -402,43 +392,6 @@ contains
 
    end subroutine calc_nacm
 
-   subroutine read_tdc(itrj, dt)
-      integer, intent(in) :: itrj
-      real(DP), intent(in) :: dt
-      integer :: ist1, ist2, iunit, ijunk
-
-      iunit = 600
-
-      open (iunit, file='tdcoups.dat')
-      read (iunit, *)
-      read (iunit, *)
-      do ist1 = 1, nstate
-         read (iunit, *) ijunk, (dotproduct(ist1, ist2, itrj), ist2=1, nstate)
-      end do
-      close (iunit)
-
-      do ist1 = 1, nstate
-         do ist2 = 1, nstate
-            dotproduct(ist1, ist2, itrj) = -dotproduct(ist1, ist2, itrj) / dt
-            if (ist1 == ist2) dotproduct(ist1, ist2, itrj) = 0.0D0
-         end do
-      end do
-
-      do ist1 = 1, nstate - 1
-         do ist2 = ist1 + 1, nstate
-            if (tocalc(ist1, ist2) == 0) then
-               write (*, *) 'Not computing NACM for states', ist1, ist2
-               dotproduct(ist1, ist2, itrj) = 0.0D0
-               dotproduct(ist2, ist1, itrj) = 0.0D0
-            end if
-         end do
-      end do
-
-      !  we don't have interpolation in the zeroth step
-      if (dotproduct(1, 1, 1) <= -1000) dotproduct_old = dotproduct
-
-   end subroutine read_tdc
-
    ! move arrays from new step to old step
    subroutine move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
       use mod_general, only: natom
@@ -446,7 +399,7 @@ contains
       real(DP), intent(out) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
       integer, intent(in) :: itrj
       integer :: ist1, ist2, iat
-      !---moving new to old variables
+
       do ist1 = 1, nstate
          en_array_old(ist1, itrj) = en_array(ist1, itrj)
 
@@ -467,15 +420,6 @@ contains
          vy_old(iat, itrj) = vy(iat, itrj)
          vz_old(iat, itrj) = vz(iat, itrj)
       end do
-
-      if (inac == 1) then
-         do ist1 = 1, nstate
-            do ist2 = 1, nstate
-               dotproduct_old(ist1, ist2, itrj) = dotproduct(ist1, ist2, itrj)
-            end do
-         end do
-      end if
-
    end subroutine move_vars
 
    !******************************
@@ -528,7 +472,7 @@ contains
 
          t_tot = 1.0D0
 
-!  FIRST, CALCULATE NACME
+         ! FIRST, CALCULATE NACME
          if (inac == 0) then
 
             do ist1 = 1, nstate - 1
@@ -582,9 +526,6 @@ contains
             ! INAC=0  endif
          end if
 
-         ! Reading time-derivative couplings
-         if (inac == 1) call read_tdc(itrj, dt)
-
          ! smaller time step
          dtp = dt / substep
 
@@ -605,21 +546,12 @@ contains
                              nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
                              dotproduct_newint, fr, frd, itrj)
 
-            ! In HST model, we do not have NACME, only dotproduct
-            if (inac == 1) then
-               call interpolate_dot(dotproduct_newint, fr, frd, itrj)
-            end if
-
             fr = real(itp - 1, DP) / real(substep, DP)
             frd = 1.0D0 - fr
 
             call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
                              nacx_int, nacy_int, nacz_int, en_array_int, &
                              dotproduct_int, fr, frd, itrj)
-
-            if (inac == 1) then
-               call interpolate_dot(dotproduct_int, fr, frd, itrj)
-            end if
 
             ! Integrate electronic wavefunction for one dtp time step
             call sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, itrj, dtp)
@@ -641,7 +573,7 @@ contains
 
             do ist1 = 1, nstate
                ! Cumulative probability over whole big step
-               ! This is only auxiliary variably used for output
+               ! This is only auxiliary variable used for output
                t_tot(ist, ist1) = t_tot(ist, ist1) * (1 - t(ist, ist1))
             end do
 
@@ -665,8 +597,12 @@ contains
                end if
 
                do ist1 = 2, nstate
-                  if (ist1 /= ist) prob(ist1) = prob(ist1 - 1) + t(ist, ist1)
-                  if (ist1 == ist) prob(ist1) = prob(ist1 - 1)
+                  if (ist1 /= ist) then
+                     prob(ist1) = prob(ist1 - 1) + t(ist, ist1)
+                  end if
+                  if (ist1 == ist) then
+                     prob(ist1) = prob(ist1 - 1)
+                  end if
                end do
 
                ihop = 0
@@ -685,14 +621,20 @@ contains
 
                ! Did HOP occur?
                if (ihop /= 0) then
-                  if (adjmom == 0) call hop(vx, vy, vz, ist, ihop, itrj, eclas)
-                  if (adjmom == 1) call hop_dot(vx, vy, vz, ist, ihop, itrj, eclas)
-                  write (formt, '(A8,I3,A7)') '(A1,I10,', nstate + 1, 'E20.10)'
+                  if (adjmom == 0) then
+                     call hop(vx, vy, vz, ist, ihop, itrj, eclas)
+                  else if (adjmom == 1) then
+                     call hop_dot(vx, vy, vz, ist, ihop, itrj, eclas)
+                  end if
+
                   if (idebug > 0) then
+                     write (formt, '(A8,I3,A7)') '(A1,I10,', nstate + 1, 'E20.10)'
                      write (UPOP, *) '# Substep RandomNum   Probabilities'
                      write (UPOP, fmt=formt) '#', itp, hop_rdnum, (t(ist, ist1), ist1=1, nstate)
                   end if
 
+                  ! TODO: It seems that we're writing this geometry even for frustrated hop?
+                  ! Is that desired?
                   ! write current geometry
                   write (chist, *) ist
                   write (chihop, *) ihop
@@ -732,6 +674,7 @@ contains
 
          call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
 
+         ! TODO: Move this to a separate function write_sh_output()
          if (modulo(it, nwrite) == 0) then
             stepfs = sim_time * AUtoFS
             write (formt, '(A10,I3,A13)') '(F15.2,I3,', nstate, 'F10.5,1F10.7)'
@@ -942,20 +885,6 @@ contains
 
    end subroutine hop_dot
 
-   subroutine interpolate_dot(dotproduct_int, fr, frd, itrj)
-      real(DP) dotproduct_int(NSTMAX, NSTMAX, NTRAJMAX)
-      integer :: ist1, ist2, itrj !iteration counters
-      real(DP) :: fr, frd
-
-      do ist1 = 1, nstate
-         do ist2 = 1, nstate
-            dotproduct_int(ist1, ist2, itrj) = dotproduct(ist1, ist2, itrj) * fr + &
-                                               dotproduct_old(ist1, ist2, itrj) * frd
-         end do
-      end do
-
-   end subroutine interpolate_dot
-
    subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
       use mod_interfaces, only: finish
       use mod_const, only: AUtoEV
@@ -974,7 +903,6 @@ contains
          if (dE_S0S1 < dE_S0S1_thr) then
             write (*, *) 'S1 - S0 gap dropped below threshold!'
             write (*, *) dE_S0S1, ' < ', dE_S0S1_thr
-            !call abinerror('S1S0 gap')
             call finish(0)
             stop 0
          end if
@@ -1040,7 +968,6 @@ contains
          end do
          if (cidotprod(ist1) < 1 / dsqrt(2.0D0)) then
             write (*, *) "Warning: cidotprod too low."
-            ! call abinerror("surfacehop.f90")
          end if
       end do
 
