@@ -5,7 +5,7 @@ module mod_splined_grid
    use mod_const, only: DP
    implicit none
    private
-   integer, parameter :: MAX_GRID_SIZE = 10000
+   integer, parameter :: MAX_GRID_SIZE = 1000
    integer :: grid_size
    real(DP), allocatable :: second_derivatives(:)
    real(DP) :: x_grid(MAX_GRID_SIZE)
@@ -14,7 +14,8 @@ module mod_splined_grid
    character(len=256) :: potential_file = 'potential.dat'
 
    public :: potential_file
-   public :: force_splined_grid, initialize_spline
+   public :: force_splined_grid
+   public :: initialize_spline, finalize_spline
    save
 contains
 
@@ -63,7 +64,7 @@ contains
 
       if (natom /= 1) then
          call fatal_error(__FILE__, __LINE__, &
-            & 'Harmonic potential is only for 1 particle')
+            & 'Splined grid potential is only for 1 particle')
       end if
       dime = 1
       f = 0
@@ -79,13 +80,19 @@ contains
       call print_splined_potential("potential_splined.dat", x_grid, grid_size)
    end subroutine initialize_spline
 
+   subroutine finalize_spline()
+      if (allocated(second_derivatives)) then
+         deallocate (second_derivatives)
+      end if
+   end subroutine
+
    subroutine read_grid(fname, x_grid, y_grid, grid_size)
       use mod_error, only: fatal_error
       use mod_general, only: my_rank
       character(len=*), intent(in) :: fname
       real(DP), dimension(:), intent(out) :: x_grid, y_grid
       integer, intent(out) :: grid_size
-      integer :: u
+      integer :: u, iost
 
       grid_size = 0
       if (my_rank == 0) then
@@ -97,10 +104,19 @@ contains
 
       open (newunit=u, file=fname, status='old', action='read')
       do
-         read (u, *, end=51) x_grid(grid_size + 1), y_grid(grid_size + 1)
+         read (u, *, iostat=iost) x_grid(grid_size + 1), y_grid(grid_size + 1)
+         if (iost < 0) then
+            exit
+         end if
+         if (iost > 0) then
+            call fatal_error(__FILE__, __LINE__, "Invalid line in file "//fname)
+         end if
          grid_size = grid_size + 1
+         if (grid_size == MAX_GRID_SIZE) then
+            call fatal_error(__FILE__, __LINE__, "Maximum grid points exceeded")
+         end if
       end do
-51    close (u)
+      close (u)
 
       if (grid_size < 3) then
          call fatal_error(__FILE__, __LINE__, "Invalid potential grid in file "//fname)

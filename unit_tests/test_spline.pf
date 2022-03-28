@@ -1,0 +1,140 @@
+! Testing functions for analytical potentials.
+module test_spline
+   use funit
+   use mod_const, only: DP
+   use mod_splined_grid
+   implicit none
+   character(len=*), parameter :: potfile = 'pot.dat'
+   integer, parameter :: NGRID = 3
+   real(DP) :: x_grid(NGRID), y_grid(NGRID)
+
+contains
+
+   @before
+   subroutine setup()
+      use mod_general, only: my_rank
+      integer :: u, i
+
+      potential_file = potfile
+      my_rank = -1
+      x_grid = (/ 0.0D0, 1.1D0, 1.3D0 /)
+      y_grid = (/ 2.0D0, 1.2D0, 1.5D0 /)
+
+      open (newunit=u, file=potfile, action='write')
+      do i = 1, NGRID
+         write (u, *) x_grid(i), y_grid(i)
+      end do
+      close (u)
+   end subroutine setup
+
+   @after
+   subroutine teardown()
+      integer :: u
+      call finalize_spline()
+      open (newunit=u, file=potfile)
+      close (u, status='delete')
+      open (newunit=u, file='potential_splined.dat')
+      close (u, status='delete')
+   end subroutine teardown
+
+   @test
+   subroutine test_bead_scaling()
+      integer, parameter :: NATOM = 1, NWALK = 3
+      real(DP), dimension(NATOM, NWALK) :: x, fx
+      real(DP), dimension(NATOM, 1) :: fx1
+      real(DP) :: eclas, eclas1
+      integer :: i
+
+      call initialize_spline(NATOM)
+
+      call random_number(x)
+      ! Scaling with number of beads
+      ! All beads have the same coordinates
+      x(1, :) = x(1, 1)
+
+      call force_splined_grid(x, fx, eclas, NWALK)
+      call force_splined_grid(x, fx1, eclas1, 1)
+
+      @assertEqual(eclas, eclas1, message='Energy independent of nwalk', tolerance=1E-15)
+      do i = 1, NWALK
+         @assertEqual(fx1(1, 1), fx(1, i), message='fx independent of nwalk', tolerance=1E-15)
+      end do
+   end subroutine
+
+   @test
+   subroutine test_grid_point_energies()
+      integer, parameter :: NATOM = 1, NWALK = 3
+      real(DP), dimension(NATOM, NWALK) :: x, fx
+      real(DP), dimension(NATOM, 1) :: fx1
+      real(DP) :: eclas
+      integer :: i
+
+      call initialize_spline(NATOM)
+
+      do i = 1, NGRID
+         x(1, :) = x_grid(i)
+         call force_splined_grid(x, fx, eclas, NWALK)
+         @assertEqual(eclas, y_grid(i), message='Energy at grid points', tolerance=1E-15)
+      end do
+   end subroutine
+
+   @test
+   subroutine test_initialize_spline_natom2()
+      integer :: natom
+
+      natom = 2
+      call initialize_spline(natom)
+      @assertExceptionRaised('Splined grid potential is only for 1 particle')
+   end subroutine
+
+   @test
+   subroutine test_grid_boundaries()
+      real(DP), dimension(1, 1) :: x, fx
+      real(DP) :: eclas
+
+      x = -10.0D0
+      call initialize_spline(1)
+      call force_splined_grid(x, fx, eclas, 1)
+      @assertExceptionRaised('Particle got out of the grid!')
+   end subroutine
+
+   @test
+   subroutine test_short_grid()
+      integer :: u
+
+      open (newunit=u, file=potfile, action='write')
+      write (u, *) 1.0D0, 2.0D0
+      write (u, *) 1.1D0, 1.3D0
+      close (u)
+      call initialize_spline(1)
+      @assertExceptionRaised('Invalid potential grid in file '//potfile)
+   end subroutine
+
+   ! TODO: This needs to throw before the FP exception
+   !@test
+   subroutine test_validate_grid_values()
+      integer :: u
+
+      open (newunit=u, file=potfile, action='write')
+      write (u, *) 1.0D0, 2.0D0
+      write (u, *) 1.1D0
+      close (u)
+      call initialize_spline(1)
+      !@assertExceptionRaised('Invalid potential grid in file '//potfile)
+   end subroutine
+
+   @test
+   subroutine test_invalid_grid()
+      integer :: u
+
+      open (newunit=u, file=potfile, action='write')
+      write (u, *) 1.0D0, 2.0D0
+      write (u, *) 2.0D0, 2.0D0
+      write (u, *) 3.0D0, 2.0D0
+      write (u, *) "bad"
+      close (u)
+      call initialize_spline(1)
+      @assertExceptionRaised('Invalid line in file '//potfile)
+   end subroutine
+
+end module test_spline

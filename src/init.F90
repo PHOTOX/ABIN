@@ -1188,11 +1188,10 @@ subroutine finish(error_code)
    use mod_lz, only: lz_finalize
    use mod_transform, only: finalize_normalmodes
    use mod_cp2k, only: finalize_cp2k
-
    use mod_plumed, only: iplumed, finalize_plumed
-
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
+   use mod_splined_grid, only: finalize_spline
 #ifdef USE_MPI
    use mpi
 #endif
@@ -1233,6 +1232,9 @@ subroutine finish(error_code)
       call lz_finalize()
    end if
 
+   if (pot == '_splined_grid_') then
+      call finalize_spline()
+   end if
    ! MPI_FINALIZE is called in this routine as well
    if (pot == '_cp2k_') then
       call finalize_cp2k()
