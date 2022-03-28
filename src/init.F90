@@ -489,11 +489,15 @@ subroutine init(dt)
 
    if (pot_ref /= '_none_') then
       md = 4
-      write (*, '(A)') 'Using Multiple Time-Step RESPA integrator!'
+      write (*, '(A)') 'Using Multiple Time-Step RESPA integrator'
       write (*, '(A)') "Reference (cheap) potential is "//trim(pot_ref)
       write (*, '(A, F6.2)') "with timestep [fs] ", dt / nstep_ref * AUtoFS
       write (*, '(A)') "Full potential is "//trim(pot)
       write (*, '(A, F6.2)') "with timestep [fs] ", dt * AUtoFS
+      if (ipimd /= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'ab initio MTS is implemented only for classical MD')
+      end if
    end if
 
    if (my_rank == 0) then
@@ -647,15 +651,15 @@ subroutine init(dt)
       call morse_init(natom, k_morse, r0_morse, d0_morse)
    end if
 
-   ! inames initialization for the MM part.
-   ! We do this also because string comparison is very costly
-   if (iqmmm == 3 .or. pot == 'mm') allocate (inames(natom))
-
-   if (iqmmm == 3 .or. pot == 'mm') then
+   if (pot == 'mm') then
+      ! TODO: Move this to a single subroutine in force_mm.F90
+      allocate (inames(natom))
       do iat = 1, MAXTYPES
          if (attypes(iat) == '') exit
          attypes(iat) = normalize_atom_name(attypes(iat))
       end do
+      ! inames initialization for the MM part.
+      ! We do this also because string comparison is very costly
       call inames_init()
       call ABr_init()
    end if
@@ -680,7 +684,7 @@ subroutine init(dt)
          write (*, nml=lz, delim='APOSTROPHE')
          write (*, *)
       end if
-      if (iqmmm == 3 .or. pot == 'mm') then
+      if (pot == 'mm') then
          write (*, nml=qmmm, delim='APOSTROPHE')
          write (*, *)
       end if
@@ -798,8 +802,8 @@ contains
          write (*, *) 'set nwalk > 1'
          error = 1
       end if
-      if (iqmmm < 0 .or. iqmmm > 3) then
-         write (*, *) 'Error: iqmmm must be 0, 1, 2 or 3.'
+      if (iqmmm < 0 .or. iqmmm > 1) then
+         write (*, *) 'Error: iqmmm must be 0 or 1 for ONIOM.'
          error = 1
       end if
       if (integ /= 'euler' .and. integ /= 'rk4' .and. integ /= 'butcher') then
@@ -1064,15 +1068,6 @@ contains
          write (*, *) 'SHAKE cannot use massive thermostating!'
          write (*, *) 'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
          error = 1
-      end if
-      if (pot == 'mm' .and. iqmmm > 0) then
-         write (*, *) 'Pot="mm"is not compatible with iqmmm>0!'
-         error = 1
-      end if
-      if (iqmmm > 1) then
-         write (*, *) 'WARNING: QMMM is higly experimental at this point. Use with care!'
-         write (*, *) chknow
-         if (iknow /= 1) error = 1
       end if
       if ((natmm + natqm /= natom) .and. iqmmm > 0) then
          write (*, *) 'Natmm+natqm not equal to natom!'

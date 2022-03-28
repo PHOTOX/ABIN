@@ -1,10 +1,10 @@
 &general
 irest=1,
+nstep=2,
 pot='mmwater'
 mdtype='MD',
 
 dt=20.,	
-nstep=2,
 irandom=53478953,
 
 nwrite=1,

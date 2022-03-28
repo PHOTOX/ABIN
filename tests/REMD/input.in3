@@ -3,7 +3,7 @@ iremd=1
 pot='mmwater'
 watpot=1
 mdtype='md'
-nstep=10,
+nstep=12,
 dt=40.,	
 irandom=131313,
 

@@ -196,7 +196,9 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 
       close (unit=MAXUNITS + iw, status='delete')
 
-      if (iqmmm == 1) call oniom(x, y, z, fx, fy, fz, eclas, iw)
+      if (iqmmm == 1) then
+         call oniom(x, y, z, fx, fy, fz, eclas, iw)
+      end if
 
    end do
 !$OMP END DO

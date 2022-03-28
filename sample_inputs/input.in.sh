@@ -16,7 +16,7 @@ nwritev=0,		! how often we print velocities?
 /
 
 &nhcopt
-inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, Langevin 3
+inose=0,		! NVE ensemble
 !temp=0.00,		! Usually, you would take initial velocities from WIGNER or set them to zero
 /
 
@@ -29,4 +29,3 @@ EnergyDifThr=0.50,      ! maximum energy difference between two consecutive step
 EnergyDriftThr=0.50,    ! maximum energy drift from initial total energy
 substep=100,		! number of substeps for solving ESCH
 /
-
