@@ -17,8 +17,8 @@ contains
 
       potential_file = potfile
       my_rank = -1
-      x_grid = (/ 0.0D0, 1.1D0, 1.3D0 /)
-      y_grid = (/ 2.0D0, 1.2D0, 1.5D0 /)
+      x_grid = (/0.0D0, 1.1D0, 1.3D0/)
+      y_grid = (/2.0D0, 1.2D0, 1.5D0/)
 
       open (newunit=u, file=potfile, action='write')
       do i = 1, NGRID

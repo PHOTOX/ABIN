@@ -44,7 +44,6 @@ contains
       ! Other values might conflict from hard-coded values defined above,
       ! so we just stop early in that case.
       if (ERROR_UNIT /= 0) then
-         print *, ERROR_UNIT, OUTPUT_UNIT
          call fatal_error(__FILE__, __LINE__, &
             & 'Non-standard stderr unit, compiler not supported')
       end if

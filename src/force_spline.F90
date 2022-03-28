@@ -31,7 +31,7 @@ contains
       real(DP), intent(out) :: eclas
       integer, intent(in) :: walkmax
       ! Displacement for numerical forces
-      real(DP), parameter:: DX = 0.0001D0
+      real(DP), parameter :: DX = 0.0001D0
       real(DP) :: en_1, en_2
       integer :: iw
 
