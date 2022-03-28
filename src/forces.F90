@@ -2,15 +2,12 @@
 ! Ab-initio programs are called from force_abin routine
 subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
    use mod_const, only: DP
-   use mod_general, only: natom, nwalk, istage, inormalmodes, iqmmm, &
-                          pot, pot_ref, idebug
-   use mod_force_mm, only: force_LJ_Coulomb
-   use mod_sbc, only: force_sbc, isbc !,ibag
+   use mod_general, only: natom, nwalk, istage, inormalmodes, &
+                          pot, pot_ref
    use mod_system, only: conatom
    use mod_nhc, only: inose
    use mod_transform
    use mod_interfaces, only: force_wrapper
-   use mod_plumed, only: iplumed, force_plumed
    implicit none
    real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
    real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
@@ -23,37 +20,27 @@ subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
    real(DP) :: fyab(size(fy, 1), size(fy, 2))
    real(DP) :: fzab(size(fz, 1), size(fz, 2))
    integer :: iat, iw
-   real(DP) :: eclas
+   real(DP) :: eclas, eclas_ref
 
-   do iw = 1, nwalk
-      do iat = 1, natom
-         fx(iat, iw) = 0.0D0
-         fy(iat, iw) = 0.0D0
-         fz(iat, iw) = 0.0D0
-         fxab(iat, iw) = 0.0D0
-         fyab(iat, iw) = 0.0D0
-         fzab(iat, iw) = 0.0D0
-      end do
-   end do
+   fx = 0.0D0
+   fy = 0.0D0
+   fz = 0.0D0
+   fxab = 0.0D0
+   fyab = 0.0D0
+   fzab = 0.0D0
 
    eclas = 0.0D0
 
    ! Back stage transformation, Cartesian coordinates are kept in trans
    ! matrices (even if staging is OFF!)
-   ! TODO: Rename transx to cart_x, cart_y, cart_z
    if (istage == 1) then
       call QtoX(x, y, z, transx, transy, transz)
    else if (inormalmodes > 0) then
-      if (idebug > 0) write (*, *) 'Transforming coordinates back to cartesian'
       call UtoX(x, y, z, transx, transy, transz)
    else
-      do iat = 1, natom
-         do iw = 1, nwalk
-            transx(iat, iw) = x(iat, iw)
-            transy(iat, iw) = y(iat, iw)
-            transz(iat, iw) = z(iat, iw)
-         end do
-      end do
+      transx = x
+      transy = y
+      transz = z
    end if
 
    ! TODO: wraping molecules back to the PBC box
@@ -68,41 +55,23 @@ subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
    ! The ab initio interface is still deeper in force_abin()
    call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, chpot, nwalk)
 
-   ! TODO: Change all one-line ifs to multiline to fix code coverage.
-
-   ! TODO: It would probably make sense to put the following additional forces
-   ! and QM/MM inside the force_wrapper as well.
-   ! Spherical harmonic potential
-   if (isbc == 1) call force_sbc(transx, transy, transz, fxab, fyab, fzab)
-
-   ! QMMM SECTION
-   ! ONIOM method (iqmmm=1) is called in force_abin
-   ! The following are not working at the moment
-   if (iqmmm == 3) call force_LJ_Coulomb(transx, transy, transz, fxab, fyab, fzab, eclas)
-
-   if (iplumed == 1) call force_plumed(transx, transy, transz, fxab, fyab, fzab, eclas)
-
-   ! For reference potential and ring-polymer contraction
+   ! For reference potential (ring-polymer contraction not yet implemented)
    if (pot_ref /= '_none_' .and. chpot == pot) then
       ! fxab now holds the full potential,
       ! but we need the difference force on the output
       fx = fxab; fy = fyab; fz = fzab
       fxab = 0.0D0; fyab = 0.0D0; fzab = 0.0D0
-      energy = eclas
-      eclas = 0.0D0
+      eclas_ref = 0.0D0
 
-      call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, pot_ref, nwalk)
-      if (isbc == 1) call force_sbc(transx, transy, transz, fxab, fyab, fzab)
-      if (iqmmm == 3) call force_LJ_Coulomb(transx, transy, transz, fxab, fyab, fzab, eclas)
-      if (iplumed == 1) call force_plumed(transx, transy, transz, fxab, fyab, fzab, eclas)
+      ! Calculate reference (cheap potential)
+      call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas_ref, pot_ref, nwalk)
 
       fxab = fx - fxab
       fyab = fy - fyab
       fzab = fz - fzab
       ! fxab now holds the difference force
       ! we return the difference forces, but full energy
-!      eclas = energy - eclas
-      eclas = energy
+      ! eclas = eclas - eclas_ref
    end if
 
    ! TRANSFORMING FORCES FROM CARTESIAN TO STAGING or NORMAL MODE COORDS
@@ -161,6 +130,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_general, only: natom, ipimd
    use mod_water, only: watpot
    use mod_force_mm, only: force_LJ_Coulomb
+   use mod_sbc, only: force_sbc, isbc
+   use mod_plumed, only: iplumed, force_plumed
    use mod_potentials, only: force_harmonic_rotor, force_harmonic_oscillator, force_morse, force_doublewell
    use mod_splined_grid
    use mod_cp2k, only: force_cp2k
@@ -183,7 +154,6 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    case ("mmwater")
       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
    case ("_splined_grid_")
-      ! Only 1D spline grid supported at the moment
       call force_splined_grid(x, fx, eclas)
    case ("_harmonic_rotor_")
       call force_harmonic_rotor(x, y, z, fx, fy, fz, eclas, walkmax)
@@ -205,6 +175,16 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
       call force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       eclas = eclas / walkmax
    end select
+
+   ! Spherical harmonic potential
+   if (isbc == 1) then
+      call force_sbc(x, y, z, fx, fy, fz, walkmax)
+   end if
+
+   ! External forces from PLUMED library
+   if (iplumed == 1) then
+      call force_plumed(x, y, z, fx, fy, fz, eclas)
+   end if
 
    e_pot = eclas
 end subroutine force_wrapper

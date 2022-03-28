@@ -17,9 +17,7 @@ nrest=5,		! how often we print restart files?
 nwritev=0,		! how often we print velocities?
 /
 
-
 &nhcopt
 temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
-inose=2,		! GLE  thermostat 2, needs GLE-A and GLE-C files
+inose=2,		! GLE thermostat 2, needs GLE-A and GLE-C files
 /
-

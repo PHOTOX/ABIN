@@ -23,4 +23,3 @@ tau0=0.001,		! relaxation time of NHC thermostat
 nrespnose=3,		! number of inner respa steps for NH thermostat
 nyosh=7,		! number of steps in suzuki-yoshida scheme,can be 1,3 or 7
 /
-

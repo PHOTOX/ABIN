@@ -16,7 +16,7 @@ contains
 
    subroutine sbc_init(x, y, z)
       use mod_const, only: ANG
-      use mod_general, only: natom !,nwalk
+      use mod_general, only: natom
       use mod_system, only: am, names
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP) :: r, rmax, xcm, ycm, zcm
@@ -75,13 +75,14 @@ contains
 
    end subroutine
 
-   subroutine force_sbc(x, y, z, fx, fy, fz)
+   subroutine force_sbc(x, y, z, fx, fy, fz, walkmax)
       use mod_const, only: ANG
-      use mod_general, only: natom, nwalk, it, nwrite
+      use mod_general, only: natom, it, nwrite
       use mod_system, only: names
       use mod_files, only: URADIUS
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
+      integer, intent(in) :: walkmax
       real(DP) :: r, frb, rmax, xcm, ycm, zcm
       integer :: iat, iw
 
@@ -93,8 +94,7 @@ contains
 
       ! write(*,*)'COM: ',xcm,ycm,zcm
 
-      ! kb_sbc and rb_sbc must be specified in input.in
-      do iw = 1, nwalk
+      do iw = 1, walkmax
          do iat = 1, natom
             r = (x(iat, iw) - xcm)**2 + (y(iat, iw) - ycm)**2 + (z(iat, iw) - zcm)**2
             r = dsqrt(r)
