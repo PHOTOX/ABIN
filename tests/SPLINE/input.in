@@ -28,4 +28,5 @@ potential_file="morse_potential.txt"
 &nhcopt
 inose=1,
 temp=300.0,
+tau0=0.001D0
 /

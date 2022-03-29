@@ -63,6 +63,13 @@ gle_EXTRA_USE := throw_with_pfunit_mod
 gle_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,gle))
 
+nhc_TESTS := test_nhc.pf
+nhc_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+nhc_OTHER_SRCS := throw_with_pfunit.F90
+nhc_EXTRA_USE := throw_with_pfunit_mod
+nhc_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,nhc))
+
 pot_TESTS := test_potentials.pf
 pot_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
 pot_OTHER_SRCS := throw_with_pfunit.F90
@@ -77,7 +84,7 @@ spline_EXTRA_USE := throw_with_pfunit_mod
 spline_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,spline))
 
-all : utils masses plumed fftw terapi gle pot spline
+all : utils masses plumed fftw terapi gle nhc pot spline
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
@@ -89,6 +96,7 @@ test : clean_plumed_output clean_terapi_output clean_gle_output
 	./fftw
 	./terapi
 	./gle
+	./nhc
 	./pot
 	./spline
 

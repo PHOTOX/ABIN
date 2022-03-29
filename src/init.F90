@@ -304,10 +304,10 @@ subroutine init(dt)
    end if
 
    if (irest == 1) then
-      readnhc = 1
+      readnhc = .true.
       scaleveloc = 0 !do not scale velocities when restarting a job
    else
-      readnhc = 0
+      readnhc = .false.
       scaleveloc = 1
    end if
 

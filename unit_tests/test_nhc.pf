@@ -1,0 +1,91 @@
+! Testing NHC thermostat
+module test_nhc
+   use funit
+   use mod_const, only: DP
+   use mod_nhc
+   implicit none
+   integer, parameter :: NAT = 2, NBEADS = 2
+
+contains
+
+   @before
+   subroutine setup()
+      use mod_general, only: natom, nwalk, my_rank
+      use mod_random, only: gautrg
+      real(DP) :: ran(1)
+      integer :: seed
+      tau0 = 0.001
+      inose = 1
+      temp = 100.0D0
+      natom = NAT
+      nwalk = NBEADS
+      my_rank = -1
+      nrespnose = 5
+      nyosh = 3
+      imasst = 1
+      nmolt = 1
+      call random_number(ran)
+      seed = int(ran(1) * 100000000)
+      call gautrg(ran, 0, seed)
+   end subroutine
+
+   @after
+   subroutine teardown()
+      call finalize_nhc()
+   end subroutine teardown
+
+   @test
+   subroutine test_nyosh()
+      nyosh = 2
+      call nhc_init()
+      @assertExceptionRaised("Invalid nyosh parameter. Allowed values are 1, 3 or 7")
+   end subroutine
+
+   @test
+   subroutine test_imasst()
+      imasst = 2
+      call nhc_init()
+      @assertExceptionRaised("parameter imasst must be 0 or 1")
+   end subroutine
+
+   @test
+   subroutine test_nmolt()
+      nmolt = 0
+      call nhc_init()
+      @assertExceptionRaised("parameter nmolt must be > 0")
+      call finalize_nhc()
+
+      nmolt = NAT + 1
+      call nhc_init()
+      @assertExceptionRaised("Invalid NHC thermostat parameter")
+   end subroutine
+
+   @test
+   subroutine test_inose()
+      inose = -1
+      call nhc_init()
+      @assertExceptionRaised("parameter inose must be >= 0")
+   end subroutine
+
+   @test
+   subroutine test_nhcham()
+      real(DP) :: nhcham
+      call nhc_init()
+      nhcham = get_nhcham(NAT, NBEADS)
+      @assertNotEqual(0.0D0, nhcham)
+   end subroutine
+
+   @test
+   subroutine test_nhc_temp()
+      real(DP) :: nhc_temp, nhc_temp1
+
+      call nhc_init()
+
+      nhc_temp = get_nhc_temp(NAT, NBEADS)
+      @assertNotEqual(0.0D0, nhc_temp)
+
+      nhc_temp1 = get_nhc_temp(1, 1)
+      @assertNotEqual(nhc_temp1, nhc_temp)
+   end subroutine
+
+end module test_nhc

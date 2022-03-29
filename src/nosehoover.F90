@@ -37,7 +37,7 @@ module mod_nhc
    ! Whether to read NHC params from the restart file
    ! Useful e.g. if we want to restart NVE simulation
    ! and turn on the thermostat.
-   integer :: readNHC = 1
+   logical :: readNHC = .true.
 
    ! Internal variables and arrays
    integer, parameter :: MAXCHAIN = 10
@@ -96,7 +96,8 @@ contains
    end function get_nhcham
 
    subroutine check_nhc_parameters()
-      use mod_general, only: natom, ipimd
+      use mod_utils, only: int_positive, int_nonnegative, int_switch, real_nonnegative
+      use mod_general, only: natom, ipimd, my_rank
       use mod_const, only: AUTOK
       use mod_error, only: fatal_error
       use mod_chars, only: chknow
@@ -104,40 +105,35 @@ contains
       integer :: imol, ipom, iat
       logical :: error
 
+      call int_nonnegative(inose, 'inose')
+      call int_positive(nchain, 'nchain')
+      call int_positive(nrespnose, 'nrespnose')
+      call int_positive(nmolt, 'nmolt')
+      call int_switch(imasst, 'imasst')
+      call real_nonnegative(temp, 'temp')
+
       error = .false.
       if (nchain > maxchain) then
          print*,'Maximum number of Nose-Hoover chains exceeded'
          error = .true.
       end if
-      if (nrespnose < 3 .and. inose == 1) then
+      if (nrespnose < 3) then
          write (*, *) 'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
          write (*, *) 'Such low value would probably not produce stable results.'
          write (*, *) chknow
          if (iknow /= 1) error = .true.
       end if
-      if (nrespnose <= 0) then
-         write (*, *) 'Variable nrespnose must be positive integer'
-         error = .true.
-      end if
-      if (nyosh <= 1 .and. inose == 1) then
+      if (nyosh == 1) then
          write (*, *) 'It is strongly reccommended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh=3 or 7).'
-         write (*, *) iknow, error, chknow
+         write (*, *) chknow
          if (iknow /= 1) error = .true.
-      end if
-      if (imasst /= 0 .and. imasst /= 1) then
-         write (*, *) 'Input error: imasst must be 1 or zero.'
-         error = .true.
       end if
       if (imasst == 0 .and. ipimd == 1) then
          write (*, *) 'PIMD simulations must use massive thermostat (imasst=1)!'
          error = .true.
       end if
-      if (imasst == 0 .and. nmolt <= 0) then
-         write (*, *) 'Number of molecules coupled to separate NH chains not specified! Set nmolt > 0.'
-         error = .true.
-      end if
       if (nmolt > natom) then
-         write (*, *) 'Input error: nmolt > natom, which is not possible. Consult the manual.'
+         if (my_rank == 0) print*,'Input error: nmolt > natom, which is not possible. Consult the manual.'
          error = .true.
       end if
       if (imasst == 0) then
@@ -148,7 +144,7 @@ contains
             end if
          end do
       end if
-      if (inose == 1 .and. imasst == 0) then
+      if (imasst == 0) then
          ipom = 0
          do iat = 1, nmolt
             ipom = ipom + natmolt(iat)
@@ -174,7 +170,6 @@ contains
    subroutine nhc_init()
       use mod_general, only: my_rank
 
-      print*,''
       if (imasst == 1) then
          if (my_rank == 0) print*,'Initializing massive Nosé-Hoover Chain thermostat'
       else
@@ -223,6 +218,7 @@ contains
       integer :: iw
 
       allocate (Qm(nwalk))
+      Qm = 0.0D0
       do iw = 1, nwalk
          Qm(iw) = nhc_mass
       end do
@@ -258,6 +254,7 @@ contains
       integer :: imol, inh
 
       allocate (ms(nmolt, nchain))
+      ms = 0.0D0
 
       do imol = 1, nmolt
          ms(imol, 1) = (dime * natmolt(imol) - nshakemol(imol)) * mass

@@ -379,7 +379,7 @@ contains
          call lz_restin(111, x, y, z, vx, vy, vz)
       end if
 
-      if (inose == 1 .and. readNHC == 1) then
+      if (inose == 1 .and. readNHC) then
          read (111, '(A)') chtemp
          call checkchar(chtemp, chnose)
          call nhc_restin(111)

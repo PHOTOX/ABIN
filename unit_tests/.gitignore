@@ -14,5 +14,6 @@ plumed.out
 fftw
 plumed_*.dat
 gle
+nhc
 pot
 spline

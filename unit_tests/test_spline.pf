@@ -65,7 +65,6 @@ contains
    subroutine test_grid_point_energies()
       integer, parameter :: NATOM = 1, NWALK = 3
       real(DP), dimension(NATOM, NWALK) :: x, fx
-      real(DP), dimension(NATOM, 1) :: fx1
       real(DP) :: eclas
       integer :: i
 
