@@ -20,6 +20,7 @@ idebug=1,
 &nhcopt
 inose=1,
 temp=298.15,
+tau0=0.001D0
 /
 
 &system

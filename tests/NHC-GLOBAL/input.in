@@ -20,4 +20,5 @@ inose=1,
 imasst=0,
 nyosh=3,
 temp=298.15,
+tau0=0.001D0
 /

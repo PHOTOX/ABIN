@@ -15,4 +15,5 @@ nrest=10,
 &nhcopt
 temp=200.
 inose=1
+tau0=0.001D0
 /

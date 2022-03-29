@@ -163,7 +163,7 @@ contains
 
       if (error) then
          call fatal_error(__FILE__, __LINE__, &
-            'Invalid NHC thermostat parameter')
+            & 'Invalid NHC thermostat parameter')
       end if
    end subroutine check_nhc_parameters
 
@@ -341,7 +341,7 @@ contains
          w(4) = 1 - w(1) - w(2) - w(3) - w(5) - w(6) - w(7)
       case default
          call fatal_error(__FILE__, __LINE__, &
-            'Invalid nyosh parameter. Allowed values are 1, 3 or 7')
+            & 'Invalid nyosh parameter. Allowed values are 1, 3 or 7')
       end select
    end subroutine set_yoshida_weights
 
