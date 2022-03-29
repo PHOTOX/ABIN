@@ -214,7 +214,7 @@ contains
       integer :: ist1, ist2, iat, itrj
       integer :: iunit1
       logical :: file_exists
-      character(len=*), parameter :: restart_file='restart_sh.bin'
+      character(len=*), parameter :: restart_file = 'restart_sh.bin'
       character(len=200) :: chsystem
 
       inquire (FILE=restart_file, EXIST=file_exists)
@@ -266,7 +266,7 @@ contains
       use mod_general, only: it
       use mod_qmmm, only: natqm
       use mod_utils, only: archive_file
-      character(len=*), parameter :: restart_file='restart_sh.bin'
+      character(len=*), parameter :: restart_file = 'restart_sh.bin'
       integer :: iost, ist1, ist2, iat, itrj
       integer :: iunit1
       logical :: file_exists

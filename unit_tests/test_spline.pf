@@ -107,11 +107,13 @@ contains
       write (u, *) 1.1D0, 1.3D0
       close (u)
       call initialize_spline(1)
-      @assertExceptionRaised('Invalid potential grid in file '//potfile)
+      @assertExceptionRaised('Grid must contain at least 3 points')
    end subroutine
 
    ! TODO: This needs to throw before the FP exception
-   !@test
+   ! For some reason, missing y-value does not trip the read statement. :-(
+   @test
+   @disable
    subroutine test_validate_grid_values()
       integer :: u
 
@@ -120,11 +122,11 @@ contains
       write (u, *) 1.1D0
       close (u)
       call initialize_spline(1)
-      !@assertExceptionRaised('Invalid potential grid in file '//potfile)
+      @assertExceptionRaised('Invalid potential grid in file '//potfile)
    end subroutine
 
    @test
-   subroutine test_invalid_grid()
+   subroutine test_invalid_line()
       integer :: u
 
       open (newunit=u, file=potfile, action='write')
@@ -135,6 +137,19 @@ contains
       close (u)
       call initialize_spline(1)
       @assertExceptionRaised('Invalid line in file '//potfile)
+   end subroutine
+
+   @test
+   subroutine test_nonmonotonic_grid()
+      integer :: u
+
+      open (newunit=u, file=potfile, action='write')
+      write (u, *) 3.0D0, 2.0D0
+      write (u, *) 2.0D0, 2.0D0
+      write (u, *) 4.0D0, 2.0D0
+      close (u)
+      call initialize_spline(1)
+      @assertExceptionRaised('grid x values do not increase monotonically')
    end subroutine
 
 end module test_spline

@@ -71,6 +71,8 @@ contains
 
       call read_grid(potential_file, x_grid, y_grid, grid_size)
 
+      call validate_grid(x_grid, grid_size)
+
       allocate (second_derivatives(grid_size))
 
       yp1 = 1E31
@@ -109,18 +111,38 @@ contains
             exit
          end if
          if (iost > 0) then
+            close (u)
             call fatal_error(__FILE__, __LINE__, "Invalid line in file "//fname)
+            return
          end if
          grid_size = grid_size + 1
          if (grid_size == MAX_GRID_SIZE) then
+            close (u)
             call fatal_error(__FILE__, __LINE__, "Maximum grid points exceeded")
          end if
       end do
       close (u)
 
-      if (grid_size < 3) then
-         call fatal_error(__FILE__, __LINE__, "Invalid potential grid in file "//fname)
+   end subroutine
+
+   subroutine validate_grid(x_grid, ngrid)
+      use mod_error, only: fatal_error
+      real(DP), dimension(ngrid), intent(in) :: x_grid
+      integer, intent(in) :: ngrid
+      integer :: i
+
+      if (ngrid < 3) then
+         call fatal_error(__FILE__, __LINE__, "Grid must contain at least 3 points")
+         return
       end if
+
+      do i = 1, ngrid - 1
+         if (x_grid(i + 1) <= x_grid(i)) then
+            call fatal_error(__FILE__, __LINE__, &
+               & "grid x values do not increase monotonically")
+            return
+         end if
+      end do
    end subroutine
 
    subroutine print_splined_potential(fname, x_grid, grid_size)
