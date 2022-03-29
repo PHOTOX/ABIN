@@ -62,7 +62,7 @@ contains
    subroutine harmonic_oscillator_init(natom, kx, ky, kz, vx, vy, vz)
       use mod_error, only: fatal_error
       use mod_general, only: irest
-      use mod_utils, only: check_real_nonnegative
+      use mod_utils, only: real_nonnegative
       use mod_system, only: dime, f
       integer, intent(in) :: natom
       real(DP), intent(in) :: kx, ky, kz
@@ -73,9 +73,9 @@ contains
             & 'Harmonic potential is only for 1 particle')
       end if
 
-      call check_real_nonnegative(kx, 'kx')
-      call check_real_nonnegative(ky, 'ky')
-      call check_real_nonnegative(kz, 'kz')
+      call real_nonnegative(kx, 'kx')
+      call real_nonnegative(ky, 'ky')
+      call real_nonnegative(kz, 'kz')
       ho = harm_osc_params(kx=kx, ky=ky, kz=kz)
 
       ! Zero-out velocity in inactive dimensions
@@ -149,7 +149,7 @@ contains
 
    subroutine doublewell_init(natom, lambda, d0, k, r0, vy, vz)
       use mod_error, only: fatal_error
-      use mod_utils, only: check_real_nonnegative
+      use mod_utils, only: real_nonnegative
       use mod_system, only: dime, f
       integer, intent(in) :: natom
       real(DP), intent(in) :: lambda
@@ -163,8 +163,8 @@ contains
             & 'Double-well potential is only for 1 particle')
       end if
 
-      call check_real_nonnegative(k, 'k_dw')
-      call check_real_nonnegative(d0, 'd0_dw')
+      call real_nonnegative(k, 'k_dw')
+      call real_nonnegative(d0, 'd0_dw')
 
       dw = dw_params(lambda=lambda, k=k, d0=d0, r0=r0)
 
@@ -201,7 +201,7 @@ contains
    ! Diatomic molecule bound by harmonic potential
    subroutine harmonic_rotor_init(natom, k, r0)
       use mod_error, only: fatal_error
-      use mod_utils, only: check_real_positive
+      use mod_utils, only: real_positive
       integer, intent(in) :: natom
       real(DP), intent(in) :: k, r0
 
@@ -210,8 +210,8 @@ contains
             & 'Harmonic rotor is only for 2 particles')
       end if
 
-      call check_real_positive(k, 'k')
-      call check_real_positive(r0, 'r0')
+      call real_positive(k, 'k')
+      call real_positive(r0, 'r0')
 
       hrot = harm_rotor_params(k=k, r0=r0)
    end subroutine harmonic_rotor_init
@@ -299,7 +299,7 @@ contains
    ! Here we actually use the harmonic constant as an input parameter.
    subroutine morse_init(natom, k_morse, r0, d0)
       use mod_error, only: fatal_error
-      use mod_utils, only: check_real_positive
+      use mod_utils, only: real_positive
       integer, intent(in) :: natom
       real(DP), intent(in) :: k_morse, r0, d0
       real(DP) :: a
@@ -309,9 +309,9 @@ contains
             & 'Morse potential is only for 2 particles')
       end if
 
-      call check_real_positive(k_morse, 'k_morse')
-      call check_real_positive(d0, 'd0_morse')
-      call check_real_positive(r0, 'r0_morse')
+      call real_positive(k_morse, 'k_morse')
+      call real_positive(d0, 'd0_morse')
+      call real_positive(r0, 'r0_morse')
 
       a = dsqrt(k_morse / 2.0D0 / d0)
       morse = morse_params(d0=d0, a=a, r0=r0)

@@ -59,9 +59,11 @@ subroutine init(dt)
    real(DP) :: r0_morse = -1, d0_morse = -1, k_morse = -1
    real(DP) :: k = -1, r0 = -1
    real(DP) :: kx = -1, ky = -1, kz = -1
+   ! Initial temperature (read from namelist nhcopt)
+   real(DP) :: temp0 = -1
    real(DP) :: masses(MAXTYPES)
    real(DP) :: rans(10)
-   integer :: ipom, iw, iat, natom_xyz, imol, iost
+   integer :: ipom, iw, iat, natom_xyz, iost
    integer :: shiftdihed
    ! Number of OpenMP processes, read from ABIN input
    ! WARNING: We do NOT use OMP_NUM_THREADS environment variable!
@@ -106,8 +108,8 @@ subroutine init(dt)
 
    namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
 
-   namelist /nhcopt/ inose, temp, temp0, nchain, ams, tau0, tau0_langevin, imasst, nrespnose, nyosh, &
-      scaleveloc, readNHC, initNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel, gle_test
+   namelist /nhcopt/ inose, temp, temp0, nchain, tau0, tau0_langevin, imasst, nrespnose, nyosh, &
+      scaleveloc, readNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel, gle_test
 
    namelist /system/ masses, massnames, ndist, dist1, dist2, &
       nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &
@@ -302,12 +304,10 @@ subroutine init(dt)
    end if
 
    if (irest == 1) then
-      readnhc = 1 !readnhc has precedence before initNHC
-      initNHC = 0 !i.e. if(readnhc.eq.1.and.initNHC.eq.1)
+      readnhc = .true.
       scaleveloc = 0 !do not scale velocities when restarting a job
-   else !then nhc momenta from restart.xyz will be used
-      readnhc = 0
-      initNHC = 1
+   else
+      readnhc = .false.
       scaleveloc = 1
    end if
 
@@ -401,10 +401,8 @@ subroutine init(dt)
    ! TODO: rename this function
    call init_mass(amg, amt)
 
-#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4
    allocate (natmolt(natom))
    allocate (nshakemol(natom))
-#endif
    natmolt = 0
    natmolt(1) = natom ! default for global NHC thermostat
    nshakemol = 0
@@ -728,51 +726,17 @@ contains
       end if
 
       if (irest == 1 .and. chveloc /= '') then
-         !   write(*,*)'ERROR: Input velocities are not compatible with irest=1.'
-         write (*, *) 'WARNING: Input velocities from file'//trim(chveloc)//' will be ignored!'
+         write (*, *) 'WARNING: Input velocities from file '//trim(chveloc)//' will be ignored!'
          write (*, *) 'Velocities will be taken from restart file because irest=1.'
-         !   write(*,*)chknow
-         !   if(iknow.ne.1) error=1
       end if
 
-      !-----Check, whether input variables don't exceeds array limits
-      if (ntraj > ntrajmax) then
-         write (*, *) 'Maximum number of trajectories is:'
-         write (*, *) ntrajmax
-         write (*, *) 'Adjust variable ntrajmax in modules.f90'
-         error = 1
-      end if
       if (nstate > nstmax) then
          write (*, *) 'Maximum number of states is:'
          write (*, *) nstmax
          write (*, *) 'Adjust variable nstmax in modules.f90'
          error = 1
       end if
-      if (nchain > maxchain) then
-         write (*, *) 'Maximum number of Nose-Hoover chains is:'
-         write (*, *) maxchain
-         write (*, *) 'Adjust variable maxchain in modules.f90'
-         error = 1
-      end if
-      if (ndist >= ndistmax) then
-         write (*, *) 'Maximum number of bonds for printing is:'
-         write (*, *) ndistmax
-         write (*, *) 'Adjust variable ndistmax in modules.f90'
-         error = 1
-      end if
-      if (nang >= ndistmax) then
-         write (*, *) 'Maximum number of angles (nang) for printing is:'
-         write (*, *) ndistmax
-         write (*, *) 'Adjust variable ndistmax in modules.f90'
-         error = 1
-      end if
-      if (ndih >= ndistmax) then
-         write (*, *) 'Maximum number of dihedral angles (ndih) for printing is:'
-         write (*, *) ndistmax
-         write (*, *) 'Adjust variable ndistmax in modules.f90'
-         error = 1
-      end if
-!----------HERE we check for errors in input.
+
       if (pot /= '_cp2k_') then
          if (nproc > nwalk) then
             write (*, *) 'ERROR: Nproc greater than nwalk. That does not make sense.'
@@ -804,7 +768,7 @@ contains
          error = 1
       end if
       if (integ /= 'euler' .and. integ /= 'rk4' .and. integ /= 'butcher') then
-         write (*, *) 'integ must be "euler","rk4" or "butcher".'
+         write (*, *) 'integ must be "euler", "rk4" or "butcher".'
          error = 1
       end if
       if (integ /= 'butcher') then
@@ -891,15 +855,13 @@ contains
       end if
 
       if (ipimd == 1 .and. inose <= 0) then
-         write (*, *) 'You have to use thermostat with PIMD!(inose>=0)'
+         write (*, *) 'You have to use thermostat with PIMD! (inose>=0)'
          write (*, *) chknow
          if (iknow /= 1) error = 1
       end if
-      if (ipimd < 0 .or. ipimd > 3) then
-         if (ipimd /= 5) then
-            write (*, *) 'ipimd has to be 0,1,2 or 3.'
-            error = 1
-         end if
+      if (ipimd < 0 .or. ipimd > 5) then
+         write (*, *) 'Invalid ipimd value'
+         error = 1
       end if
       if (ipimd == 5 .and. pot == '_tera_' .and. ntriplet_lz > 0) then
          write (*, *) 'ERROR: Landau-Zener with Singlet-Triplet transitions not implemented with TeraChem over MPI.'
@@ -916,13 +878,6 @@ contains
       if (inormalmodes < 0 .and. inormalmodes > 2) then
          write (*, *) 'ERROR: inormalmodes has to be 0, 1 or 2!'
          error = 1
-      end if
-      if (readnhc == 1 .and. initNHC == 1 .and. irest == 1) then
-         write (*, *) 'Warning: Conflicting keywords readnhc and initNHC set to 1.'
-         write (*, *) 'Momenta from restart.xyz will be used.'
-      end if
-      if (readnhc == 1 .and. irest == 0) then
-         write (*, *) 'Ignoring readnhc=1 since irest=0.'
       end if
       if (inac > 2 .or. inac < 0) then
          write (*, *) 'Parameter "inac" must be 0,1 or 2.' !be very carefull if you change this!
@@ -989,34 +944,6 @@ contains
          write (*, *) 'nac_accu1 < nac_accu2'
          write (*, *) 'I will compute NACME only with default accuracy:', nac_accu1
       end if
-      if (imasst /= 0 .and. imasst /= 1) then
-         write (*, *) 'Input error: imasst must be 1 or zero.'
-         error = 1
-      end if
-      if (imasst == 0 .and. ipimd == 1) then
-         write (*, *) 'PIMD simulations must use massive thermostat ( imasst=1)! '
-         error = 1
-      end if
-      if (imasst == 0 .and. nmolt <= 0) then
-         write (*, *) 'Number of molecules coupled to separate NH chains not specified!Set nmolt > 0.'
-         error = 1
-      end if
-      if (nmolt > natom) then
-         write (*, *) 'Input error: nmolt > natom, which is not possible. Consult the manual.'
-         error = 1
-      end if
-      if (imasst == 0) then
-         do imol = 1, nmolt
-            if (natmolt(imol) <= 0) then
-               write (*, *) 'Number of atoms in molecules not specified! Set array natmolt properly.'
-               error = 1
-            end if
-         end do
-      end if
-      if (inose < 0 .and. inose > 3) then
-         write (*, *) 'inose has to be 0,1,2 or 3.'
-         error = 1
-      end if
       if (istage == 1 .and. ipimd /= 1) then
          write (*, *) 'The staging transformation is only meaningful for PIMD'
          error = 1
@@ -1026,31 +953,12 @@ contains
          error = 1
       end if
       if (istage == 0 .and. ipimd == 1 .and. inose /= 2 .and. inormalmodes == 0) then
-         write (*, *) 'PIMD should be done with staging or normal mode transformation! Exiting...'
+         write (*, *) 'PIMD should be done with staging or normal mode transformation!'
          write (*, *) chknow
          if (iknow /= 1) error = 1
       end if
       if (istage == 1 .and. inose == 2) then
          write (*, *) 'The staging transformation is not compatible with GLE thermostat.'
-         error = 1
-      end if
-      if (nyosh /= 1 .and. nyosh /= 3 .and. nyosh /= 7) then
-         write (*, *) 'Variable nyosh(order of Suzuki-Yoshiga scheme) must be 1,3 or 7'
-         error = 1
-      end if
-      if (nyosh <= 1 .and. inose == 1) then
-         write (*, *) 'It is strongly reccommended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh=3 or 7).'
-         write (*, *) iknow, error, chknow
-         if (iknow /= 1) error = 1
-      end if
-      if (nrespnose < 3 .and. inose == 1) then
-         write (*, *) 'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
-         write (*, *) 'Such low value would probably not produce stable results.'
-         write (*, *) chknow
-         if (iknow /= 1) error = 1
-      end if
-      if (nrespnose <= 0) then
-         write (*, *) 'Variable nrespnose must be positive integer'
          error = 1
       end if
       if (irest /= 1 .and. irest /= 0) then
@@ -1069,26 +977,6 @@ contains
       if ((natmm + natqm /= natom) .and. iqmmm > 0) then
          write (*, *) 'Natmm+natqm not equal to natom!'
          error = 1
-      end if
-
-      if (inose == 1 .and. imasst == 0) then
-         ipom = 0
-         do iat = 1, nmolt
-            ipom = ipom + natmolt(iat)
-         end do
-         if (ipom /= natom) then
-            write (*, *) 'Number of atoms in thermostated molecules(natmolt) doesnt match with natom.'
-            write (*, *) 'This is probably mistake in input.Exiting...'
-            write (*, *) chknow
-            if (iknow /= 1) error = 1
-         end if
-      end if
-
-      if (temp < 1 .and. inose >= 1) then
-         write (*, *) 'WARNING!:Temperature below 1K. Are you sure?'
-         write (*, *) 'This is probably mistake in input.Exiting...'
-         write (*, *) chknow
-         if (iknow /= 1) error = 1
       end if
 
       if (iremd == 1) then

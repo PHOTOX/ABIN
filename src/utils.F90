@@ -310,22 +310,52 @@ contains
       end do
    end function ekin_p
 
-   subroutine check_real_nonnegative(a, varname)
+   subroutine real_nonnegative(a, varname)
       real(DP), intent(in) :: a
       character(len=*), intent(in) :: varname
       if (a < 0.0D0) then
          call fatal_error(__FILE__, __LINE__, &
             & 'parameter '//varname//' must be >= 0.0')
       end if
-   end subroutine check_real_nonnegative
+   end subroutine real_nonnegative
 
-   subroutine check_real_positive(a, varname)
+   subroutine real_positive(a, varname)
       real(DP), intent(in) :: a
       character(len=*), intent(in) :: varname
       if (a <= 0.0D0) then
          call fatal_error(__FILE__, __LINE__, &
             & 'parameter '//varname//' must be > 0.0')
       end if
-   end subroutine check_real_positive
+   end subroutine real_positive
+
+   subroutine int_nonnegative(i, varname)
+      integer, intent(in) :: i
+      character(len=*), intent(in) :: varname
+
+      if (i < 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'parameter '//varname//' must be >= 0')
+      end if
+   end subroutine int_nonnegative
+
+   subroutine int_positive(i, varname)
+      integer, intent(in) :: i
+      character(len=*), intent(in) :: varname
+
+      if (i <= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'parameter '//varname//' must be > 0')
+      end if
+   end subroutine int_positive
+
+   subroutine int_switch(i, varname)
+      integer, intent(in) :: i
+      character(len=*), intent(in) :: varname
+
+      if (i /= 0 .and. i /= 1) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'parameter '//varname//' must be 0 or 1')
+      end if
+   end subroutine int_switch
 
 end module mod_utils

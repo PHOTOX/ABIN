@@ -1,6 +1,3 @@
-This is a sample input file for ABIN 
-NOTE: order of input sections matters!!
-
 &general
 pot='mmwater'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
 ipimd=0,		!classical simulation 0, quantum simulation 1
@@ -53,15 +50,5 @@ nchain=4,		! number of nose-hoover chains
 temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 nyosh=7,
 nrespnose=3
+tau0=0.001D0
 /
-
-&nab
-ipbc=0,		! turns on periodic boundary conditions
-cutoff=100.0,	! non-bonded cutoff (both LJ and coulomb)
-nsnb=100,	!update non-bonded list every nsnb steps	
-ips=0,		!isotropic periodic sum 1-both LJ and coul, 2-coul 3- LJ
-
-alpha_pme=0,	! parameter for ewald(TO DO)
-kappa_pme=0,	! parameter for ewald(TO DO)
-/
-

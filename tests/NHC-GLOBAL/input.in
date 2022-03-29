@@ -1,10 +1,10 @@
 &general
 irest=0,
-nstep=1,
 pot='mmwater'
 mdtype='MD',
 
 dt=20.,	
+nstep=1,
 irandom=53478953,
 
 nwrite=1,
@@ -16,7 +16,9 @@ idebug=1,
 /
 
 &nhcopt
-inose=0,
+inose=1,
+imasst=0,
+nyosh=3,
 temp=298.15,
 tau0=0.001D0
 /

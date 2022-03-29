@@ -3,6 +3,10 @@ module mod_vinit
    implicit none
    private
    public :: vinit, scalevelocities, remove_rotations, remove_comvel, constrainP
+   ! This parameter is read from namelist nhcopt
+   public :: scaleveloc
+   ! Whether to scale velocities to target temperature
+   integer :: scaleveloc
 contains
 !------------------------------------------------------------------------
 !
@@ -76,7 +80,7 @@ contains
       use mod_const, only: autok
       use mod_general, only: natom, nwalk, my_rank
       use mod_system, only: dime, f, conatom
-      use mod_nhc, only: scaleveloc, temp
+      use mod_nhc, only: temp
       use mod_kinetic, only: ekin_v
       use mod_shake, only: nshake
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
@@ -136,7 +140,7 @@ contains
 
          ! Shift velocities such that momentum of center of mass is zero
          if (lremove) then
-            if (my_rank == 0) write (*, *) 'Removing center of mass velocity.'
+            if (my_rank == 0 .and. iw == 1) write (*, *) 'Removing center of mass velocity.'
             do iat = 1, natom
                vx(iat, iw) = vx(iat, iw) - vcmx
                vy(iat, iw) = vy(iat, iw) - vcmy
