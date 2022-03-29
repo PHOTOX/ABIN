@@ -108,14 +108,14 @@ contains
       call send_natom(natmm_tera)
 
       if (idebug > 1) then
-         write (6, '(a)') 'Sending charges: '
+         print '(a)', 'Sending charges: '
       end if
       call MPI_Send(mmcharges, natmm_tera, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
       ! Send MM point charge coordinate array
       if (idebug > 1) then
-         write (6, '(a)') 'Sending MM coordinates...'
+         print '(a)', 'Sending MM coordinates...'
       end if
       do iat = 1, natmm_tera
          coords(1, iat) = x(iat + natqm, iw) / ANG
@@ -128,6 +128,7 @@ contains
 #endif
 
    subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm)
+      use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
       use mod_const, only: ANG
       use mod_general, only: idebug, it, nwrite
       use mod_io, only: print_charges, print_dipoles
@@ -149,8 +150,8 @@ contains
       ! Begin receiving data from TeraChem
 
       if (idebug > 2) then
-         write (6, '(a)') 'Waiting to receive energy from TeraChem...'
-         call flush (6)
+         print '(a)', 'Waiting to receive energy from TeraChem...'
+         call flush (OUTPUT_UNIT)
       end if
       call MPI_Recv(escf, 1, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
                   & MPI_ANY_TAG, tc_comm, status, ierr)
@@ -162,12 +163,12 @@ contains
          call abinerror('force_tera')
       end if
       if (idebug > 1) then
-         write (6, '(A,ES15.6)') 'Received SCF energy from server:', escf
-         call flush (6)
+         print '(A,ES15.6)', 'Received SCF energy from server:', escf
+         call flush (OUTPUT_UNIT)
       end if
 
       if (idebug > 2) then
-         write (6, '(a)') 'Waiting to receive charges...'
+         print '(a)', 'Waiting to receive charges...'
       end if
       call MPI_Recv(qmcharges(:), natqm, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
                    & MPI_ANY_TAG, tc_comm, status, ierr)
@@ -178,7 +179,7 @@ contains
       end if
 
       if (idebug > 2) then
-         write (6, '(a)') 'Waiting to receive dipole moment...'
+         print '(a)', 'Waiting to receive dipole moment...'
       end if
       ! QM dipole moment
       call MPI_Recv(dipmom(:, 1), 4, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
@@ -186,8 +187,8 @@ contains
       call handle_mpi_error(ierr)
       call check_recv_count(status, 4, MPI_DOUBLE_PRECISION)
       if (idebug > 1) then
-         write (6, '(a,4es15.6)') 'Received QM  dipole moment from server:', dipmom(:, 1)
-         call flush (6)
+         print '(a,4es15.6)', 'Received QM  dipole moment from server:', dipmom(:, 1)
+         call flush (OUTPUT_UNIT)
       end if
       ! TODO: Attach dipoles to global electronic structure type
       ! and print them elsewhere. Right now when we run concurrent
@@ -209,11 +210,11 @@ contains
       call handle_mpi_error(ierr)
       call check_recv_count(status, 3 * natqm, MPI_DOUBLE_PRECISION)
       if (idebug > 1) then
-         write (6, '(A)') 'Received the following gradients from server:'
+         print '(A)', 'Received the following gradients from server:'
          do iat = 1, natqm
-            write (6, *) 'Atom ', iat, ': ', dxyz_all(:, iat)
+            print '(A)', 'Atom ', iat, ': ', dxyz_all(:, iat)
          end do
-         call flush (6)
+         call flush (OUTPUT_UNIT)
       end if
 
       do iat = 1, natqm

@@ -1,5 +1,6 @@
 ! Common subroutines for MPI interface with TeraChem
 module mod_terampi
+   use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
    use mod_const, only: DP
 #ifdef USE_MPI
    use mpi
@@ -118,7 +119,7 @@ contains
 
       write (6, '(2A)') 'Found TeraChem port: ', trim(port_name)
       write (6, '(A)') 'Establishing connection...'
-      call flush (6)
+      call flush (OUTPUT_UNIT)
 
       ! Establish new communicator via port name
       call MPI_Comm_connect(trim(port_name), MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
@@ -150,7 +151,7 @@ contains
       port_name = ''
 
       write (*, '(2A)') 'Looking up TeraChem server under name:', server_name
-      call flush (6)
+      call flush (OUTPUT_UNIT)
 
       timer = MPI_WTIME()
 
@@ -367,7 +368,7 @@ contains
       ! Send natqm and the type of each qmatom
       if (idebug > 1) then
          write (6, '(A, I0)') 'Sending number of atoms  = ', num_atom
-         call flush (6)
+         call flush (OUTPUT_UNIT)
       end if
       call MPI_Send(num_atom, 1, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
@@ -401,7 +402,7 @@ contains
       if (idebug > 1) then
          write (6, '(A)') 'Sending QM atom types: '
          write (*, '(A)') trim(buffer)
-         call flush (6)
+         call flush (OUTPUT_UNIT)
       end if
 
       call MPI_Send(buffer, num_char, MPI_CHARACTER, 0, TC_TAG, tc_comm, ierr)
@@ -444,7 +445,7 @@ contains
          write (6, '(A)') 'Sending QM coords: '
          do iat = 1, num_atom
             write (6, *) 'Atom ', iat, ': ', coords(:, iat)
-            call flush (6)
+            call flush (OUTPUT_UNIT)
          end do
       end if
       call MPI_Send(coords, num_atom * 3, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)

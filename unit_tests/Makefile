@@ -68,9 +68,16 @@ pot_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_pote
 pot_OTHER_SRCS := throw_with_pfunit.F90
 pot_EXTRA_USE := throw_with_pfunit_mod
 pot_EXTRA_INITIALIZE := initialize_throw
-
 $(eval $(call make_pfunit_test,pot))
-all : utils masses plumed fftw terapi gle pot
+
+spline_TESTS := test_spline.pf
+spline_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+spline_OTHER_SRCS := throw_with_pfunit.F90
+spline_EXTRA_USE := throw_with_pfunit_mod
+spline_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,spline))
+
+all : utils masses plumed fftw terapi gle pot spline
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
@@ -83,10 +90,11 @@ test : clean_plumed_output clean_terapi_output clean_gle_output
 	./terapi
 	./gle
 	./pot
+	./spline
 
 clean : clean_plumed_output clean_terapi_output clean_gle_output
-	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90
-	/bin/rm -f masses utils plumed fftw terapi gle pot
+	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 ERROR
+	/bin/rm -f masses utils plumed fftw terapi gle pot spline
 
 clean_plumed_output :
 	/bin/rm -f bck.* plumed_*.dat

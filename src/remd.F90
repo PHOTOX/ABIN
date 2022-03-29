@@ -229,7 +229,6 @@ contains
       real(DP) :: koef
       integer :: ierr, i
 
-!   call flush(6)
       if (irest == 0) then
          open (20, file='remd.out', action='write', access='sequential')
       else

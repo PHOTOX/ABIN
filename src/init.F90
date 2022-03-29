@@ -13,6 +13,7 @@
 ! In general, each module should have their own init function,
 ! that can be called from here.
 subroutine init(dt)
+   use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
    use mod_const
    use mod_interfaces, only: print_compile_info, omp_set_num_threads, print_runtime_info
    use mod_cmdline, only: get_cmdline
@@ -33,7 +34,7 @@ subroutine init(dt)
    use mod_gle
    use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
-   use mod_splined_grid, only: initialize_spline
+   use mod_splined_grid, only: initialize_spline, potential_file
    use mod_utils, only: toupper, tolower, normalize_atom_name, file_exists_or_exit
    use mod_vinit
    use mod_analyze_geometry
@@ -111,7 +112,7 @@ subroutine init(dt)
    namelist /system/ masses, massnames, ndist, dist1, dist2, &
       nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &
       k, r0, kx, ky, kz, r0_morse, d0_morse, k_morse, D0_dw, lambda_dw, k_dw, r0_dw, &
-      Nshake, ishake1, ishake2, shake_tol
+      Nshake, ishake1, ishake2, shake_tol, potential_file
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
       nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
@@ -141,13 +142,6 @@ subroutine init(dt)
    read (150, general)
    rewind (150)
    pot = tolower(pot)
-
-   if (pot == '_splined_grid_') then
-      natom = 1
-      dime = 1
-      f = 0
-      call initialize_spline()
-   end if
 
    if (pot == "_cp2k_" .or. pot_ref == "_cp2k_") then
       call init_cp2k()
@@ -650,6 +644,9 @@ subroutine init(dt)
    if (pot == '_morse_' .or. pot_ref == '_morse_') then
       call morse_init(natom, k_morse, r0_morse, d0_morse)
    end if
+   if (pot == '_splined_grid_' .or. pot_ref == '_splined_grid_') then
+      call initialize_spline(natom)
+   end if
 
    if (pot == 'mm') then
       ! TODO: Move this to a single subroutine in force_mm.F90
@@ -704,7 +701,7 @@ subroutine init(dt)
    ! TODO: It's strange that we're passing these random params here...
    call files_init(isbc, phase, ndist, nang, ndih)
 
-   call flush (6)
+   call flush (OUTPUT_UNIT)
 
 contains
 
@@ -1163,6 +1160,7 @@ end subroutine init
 ! due to a conflict of 'call system()` with namelist 'system',
 ! which some compilers do not like.
 subroutine print_runtime_info()
+   use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
    character(len=1024) :: cmdline
    print '(a)', ''
    print '(a)', '          RUNTIME INFO'
@@ -1174,7 +1172,7 @@ subroutine print_runtime_info()
    write (*, *)
    call get_command(cmdline)
    write (*, *) trim(cmdline)
-   call flush (6)
+   call flush (OUTPUT_UNIT)
    call get_command_argument(0, cmdline)
    write (*, *)
    call system('ldd '//cmdline)
@@ -1183,32 +1181,27 @@ end subroutine print_runtime_info
 
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
-   use mod_general
-   use mod_files, only: MAXUNITS
+   use mod_general, only: pot, pot_ref, ipimd, iremd, inormalmodes
+   use mod_files, only: close_files
    use mod_nhc, only: inose, finalize_nhc
    use mod_gle, only: finalize_gle, finalize_pile
    use mod_lz, only: lz_finalize
    use mod_transform, only: finalize_normalmodes
    use mod_cp2k, only: finalize_cp2k
-
    use mod_plumed, only: iplumed, finalize_plumed
-
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
+   use mod_splined_grid, only: finalize_spline
 #ifdef USE_MPI
-   ! Commenting this out to support older MPICH versions.
-   ! use mpi, only: MPI_COMM_WORLD, MPI_SUCCESS, MPI_Finalize, MPI_Abort
    use mpi
 #endif
    implicit none
    integer, intent(in) :: error_code
-   integer :: i
 #ifdef USE_MPI
    integer :: ierr
 #endif
-   logical :: lopen
 
-   if (pot == '_tera_') then
+   if (pot == '_tera_' .or. pot_ref == '_tera_') then
       if (ipimd == 2) then
          call finalize_terash()
       end if
@@ -1216,15 +1209,7 @@ subroutine finish(error_code)
    end if
 
    call deallocate_arrays()
-
-   ! TODO: Move this to a subroutine in mod_files
-   do i = 2, MAXUNITS
-      inquire (unit=i, opened=lopen)
-      ! TODO: This is not portable, do not hardcode 5 and 6!
-      if (lopen .and. i /= 5 .and. i /= 6) then
-         close (i)
-      end if
-   end do
+   call close_files()
 
    if (inormalmodes > 0) then
       call finalize_normalmodes()
@@ -1247,6 +1232,9 @@ subroutine finish(error_code)
       call lz_finalize()
    end if
 
+   if (pot == '_splined_grid_') then
+      call finalize_spline()
+   end if
    ! MPI_FINALIZE is called in this routine as well
    if (pot == '_cp2k_') then
       call finalize_cp2k()

@@ -119,7 +119,7 @@ if [[ $TESTS = "all" ]];then
             LZ_SS LZ_ST LZ_ENE \
             PIMD ABINITIO MTS \
             LANGEVIN QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
-            SHAKE HARMON MORSE DOUBLEWELL MINI QMMM \
+            SHAKE HARMON MORSE DOUBLEWELL SPLINE MINI QMMM \
             ANALYZE_EXT CMDLINE WATER_FAIL)
 
    if [[ $MPI = "TRUE" ]];then

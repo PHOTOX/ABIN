@@ -3,9 +3,12 @@
 ! Note that we're not trying to explicitly handle I/O errors here.
 ! If open() or write fails, we crash ungracefully.
 module mod_files
+   use, intrinsic :: iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
    implicit none
    public
-   private :: CHFILES
+   private :: CHFILES, MAXFILENAME
+   ! TODO: Make MAXUNITS private, currently used in force_abin.F90
+   ! private :: MAXUNITS
    ! Defines maximum number of units available for permanently opened files
    integer, parameter :: MAXUNITS = 50, MAXFILENAME = 50
    character(len=MAXFILENAME) :: CHFILES(MAXUNITS)
@@ -31,10 +34,23 @@ contains
 
    subroutine files_init(isbc, phase, ndist, nang, ndih)
       use mod_general
+      use mod_error, only: fatal_error
       use mod_system, only: names
       integer, intent(in) :: isbc, phase, ndist, nang, ndih
       character(len=10) :: chaccess
       integer :: i
+
+      ! In this code we assume ERROR_UNIT == 0 and OUTPUT_UNIT == 6
+      ! Other values might conflict from hard-coded values defined above,
+      ! so we just stop early in that case.
+      if (ERROR_UNIT /= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Non-standard stderr unit, compiler not supported')
+      end if
+      if (OUTPUT_UNIT /= 6) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Non-standard stdout unit, compiler not supported')
+      end if
 
       do i = 1, MAXUNITS
          chfiles(i) = ''
@@ -45,16 +61,16 @@ contains
       chfiles(UENERGY) = 'energies.dat'
       chfiles(UTEMPER) = 'temper.dat'
 
-!  radius for spherical boundary conditions
+      ! radius for spherical boundary conditions
       chfiles(URADIUS) = 'radius.dat'
 
-!  Files for PIMD estimators
+      ! Files for PIMD estimators
       chfiles(UESTENERGY) = 'est_energy.dat'
       chfiles(UCV) = 'cv.dat'
-!  file for advanced cv estimator
+      ! file for advanced cv estimator
       chfiles(UCVDCV) = 'cv_dcv.dat'
 
-!  Files for Surface Hopping
+      ! Files for Surface Hopping
       chfiles(UPOP) = 'pop.dat'
       chfiles(UPROB) = 'prob.dat'
       chfiles(UPES) = 'PES.dat'
@@ -63,13 +79,13 @@ contains
       chfiles(UWFCOEF) = 'wfcoef.dat'
       chfiles(UPHASE) = 'phase.dat'
       chfiles(UBKL) = 'bkl.dat'
-!  Files for TeraChem SH interface
+      ! Files for TeraChem SH interface
       chfiles(UCHARGES) = 'charges.dat'
       chfiles(UDIP) = 'dipoles.dat'
       chfiles(UTDIP) = 'trans_dipoles.dat'
       chfiles(UDOTPRODCI) = 'dotprodci.dat'
 
-!  Geometry analysis output
+      ! Geometry analysis output
       chfiles(UDIST) = 'distances.dat'
       chfiles(UANG) = 'angles.dat'
       chfiles(UDIH) = 'dihedrals.dat'
@@ -202,5 +218,17 @@ contains
       end if
 
    end subroutine files_init
+
+   subroutine close_files()
+      integer :: i
+      logical :: lopen
+
+      do i = 2, MAXUNITS
+         inquire (unit=i, opened=lopen)
+         if (lopen .and. i /= ERROR_UNIT .and. i /= OUTPUT_UNIT) then
+            close (i)
+         end if
+      end do
+   end subroutine close_files
 
 end module mod_files

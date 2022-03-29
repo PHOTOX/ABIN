@@ -53,6 +53,7 @@ contains
    ! Initialize white-noise PILE thermostat,
    ! which can be used both for classical MD and PIMD.
    subroutine pile_init(dt, tau0)
+      use, intrinsic :: iso_fortran_env, only: ERROR_UNIT
       use mod_const, only: PI, AUtoFS
       use mod_general, only: nwalk, ipimd, inormalmodes
       use mod_nhc, only: temp
@@ -68,8 +69,8 @@ contains
       end if
 
       if (tau0 <= 0.0D0) then
-         write (*, *) 'ERROR: tau0_langevin for PILE thermostat was not set or was negative.'
-         write (*, *) 'Set "tau0_langevin" in picoseconds in the ABIN input in section "nhcopt".'
+         write (ERROR_UNIT, *) 'ERROR: tau0_langevin for PILE thermostat was not set or was negative.'
+         write (ERROR_UNIT, *) 'Set "tau0_langevin" in picoseconds in the ABIN input in section "nhcopt".'
          call fatal_error(__FILE__, __LINE__, 'invalid tau0_langevin')
       end if
 
@@ -588,6 +589,7 @@ contains
    ! in practice, we compute LDL^T decomposition, and force
    ! to zero negative eigenvalues.
    subroutine cholesky(SST, S, n)
+      use, intrinsic :: iso_fortran_env, only: ERROR_UNIT
       use mod_general, only: my_rank
       integer, intent(in) :: n
       real(DP), intent(in) :: SST(n, n)
@@ -607,7 +609,9 @@ contains
             if (D(j, j) > 1.0D-10) then
                L(i, j) = L(i, j) / D(j, j)
             else
-               if (my_rank == 0) print*,"Warning: zero eigenvalue in LDL^T decomposition."
+               if (my_rank == 0) then
+                  write (ERROR_UNIT, '(A)') "Warning: zero eigenvalue in LDL^T decomposition."
+               end if
                L(i, j) = 0.D0
             end if
          end do
@@ -620,7 +624,9 @@ contains
          if (D(i, i) >= 0.0D0) then
             D(i, i) = dsqrt(D(i, i))
          else
-            if (my_rank == 0) print*,"WARNING: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
+            if (my_rank == 0) then
+               write (ERROR_UNIT, *) "WARNING: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
+            end if
             D(i, i) = 0.0D0
          end if
       end do
