@@ -19,6 +19,7 @@ temp=100.15,
 nrespnose=8
 rem_comrot=.false.
 rem_comvel=.false.
+tau0=0.001D0
 /
 
 &remd

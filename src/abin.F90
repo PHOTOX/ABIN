@@ -33,10 +33,8 @@ program abin
    use mod_en_restraint
    use mod_plumed
    use mod_terampi_sh, only: move_new2old_terash
+   use mod_mpi, only: mpi_barrier_wrapper
    use mod_remd
-#ifdef USE_MPI
-   use mpi, only: MPI_COMM_WORLD, MPI_Barrier
-#endif
    implicit none
    ! TODO: These should probably be defined and stored in some module, not here
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
@@ -44,9 +42,6 @@ program abin
    logical :: file_exists
    integer, dimension(8) :: time_start, time_end
    real(DP) :: total_cpu_time
-#ifdef USE_MPI
-   integer :: ierr
-#endif
 
    call date_and_time(VALUES=time_start)
 
@@ -96,13 +91,13 @@ program abin
          write (*, *)
          write (*, *) '#      Step     Time [fs]'
       end if
-!---------------- PROPAGATION-----------------------------------
 
-#ifdef USE_MPI
+      ! ---------------- PROPAGATION-------------
+
       ! Without this Barrier, ranks > 0 do not write geom.dat in force_clas
       ! I don't know why the hell not.
-      call MPI_Barrier(MPI_COMM_WORLD, ierr)
-#endif
+      call mpi_barrier_wrapper()
+
       ! getting initial forces and energies
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
       if (ipimd == 1) then
@@ -110,7 +105,9 @@ program abin
       end if
 
       ! Correct energy history for LZ
-      if (ipimd == 5) call lz_rewind(en_array_lz)
+      if (ipimd == 5) then
+         call lz_rewind(en_array_lz)
+      end if
 
       ! if we use reference potential with RESPA
       if (pot_ref /= '_none_') then
@@ -138,11 +135,10 @@ program abin
       it = it + 1
       do it = (it), nstep
 
-#ifdef USE_MPI
          ! This barrier is needed so that all MPI processes see the file 'EXIT'
          ! if it is present (we delete it below before we stop the program).
-         call MPI_Barrier(MPI_COMM_WORLD, ierr)
-#endif
+         call mpi_barrier_wrapper()
+
          inquire (FILE="EXIT", EXIST=file_exists)
          if (file_exists) then
             print*,'Found file EXIT. Writing restart file and exiting.'
@@ -158,9 +154,8 @@ program abin
                call restout(x, y, z, vx, vy, vz, it - 1)
             end if
 
-#ifdef USE_MPI
-            call MPI_Barrier(MPI_COMM_WORLD, ierr)
-#endif
+            call mpi_barrier_wrapper()
+
             if (my_rank == 0) then
                call system('rm EXIT')
             end if
@@ -213,7 +208,9 @@ program abin
             py = amt * vy
             pz = amt * vz
 
-            if (pot == '_tera_') call move_new2old_terash()
+            if (pot == '_tera_') then
+               call move_new2old_terash()
+            end if
          end if
 
 #ifdef USE_MPI

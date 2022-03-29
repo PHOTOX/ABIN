@@ -16,6 +16,7 @@ module mod_force_tera
    use mod_terampi
 #ifdef USE_MPI
    use mpi
+   use mod_mpi, only: handle_mpi_error, check_recv_count
 #endif
    implicit none
    private

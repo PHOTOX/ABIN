@@ -4,6 +4,7 @@ module mod_terampi
    use mod_const, only: DP
 #ifdef USE_MPI
    use mpi
+   use mod_mpi, only: handle_mpi_error, get_mpi_error_string
 #endif
    implicit none
    private
@@ -27,8 +28,6 @@ module mod_terampi
 #ifdef USE_MPI
    integer, allocatable :: tc_comms(:)
 
-   ! TODO: Move handle_mpi_error and check_recv_count to a dedicated MPI module
-   public :: handle_mpi_error, check_recv_count
    public :: get_tc_communicator
    public :: wait_for_terachem
    public :: send_natom, send_atom_types_and_scrdir, send_coordinates
@@ -262,57 +261,18 @@ contains
          if (ierr /= MPI_SUCCESS) then
             write (*, '(A,I0)') 'MPI ERROR during shutdown of TeraChem server id = ', itera
             write (*, '(A)') 'Verify manually that the TeraChem server was terminated.'
-            call print_mpi_error(ierr)
+            print*,get_mpi_error_string(ierr)
          end if
 
          call MPI_Comm_free(tc_comms(itera), ierr)
          if (ierr /= MPI_SUCCESS) then
-            call print_mpi_error(ierr)
+            print*,get_mpi_error_string(ierr)
          end if
 
       end do
 
       deallocate (tc_comms)
    end subroutine finalize_terachem
-
-   subroutine print_mpi_error(mpi_err)
-      integer, intent(in) :: mpi_err
-      character(len=MPI_MAX_ERROR_STRING) :: error_string
-      integer :: ierr, result_len
-
-      call MPI_Error_string(mpi_err, error_string, result_len, ierr)
-      if (ierr == MPI_SUCCESS) then
-         write (*, '(A)') trim(error_string)
-      end if
-   end subroutine print_mpi_error
-
-   subroutine handle_mpi_error(mpi_err)
-      use mod_utils, only: abinerror
-      integer, intent(in) :: mpi_err
-
-      if (mpi_err /= MPI_SUCCESS) then
-         call print_mpi_error(mpi_err)
-         call abinerror('handle_mpi_error')
-      end if
-   end subroutine handle_mpi_error
-
-   ! TODO: Move this to mpi_wrapper module
-   subroutine check_recv_count(mpi_status, expected_count, datatype)
-      use mod_utils, only: abinerror
-      integer, intent(in) :: mpi_status(:)
-      integer, intent(in) :: expected_count
-      integer, intent(in) :: datatype ! e.g. MPI_INTEGER
-      integer :: recv_count
-      integer :: ierr
-
-      call MPI_Get_count(mpi_status, datatype, recv_count, ierr)
-      call handle_mpi_error(ierr)
-      if (recv_count /= expected_count) then
-         write (*, *) 'ERROR: MPI_Recv failed'
-         write (*, '(A,I0,A,I0)') 'Received ', recv_count, ' bytes, expected ', expected_count
-         call abinerror('check_recv_count')
-      end if
-   end subroutine check_recv_count
 
    subroutine wait_for_terachem(tc_comm)
       integer, intent(in) :: tc_comm

@@ -1,7 +1,7 @@
 module mod_en_restraint
    use mod_const, only: DP
-   use mod_nhc, only: temp
-   use mod_general, only: natom, nwalk, en_restraint
+   ! TODO: en_restraint should live here, not in mod_general
+   use mod_general, only: en_restraint
    implicit none
    public
    real(DP) :: en_diff, en_kk
@@ -20,23 +20,32 @@ contains
 
 ! B) Quadratic potential around target value (en_kk must be set)
 
-   subroutine en_rest_init()
-      use mod_general, only: natom
-      implicit none
+   subroutine en_rest_init(natom)
+      use mod_error, only: fatal_error
+      integer, intent(in) :: natom
 
+      if (en_restraint == 1) then
+         print*,'Energy restraint is ON(1): Using method of Lagrange multipliers.'
+      else if (en_restraint == 2 .and. en_kk >= 0) then
+         print*,'Energy restraint is ON(2): Using quadratic potential restraint.'
+      else
+         call fatal_error(__FILE__, __LINE__, &
+            & 'en_restraint must be either 0, 1 (Lagrange multipliers) or 2 (umbrella, define en_kk)')
+      end if
+
+      ! TODO: This should deallocate in finalize_en_rest()
       allocate (fxr(natom, 2)) ! two states, not beads.
       allocate (fyr(natom, 2))
       allocate (fzr(natom, 2))
    end subroutine en_rest_init
 
    subroutine energy_restraint(x, y, z, px, py, pz, eclas)
-      use mod_general, only: natom, dt0 ! dt0 is the time step
+      use mod_general, only: natom, nwalk, dt0 ! dt0 is the time step
       use mod_utils, only: abinerror
       use mod_const, only: AMU
       use mod_system, only: am
       use mod_sh, only: en_array
       use mod_terampi_sh, only: force_terash
-      implicit none
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       ! TODO: Eclas is not modified in this routine, but probably should be
       real(DP), intent(inout) :: eclas

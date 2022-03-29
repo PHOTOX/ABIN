@@ -231,6 +231,7 @@ jobs:
   openmpi_build:
     name: OpenMPI build
     runs-on: ubuntu-18.04
+    timeout-minutes: 30
     needs: basic_build
     strategy:
       fail-fast: false

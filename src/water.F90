@@ -6,6 +6,7 @@ module mod_water
    save
 contains
    subroutine check_water(natom, names)
+      use mod_general, only: my_rank
       use mod_utils, only: abinerror, count_atoms_by_name
       integer, intent(in) :: natom
       character(len=2) :: names(:)
@@ -23,7 +24,7 @@ contains
 
       error = 0
 
-      write (*, *) 'Checking that input atom types correspond to pure water.'
+      if (my_rank == 0) print*,'Checking that input atom types correspond to pure water.'
 
       ! Note that some of these checks are redundant,
       ! but we're trying to be helpful and provide as much info as we can.
@@ -53,7 +54,7 @@ contains
          call abinerror('check_water')
       end if
 
-      print '(A,I0,A)', 'Detected ', nO, ' water molecules'
+      if (my_rank == 0) print '(A,I0,A)', 'Detected ', nO, ' water molecules'
    end subroutine check_water
 
 end module mod_water
