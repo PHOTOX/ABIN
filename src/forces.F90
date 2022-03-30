@@ -149,8 +149,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    ! Here we decide which forces we want.
    ! By default we call an external program in force_abin routine
    select case (chpot)
-   case ("mm")
-      call force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas)
+   case ("_mm_")
+      call force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_mmwater_")
       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
    case ("_splined_grid_")

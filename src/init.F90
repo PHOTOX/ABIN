@@ -68,7 +68,7 @@ subroutine init(dt)
    real(DP) :: kx = -1, ky = -1, kz = -1
    ! Initial temperature (read from namelist nhcopt)
    real(DP) :: temp0 = -1
-   real(DP) :: masses(MAXTYPES)
+   real(DP), allocatable :: masses(:)
    real(DP) :: rans(10)
    integer :: ipom, iw, iat, natom_xyz, iost
    integer :: shiftdihed
@@ -77,7 +77,7 @@ subroutine init(dt)
    integer :: nproc
    integer :: getPID
 !$ integer, external :: omp_get_max_threads
-   character(len=2) :: massnames(MAXTYPES)
+   character(len=2), allocatable :: massnames(:)
    character(len=2) :: atom
    character(len=200) :: chinput, chcoords, chveloc
    character(len=200) :: chiomsg, chout
@@ -245,7 +245,7 @@ subroutine init(dt)
 
    ! This line is super important,
    ! cause we actually use natqm in many parts of the code
-   if (iqmmm == 0 .and. pot /= 'mm') then
+   if (iqmmm == 0 .and. pot /= '_mm_') then
       natqm = natom
    end if
 
@@ -266,10 +266,20 @@ subroutine init(dt)
 
    ! We have to initialize here, because we read them from input
    allocate (names(natom))
+   allocate (masses(natom))
+   allocate (massnames(natom))
    names = ''
-   attypes = ''
    massnames = ''
    masses = -1.0D0
+
+   allocate (attypes(natom))
+   allocate (rmin(natom))
+   allocate (q(natom))
+   allocate (eps(natom))
+   attypes = ''
+   rmin = -1.0D0
+   eps = -1.0D0
+   q = 0.0D0
 
    allocate (ishake1(natom * 3 - 6))
    allocate (ishake2(natom * 3 - 6))
@@ -335,7 +345,7 @@ subroutine init(dt)
       call abinerror('init')
    end if
 
-   do iat = 1, MAXTYPES
+   do iat = 1, size(massnames)
       massnames(iat) = normalize_atom_name(massnames(iat))
    end do
 
@@ -373,7 +383,7 @@ subroutine init(dt)
       call remd_init(temp, temp0)
    end if
 
-   if (iqmmm > 0 .or. pot == 'mm') then
+   if (iqmmm > 0 .or. pot == '_mm_') then
       read (150, qmmm)
       rewind (150)
    end if
@@ -572,6 +582,7 @@ subroutine init(dt)
       call en_rest_init(natom)
    end if
 
+   ! Initialize in-built analytical potentials
    if (pot == '_doublewell_' .or. pot_ref == '_doublewell_') then
       call doublewell_init(natom, lambda_dw, d0_dw, k_dw, r0_dw, vy, vz)
    end if
@@ -587,18 +598,8 @@ subroutine init(dt)
    if (pot == '_splined_grid_' .or. pot_ref == '_splined_grid_') then
       call initialize_spline(natom)
    end if
-
-   if (pot == 'mm') then
-      ! TODO: Move this to a single subroutine in force_mm.F90
-      allocate (inames(natom))
-      do iat = 1, MAXTYPES
-         if (attypes(iat) == '') exit
-         attypes(iat) = normalize_atom_name(attypes(iat))
-      end do
-      ! inames initialization for the MM part.
-      ! We do this also because string comparison is very costly
-      call inames_init()
-      call ABr_init()
+   if (pot == '_mm_' .or. pot_ref == '_mm_') then
+      call initialize_mm(natom)
    end if
 
    if (my_rank == 0) then
@@ -972,7 +973,7 @@ contains
          write (stdout, nml=lz, delim='APOSTROPHE')
          write (stdout, *)
       end if
-      if (pot == 'mm') then
+      if (iqmmm > 0 .or. pot == '_mm_') then
          write (stdout, nml=qmmm, delim='APOSTROPHE')
          write (stdout, *)
       end if

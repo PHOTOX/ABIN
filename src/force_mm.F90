@@ -1,52 +1,75 @@
-! Simple subroutine for calculation of
+! A toy code for calculation of
 ! Coulomb and Lennard-Jones forces and energies
 
 ! Currently, this module does not support QMMM,
 ! Instead we can only do pure MM with LJ and Coulomb potential
-! This is invoked via pot='mm'
+! This is invoked via pot='_mm_'
 module mod_force_mm
    use mod_const, only: DP
-   use mod_array_size, only: MAXTYPES
-   use mod_utils, only: abinerror
-   use mod_qmmm, only: natmm, natqm
    implicit none
    private
-   public :: inames_init, ABr_init, force_LJ_Coulomb
-   ! TODO: These should all be private
+   public :: initialize_mm, force_LJ_Coulomb
    public :: attypes, q, rmin, eps
-   character(len=2) :: attypes(MAXTYPES)
+
+   ! Mapping of atomic types to atoms in the system
+   integer, allocatable :: inames(:)
+
+   ! User-specified atomic types read from the input file
+   character(len=2), allocatable :: attypes(:)
+   ! User-specified Lennard-Jones parameters
+   real(DP), allocatable :: rmin(:), eps(:)
+   ! User-specified Coulomb charges
+   real(DP), allocatable :: q(:)
+
    ! L-J Combination rules
    character(len=10), parameter :: LJcomb = 'LB' !no other option for now
-   real(DP) :: q(MAXTYPES), rmin(MAXTYPES), eps(MAXTYPES)
+   ! Internal L-J parameters
    real(DP), allocatable :: AIJ(:, :), BIJ(:, :)
    save
 contains
-   subroutine inames_init()
-      use mod_general, only: natom
-      use mod_system, only: inames, names
-      integer :: i, iat2, pom
 
-      do i = 1, natom
-         pom = 0
-         do iat2 = 1, natom
-            if (names(i) == attypes(iat2)) then
-               inames(i) = iat2
-               pom = 1
+   subroutine initialize_mm(natom)
+      use mod_utils, only: normalize_atom_name
+      integer, intent(in) :: natom
+      integer :: iat
+
+      allocate (inames(natom))
+
+      do iat = 1, size(attypes)
+         if (attypes(iat) == '') exit
+         attypes(iat) = normalize_atom_name(attypes(iat))
+      end do
+
+      call inames_init(natom)
+      call ABr_init(natom)
+   end subroutine
+
+   subroutine inames_init(natom)
+      use mod_error, only: fatal_error
+      use mod_system, only: names
+      integer, intent(in) :: natom
+      integer :: iat, iat2
+      logical :: assigned
+
+      do iat = 1, natom
+         assigned = .false.
+         do iat2 = 1, size(attypes)
+            if (names(iat) == attypes(iat2)) then
+               inames(iat) = iat2
+               assigned = .true.
                exit
             end if
          end do
-         if (pom == 0) then
-            write (*, *) 'Atom name does not have atom type for qmmm parameters. Exiting....'
-            call abinerror('inames_init')
+         if (.not. assigned) then
+            call fatal_error(__FILE__, __LINE__,&
+               & 'Atom name '//trim(names(iat))//' does not have corresponding atom type in MM parameters')
          end if
       end do
-
    end subroutine inames_init
 
-   subroutine ABr_init()
+   subroutine ABr_init(natom)
       use mod_const, only: ANG
-      use mod_general, only: natom
-      use mod_system, only: inames
+      integer, intent(in) :: natom
       integer :: iat1, iat2, i1, i2
       real(DP) :: epsij, rij
       allocate (AIJ(natom, natom))
@@ -65,22 +88,23 @@ contains
       end do
    end subroutine
 
-   subroutine force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas)
-      use mod_array_size
-      use mod_general
-      use mod_system, only: inames
-      implicit none
+   subroutine force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas, walkmax)
+      use mod_general, only: natom
+      use mod_qmmm, only: natqm
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
+      integer, intent(in) :: walkmax
       integer :: iw, iat1, iat2, i1, i2
       real(DP) :: r, kLJ, kC
       real(DP) :: ri, ri3, dx, dy, dz
 
-      do iw = 1, nwalk
+      do iw = 1, walkmax
          do iat1 = 1, natom
             do iat2 = iat1 + 1, natom
-               if (iat2 <= natqm) cycle
+               if (iat2 <= natqm) then
+                  cycle
+               end if
                dx = x(iat1, iw) - x(iat2, iw)
                dy = y(iat1, iw) - y(iat2, iw)
                dz = z(iat1, iw) - z(iat2, iw)
@@ -97,8 +121,8 @@ contains
                fy(iat2, iw) = fy(iat2, iw) - (kLJ + kC) * dy
                fz(iat1, iw) = fz(iat1, iw) + (kLJ + kC) * dz
                fz(iat2, iw) = fz(iat2, iw) - (kLJ + kC) * dz
-               eclas = eclas + ri3 * (ri3 * AIJ(i1, i2) / 12 - BIJ(i1, i2) / 6) / nwalk
-               eclas = eclas + q(i1) * q(i2) / dsqrt(r) / nwalk
+               eclas = eclas + ri3 * (ri3 * AIJ(i1, i2) / 12 - BIJ(i1, i2) / 6) / walkmax
+               eclas = eclas + q(i1) * q(i2) / dsqrt(r) / walkmax
             end do
          end do
       end do

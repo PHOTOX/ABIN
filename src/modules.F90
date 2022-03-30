@@ -11,7 +11,6 @@ module mod_array_size
    use mod_const, only: DP
    implicit none
    public
-   integer, parameter :: MAXTYPES = 10
    integer, parameter :: NSTMAX = 50
    save
 end module mod_array_size
@@ -81,7 +80,6 @@ module mod_system
    public
    real(DP), allocatable :: am(:)
    character(len=2), allocatable :: names(:)
-   integer, allocatable :: inames(:)
    integer :: dime = 3 ! dimension of the system
    integer :: f = 3 ! number of constants of motion
    ! (for calculating kinetic temperature)
