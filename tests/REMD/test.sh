@@ -1,6 +1,6 @@
 #/bin/bash
 
-rm -f remd.out abin.out restart.xyz.??.old restart.xyz.?? restart.xyz.??.? geom.dat.?? movie.xyz.?? cp2k.out temper.dat.?? energies.dat.??
+rm -f EXIT ERROR remd.out abin.out restart.xyz.??.old restart.xyz.?? restart.xyz.??.? geom.dat.?? movie.xyz.?? cp2k.out temper.dat.?? energies.dat.??
 if [[ "$1" = "clean" ]];then
    exit 0
 fi
@@ -31,6 +31,7 @@ $MPIRUN -np $N_REPLICAS $ABINEXE -i ${ABININ}2 >> $ABINOUT
 # Test that ABIN stops when file EXIT is present
 touch EXIT
 $MPIRUN -np $N_REPLICAS $ABINEXE -i ${ABININ}3 >> $ABINOUT
+rm -f EXIT
 
 # Useful line in case you need to debug multiple MPI processes
 # $MPIRUN -np $N_REPLICAS xterm -e gdb $ABINEXE -i $ABININ -v $ABINVEL > $ABINOUT

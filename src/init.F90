@@ -18,6 +18,7 @@ subroutine init(dt)
    use mod_interfaces, only: print_compile_info, omp_set_num_threads, print_runtime_info
    use mod_cmdline, only: get_cmdline
    use mod_error, only: fatal_error
+   use mod_mpi, only: initialize_mpi, get_mpi_size, get_mpi_rank, mpi_barrier_wrapper
    use mod_files
    use mod_arrays
    use mod_array_size
@@ -49,9 +50,6 @@ subroutine init(dt)
    use mod_remd
    use mod_terampi
    use mod_terampi_sh
-#ifdef USE_MPI
-   use mpi
-#endif
    implicit none
    real(DP), intent(out) :: dt
    ! Input parameters for analytical potentials
@@ -80,9 +78,6 @@ subroutine init(dt)
    character(len=1024) :: tc_server_name
    logical :: file_exists
    logical :: rem_comvel, rem_comrot
-#ifdef USE_MPI
-   integer :: ierr
-#endif
    integer :: irand
 
    ! ABIN input parameters are read from the input file (default 'input.in')
@@ -147,34 +142,9 @@ subroutine init(dt)
 
    if (pot == "_cp2k_" .or. pot_ref == "_cp2k_") then
       call init_cp2k()
-#ifdef USE_MPI
-   else
-      ! TODO: Move this to a mpi_wrapper module
-      if (pot == "_tera_" .and. nteraservers > 1) then
-         ! We will be calling TS servers concurently
-         ! via OpenMP parallelization, hence we need MPI_Init_thread().
-         ! https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report/node303.htm
-         call MPI_Init_thread(MPI_THREAD_MULTIPLE, ipom, ierr)
-         if (ipom /= MPI_THREAD_MULTIPLE) then
-            write (*, *) 'Provided safety level is not MPI_THREAD_MULTIPLE'
-            write (*, '(A,I1,A,I1)') 'Requested ', MPI_THREAD_MULTIPLE, 'got:', ipom
-            call abinerror('init')
-         end if
-         ! nproc is used to initialize OpenMP threads below.
-         if (nproc /= nteraservers) then
-            nproc = nteraservers
-         end if
-      else
-         ! TODO: Check whether MPI is already initialized
-         ! This can happen when using internal CP2K interface.
-         call MPI_Init(ierr)
-      end if
-      if (ierr /= 0) then
-         write (*, *) 'Bad signal from MPI_INIT:', ierr
-         stop 1
-      end if
-#endif
    end if
+
+   call initialize_mpi(pot, pot_ref, nteraservers)
 
    ! Set OpenMP parallelization
    ! Currently only used in PIMD for trivial
@@ -182,35 +152,27 @@ subroutine init(dt)
    ! Note that scaling is actually not so great
    ! since SCF timings will vary for different beads,
    ! which decreases thread utilization.
+   if (pot == "_tera_" .and. nteraservers > 1) then
+      nproc = nteraservers
+   end if
 !$ call omp_set_num_threads(nproc)
 
-#ifdef USE_MPI
-   ! TODO: Move this to an mpi_wrapper module
-   call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
-   call MPI_Comm_size(MPI_COMM_WORLD, mpi_world_size, ierr)
-   ! TODO: allow mpi_world_size > 1 only for REMD
+   my_rank = get_mpi_rank()
+   mpi_world_size = get_mpi_size()
+
+   if (iremd == 0 .and. mpi_world_size > 1) then
+      call fatal_error(__FILE__, __LINE__, &
+         & 'MPI parallelization available only for REMD')
+   end if
+
    if (my_rank == 0 .and. mpi_world_size > 1) then
       write (*, '(A,I3)') 'Number of MPI processes = ', mpi_world_size
    end if
-#endif
 
    ! We need to connect to TeraChem as soon as possible,
    ! because we want to shut down TeraChem nicely in case something goes wrong.
-   if (pot == '_tera_' .or. restrain_pot == '_tera_') then
+   if (pot == '_tera_' .or. restrain_pot == '_tera_' .or. pot_ref == '_tera_') then
       call initialize_terachem_interface(trim(tc_server_name))
-   end if
-
-   if (en_restraint >= 1) then
-      call en_rest_init()
-
-      if (en_restraint == 1) then
-         write (*, *) 'Energy restraint is ON(1): Using method of Lagrange multipliers.'
-      else if (en_restraint == 2 .and. en_kk >= 0) then
-         write (*, *) 'Energy restraint is ON(2): Using quadratic potential restraint.'
-      else
-         write (*, *) 'FATAL ERROR: en_restraint must be either 0 or 1(Lagrange multipliers),2(umbrella, define en_kk)'
-         call abinerror('init')
-      end if
    end if
 
    if (mdtype /= '') then
@@ -510,7 +472,7 @@ subroutine init(dt)
       cvhess_cumul = 0.0D0
    end if
 
-   ! Initialize SHAKE, determine the constrained bond lenghts
+   ! Initialize SHAKE, determine the constrained bond lengths
    if (nshake /= 0) then
       call shake_init(x, y, z)
    end if
@@ -630,6 +592,10 @@ subroutine init(dt)
       call sbc_init(x, y, z)
    end if
 
+   if (en_restraint >= 1) then
+      call en_rest_init(natom)
+   end if
+
    if (pot == '_doublewell_' .or. pot_ref == '_doublewell_') then
       call doublewell_init(natom, lambda_dw, d0_dw, k_dw, r0_dw, vy, vz)
    end if
@@ -684,13 +650,15 @@ subroutine init(dt)
          write (*, *)
       end if
    end if
-#ifdef USE_MPI
-   call MPI_Barrier(MPI_COMM_WORLD, ierr)
-   write (*, '(A,I0,A,I0)') 'MPI rank: ', my_rank, ' PID: ', GetPID()
-   call MPI_Barrier(MPI_COMM_WORLD, ierr)
-#else
-   write (*, '(A,I0)') 'Process ID (PID): ', GetPID()
-#endif
+
+   if (mpi_world_size > 1) then
+      call mpi_barrier_wrapper()
+      write (*, '(A,I0,A,I0)') 'MPI rank: ', my_rank, ' PID: ', GetPID()
+      call mpi_barrier_wrapper()
+   else
+      write (*, '(A,I0)') 'Process ID (PID): ', GetPID()
+   end if
+
    if (my_rank == 0) then
 !$    write (*, '(A,I0)') 'Number of OpenMP threads: ', omp_get_max_threads()
    end if
@@ -705,6 +673,8 @@ contains
 
    subroutine check_inputsanity()
       use mod_chars, only: chknow
+      use mod_utils, only: real_positive, real_nonnegative, &
+                         & int_positive, int_nonnegative, int_switch
       integer :: error
 !$    integer :: nthreads, omp_get_max_threads
 
@@ -754,7 +724,7 @@ contains
          end if
       end if
       if (pot == '_none_') then
-         write (*, *) 'FATAL: Variable "pot" not specified.Exiting now...'
+         write (*, *) 'ERROR: Variable "pot" not specified.'
          error = 1
       end if
       if (ipimd == 1 .and. nwalk <= 1) then
@@ -800,53 +770,12 @@ contains
       if (shiftdihed == 0) shiftdih = 0.0D0
       if (shiftdihed == 1) shiftdih = 360.0D0
 
-      if (imini < 0) then
-         write (*, *) 'Input error: imini must be positiv or zero.'
-         error = 1
-      end if
-      if (nstep < 0) then
-         write (*, *) 'Input error: nstep must be positive.'
-         error = 1
-      end if
-      if (nwrite <= 0) then
-         write (*, *) 'Input error: nwrite must be positive.'
-         error = 1
-      end if
-      if (nwritex <= 0) then
-         write (*, *) 'Input error: nwritex must be positive.'
-         error = 1
-      end if
-      if (nrest <= 0) then
-         write (*, *) 'Input error: nrest must be positive.'
-         error = 1
-      end if
-      if (nabin <= 0) then
-         write (*, *) 'Input error: nabin must be positive.'
-         error = 1
-      end if
-      if (icv /= 0 .and. icv /= 1) then
-         write (*, *) 'Input error: icv must be 1 or 0.'
-         error = 1
-      end if
-      if (temp < 0) then
-         write (*, *) 'Input error: temperature must be positive.'
-         error = 1
-      end if
       if (icv == 1 .and. temp <= 0.0D0) then
          write (*, *) 'Cannot compute heat capacity for zero temperature.'
          error = 1
       end if
       if (icv == 1 .and. inose == 0) then
          write (*, *) 'Cannot compute heat capacity for NVE simulation.'
-         error = 1
-      end if
-      if (dt <= 0) then
-         write (*, *) 'Time step negative or undefined!'
-         write (*, *) 'Modify variable "dt" in input the general input section.'
-         error = 1
-      end if
-      if (ncalc <= 0) then
-         write (*, *) 'Ncalc must be positive integer number!'
          error = 1
       end if
       if (ncalc > nwrite) then
@@ -869,10 +798,6 @@ contains
       end if
       if (ipimd == 5 .and. nwalk /= 1) then
          write (*, *) 'ERROR: LZ not implemented with multiple walkers.'
-         error = 1
-      end if
-      if (istage /= 1 .and. istage /= 0) then
-         write (*, *) 'ERROR: istage has to be 0 or 1'
          error = 1
       end if
       if (inormalmodes < 0 .and. inormalmodes > 2) then
@@ -961,10 +886,6 @@ contains
          write (*, *) 'The staging transformation is not compatible with GLE thermostat.'
          error = 1
       end if
-      if (irest /= 1 .and. irest /= 0) then
-         write (*, *) 'ERROR:irest has to be 1 or 0'
-         error = 1
-      end if
       if (nshake /= 0 .and. ipimd == 1) then
          write (*, *) 'PIMD with SHAKE cannot use massive thermostating!'
          error = 1
@@ -1011,6 +932,26 @@ contains
             error = 1
          end if
       end if
+
+      call real_nonnegative(temp, 'temp')
+      call real_positive(dt, 'dt')
+
+      call int_switch(irest, 'irest')
+      call int_switch(icv, 'icv')
+      call int_switch(istage, 'istage')
+
+      call int_nonnegative(nstep, 'nstep')
+      call int_nonnegative(imini, 'imini')
+      call int_nonnegative(nwrite, 'nwrite')
+      call int_nonnegative(nwritex, 'nwritex')
+      call int_nonnegative(nwritev, 'nwritev')
+      call int_nonnegative(nwritef, 'nwritef')
+      call int_nonnegative(nrest, 'nrest')
+      call int_nonnegative(narchive, 'narchive')
+
+      call int_positive(nabin, 'nwalk')
+      call int_positive(nwalk, 'nwalk')
+      call int_positive(ncalc, 'ncalc')
 
       if (error == 1) then
          write (*, *) 'Input errors were found! Exiting now...'
@@ -1069,7 +1010,7 @@ end subroutine print_runtime_info
 
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
-   use mod_general, only: pot, pot_ref, ipimd, iremd, inormalmodes
+   use mod_general, only: pot, pot_ref, ipimd, inormalmodes
    use mod_files, only: close_files
    use mod_nhc, only: inose, finalize_nhc
    use mod_gle, only: finalize_gle, finalize_pile
@@ -1080,14 +1021,9 @@ subroutine finish(error_code)
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
    use mod_splined_grid, only: finalize_spline
-#ifdef USE_MPI
-   use mpi
-#endif
+   use mod_mpi, only: finalize_mpi
    implicit none
    integer, intent(in) :: error_code
-#ifdef USE_MPI
-   integer :: ierr
-#endif
 
    if (pot == '_tera_' .or. pot_ref == '_tera_') then
       if (ipimd == 2) then
@@ -1128,22 +1064,7 @@ subroutine finish(error_code)
       call finalize_cp2k()
    end if
 
-! At last, we terminate MPI processes
-! TODO: We should have an MPI module handling this
-! TODO: We should check whether MPI was initialized with MPI_Init
-! before we attempt to call MPI_Finalize().
-#ifdef USE_MPI
-   if (iremd == 1 .or. pot == '_tera_' .or. pot == '_cp2k_') then
-      if (error_code == 0 .and. pot /= "_cp2k_" .or. pot == '_tera_') then
-         call MPI_Finalize(ierr)
-         if (ierr /= MPI_SUCCESS) then
-            write (*, '(A)') 'Bad signal from MPI_FINALIZE: ', ierr
-            ! Let's try to continue
-         end if
-      else if (error_code > 0) then
-         call MPI_Abort(MPI_COMM_WORLD, error_code, ierr)
-      end if
-   end if
-#endif
+   ! This must be the last call
+   call finalize_mpi(error_code)
 
 end subroutine finish

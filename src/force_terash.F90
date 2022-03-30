@@ -43,7 +43,7 @@ contains
       use mod_const, only: DP, ANG
       use mod_array_size, only: NSTMAX
       use mod_general, only: idebug, natom, en_restraint, ipimd
-      use mod_terampi, only: handle_mpi_error, check_recv_count
+      use mod_mpi, only: handle_mpi_error, check_recv_count
       use mod_qmmm, only: natqm
       use mod_utils, only: abinerror
       use mod_io, only: print_charges, print_dipoles, print_transdipoles
@@ -208,7 +208,7 @@ contains
       use mod_terampi, only: send_coordinates
       use mod_array_size, only: NSTMAX
       use mod_const, only: DP, ANG, AUTOFS
-      use mod_terampi, only: handle_mpi_error
+      use mod_mpi, only: handle_mpi_error
       use mod_general, only: natom, idebug, sim_time, en_restraint
       use mod_qmmm, only: natqm
       use mod_utils, only: abinerror
@@ -321,8 +321,8 @@ contains
       use mod_system, only: names
       use mod_qmmm, only: natqm
       use mod_sh_integ, only: nstate
+      use mod_mpi, only: handle_mpi_error
       use mod_terampi, only: get_tc_communicator, &
-                             handle_mpi_error, &
                              send_natom, &
                              send_atom_types_and_scrdir, &
                              send_coordinates

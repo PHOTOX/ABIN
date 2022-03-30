@@ -17,6 +17,7 @@ irest=1,
 inose=1,
 temp=100.15,
 nrespnose=8
+tau0=0.001D0
 /
 
 &remd

@@ -42,6 +42,9 @@ echo "########### SUBTEST 3 ###################"
 ./test3.sh
 echo "########### SUBTEST 4 ###################"
 ./test4.sh
+# Getting rid of varible MPI trace
+head -1 ABIN_ERROR4 > tmp
+mv tmp ABIN_ERROR4
 echo "########### SUBTEST 5 ###################"
 ./test5.sh
 echo "########### SUBTEST 6 ###################"

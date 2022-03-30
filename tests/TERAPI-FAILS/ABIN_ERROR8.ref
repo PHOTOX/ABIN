@@ -1,2 +1,1 @@
- FATAL ERROR encountered in subroutine: check_recv_count
- Check standard output for further information.
+ERROR in mpi_wrapper.F90: Unexpected MPI_Recv count. Received 0 bytes, expected 1

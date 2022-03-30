@@ -33,9 +33,9 @@ module mod_remd
 contains
 
 #ifdef USE_MPI
-   !TODO: make general subroutine check_mpi_error in utils.f90 and check every ierr
    subroutine remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
       use mpi
+      use mod_mpi, only: handle_mpi_error
       use mod_general, only: my_rank, it
       use mod_random, only: vranf
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
@@ -53,6 +53,7 @@ contains
       ! TODO: This is probably no longer needed, each mpi rank has now
       ! "independent" prngs...
       call MPI_Bcast(ran, MAX_REPLICA, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+      call handle_mpi_error(ierr)
       if (my_rank /= 0) rn = ran(my_rank)
 
       ! Main Swapping loop, starting with the second replica and going up
@@ -63,14 +64,20 @@ contains
 
          if (my_rank == source - 1) then
 
+            ! TODO: Why MPI_REAL8 ??? eclas_new is DP as well!
             call MPI_Recv(eclas_new, 1, MPI_REAL8, source, tag_en, MPI_COMM_WORLD, status, ierr)
+            call handle_mpi_error(ierr)
             call MPI_Send(eclas, 1, MPI_DOUBLE_PRECISION, source, tag_en, MPI_COMM_WORLD, ierr)
+            call handle_mpi_error(ierr)
             call MPI_Recv(lswap, 1, MPI_LOGICAL, source, tag_swap, MPI_COMM_WORLD, status, ierr)
+            call handle_mpi_error(ierr)
 
          else if (my_rank == source) then
             ! Replica with the higher temperature is the master here
             call MPI_Send(eclas, 1, MPI_REAL8, source - 1, tag_en, MPI_COMM_WORLD, ierr)
+            call handle_mpi_error(ierr)
             call MPI_Recv(eclas_new, 1, MPI_DOUBLE_PRECISION, source - 1, tag_en, MPI_COMM_WORLD, status, ierr)
+            call handle_mpi_error(ierr)
             prob = (eclas - eclas_new) * (1 / temp_list(my_rank + 1) - 1 / temp_list(my_rank))
             if (prob > 0.0D0) then
                prob = 1.0D0
@@ -82,8 +89,8 @@ contains
             else
                lswap = .false.
             end if
-            !      write(*,*)'Probability, ran. number, lswap', prob, rn, lswap
             call MPI_Send(lswap, 1, MPI_LOGICAL, source - 1, tag_swap, MPI_COMM_WORLD, ierr)
+            call handle_mpi_error(ierr)
 
          end if
 
@@ -100,8 +107,11 @@ contains
       ! TODO: we dont really need allgather
       ! We should really track replicas a posteriori via some script, all output is there
       call MPI_AllGather(i, 1, MPI_INTEGER, reps, 1, MPI_INTEGER, MPI_COMM_WORLD, ierr)
+      call handle_mpi_error(ierr)
       call MPI_Gather(prob, 1, MPI_DOUBLE_PRECISION, probs, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call handle_mpi_error(ierr)
       call MPI_Gather(lswap, 1, MPI_LOGICAL, lswaps, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
+      call handle_mpi_error(ierr)
       if (my_rank == 0) then
          do i = 1, nreplica - 1
             if (lswaps(i)) ratios_cumul(i) = ratios_cumul(i) + 1.0D0
@@ -223,6 +233,7 @@ contains
 
    subroutine remd_init(temp, temp0)
       use mpi
+      use mod_mpi, only: handle_mpi_error, get_mpi_size
       use mod_const, only: AUTOK
       use mod_general, only: pot, my_rank, ipimd, irest
       real(DP), intent(inout) :: temp, temp0
@@ -270,7 +281,7 @@ contains
       end if
 
       ! determine number of MPI processess and check with user input
-      call MPI_Comm_size(MPI_COMM_WORLD, i, ierr)
+      i = get_mpi_size()
       if (i /= nreplica) then
          write (*, *) 'ERROR: Number of MPI processes does not match number of replicas.'
          write (*, *) 'Number of processors used must equal "nreplica" parameter in input file.'
@@ -304,6 +315,7 @@ contains
       deltaT = deltaT / AUTOK
 
       call MPI_AllGather(temp, 1, MPI_DOUBLE_PRECISION, temp_list, 1, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, ierr)
+      call handle_mpi_error(ierr)
       if (my_rank == 0) then
          do i = 1, nreplica
             write (20, '(A,I2,A,F8.2)') 'Temperature of replica ', i - 1, ' is ', temp_list(i)
