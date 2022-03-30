@@ -31,7 +31,11 @@ module mod_sh
    integer :: inac = 0
    ! 1 - Turn OFF hopping
    integer :: nohop = 0
-   !
+   ! How to adjust velocity after hop:
+   ! 0 - Adjust velocity along the NAC vector (default)
+   ! 1 - Simple velocity rescale
+   ! NOTE: Simple v-rescale is invoked as a fallback
+   ! if there is not enough momentum along the NAC vector.
    integer :: adjmom = 0
    ! 1 - Reverse momentum direction after frustrated hop
    integer :: revmom = 0
@@ -429,7 +433,7 @@ contains
       use mod_const, only: ANG, AUTOFS
       use mod_general, only: natom, nwrite, idebug, it, sim_time
       use mod_system, only: names
-      use mod_files, only: UPOP, UPROB, UPES, UWFCOEF, UWFCOEF, UNACME, UBKL, UPHASE, UDOTPROD
+      use mod_files, only: UPOP, UPROB, UPES, UNACME, UBKL, UPHASE, UDOTPROD
       use mod_qmmm, only: natqm
       use mod_random, only: vranf
       use mod_kinetic, only: ekin_v
@@ -624,13 +628,13 @@ contains
                   if (adjmom == 0) then
                      call hop(vx, vy, vz, ist, ihop, itrj, eclas)
                   else if (adjmom == 1) then
-                     call hop_dot(vx, vy, vz, ist, ihop, itrj, eclas)
+                     call try_hop_simple_rescale(vx, vy, vz, ist, ihop, eclas)
                   end if
 
                   if (idebug > 0) then
                      write (formt, '(A8,I3,A7)') '(A1,I10,', nstate + 1, 'E20.10)'
-                     write (UPOP, *) '# Substep RandomNum   Probabilities'
-                     write (UPOP, fmt=formt) '#', itp, hop_rdnum, (t(ist, ist1), ist1=1, nstate)
+                     write (*, *) '# Substep RandomNum   Probabilities'
+                     write (*, fmt=formt) '#', itp, hop_rdnum, (t(ist, ist1), ist1=1, nstate)
                   end if
 
                   ! TODO: It seems that we're writing this geometry even for frustrated hop?
@@ -750,7 +754,7 @@ contains
       if (c_temp < 0) then
          write (*, *) '# Not enough momentum in the direction of NAC vector.'
          ! Try, whether there is enough total kinetic energy and scale velocities.
-         call hop_dot(vx, vy, vz, instate, outstate, itrj, eclas)
+         call try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
          return
       end if
 
@@ -829,17 +833,19 @@ contains
 
    end subroutine interpolate
 
-   subroutine hop_dot(vx, vy, vz, instate, outstate, itrj, eclas)
+   subroutine try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
       use mod_general, only: natom, pot
       use mod_kinetic, only: ekin_v
       use mod_arrays, only: fxc, fyc, fzc, x, y, z
       use mod_interfaces, only: force_clas
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(inout) :: eclas
-      integer, intent(in) :: itrj, instate, outstate
+      integer, intent(in) :: instate, outstate
+      integer :: itrj
       integer :: iat
       real(DP) :: de, ekin, alfa, ekin_new
 
+      itrj = 1
       ekin = 0.0D0
       ekin_new = 0.0D0
 
@@ -859,18 +865,18 @@ contains
          eclas = en_array(outstate, itrj)
          ekin_new = ekin_v(vx, vy, vz)
 
-         write (*, '(A24,I3,A10,I3)') '# Hop occured from state ', instate, ' to state ', outstate
-         write (*, *) '# Adjusting velocities by simple scaling.'
-         write (*, '(A,2E20.10)') '#Total_energy_old   Total_energy_new :', &
+         print '(A24,I0,A10,I0)', '# Hop occured from state ', instate, ' to state ', outstate
+         print '(A)', '# Adjusting velocities by simple scaling.'
+         print '(A,2E20.10)', '# Total_energy_old   Total_energy_new :', &
                                & ekin + en_array(instate, itrj), ekin_new + en_array(outstate, itrj)
 
          call set_tocalc(itrj)
-         write (*, *) 'Calculating forces for the new state.'
+         print*,'Calculating forces for the new state.'
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
       else
 
-         write (*, '(A35,I3,A10,I3)') '# Frustrated Hop occured from state ', &
+         print '(A35,I0,A10,I0)', '# Frustrated Hop occured from state ', &
                                     & instate, ' to state ', outstate
          if (revmom == 1) then
             write (*, *) '# Reversing momentum direction.'
@@ -883,7 +889,7 @@ contains
 
       write (*, '(A31,2E20.10)') '# deltaE_pot  E_kin-total', dE, ekin
 
-   end subroutine hop_dot
+   end subroutine try_hop_simple_rescale
 
    subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
       use mod_interfaces, only: finish
