@@ -433,7 +433,7 @@ contains
       use mod_const, only: ANG, AUTOFS
       use mod_general, only: natom, nwrite, idebug, it, sim_time
       use mod_system, only: names
-      use mod_files, only: UPOP, UPROB, UPES, UNACME, UBKL, UPHASE, UDOTPROD
+      use mod_files, only: UPOP, UPROB, UPES, UNACME, UDOTPROD
       use mod_qmmm, only: natqm
       use mod_random, only: vranf
       use mod_kinetic, only: ekin_v
@@ -760,7 +760,7 @@ contains
 
       istate(itrj) = outstate
       eclas = en_array(outstate, itrj)
-      write (*, '(A24,I3,A10,I3)') '# Hop occured from state ', instate, ' to state ', outstate
+      write (*, '(A,I0,A,I0)') '# Hop occured from state ', instate, ' to state ', outstate
 
       ! Rescaling the velocities
 
@@ -779,14 +779,11 @@ contains
       end do
       ekin_new = ekin_v(vx, vy, vz)
 
-      write (*, '(A31,2E20.10)') '# deltaE_pot     E_kin-total', &
+      write (*, '(A,2E20.10)') '# deltaE_pot     E_kin-total', &
                                & en_array(outstate, itrj) - en_array(instate, itrj), ekin
-      write (*, '(A,2E20.10)') '# Total_energy_old   Total_energy_new :', &
-                             & ekin + en_array(instate, itrj), &
-                             & ekin_new + en_array(outstate, itrj)
 
       call set_tocalc(itrj)
-      write (*, *) 'Calculating forces for the new state.'
+      write (*, *) '# Calculating forces for the new state.'
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
    end subroutine hop
@@ -865,21 +862,19 @@ contains
          eclas = en_array(outstate, itrj)
          ekin_new = ekin_v(vx, vy, vz)
 
-         print '(A24,I0,A10,I0)', '# Hop occured from state ', instate, ' to state ', outstate
-         print '(A)', '# Adjusting velocities by simple scaling.'
-         print '(A,2E20.10)', '# Total_energy_old   Total_energy_new :', &
-                               & ekin + en_array(instate, itrj), ekin_new + en_array(outstate, itrj)
+         write (*, '(A,I0,A,I0)') '# Hop occured from state ', instate, ' to state ', outstate
+         write (*, '(A)') '# Adjusting velocities by simple scaling.'
 
          call set_tocalc(itrj)
-         print*,'Calculating forces for the new state.'
+         write (*, '(A)') '# Calculating forces for the new state.'
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
       else
 
-         print '(A35,I0,A10,I0)', '# Frustrated Hop occured from state ', &
+         write (*, '(A,I0,A,I0)') '# Frustrated Hop occured from state ', &
                                     & instate, ' to state ', outstate
          if (revmom == 1) then
-            write (*, *) '# Reversing momentum direction.'
+            write (*, '(A)') '# Reversing momentum direction.'
             vx = -vx
             vy = -vy
             vz = -vz
@@ -887,7 +882,7 @@ contains
 
       end if
 
-      write (*, '(A31,2E20.10)') '# deltaE_pot  E_kin-total', dE, ekin
+      write (*, '(A,E17.10,A,E17.10)') '# deltaE_pot / a.u. = ', dE, ' E_kin-total / a.u. = ', ekin
 
    end subroutine try_hop_simple_rescale
 

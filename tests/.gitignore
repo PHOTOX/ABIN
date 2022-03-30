@@ -20,7 +20,7 @@ REMD/restart.xyz.??.*
 */restart.xyz.0?.old
 */debug.nacm
 */ERROR
-SH_BUTCHER/geom.?.?.?
+SH_*/geom.?.?.?
 CP2K*/WATER*
 
 # PLUMED backup files
