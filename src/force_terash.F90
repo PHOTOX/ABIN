@@ -6,6 +6,7 @@ module mod_terampi_sh
    ! Original Authors: Basile Curchod, J. Snyder and Ed Hohenstein
    !----------------------------------------------------------------
    use mod_const, only: DP
+   use mod_files, only: stdout
    use mod_terampi, only: TC_TAG
    implicit none
    private
@@ -41,11 +42,11 @@ contains
    subroutine receive_terash(fx, fy, fz, eclas, tc_comm)
       use mod_terampi, only: wait_for_terachem
       use mod_const, only: DP, ANG
+      use mod_error, only: fatal_error
       use mod_array_size, only: NSTMAX
       use mod_general, only: idebug, natom, en_restraint, ipimd
       use mod_mpi, only: handle_mpi_error, check_recv_count
       use mod_qmmm, only: natqm
-      use mod_utils, only: abinerror
       use mod_io, only: print_charges, print_dipoles, print_transdipoles
       use mod_sh_integ, only: nstate
       use mod_sh, only: check_CIVector, en_array, istate, nacx, nacy, nacz
@@ -172,8 +173,8 @@ contains
                ! (this assumes, that the initial state is ground state)
                if (en_restraint >= 1) then
                   if (ist1 > 2) then
-                     write (*, *) 'ERROR: Energy restraint not implemented for more than 2 states!'
-                     call abinerror('receive_terash')
+                     call fatal_error(__FILE__, __LINE__, &
+                        & ': Energy restraint not implemented for more than 2 states!')
                   end if
                   do iat = 1, natom
                      fx(iat, 2) = -NAC(ipom)
@@ -211,7 +212,6 @@ contains
       use mod_mpi, only: handle_mpi_error
       use mod_general, only: natom, idebug, sim_time, en_restraint
       use mod_qmmm, only: natqm
-      use mod_utils, only: abinerror
       use mod_sh_integ, only: nstate
       use mod_sh, only: istate, tocalc, ignore_state
       use mpi
@@ -345,7 +345,7 @@ contains
       bufints(3) = natmm_tera
       call MPI_SSend(bufints, 3, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
-      if (idebug > 0) write (*, '(a)') 'Sent initial FMSinit.'
+      if (idebug > 0) write (stdout, '(a)') 'Sent initial FMSinit.'
 
       call send_atom_types_and_scrdir(names, natqm, iw, tc_comm, send_scrdir)
 
@@ -362,7 +362,7 @@ contains
       call set_nbf(bufints(2))
       call set_blob_size(bufints(3))
 
-      print*,'size of CI vector, number of AOs, blob size:', bufints(1), bufints(2), bufints(3)
+      write (stdout, *) 'size of CI vector, number of AOs, blob size:', bufints(1), bufints(2), bufints(3)
       call allocate_tc_arrays(nstate, natom)
    end subroutine init_terash
 ! USE_MPI
@@ -462,7 +462,8 @@ contains
    end subroutine write_wfn
 
    subroutine read_wfn()
-      use mod_general, only: iknow, it, my_rank
+      use mod_general, only: iknow, it
+      use mod_files, only: stderr
       use mod_chars, only: chknow
       use mod_error, only: fatal_error
       use mod_utils, only: archive_file
@@ -476,9 +477,9 @@ contains
       inquire (file=fname, exist=file_exists)
       if (.not. file_exists) then
          close (uwfn)
-         if (my_rank == 0) print*,'ERROR: Wavefunction restart file '//trim(fname)//' does not exist!'
+         write (stderr, *) 'Wavefunction restart file '//trim(fname)//' does not exist!'
          if (iknow /= 1) then
-            if (my_rank == 0) print*,chknow
+            write (stderr, *) chknow
             call fatal_error(__FILE__, __LINE__, &
                & 'missing restart file '//trim(fname))
          end if
@@ -539,7 +540,7 @@ contains
 
 #ifndef USE_MPI
    subroutine init_terash(x, y, z)
-      use mod_utils, only: not_compiled_with
+      use mod_error, only: not_compiled_with
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       ! Assignments just to squash compiler warnings
       x = 0.0D0; y = 0.0D0; z = 0.0D0
@@ -548,7 +549,7 @@ contains
 
    subroutine force_terash(x, y, z, fx, fy, fz, eclas)
       use mod_const, only: DP
-      use mod_utils, only: not_compiled_with
+      use mod_error, only: not_compiled_with
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas

@@ -1,2 +1,1 @@
- FATAL ERROR encountered in subroutine: read_tc_port_from_file
- Check standard output for further information.
+ERROR in tera_mpi_api.F90: Could not read file port.txt.1

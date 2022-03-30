@@ -8,7 +8,7 @@ module mod_plumed
    use iso_c_binding, only: C_NULL_PTR
    use mod_const, only: DP
 #ifndef USE_PLUMED
-   use mod_utils, only: not_compiled_with
+   use mod_error, only: not_compiled_with
 #endif
    implicit none
    private

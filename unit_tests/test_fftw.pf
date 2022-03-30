@@ -55,13 +55,14 @@ contains
    @test(ifndef=USE_FFTW)
    subroutine test_not_compiled_with_fftw()
       use, intrinsic :: iso_c_binding, only: C_DOUBLE, C_DOUBLE_COMPLEX
-      use mod_general, only: my_rank
+      use mod_files, only: stdout_to_devnull, stderr_to_stdout, &
+                        &  reset_stdout, reset_stderr
       complex(C_DOUBLE_COMPLEX), dimension(1) :: normal_modes
       real(C_DOUBLE), dimension(1) :: xyz
       integer :: nbeads
 
-      ! To suppress output
-      my_rank = 1
+      call stdout_to_devnull()
+      call stderr_to_stdout()
 
       call fftw_normalmodes_init(nbeads)
       @assertExceptionRaised('ABIN was not compiled with FFTW library')
@@ -71,6 +72,9 @@ contains
 
       call dft_cart2normalmode(xyz, normal_modes)
       @assertExceptionRaised('ABIN was not compiled with FFTW library')
+
+      call reset_stdout()
+      call reset_stderr()
    end subroutine test_not_compiled_with_fftw
 
 #endif

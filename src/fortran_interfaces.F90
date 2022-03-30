@@ -1,22 +1,17 @@
 ! Fortran interfaces created by hand
 ! for functions outside of modules
+! TODO: Everything should be in modules!
 module mod_interfaces
    use mod_const, only: DP
    public
    interface
 
-      subroutine init(dt)
-         import :: DP
-         real(DP), intent(out) :: dt
-      end subroutine init
+      subroutine print_compile_info()
+      end subroutine print_compile_info
 
       subroutine finish(error_code)
          integer, intent(in) :: error_code
       end subroutine finish
-
-      subroutine print_compile_info()
-
-      end subroutine print_compile_info
 
       ! has to be here or in its own module, as it depends on mod_sh
       ! and mod_sh depends on force_clas
@@ -72,9 +67,6 @@ module mod_interfaces
       subroutine omp_set_num_threads(nthreads)
          integer, intent(in) :: nthreads
       end subroutine omp_set_num_threads
-
-      subroutine print_runtime_info()
-      end subroutine
 
       ! TODO: This interface currently doesn't work, probably because
       ! of how we pass the 2D arrays...

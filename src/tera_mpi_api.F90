@@ -2,6 +2,8 @@
 module mod_terampi
    use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
    use mod_const, only: DP
+   use mod_error, only: fatal_error
+   use mod_files, only: stdout, stderr
 #ifdef USE_MPI
    use mpi
    use mod_mpi, only: handle_mpi_error, get_mpi_error_string
@@ -40,23 +42,21 @@ contains
 #ifdef USE_MPI
 
    subroutine initialize_terachem_interface(tc_server_name)
-      use mod_general, only: nwalk
-      use mod_general, only: iremd, my_rank
+      use mod_general, only: nwalk, iremd
+      use mod_mpi, only: get_mpi_rank
       character(len=*) :: tc_server_name
       integer :: i, ierr
 
       if (nwalk > 1) then
-         write (*, '(A)') 'WARNING: You are using PIMD with direct TeraChem interface.'
-         write (*, '(A)') 'You should have "integrator regular" in the TeraChem input file'
+         write (stdout, '(A)') 'WARNING: You are using PIMD with direct TeraChem interface.'
+         write (stdout, '(A)') 'You should have "integrator regular" in the TeraChem input file'
       end if
 
-      if (my_rank == 0) then
-         write (*, '(A,I0)') 'Number of TeraChem servers: ', nteraservers
-      end if
+      write (stdout, '(A,I0)') 'Number of TeraChem servers: ', nteraservers
 
       if (mpi_sleep <= 0) then
-         write (*, *) 'WARNING: Parameter "mpi_sleep" must be positive!'
-         write (*, *) 'Setting it back to default value'
+         write (stdout, *) 'WARNING: Parameter "mpi_sleep" must be positive!'
+         write (stdout, *) 'Setting it back to default value'
          mpi_sleep = 0.05D0
       end if
 
@@ -82,7 +82,7 @@ contains
          ! Right now, we hardcode one TC server per replica
          ! and we ignore the nteraservers setting in the ABIN input.
          nteraservers = 1
-         call connect_tc_server(trim(tc_server_name), my_rank + 1)
+         call connect_tc_server(trim(tc_server_name), get_mpi_rank() + 1)
       else
          ! Parallel calls to MPI_Comm_connect often lead to segfault,
          ! maybe a bug in MPICH. Commenting out until we debug further.
@@ -96,7 +96,6 @@ contains
 
    subroutine connect_tc_server(tc_server_name, itera)
       use mod_general, only: iremd
-      use mod_utils, only: abinerror
       character(len=*), intent(in) :: tc_server_name
       integer, intent(in) :: itera
       character(len=MPI_MAX_PORT_NAME) :: port_name
@@ -116,14 +115,14 @@ contains
 
       end if
 
-      write (6, '(2A)') 'Found TeraChem port: ', trim(port_name)
-      write (6, '(A)') 'Establishing connection...'
+      write (stdout, '(2A)') 'Found TeraChem port: ', trim(port_name)
+      write (stdout, '(A)') 'Establishing connection...'
       call flush (OUTPUT_UNIT)
 
       ! Establish new communicator via port name
       call MPI_Comm_connect(trim(port_name), MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
       call handle_mpi_error(ierr)
-      write (6, '(A)') 'Connection established!'
+      write (stdout, '(A)') 'Connection established!'
 
       ! This is a horrible hack :-(
       if (iremd == 1) then
@@ -141,7 +140,6 @@ contains
    ! Look for server_name via MPI nameserver, get port name
    subroutine lookup_port_via_nameserver(server_name, port_name)
       use mod_general, only: idebug
-      use mod_utils, only: abinerror
       character(len=*), intent(in) :: server_name
       character(len=MPI_MAX_PORT_NAME), intent(out) :: port_name
       real(DP) :: timer
@@ -149,7 +147,7 @@ contains
 
       port_name = ''
 
-      write (*, '(2A)') 'Looking up TeraChem server under name:', server_name
+      write (stdout, '(2A)') 'Looking up TeraChem server under name:', server_name
       call flush (OUTPUT_UNIT)
 
       timer = MPI_WTIME()
@@ -160,7 +158,7 @@ contains
          if (ierr == MPI_SUCCESS) then
             ! Workaround for a bug in hydra_nameserver for MPICH versions < 3.3
             if (len_trim(port_name) == 0) then
-               write (*, '(A)') 'Found empty port, retrying...'
+               write (stdout, '(A)') 'Found empty port, retrying...'
             else
                exit
             end if
@@ -168,14 +166,14 @@ contains
 
          ! Timeout after max_wait_time seconds
          if ((MPI_WTIME() - timer) > max_wait_time) then
-            write (*, *) 'Server name '//server_name//' not found.'
-            call abinerror("lookup_port_via_nameserver")
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Server name '//server_name//' not found.')
          end if
 
          ! Let's wait a bit since too many calls
          ! to MPI_LOOKUP_NAME() can crash the hydra_nameserver process
          if (idebug > 1) then
-            write (*, '(A)') 'Waiting for TC port'
+            write (stdout, '(A)') 'Waiting for TC port'
          end if
          ! TODO: Try out how long should we sleep here.
          call system('sleep 0.5')
@@ -190,13 +188,12 @@ contains
    ! This is more portable then the nameserver approach,
    ! but have to rely on HDD.
    subroutine read_tc_port_from_file(portfile, port_name)
-      use mod_utils, only: abinerror
       character(len=*), intent(in) :: portfile
       character(len=MPI_MAX_PORT_NAME), intent(out) :: port_name
       integer :: iunit, iost
       real(DP) :: timer
 
-      write (*, '(A)') 'Reading TeraChem port name from file '//portfile
+      write (stdout, '(A)') 'Reading TeraChem port name from file '//portfile
       port_name = ''
       timer = MPI_WTIME()
 
@@ -207,19 +204,19 @@ contains
          end if
 
          if ((MPI_WTIME() - timer) > max_wait_time) then
-            write (*, '(A)') 'ERROR: Could not open file '//portfile
-            call abinerror('read_tc_port_from_file')
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Could not open file '//portfile)
          end if
 
-         write (*, '(A)') 'WARNING: Cannot open file '//portfile
+         write (stdout, '(A)') 'WARNING: Cannot open file '//portfile
          call system('sleep 0.5')
 
       end do
 
       read (iunit, '(A)', iostat=iost) port_name
       if (iost /= 0) then
-         write (*, '(A)') 'ERROR reading file '//portfile
-         call abinerror('read_tc_port_from_file')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Could not read file '//portfile)
       end if
 
       close (iunit, status='delete')
@@ -254,19 +251,19 @@ contains
 
       do itera = 1, nteraservers
 
-         write (*, '(A,I0)') 'Shutting down TeraChem server id = ', itera
+         write (stdout, '(A,I0)') 'Shutting down TeraChem server id = ', itera
 
          call MPI_Send(empty, 0, MPI_INTEGER, 0, mpi_tag, tc_comms(itera), ierr)
 
          if (ierr /= MPI_SUCCESS) then
-            write (*, '(A,I0)') 'MPI ERROR during shutdown of TeraChem server id = ', itera
-            write (*, '(A)') 'Verify manually that the TeraChem server was terminated.'
-            print*,get_mpi_error_string(ierr)
+            write (stderr, '(A,I0)') 'MPI ERROR during shutdown of TeraChem server id = ', itera
+            write (stderr, '(A)') 'Verify manually that the TeraChem server was terminated.'
+            write (stderr, *) get_mpi_error_string(ierr)
          end if
 
          call MPI_Comm_free(tc_comms(itera), ierr)
          if (ierr /= MPI_SUCCESS) then
-            print*,get_mpi_error_string(ierr)
+            write (stderr, *) get_mpi_error_string(ierr)
          end if
 
       end do
@@ -327,7 +324,7 @@ contains
 
       ! Send natqm and the type of each qmatom
       if (idebug > 1) then
-         write (6, '(A, I0)') 'Sending number of atoms  = ', num_atom
+         write (stdout, '(A, I0)') 'Sending number of atoms  = ', num_atom
          call flush (OUTPUT_UNIT)
       end if
       call MPI_Send(num_atom, 1, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
@@ -335,7 +332,8 @@ contains
    end subroutine send_natom
 
    subroutine send_atom_types_and_scrdir(at_names, num_atom, iw, tc_comm, send_scrdir)
-      use mod_general, only: my_rank, idebug
+      use mod_general, only: idebug
+      use mod_mpi, only: get_mpi_rank
       character(len=2), intent(in) :: at_names(:)
       logical, intent(in) :: send_scrdir
       integer, intent(in) :: num_atom
@@ -355,13 +353,13 @@ contains
       num_char = num_atom * 2
 
       if (send_scrdir) then
-         call append_scrdir_name(buffer, num_atom * 2, iw, my_rank)
+         call append_scrdir_name(buffer, num_atom * 2, iw, get_mpi_rank())
          num_char = len_trim(buffer)
       end if
 
       if (idebug > 1) then
-         write (6, '(A)') 'Sending QM atom types: '
-         write (*, '(A)') trim(buffer)
+         write (stdout, '(A)') 'Sending QM atom types: '
+         write (stdout, '(A)') trim(buffer)
          call flush (OUTPUT_UNIT)
       end if
 
@@ -372,7 +370,6 @@ contains
    subroutine send_coordinates(x, y, z, num_atom, iw, tc_comm, units)
       use mod_general, only: idebug
       use mod_const, only: ANG
-      use mod_error, only: fatal_error
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: num_atom
       integer, intent(in) :: iw
@@ -402,9 +399,9 @@ contains
       end if
 
       if (idebug > 1) then
-         write (6, '(A)') 'Sending QM coords: '
+         write (stdout, '(A)') 'Sending QM coords: '
          do iat = 1, num_atom
-            write (6, *) 'Atom ', iat, ': ', coords(:, iat)
+            write (stdout, *) 'Atom ', iat, ': ', coords(:, iat)
             call flush (OUTPUT_UNIT)
          end do
       end if
@@ -415,12 +412,12 @@ contains
 #else
 
    subroutine initialize_tc_servers()
-      use mod_utils, only: not_compiled_with
+      use mod_error, only: not_compiled_with
       call not_compiled_with('MPI')
    end subroutine initialize_tc_servers
 
    subroutine initialize_terachem_interface(tc_server_name)
-      use mod_utils, only: not_compiled_with
+      use mod_error, only: not_compiled_with
       character(len=*), intent(in) :: tc_server_name
       character(len=len(tc_server_name)) :: dummy
       dummy = tc_server_name

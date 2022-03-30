@@ -1,2 +1,1 @@
- FATAL ERROR encountered in subroutine: lookup_port_via_nameserver
- Check standard output for further information.
+ERROR in tera_mpi_api.F90: Server name test5.1 not found.

@@ -6,7 +6,7 @@ module mod_water
    save
 contains
    subroutine check_water(natom, names)
-      use mod_general, only: my_rank
+      use mod_files, only: stdout
       use mod_utils, only: abinerror, count_atoms_by_name
       integer, intent(in) :: natom
       character(len=2) :: names(:)
@@ -24,7 +24,7 @@ contains
 
       error = 0
 
-      if (my_rank == 0) print*,'Checking that input atom types correspond to pure water.'
+      write (stdout, *) 'Checking that input atom types correspond to pure water.'
 
       ! Note that some of these checks are redundant,
       ! but we're trying to be helpful and provide as much info as we can.
@@ -32,29 +32,29 @@ contains
       nO = count_atoms_by_name(names, 'O', natom)
       nH = count_atoms_by_name(names, 'H', natom)
       if (nO * 2 /= nH) then
-         write (*, *) 'ERROR: oxygen to hydrogen ratio is not 1:2'
+         write (stdout, *) 'ERROR: oxygen to hydrogen ratio is not 1:2'
          error = 1
       end if
 
       if (modulo(natom, 3) /= 0) then
-         write (*, *) 'ERROR: Number of atoms is not divisible by 3.'
+         write (stdout, *) 'ERROR: Number of atoms is not divisible by 3.'
          error = 1
       end if
 
       do iat = 1, natom, 3
          if (names(iat) /= 'O' .or. names(iat + 1) /= 'H' .or. names(iat + 2) /= 'H') then
             error = 1
-            write (*, *) 'ERROR: Bad element type.'
-            write (*, *) 'Water atoms must be ordered as "O H H" '
+            write (stdout, *) 'ERROR: Bad element type.'
+            write (stdout, *) 'Water atoms must be ordered as "O H H" '
          end if
       end do
 
       if (error == 1) then
-         write (*, *) 'This is not pure water.'
+         write (stdout, *) 'This is not pure water.'
          call abinerror('check_water')
       end if
 
-      if (my_rank == 0) print '(A,I0,A)', 'Detected ', nO, ' water molecules'
+      write (stdout, '(A,I0,A)') 'Detected ', nO, ' water molecules'
    end subroutine check_water
 
 end module mod_water

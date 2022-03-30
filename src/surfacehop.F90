@@ -3,6 +3,8 @@
 module mod_sh
    use mod_const, only: DP
    use mod_array_size, only: NSTMAX, NTRAJMAX
+   use mod_files, only: stdout, stderr
+   use mod_error, only: fatal_error
    use mod_utils, only: abinerror
    use mod_sh_integ
    implicit none
@@ -162,8 +164,7 @@ contains
          end if
 
          if (iost /= 0) then
-            write (*, *) 'Some NACMEs not read. Exiting...'
-            call abinerror('get_nacm')
+            call fatal_error(__FILE__, __LINE__, 'Some NACMEs could not be read')
          end if
          ! we always have to set tocalc because we change it in readnacm
          call set_tocalc(itrj)
@@ -276,11 +277,11 @@ contains
       logical :: file_exists
       character(len=200) :: chmsg
 
-      print*,'Reading Surface Hopping restart data from file '//trim(restart_file)
+      write (stdout, *) 'Reading Surface Hopping restart data from file '//trim(restart_file)
       inquire (file=restart_file, exist=file_exists)
       if (.not. file_exists) then
-         write (*, *) 'ERROR: Surface Hopping restart file does not exist! '//trim(restart_file)
-         call abinerror('read_nacmrest')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Surface Hopping restart file '//trim(restart_file)//' does not exist!')
       end if
 
       open (newunit=iunit1, file=restart_file, action="read", status="old", access="sequential", form="unformatted")
@@ -922,10 +923,10 @@ contains
       entot_old = (ekin_old + en_array_old(istate(itrj), itrj)) * AUtoEV
 
       if (abs(entot - entot_old) > energydifthr) then
-         write (*, *) 'ERROR:Poor energy conservation. Exiting...'
-         write (*, *) 'Total energy difference [eV] is:', entot - entot_old
-         write (*, *) 'The threshold was:', energydifthr
-         write (*, *) 'Ekin_old, Ekin, Epot_old, E_pot', &
+         write (stderr, *) 'ERROR:Poor energy conservation. Exiting...'
+         write (stderr, *) 'Total energy difference [eV] is:', entot - entot_old
+         write (stderr, *) 'The threshold was:', energydifthr
+         write (stderr, *) 'Ekin_old, Ekin, Epot_old, E_pot', &
             ekin_old, ekin, en_array_old(istate(itrj), itrj), en_array(istate(itrj), itrj)
          call abinerror('check_energy')
       end if
@@ -944,9 +945,9 @@ contains
       entot = (ekin + en_array(istate(itrj), itrj)) * AUtoEV
 
       if (abs(entot - entot0) > energydriftthr) then
-         write (*, *) 'ERROR: Energy drift exceeded threshold value. Exiting...'
-         write (*, *) 'Total energy difference [eV] is:', entot - entot0
-         write (*, *) 'The threshold was:', energydriftthr
+         write (stderr, *) 'ERROR: Energy drift exceeded threshold value. Exiting...'
+         write (stderr, *) 'Total energy difference [eV] is:', entot - entot0
+         write (stderr, *) 'The threshold was:', energydriftthr
          call abinerror('check_energy')
       end if
 

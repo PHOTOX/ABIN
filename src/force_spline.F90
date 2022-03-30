@@ -90,19 +90,18 @@ contains
 
    subroutine read_grid(fname, x_grid, y_grid, grid_size)
       use mod_error, only: fatal_error
-      use mod_general, only: my_rank
+      use mod_files, only: stdout
       character(len=*), intent(in) :: fname
       real(DP), dimension(:), intent(out) :: x_grid, y_grid
       integer, intent(out) :: grid_size
       integer :: u, iost
 
       grid_size = 0
-      if (my_rank == 0) then
-         print*,''
-         print*,'Reading numerical potential grid from file '//trim(fname)
-         print*,'First column: x-coordinate / bohrs'
-         print*,'Second column: potential energy / atomic units'
-      end if
+
+      write (stdout, *) ''
+      write (stdout, *) 'Reading numerical potential grid from file '//trim(fname)
+      write (stdout, *) 'First column: x-coordinate / bohrs'
+      write (stdout, *) 'Second column: potential energy / atomic units'
 
       open (newunit=u, file=fname, status='old', action='read')
       do

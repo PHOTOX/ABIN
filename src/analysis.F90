@@ -92,14 +92,18 @@ contains
    subroutine trajout(x, y, z, time_step)
       use mod_const, only: ANG
       use mod_files, only: UMOVIE
-      use mod_general, only: nwalk, natom, iremd, my_rank, sim_time
+      use mod_general, only: nwalk, natom, iremd, sim_time
+      use mod_mpi, only: get_mpi_rank
       use mod_system, only: names
       implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: time_step
       integer :: iat, iw
+      integer :: my_rank
       character(len=20) :: chout
       logical :: lopened
+
+      my_rank = get_mpi_rank()
 
       inquire (UMOVIE, opened=lopened)
 
@@ -195,7 +199,8 @@ contains
 
    subroutine restout(x, y, z, vx, vy, vz, time_step)
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
-                             iremd, my_rank, pot, narchive, sim_time
+                             iremd, pot, narchive, sim_time
+      use mod_mpi, only: get_mpi_rank
       use mod_utils, only: archive_file
       use mod_nhc, only: inose, nhc_restout
       use mod_estimators
@@ -210,8 +215,11 @@ contains
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(in) :: time_step
       integer :: iat, iw, itrj
+      integer :: my_rank
       logical :: file_exists
       character(len=200) :: chout, chsystem
+
+      my_rank = get_mpi_rank()
 
       if (pot == '_tera_' .and. ipimd == 2) then
          call write_wfn()
@@ -316,8 +324,9 @@ contains
    ! It is called from subroutine init.
    subroutine restin(x, y, z, vx, vy, vz, it)
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
-                             iremd, my_rank, pot, sim_time
+                             iremd, pot, sim_time
       use mod_nhc, only: readNHC, inose, nhc_restin
+      use mod_mpi, only: get_mpi_rank
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
       use mod_sh_integ, only: sh_read_wf
@@ -330,10 +339,12 @@ contains
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(out) :: it
       integer :: iat, iw, itrj
+      integer :: my_rank
       character(len=100) :: chtemp
       logical :: prngread
       character(len=20) :: chin
 
+      my_rank = get_mpi_rank()
       prngread = .false.
 
       if (iremd == 1) then

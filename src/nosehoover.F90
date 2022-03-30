@@ -97,7 +97,8 @@ contains
 
    subroutine check_nhc_parameters()
       use mod_utils, only: int_positive, int_nonnegative, int_switch, real_nonnegative
-      use mod_general, only: natom, ipimd, my_rank
+      use mod_files, only: stdout, stderr
+      use mod_general, only: natom, ipimd
       use mod_const, only: AUTOK
       use mod_error, only: fatal_error
       use mod_chars, only: chknow
@@ -114,32 +115,32 @@ contains
 
       error = .false.
       if (nchain > maxchain) then
-         print*,'Maximum number of Nose-Hoover chains exceeded'
+         write (stderr, *) 'Maximum number of Nose-Hoover chains exceeded'
          error = .true.
       end if
       if (nrespnose < 3) then
-         write (*, *) 'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
-         write (*, *) 'Such low value would probably not produce stable results.'
-         write (*, *) chknow
+         write (stderr, *) 'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
+         write (stderr, *) 'Such low value would probably not produce stable results.'
+         write (stderr, *) chknow
          if (iknow /= 1) error = .true.
       end if
       if (nyosh == 1) then
-         write (*, *) 'It is strongly reccommended to use Suzuki-Yoshida scheme when using Nose-Hoover thermostat (nyosh=3 or 7).'
-         write (*, *) chknow
+         write (stderr, *) 'Use Suzuki-Yoshida scheme for Nose-Hoover thermostat (nyosh=3 or 7).'
+         write (stderr, *) chknow
          if (iknow /= 1) error = .true.
       end if
       if (imasst == 0 .and. ipimd == 1) then
-         write (*, *) 'PIMD simulations must use massive thermostat (imasst=1)!'
+         write (stderr, *) 'PIMD simulations must use massive thermostat (imasst=1)!'
          error = .true.
       end if
       if (nmolt > natom) then
-         if (my_rank == 0) print*,'Input error: nmolt > natom, which is not possible. Consult the manual.'
+         write (stdout, *) 'Input error: nmolt > natom, which is not possible. Consult the manual.'
          error = .true.
       end if
       if (imasst == 0) then
          do imol = 1, nmolt
             if (natmolt(imol) <= 0) then
-               write (*, *) 'Number of atoms in molecules not specified! Set array natmolt properly.'
+               write (stderr, *) 'Number of atoms in molecules not specified! Set array natmolt properly.'
                error = .true.
             end if
          end do
@@ -150,14 +151,14 @@ contains
             ipom = ipom + natmolt(iat)
          end do
          if (ipom /= natom) then
-            write (*, *) 'Number of atoms in thermostated molecules (natmolt) does not match natom.'
-            write (*, *) chknow
+            write (stderr, *) 'Number of atoms in thermostated molecules (natmolt) does not match natom.'
+            write (stderr, *) chknow
             if (iknow /= 1) error = .true.
          end if
       end if
       if (temp * AUTOK < 1 .and. inose > 0) then
-         write (*, *) 'Temperature below 1 Kelvin. Are you sure?'
-         write (*, *) chknow
+         write (stderr, *) 'Temperature below 1 Kelvin. Are you sure?'
+         write (stderr, *) chknow
          if (iknow /= 1) error = .true.
       end if
 
@@ -168,12 +169,11 @@ contains
    end subroutine check_nhc_parameters
 
    subroutine nhc_init()
-      use mod_general, only: my_rank
-
+      use mod_files, only: stdout
       if (imasst == 1) then
-         if (my_rank == 0) print*,'Initializing massive Nosé-Hoover Chain thermostat'
+          write (stdout, *) 'Initializing massive Nosé-Hoover Chain thermostat'
       else
-         if (my_rank == 0) print*,'Initializing global Nosé-Hoover Chain thermostat'
+         write (stdout, *) 'Initializing global Nosé-Hoover Chain thermostat'
       end if
 
       call check_nhc_parameters()
@@ -182,10 +182,8 @@ contains
 
       ! Not sure if we should have this default value
       if (tau0 < 0) then
-         if (my_rank == 0) then
-            write (*, *) 'WARNING: tau0 not set.'
-            write (*, *) 'Using default value tau0=0.001 picoseconds'
-         end if
+         write (stdout, *) 'WARNING: tau0 not set.'
+         write (stdout, *) 'Using default value tau0=0.001 picoseconds'
          tau0 = 0.001D0
       end if
       call set_nhc_masses(tau0)

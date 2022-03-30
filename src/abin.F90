@@ -20,7 +20,10 @@ program abin
    use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
    use mod_const, only: DP, AUtoFS
    use mod_arrays
-   use mod_general
+   use mod_files, only: stdout
+   use mod_general, only: sim_time, pot, pot_ref, iremd, ipimd, &
+      & md, nwrite, nstep, ncalc, it, inormalmodes, istage, irest
+   use mod_init, only: init
    use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
@@ -33,7 +36,7 @@ program abin
    use mod_en_restraint
    use mod_plumed
    use mod_terampi_sh, only: move_new2old_terash
-   use mod_mpi, only: mpi_barrier_wrapper
+   use mod_mpi, only: get_mpi_rank, mpi_barrier_wrapper
    use mod_remd
    implicit none
    ! TODO: These should probably be defined and stored in some module, not here
@@ -41,12 +44,15 @@ program abin
    integer :: itrj
    logical :: file_exists
    integer, dimension(8) :: time_start, time_end
+   integer :: my_rank
    real(DP) :: total_cpu_time
 
    call date_and_time(VALUES=time_start)
 
    ! INPUT AND INITIALIZATION SECTION
    call init(dt)
+
+   my_rank = get_mpi_rank()
 
    ! This cannot be in init because of the namelist 'system'
    if (my_rank == 0) then
@@ -65,10 +71,8 @@ program abin
       call lz_rewind(en_array_lz)
    end if
 
-   if (my_rank == 0) then
-      write (*, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
-      write (*, *) ''
-   end if
+   write (stdout, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
+   write (stdout, *) ''
 
    ! Transform coordinates and velocities Path Integral MD
    ! (staging or normal modes)
@@ -87,10 +91,8 @@ program abin
 
    else
 
-      if (my_rank == 0) then
-         write (*, *)
-         write (*, *) '#      Step     Time [fs]'
-      end if
+      write (stdout, *)
+      write (stdout, *) '#      Step     Time [fs]'
 
       ! ---------------- PROPAGATION-------------
 
@@ -141,7 +143,7 @@ program abin
 
          inquire (FILE="EXIT", EXIST=file_exists)
          if (file_exists) then
-            print*,'Found file EXIT. Writing restart file and exiting.'
+            write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
             if (istage == 1) then
                call QtoX(vx, vy, vz, transxv, transyv, transzv)
                call QtoX(x, y, z, transx, transy, transz)
@@ -252,8 +254,8 @@ program abin
 
          end if
 
-         if (modulo(it, nwrite) == 0 .and. my_rank == 0) then
-            write (*, '(I20,F15.2)') it, sim_time * AUtoFS
+         if (modulo(it, nwrite) == 0) then
+            write (stdout, '(I20,F15.2)') it, sim_time * AUtoFS
             call flush (OUTPUT_UNIT)
          end if
 
@@ -280,24 +282,20 @@ program abin
       ! minimization endif
    end if
 
-   if (my_rank == 0) then
-      write (*, *) ''
-      write (*, '(A)') 'Job finished successfully!'
-   end if
+   write (stdout, *) ''
+   write (stdout, '(A)') 'Job finished successfully!'
 
    call finish(0)
 
-   if (my_rank == 0) then
-      call cpu_time(total_cpu_time)
-      write (*, '(A)') 'Total cpu time [s] (does not include ab initio calculations)'
-      write (*, *) total_cpu_time
-      write (*, '(A)') 'Total cpu time [hours] (does not include ab initio calculations)'
-      write (*, *) total_cpu_time / 3600.
+   call cpu_time(total_cpu_time)
+   write (stdout, '(A)') 'Total cpu time [s] (does not include ab initio calculations)'
+   write (stdout, *) total_cpu_time
+   write (stdout, '(A)') 'Total cpu time [hours] (does not include ab initio calculations)'
+   write (stdout, *) total_cpu_time / 3600.
 
-      write (*, '(A)') 'Job started at:  '//trim(get_formatted_date_and_time(time_start))
-      call date_and_time(VALUES=time_end)
-      write (*, '(A)') 'Job finished at: '//trim(get_formatted_date_and_time(time_end))
-   end if
+   write (stdout, '(A)') 'Job started at:  '//trim(get_formatted_date_and_time(time_start))
+   call date_and_time(VALUES=time_end)
+   write (stdout, '(A)') 'Job finished at: '//trim(get_formatted_date_and_time(time_end))
 
 contains
 

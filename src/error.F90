@@ -22,7 +22,7 @@ module mod_error
    private
 
    ! This method replaces abinerror()
-   public :: fatal_error
+   public :: fatal_error, not_compiled_with
    ! This method is used by pFUnit to set it's own error handler,
    ! see unit_tests/throw_with_pfunit.F90
    public :: set_error_method
@@ -55,6 +55,13 @@ contains
 
       call error_method(filename, line_number, message=message)
    end subroutine fatal_error
+
+   subroutine not_compiled_with(feature)
+      character(len=*), intent(in) :: feature
+      character(:), allocatable :: error_msg
+      error_msg = 'ABIN was not compiled with '//feature
+      call fatal_error(__FILE__, __LINE__, error_msg)
+   end subroutine not_compiled_with
 
    subroutine print_error_and_stop(filename, line, message)
       use mod_interfaces, only: finish

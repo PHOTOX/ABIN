@@ -6,12 +6,12 @@ module mod_files
    use, intrinsic :: iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
    implicit none
    public
-   private :: CHFILES, MAXFILENAME
-   ! TODO: Make MAXUNITS private, currently used in force_abin.F90
-   ! private :: MAXUNITS
    ! Defines maximum number of units available for permanently opened files
-   integer, parameter :: MAXUNITS = 50, MAXFILENAME = 50
-   character(len=MAXFILENAME) :: CHFILES(MAXUNITS)
+   ! TODO: Make MAXUNITS private, currently used in force_abin.F90
+   integer, parameter :: MAXUNITS = 50
+
+   integer, parameter, private :: MAXFILENAME = 50
+   character(len=MAXFILENAME), private :: CHFILES(MAXUNITS)
 
    ! UNIT 1 is reserved for CP2K!!!
    integer, parameter :: UMOVIE = 10, UVELOC = 2, UFORCE = 15
@@ -28,13 +28,45 @@ module mod_files
    integer, parameter :: UDIP = 33, UTDIP = 34
    ! Analysis output
    integer, parameter :: UDIST = 36, UANG = 37, UDIH = 38
+
+   ! Default standard output and standard error units
+   ! These are NOT parameters, we change them in REMD and in unit tests.
+   integer, protected :: stdout = OUTPUT_UNIT
+   integer, protected :: stderr = ERROR_UNIT
    save
 
 contains
 
+   subroutine stdout_to_devnull()
+      use mod_error, only: fatal_error
+      integer :: u, iost
+      open (newunit=u, iostat=iost, file='/dev/null', action='write')
+      if (iost == 0) then
+         stdout = u
+      else
+         call fatal_error(__FILE__, __LINE__, 'Could not open file /dev/null')
+      end if
+   end subroutine stdout_to_devnull
+
+   subroutine reset_stdout()
+      if (stdout /= OUTPUT_UNIT) then
+         close (stdout)
+         stdout = OUTPUT_UNIT
+      end if
+   end subroutine reset_stdout
+
+   subroutine stderr_to_stdout()
+      stderr = stdout
+   end subroutine stderr_to_stdout
+
+   subroutine reset_stderr()
+      stderr = ERROR_UNIT
+   end subroutine reset_stderr
+
    subroutine files_init(isbc, phase, ndist, nang, ndih)
       use mod_general
       use mod_error, only: fatal_error
+      use mod_mpi, only: get_mpi_rank
       use mod_system, only: names
       integer, intent(in) :: isbc, phase, ndist, nang, ndih
       character(len=10) :: chaccess
@@ -101,7 +133,7 @@ contains
 
       if (iremd == 1) then
          do i = 1, MAXUNITS
-            write (chfiles(i), '(A,I2.2)') trim(chfiles(i))//'.', my_rank
+            write (chfiles(i), '(A,I2.2)') trim(chfiles(i))//'.', get_mpi_rank()
          end do
       end if
 
