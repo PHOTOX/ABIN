@@ -673,6 +673,8 @@ contains
 
    subroutine check_inputsanity()
       use mod_chars, only: chknow
+      use mod_utils, only: real_positive, real_nonnegative, &
+                         & int_positive, int_nonnegative, int_switch
       integer :: error
 !$    integer :: nthreads, omp_get_max_threads
 
@@ -722,7 +724,7 @@ contains
          end if
       end if
       if (pot == '_none_') then
-         write (*, *) 'FATAL: Variable "pot" not specified.Exiting now...'
+         write (*, *) 'ERROR: Variable "pot" not specified.'
          error = 1
       end if
       if (ipimd == 1 .and. nwalk <= 1) then
@@ -768,53 +770,12 @@ contains
       if (shiftdihed == 0) shiftdih = 0.0D0
       if (shiftdihed == 1) shiftdih = 360.0D0
 
-      if (imini < 0) then
-         write (*, *) 'Input error: imini must be positiv or zero.'
-         error = 1
-      end if
-      if (nstep < 0) then
-         write (*, *) 'Input error: nstep must be positive.'
-         error = 1
-      end if
-      if (nwrite <= 0) then
-         write (*, *) 'Input error: nwrite must be positive.'
-         error = 1
-      end if
-      if (nwritex <= 0) then
-         write (*, *) 'Input error: nwritex must be positive.'
-         error = 1
-      end if
-      if (nrest <= 0) then
-         write (*, *) 'Input error: nrest must be positive.'
-         error = 1
-      end if
-      if (nabin <= 0) then
-         write (*, *) 'Input error: nabin must be positive.'
-         error = 1
-      end if
-      if (icv /= 0 .and. icv /= 1) then
-         write (*, *) 'Input error: icv must be 1 or 0.'
-         error = 1
-      end if
-      if (temp < 0) then
-         write (*, *) 'Input error: temperature must be positive.'
-         error = 1
-      end if
       if (icv == 1 .and. temp <= 0.0D0) then
          write (*, *) 'Cannot compute heat capacity for zero temperature.'
          error = 1
       end if
       if (icv == 1 .and. inose == 0) then
          write (*, *) 'Cannot compute heat capacity for NVE simulation.'
-         error = 1
-      end if
-      if (dt <= 0) then
-         write (*, *) 'Time step negative or undefined!'
-         write (*, *) 'Modify variable "dt" in input the general input section.'
-         error = 1
-      end if
-      if (ncalc <= 0) then
-         write (*, *) 'Ncalc must be positive integer number!'
          error = 1
       end if
       if (ncalc > nwrite) then
@@ -837,10 +798,6 @@ contains
       end if
       if (ipimd == 5 .and. nwalk /= 1) then
          write (*, *) 'ERROR: LZ not implemented with multiple walkers.'
-         error = 1
-      end if
-      if (istage /= 1 .and. istage /= 0) then
-         write (*, *) 'ERROR: istage has to be 0 or 1'
          error = 1
       end if
       if (inormalmodes < 0 .and. inormalmodes > 2) then
@@ -929,10 +886,6 @@ contains
          write (*, *) 'The staging transformation is not compatible with GLE thermostat.'
          error = 1
       end if
-      if (irest /= 1 .and. irest /= 0) then
-         write (*, *) 'ERROR:irest has to be 1 or 0'
-         error = 1
-      end if
       if (nshake /= 0 .and. ipimd == 1) then
          write (*, *) 'PIMD with SHAKE cannot use massive thermostating!'
          error = 1
@@ -979,6 +932,26 @@ contains
             error = 1
          end if
       end if
+
+      call real_nonnegative(temp, 'temp')
+      call real_positive(dt, 'dt')
+
+      call int_switch(irest, 'irest')
+      call int_switch(icv, 'icv')
+      call int_switch(istage, 'istage')
+
+      call int_nonnegative(nstep, 'nstep')
+      call int_nonnegative(imini, 'imini')
+      call int_nonnegative(nwrite, 'nwrite')
+      call int_nonnegative(nwritex, 'nwritex')
+      call int_nonnegative(nwritev, 'nwritev')
+      call int_nonnegative(nwritef, 'nwritef')
+      call int_nonnegative(nrest, 'nrest')
+      call int_nonnegative(narchive, 'narchive')
+
+      call int_positive(nabin, 'nwalk')
+      call int_positive(nwalk, 'nwalk')
+      call int_positive(ncalc, 'ncalc')
 
       if (error == 1) then
          write (*, *) 'Input errors were found! Exiting now...'
