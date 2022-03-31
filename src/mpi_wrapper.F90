@@ -20,6 +20,7 @@ contains
 
 #ifdef USE_MPI
    subroutine initialize_mpi(pot, pot_ref, nteraservers)
+      use, intrinsic :: iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
       character(len=*), intent(in) :: pot, pot_ref
       integer, intent(in) :: nteraservers
       logical :: initialized
@@ -36,18 +37,18 @@ contains
          ! https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report/node303.htm
          call MPI_Init_thread(MPI_THREAD_MULTIPLE, ithread, ierr)
          if (ierr /= 0) then
-            print*,'Bad signal from MPI_Init_thread:', ierr
+            write (ERROR_UNIT, *) 'Bad signal from MPI_Init_thread:', ierr
             stop 1
          end if
          if (ithread /= MPI_THREAD_MULTIPLE) then
-            write (*, *) 'Provided safety level is not MPI_THREAD_MULTIPLE'
-            write (*, '(A,I0,A,I0)') 'Requested ', MPI_THREAD_MULTIPLE, ' got: ', ithread
+            write (ERROR_UNIT, *) 'Provided safety level is not MPI_THREAD_MULTIPLE'
+            write (ERROR_UNIT, '(A,I0,A,I0)') 'Requested ', MPI_THREAD_MULTIPLE, ' got: ', ithread
             stop 1
          end if
       else
          call MPI_Init(ierr)
          if (ierr /= 0) then
-            write (*, *) 'Bad signal from MPI_INIT:', ierr
+            write (ERROR_UNIT, *) 'Bad signal from MPI_INIT:', ierr
             stop 1
          end if
       end if
@@ -163,8 +164,8 @@ contains
 #else
 
    subroutine initialize_mpi(pot, pot_ref, nteraservers)
-      use mod_utils, only: not_compiled_with
       use mod_general, only: iremd
+      use mod_error, only: not_compiled_with
       character(len=*), intent(in) :: pot, pot_ref
       integer, intent(in) :: nteraservers
       integer :: i

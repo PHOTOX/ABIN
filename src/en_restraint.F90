@@ -1,5 +1,7 @@
 module mod_en_restraint
    use mod_const, only: DP
+   use mod_files, only: stderr, stdout
+   use mod_error, only: fatal_error
    ! TODO: en_restraint should live here, not in mod_general
    use mod_general, only: en_restraint
    implicit none
@@ -21,13 +23,12 @@ contains
 ! B) Quadratic potential around target value (en_kk must be set)
 
    subroutine en_rest_init(natom)
-      use mod_error, only: fatal_error
       integer, intent(in) :: natom
 
       if (en_restraint == 1) then
-         print*,'Energy restraint is ON(1): Using method of Lagrange multipliers.'
+         write (stdout, *) 'Energy restraint is ON(1): Using method of Lagrange multipliers.'
       else if (en_restraint == 2 .and. en_kk >= 0) then
-         print*,'Energy restraint is ON(2): Using quadratic potential restraint.'
+         write (stdout, *) 'Energy restraint is ON(2): Using quadratic potential restraint.'
       else
          call fatal_error(__FILE__, __LINE__, &
             & 'en_restraint must be either 0, 1 (Lagrange multipliers) or 2 (umbrella, define en_kk)')
@@ -41,7 +42,6 @@ contains
 
    subroutine energy_restraint(x, y, z, px, py, pz, eclas)
       use mod_general, only: natom, nwalk, dt0 ! dt0 is the time step
-      use mod_utils, only: abinerror
       use mod_const, only: AMU
       use mod_system, only: am
       use mod_sh, only: en_array
@@ -82,9 +82,7 @@ contains
 !-----READING energy of groud state (engrad.ground.dat)
             open (901, file=chforce_ground, status='OLD', iostat=ios, action='read')
             if (ios /= 0) then
-               write (*, *) 'Error: could not read '//chforce_ground
-               write (*, *) 'Check whether you use proper external script for restrained energy dynamics.'
-               call abinerror('energy_restraint')
+               call fatal_error(__FILE__, __LINE__, 'Could not open file '//chforce_ground)
             end if
             read (901, *) eclasground
 
@@ -92,8 +90,8 @@ contains
             do iat = 1, natom
                read (901, *, IOSTAT=ios) fxgs(iat), fygs(iat), fzgs(iat)
                if (ios /= 0) then
-                  write (*, *) 'Fatal problem with reading gradients from file engrad.ground.dat '
-                  call abinerror('energy_restraint')
+                  call fatal_error(__FILE__, __LINE__, &
+                     & 'Fatal problem with reading gradients from file engrad.ground.dat')
                end if
                ! Conversion to forces
                fxgs(iat) = -fxgs(iat)
@@ -105,9 +103,7 @@ contains
             ! Reading energy of excited state (engrad.exc.dat)
             open (901, file=chforce_exc, status='OLD', iostat=ios, action='read')
             if (ios /= 0) then
-               write (*, *) 'Error: could not read engrad.exc.dat.001!'
-               write (*, *) 'Check if you use proper external script for restrained energy dynamics.'
-               call abinerror('energy_restraint')
+               call fatal_error(__FILE__, __LINE__, 'Could not open file '//chforce_exc)
             end if
             read (901, *) eclasexc
 
@@ -115,8 +111,8 @@ contains
             do iat = 1, natom
                read (901, *, IOSTAT=ios) fxes(iat), fyes(iat), fzes(iat)
                if (ios /= 0) then
-                  write (*, *) 'Fatal problem with reading gradients from file engrad.exc.dat '
-                  call abinerror('energy_restraint')
+                  call fatal_error(__FILE__, __LINE__, &
+                                   'Could not read gradients from file '//chforce_exc)
                end if
                ! Conversion to forces
                fxes(iat) = -fxes(iat)
@@ -130,7 +126,7 @@ contains
 
          ! Energy difference
          Egrad = eclasexc - eclasground
-         write (*, *) 'Energy difference ES-GS (', iw, ') is', Egrad * 2625.5697
+         write (stdout, *) 'Energy difference ES-GS (', iw, ') is', Egrad * 2625.5697
          deltaE = (Egrad - en_diff)
 
          if (en_restraint == 1) then
@@ -147,7 +143,6 @@ contains
                   deltaEnext = deltaEnext - py(iat, iw) * dt0 / am(iat) * (fyes(iat) - fygs(iat))
                   deltaEnext = deltaEnext - pz(iat, iw) * dt0 / am(iat) * (fzes(iat) - fzgs(iat))
                end do
-               !write(*,*)'deltaEnext',deltaEnext*2625.5697
 
                ! lambda computation
 

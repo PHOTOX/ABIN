@@ -5,30 +5,30 @@
 subroutine print_compile_info()
    use iso_fortran_env, only: compiler_version
    use iso_fortran_env, only: compiler_version, compiler_options
+   use mod_files, only: stdout
    ! TODO: Decide how we should do versioning
    character(len=*), parameter :: ABIN_VERSION = '1.1'
 
-   print '(a)', 'ABIN version '//ABIN_VERSION
-   print '(a, a, 1x, a)', 'Compiled at ', __TIME__, __DATE__
-   print '(a)', 'Git commit '//GIT_COMMIT
-!$ print'(a)', 'Compiled with parallel OpenMP support for PIMD.'
+   write (stdout, *) 'ABIN version '//ABIN_VERSION
+   write (stdout, '(a, a, 1x, a)') 'Compiled at ', __TIME__, __DATE__
+   write (stdout, *) 'Git commit '//GIT_COMMIT
+!$ write (stdout, *) 'Compiled with parallel OpenMP support for PIMD.'
 #ifdef USE_FFTW
-   print '(a)', 'Compiled with FFTW support.'
+   write (stdout, *) 'Compiled with FFTW support.'
 #endif
 #ifdef USE_CP2K
-   print '(a)', 'Compiled with in-built CP2K interface.'
+   write (stdout, *) 'Compiled with in-built CP2K interface.'
 #endif
 #ifdef USE_PLUMED
-   print '(a)', 'Compiled with PLUMED (static lib).'
+   write (stdout, *) 'Compiled with PLUMED (static lib).'
 #endif
 #ifdef USE_MPI
-   print '(a)', 'Compiled with MPI support.'
-   print '(a)', '(used for REMD and direct CP2K and TeraChem interfaces.)'
+   write (stdout, *) 'Compiled with MPI support.'
+   write (stdout, *) '(used for REMD and direct CP2K and TeraChem interfaces.)'
 #endif
-   print '(a)', ' '
+   write (stdout, *)
 
-   print '(a)', 'This program was compiled by:'
-   print '(a)', compiler_version()
-   print '(a)', 'using the compiler options:'
-   print '(a)', compiler_options()
+   write (stdout, *) 'This program was compiled by '//compiler_version()
+   write (stdout, *) 'using the compiler options:'
+   write (stdout, *) compiler_options()
 end subroutine print_compile_info

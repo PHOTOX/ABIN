@@ -1,7 +1,8 @@
 subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    use mod_const, only: DP, ANG
    use mod_files, only: MAXUNITS
-   use mod_general, only: ipimd, iqmmm, it, iremd, my_rank
+   use mod_mpi, only: get_mpi_rank
+   use mod_general, only: ipimd, iqmmm, it, iremd
    use mod_system, only: names
    use mod_sh_integ, only: nstate
    use mod_sh, only: tocalc, en_array, istate
@@ -23,6 +24,9 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    integer :: iat, iw, itest
    integer :: ist1, iost, ISTATUS
    integer :: system
+   integer :: my_rank
+
+   my_rank = get_mpi_rank()
 
    eclas = 0.0D0
 

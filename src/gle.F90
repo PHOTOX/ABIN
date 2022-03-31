@@ -18,7 +18,7 @@
 ! mod_gle_private should be used only in unit tests (test_gle.pf).
 module mod_gle_private
    use mod_const, only: DP
-   use mod_random, only: gautrg
+   use mod_files, only: stdout
    implicit none
    public
    ! Relaxation time of the white noise Langevin thermostat (PILE)
@@ -99,6 +99,7 @@ contains
    subroutine pile_step(px, py, pz, m)
       use mod_general, only: natom, nwalk
       use mod_utils, only: ekin_p
+      use mod_random, only: gautrg
       real(DP), intent(inout) :: px(:, :)
       real(DP), intent(inout) :: py(:, :)
       real(DP), intent(inout) :: pz(:, :)
@@ -133,40 +134,41 @@ contains
       integer, intent(in) :: inose
       integer, intent(in) :: ipimd
       integer, intent(in) :: inormalmodes
-      print*,""
-      print*,"Initialization of GLE thermostat."
-      print*,"Please cite the following review paper about the GLE methodology"
-      print*,"M. Ceriotti, G. Bussi and M. Parrinello"
-      print*,"J. Chem. Theory Comput. 6, 1170 (2010)"
-      print*,"Colored-noise thermostats a la carte"
-      print*,"http://dx.doi.org/10.1021/ct900563s"
-      print*,""
-      print*,"The citations for specific GLE use cases is at"
-      print*,"http://gle4md.org/index.html?page=refs"
-      print*,""
+
+      write (stdout, *) ""
+      write (stdout, *) "Initialization of GLE thermostat."
+      write (stdout, *) "Please cite the following review paper about the GLE methodology"
+      write (stdout, *) "M. Ceriotti, G. Bussi and M. Parrinello"
+      write (stdout, *) "J. Chem. Theory Comput. 6, 1170 (2010)"
+      write (stdout, *) "Colored-noise thermostats a la carte"
+      write (stdout, *) "http://dx.doi.org/10.1021/ct900563s"
+      write (stdout, *) ""
+      write (stdout, *) "The citations for specific GLE use cases is at"
+      write (stdout, *) "http://gle4md.org/index.html?page=refs"
+      write (stdout, *) ""
 
       if (inose == 2 .and. ipimd == 0) then
-         print*,"Using Quantum Thermostat, please cite"
-         print*,"M. Ceriotti, G. Bussi and M. Parrinello"
-         print*,"Phy. Rev. Lett. 103, 030603 (2009)"
-         print*,"Nuclear quantum effects in solids using a colored-noise thermostat"
-         print*,"http://dx.doi.org/10.1103/PhysRevLett.103.030603"
-         print*,""
+         write (stdout, *) "Using Quantum Thermostat, please cite"
+         write (stdout, *) "M. Ceriotti, G. Bussi and M. Parrinello"
+         write (stdout, *) "Phy. Rev. Lett. 103, 030603 (2009)"
+         write (stdout, *) "Nuclear quantum effects in solids using a colored-noise thermostat"
+         write (stdout, *) "http://dx.doi.org/10.1103/PhysRevLett.103.030603"
+         write (stdout, *) ""
       else if (inose == 2 .and. ipimd == 1 .and. inormalmodes == 0) then
-         print*,"Using PI+GLE thermostat, please cite:"
-         print*,"M. Ceriotti, D. E. Manolopoulos, and M. Parrinello"
-         print*,"J. Chem. Phys. 134, 084104 (2011)"
-         print*,"Accelerating the convergence of path integral dynamics"
-         print*,"with a generalized Langevin equation"
-         print*,"http://dx.doi.org/10.1063/1.3556661"
-         print*,""
+         write (stdout, *) "Using PI+GLE thermostat, please cite:"
+         write (stdout, *) "M. Ceriotti, D. E. Manolopoulos, and M. Parrinello"
+         write (stdout, *) "J. Chem. Phys. 134, 084104 (2011)"
+         write (stdout, *) "Accelerating the convergence of path integral dynamics"
+         write (stdout, *) "with a generalized Langevin equation"
+         write (stdout, *) "http://dx.doi.org/10.1063/1.3556661"
+         write (stdout, *) ""
       else if (inose == 2 .and. ipimd == 1 .and. inormalmodes == 1) then
-         print*,"Using PIGLET thermostat, please cite"
-         print*,"M. Ceriotti, D. E. Manolopoulos, Rev. Lett. 109, 100604 (2012)"
-         print*,"Efficient first-principles calculation of the"
-         print*,"quantum kinetic energy and momentum distribution of nuclei"
-         print*,"http://dx.doi.org/10.1103/PhysRevLett.109.100604"
-         print*,""
+         write (stdout, *) "Using PIGLET thermostat, please cite"
+         write (stdout, *) "M. Ceriotti, D. E. Manolopoulos, Rev. Lett. 109, 100604 (2012)"
+         write (stdout, *) "Efficient first-principles calculation of the"
+         write (stdout, *) "quantum kinetic energy and momentum distribution of nuclei"
+         write (stdout, *) "http://dx.doi.org/10.1103/PhysRevLett.109.100604"
+         write (stdout, *) ""
       end if
    end subroutine print_gle_header
 
@@ -216,7 +218,8 @@ contains
    subroutine gle_init(dt)
       use mod_const, only: AUtoEV
       use mod_error, only: fatal_error
-      use mod_general, only: natom, nwalk, ipimd, inormalmodes, my_rank, iremd
+      use mod_mpi, only: get_mpi_rank
+      use mod_general, only: natom, nwalk, ipimd, inormalmodes, iremd
       use mod_nhc, only: temp, inose
       implicit none
       real(DP), intent(in) :: dt
@@ -225,21 +228,19 @@ contains
       character(len=*), parameter :: glea_centroid = 'GLE-A.centroid'
       character(len=*), parameter :: glec_centroid = 'GLE-C.centroid'
       character(len=2) :: char_my_rank
+      integer :: my_rank
       integer :: i, iw
 
-      if (my_rank == 0) then
-         call print_gle_header(inose, ipimd, inormalmodes)
-      end if
+      call print_gle_header(inose, ipimd, inormalmodes)
 
       langham = 0.D0 ! sets to zero accumulator for langevin 'conserved' quantity
 
       glea = 'GLE-A'
       glec = 'GLE-C'
       if (iremd == 1) then
-         if (my_rank == 0) then
-            print*,"REMD with GLE: Expecting matrices in form:"//&
+         my_rank = get_mpi_rank()
+         write (stdout, *) "REMD with GLE: Expecting matrices in form:"//&
                         &" GLE-A.id_of_replica, GLE-C.id_of_replica (e.g. GLE-A.00)"
-         end if
          write (char_my_rank, '(I0.2)') my_rank
          glea = 'GLE-A.'//char_my_rank
          glec = 'GLE-C.'//char_my_rank
@@ -250,18 +251,18 @@ contains
       allocate (gA(ns + 1, ns + 1))
       allocate (gC(ns + 1, ns + 1))
 
-      if (my_rank == 0) print*,'Reading A-matrix. Expecting a.u. units!'
+      write (stdout, *) 'Reading A-matrix. Expecting a.u. units!'
       call read_gle_matrix(ns, glea, gA)
 
       ! read C (in eV!), or init to kT
       if (inose == 4) then
-         if (my_rank == 0) print*,"Using canonical-sampling, Cp=kT"
+         write (stdout, *) "Using canonical-sampling, Cp=kT"
          gC = 0.0D0
          do i = 1, ns + 1
             gC(i, i) = temp
          end do
       else
-         if (my_rank == 0) print*,'Reading specialized Cp matrix. Expecting eV units!'
+         write (stdout, *) 'Reading specialized Cp matrix. Expecting eV units!'
          call read_gle_matrix(ns, glec, gC)
          gC = gC / AUtoEV
       end if
@@ -288,10 +289,10 @@ contains
       ! For PIGLET, we repeat the procedure with separate
       ! GLE matrices for the Path Integral centroid.
       if (inormalmodes == 1) then
-         if (my_rank == 0) print*,'Reading A matrix for centroid. Expecting a.u. units!'
+         write (stdout, *) 'Reading A matrix for centroid. Expecting a.u. units!'
          call read_gle_matrix(ns, glea_centroid, gA)
 
-         if (my_rank == 0) print*,'Reading specialized Cp matrix for centroid. Expecting eV units!'
+         write (stdout, *) 'Reading specialized Cp matrix for centroid. Expecting eV units!'
          call read_gle_matrix(ns, glec_centroid, gC)
          gC = gC / AUtoEV
 
@@ -321,6 +322,7 @@ contains
    subroutine initialize_momenta(C, iw, natom, ps)
       !use mod_arrays,  only: px, py, pz, vx, vy, vz, amt
       use mod_error, only: fatal_error
+      use mod_random, only: gautrg
       real(DP), intent(in) :: C(:, :)
       integer, intent(in) :: iw, natom
       real(DP), intent(inout) :: ps(:, :, :)
@@ -523,6 +525,7 @@ contains
 
    subroutine gle_propagate(p, T, S, mass, iw)
       use mod_general, only: natom
+      use mod_random, only: gautrg
       real(DP), intent(inout) :: p(:, :)
       real(DP), intent(in) :: T(:, :), S(:, :), mass(:, :)
       integer, intent(in) :: iw
@@ -589,8 +592,7 @@ contains
    ! in practice, we compute LDL^T decomposition, and force
    ! to zero negative eigenvalues.
    subroutine cholesky(SST, S, n)
-      use, intrinsic :: iso_fortran_env, only: ERROR_UNIT
-      use mod_general, only: my_rank
+      use mod_files, only: stderr
       integer, intent(in) :: n
       real(DP), intent(in) :: SST(n, n)
       real(DP), intent(out) :: S(n, n)
@@ -609,9 +611,7 @@ contains
             if (D(j, j) > 1.0D-10) then
                L(i, j) = L(i, j) / D(j, j)
             else
-               if (my_rank == 0) then
-                  write (ERROR_UNIT, '(A)') "Warning: zero eigenvalue in LDL^T decomposition."
-               end if
+               write (stderr, '(A)') "Warning: zero eigenvalue in LDL^T decomposition."
                L(i, j) = 0.D0
             end if
          end do
@@ -624,9 +624,7 @@ contains
          if (D(i, i) >= 0.0D0) then
             D(i, i) = dsqrt(D(i, i))
          else
-            if (my_rank == 0) then
-               write (ERROR_UNIT, *) "WARNING: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
-            end if
+            write (stderr, *) "WARNING: negative eigenvalue (", D(i, i), ")in LDL^T decomposition."
             D(i, i) = 0.0D0
          end if
       end do

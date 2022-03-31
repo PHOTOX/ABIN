@@ -195,13 +195,6 @@ contains
       end do
    end function toupper
 
-   subroutine not_compiled_with(feature)
-      character(len=*), intent(in) :: feature
-      character(:), allocatable :: error_msg
-      error_msg = 'ABIN was not compiled with '//feature
-      call fatal_error(__FILE__, __LINE__, error_msg)
-   end subroutine not_compiled_with
-
    ! TODO: Maybe move this into a separate error handling module,
    ! together with finish(), and move it to a separate file
    ! Though need to figure out how to do it without having circular dependencies :-(
@@ -211,23 +204,23 @@ contains
    ! In any case, mod_utils should not depend on anything outside of mod_const and mod_general!
    subroutine abinerror(chcaller)
       use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
-      use mod_general, only: my_rank
+      use mod_interfaces, only: finish
+      use mod_files, only: stdout
       character(len=*), intent(in) :: chcaller
       integer, dimension(8) :: time_end
+      integer :: u
       ! When the file ERROR exists (perhaps as a remnant of a previous run),
       ! we append it. This also helps us with testing multiple failure check within end-to-end tests.
-      open (unit=500, file='ERROR', action='write', access='append')
-      write (500, *) 'FATAL ERROR encountered in subroutine: ', chcaller
-      write (500, *) 'Check standard output for further information.'
-      close (unit=500)
-      if (my_rank == 0) then
-         call date_and_time(VALUES=time_end)
-         write (*, *) ''
-         write (*, *) 'Ended with ERROR at:'
-         write (*, "(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)") time_end(5), ':', &
-            time_end(6), ':', time_end(7), '  ', time_end(3), '.', time_end(2), '.', &
-            time_end(1)
-      end if
+      open (newunit=u, file='ERROR', action='write', access='append')
+      write (u, *) 'FATAL ERROR encountered in subroutine: ', chcaller
+      write (u, *) 'Check standard output for further information.'
+      close (unit=u)
+      call date_and_time(VALUES=time_end)
+      write (stdout, *) ''
+      write (stdout, *) 'Ended with ERROR at:'
+      write (stdout, "(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)") time_end(5), ':', &
+         time_end(6), ':', time_end(7), '  ', time_end(3), '.', time_end(2), '.', &
+         time_end(1)
       call flush (OUTPUT_UNIT)
       call finish(1)
       stop 1
@@ -249,11 +242,15 @@ contains
    end subroutine print_xyz_arrays
 
    subroutine archive_file(chfile, time_step)
-      use mod_general, only: iremd, my_rank
+      use mod_general, only: iremd
+      use mod_mpi, only: get_mpi_rank
       integer, intent(in) :: time_step
       character(len=*), intent(in) :: chfile
       character(len=200) :: chsystem
       character(len=50) :: chit, charch
+      integer :: my_rank
+
+      my_rank = get_mpi_rank()
       if (my_rank == 0 .or. iremd == 1) then
          write (chit, *) time_step
          if (iremd == 1) then

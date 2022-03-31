@@ -1,17 +1,12 @@
 module mod_shake
    use mod_const, only: DP
-   use mod_utils, only: abinerror
+   use mod_utils, only: fatal_error
+   use mod_files, only: stdout
    implicit none
    private
    public :: shake_init, shake_tol, nshake, shake, ishake1, ishake2
    real(DP), allocatable :: dshake(:)
-#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || ( __GNUC__ > 4 )
-   ! TODO: merge ishake1 and ishake2
    integer, allocatable :: ishake1(:), ishake2(:)
-#else
-   integer, parameter :: MAXSHAKE = 6000
-   integer :: ishake1(maxshake), ishake2(maxshake)
-#endif
    real(DP) :: shake_tol = 0.001D0
    integer :: nshake = 0
    save
@@ -24,6 +19,7 @@ contains
       use mod_utils, only: get_distance, count_atoms_by_name
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(out) :: num_shake
+      character(len=200) :: errormsg
       real(DP) :: r, hbond_len_thr
       integer :: iat1, iat2, iw, ish
 
@@ -58,35 +54,33 @@ contains
 
             ! We expect each H to be bonded!
             if (iat2 == natom) then
-               write (*, *) 'ERROR: Could not find bond for hydrogen atom! index = ', iat1
-               call abinerror('find_bonds')
+               write (errormsg, '(A,I0)') 'Could not find bond for hydrogen atom, index = ', iat1
+               call fatal_error(__FILE__, __LINE__, errormsg)
             end if
          end do
 
       end do
 
       if (ish /= nshake) then
-         write (*, *) 'ERROR: Whoops, something wrong when determining H bonds!'
-         call abinerror('find_hbonds')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Whoops, something wrong when determining H bonds!')
       end if
 
-      write (*, *) 'Found the following bonds to H atoms'
+      write (stdout, *) 'Found the following bonds to H atoms'
       do iat1 = 1, num_shake
-         write (*, '(A2, A2, 2I6)') names(ishake1(iat1)), names(ishake1(iat1)), &
+         write (stdout, '(A2, A2, 2I6)') names(ishake1(iat1)), names(ishake1(iat1)), &
                                   & ishake1(iat1), ishake2(iat1)
       end do
 
    end subroutine find_hbonds
 
    subroutine shake_init(x, y, z)
-      use mod_general, only: my_rank
+      use mod_files, only: stdout
       real(DP) x(:, :), y(:, :), z(:, :)
       real(DP) xi, yi, zi, xj, yj, zj
       integer :: ixshake, i, j
 
-      if (my_rank == 0) then
-         write (*, *) 'Setting distances for SHAKE from XYZ coordinates'
-      end if
+      write (stdout, *) 'Setting distances for SHAKE from XYZ coordinates'
 
       ! TODO: This is an experimental switch for SHAKing all hydrogens
       if (nshake == -1) then
@@ -107,6 +101,7 @@ contains
       end do
    end subroutine shake_init
 
+   ! TODO: Have different routines for shaking positions and velocities
    subroutine shake(x, y, z, px, py, pz, amt, iq, iv)
       use mod_general, only: natom, nwalk, inormalmodes
       use mod_system, only: am
@@ -114,6 +109,8 @@ contains
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
       real(DP), intent(in) :: amt(:, :)
       integer, intent(in) :: iq, iv
+      character(len=200) :: errormsg
+      ! TODO: Why is there a save attribute???!!!
       real(DP), allocatable, save :: vx(:, :), vy(:, :), vz(:, :)
       real(DP) :: mi, mj, mij, agama
       integer :: iat, iw, i, j, ixshake, iiter, maxcycle, itest
@@ -192,8 +189,8 @@ contains
             end do
 
             if (iiter >= maxcycle) then
-               write (*, *) 'Error: Shake not converged after', maxcycle, 'iterations. Exiting...'
-               call abinerror('shake')
+               write (errormsg, '(A,I0,A)') 'SHAKE did not converged after', maxcycle, 'iterations'
+               call fatal_error(__FILE__, __LINE__, errormsg)
             end if
 
          end if
@@ -242,8 +239,8 @@ contains
                ! IITER loop
             end do
             if (iiter >= maxcycle) then
-               write (*, *) 'Velocity shake not converged after', maxcycle, 'iterations. Exiting...'
-               call abinerror('shake')
+               write (errormsg, '(A,I0,A)') 'Velocity SHAKE not converged after', maxcycle, 'iterations.'
+               call fatal_error(__FILE__, __LINE__, errormsg)
             end if
          end if
 

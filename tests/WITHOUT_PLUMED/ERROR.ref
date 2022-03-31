@@ -1,1 +1,1 @@
-ERROR in utils.F90: ABIN was not compiled with PLUMED
+ERROR in error.F90: ABIN was not compiled with PLUMED

@@ -10,16 +10,19 @@ contains
 
    @before
    subroutine setup()
-      use mod_general, only: natom, nwalk, my_rank
+      use mod_general, only: natom, nwalk
+      use mod_files, only: stdout_to_devnull, stderr_to_stdout
       use mod_random, only: gautrg
       real(DP) :: ran(1)
       integer :: seed
+
+      call stdout_to_devnull()
+      call stderr_to_stdout()
       tau0 = 0.001
       inose = 1
       temp = 100.0D0
       natom = NAT
       nwalk = NBEADS
-      my_rank = -1
       nrespnose = 5
       nyosh = 3
       imasst = 1
@@ -31,7 +34,10 @@ contains
 
    @after
    subroutine teardown()
+      use mod_files, only: reset_stdout, reset_stderr
       call finalize_nhc()
+      call reset_stdout()
+      call reset_stderr()
    end subroutine teardown
 
    @test

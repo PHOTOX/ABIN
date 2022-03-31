@@ -1,5 +1,6 @@
 module mod_vinit
    use mod_const, only: DP
+   use mod_files, only: stdout
    implicit none
    private
    public :: vinit, scalevelocities, remove_rotations, remove_comvel, constrainP
@@ -78,7 +79,7 @@ contains
    ! or if restarting to different temperature
    subroutine ScaleVelocities(vx, vy, vz)
       use mod_const, only: autok
-      use mod_general, only: natom, nwalk, my_rank
+      use mod_general, only: natom, nwalk
       use mod_system, only: dime, f, conatom
       use mod_nhc, only: temp
       use mod_kinetic, only: ekin_v
@@ -94,12 +95,12 @@ contains
          temp_mom = 0.0D0
       end if
 
-      if (my_rank == 0) write (*, *) 'Initial temperature (K):', temp_mom * autok
+      write (stdout, *) 'Initial temperature (K):', temp_mom * autok
 
       ! TODO: Might not work correctly for PIMD with normal modes!
       if (scaleveloc == 1 .and. temp_mom > 0.1E-10) then
 
-         if (my_rank == 0) write (*, *) 'Scaling velocities to correct temperature.'
+         write (stdout, *) 'Scaling velocities to correct temperature.'
          scal = dsqrt(temp / temp_mom)
          vx = vx * scal
          vy = vy * scal
@@ -107,13 +108,13 @@ contains
 
          ekin_mom = ekin_v(vx, vy, vz)
          temp_mom = 2 * ekin_mom / (dime * nwalk * natom - nshake - f - dime * conatom * nwalk)
-         if (my_rank == 0) write (*, *) 'Temperature after scaling (K):', temp_mom * autok
+         write (stdout, *) 'Temperature after scaling (K):', temp_mom * autok
       end if
 
    end subroutine ScaleVelocities
 
    subroutine remove_comvel(vx, vy, vz, mass, lremove)
-      use mod_general, only: natom, nwalk, my_rank
+      use mod_general, only: natom, nwalk
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: mass(:)
       ! This variable decides whether we actually remove the momenta
@@ -140,7 +141,7 @@ contains
 
          ! Shift velocities such that momentum of center of mass is zero
          if (lremove) then
-            if (my_rank == 0 .and. iw == 1) write (*, *) 'Removing center of mass velocity.'
+            if (iw == 1) write (stdout, *) 'Removing center of mass velocity.'
             do iat = 1, natom
                vx(iat, iw) = vx(iat, iw) - vcmx
                vy(iat, iw) = vy(iat, iw) - vcmy
@@ -154,7 +155,7 @@ contains
 
    subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
       use mod_system, only: dime
-      use mod_general, only: natom, nwalk, my_rank
+      use mod_general, only: natom, nwalk
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: masses(:)
@@ -240,7 +241,7 @@ contains
          !write(*,*)"Angular kinetic energy:", 0.5 * * Om_tot**2
 
          if (lremove) then
-            if (my_rank == 0) write (*, *) 'Removing angular momentum.'
+            write (stdout, *) 'Removing angular momentum.'
             do iat = 1, natom
                vx(iat, iw) = vx(iat, iw) - Omy * z(iat, iw) + Omz * y(iat, iw)
                vy(iat, iw) = vy(iat, iw) - Omz * x(iat, iw) + Omx * z(iat, iw)
@@ -283,11 +284,12 @@ contains
    end subroutine REMOVE_ROTATIONS
 
    subroutine constrainP(px, py, pz, constrained_atoms)
-      use mod_general, only: nwalk, my_rank
+      use mod_general, only: nwalk
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
       integer, intent(in) :: constrained_atoms
       integer :: iw, iat
-      if (my_rank == 0) write (*, *) 'Removing momentum of constrained atoms.'
+
+      write (stdout, *) 'Removing momentum of constrained atoms.'
       do iw = 1, nwalk
          do iat = 1, constrained_atoms
             px(iat, iw) = 0.0D0

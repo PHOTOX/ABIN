@@ -5,11 +5,11 @@ module mod_transform
    use, intrinsic :: iso_c_binding
    use mod_const, only: DP
    use mod_general, only: natom, nwalk
-   use mod_utils, only: abinerror
+   use mod_error, only: fatal_error
    implicit none
    private
    public :: UtoX, XtoU, QtoX, XtoQ, FXtoFQ, FQtoFX
-   public :: init_mass, initialize_pi_transforms
+   public :: initialize_pi_masses, initialize_pi_transforms
    public :: equant_nm
    public :: finalize_normalmodes
    real(C_DOUBLE), dimension(:), allocatable :: x_in, y_in, z_in
@@ -49,8 +49,8 @@ contains
          vy = transy
          vz = transz
       else
-         print*,'ERROR: Invalid call to initialize_pi_transforms'
-         call abinerror('initialize_pi_transforms')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Invalid call to initialize_pi_transforms')
       end if
    end subroutine initialize_pi_transforms
 
@@ -146,7 +146,7 @@ contains
 
    end subroutine XtoQ
 
-   subroutine init_mass(amg, amt)
+   subroutine initialize_pi_masses(amg, amt)
       use mod_const, only: PI
       use mod_general, only: istage, inormalmodes, idebug
       use mod_system, only: am
@@ -217,7 +217,7 @@ contains
          end do
       end if
 
-   end subroutine init_mass
+   end subroutine initialize_pi_masses
 
    ! This routine transforms staging forces to cartesian forces, which are stored
    ! in trans matrices,values in fx,fy and fz matrices are NOT modified!!
@@ -330,8 +330,8 @@ contains
          ! TODO: complex() is a GNU intrinsic, we need to figure out how to do this
          ! in a portable manner to support intel compilers.
 #if __GNUC__ == 0
-         write (*, *) 'ERROR: Normal mode transform not supported for non-GNU compilers'
-         call abinerror('UtoX')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Normal mode transform not supported for non-GNU compilers')
 #else
          cx(1) = complex(x(iat, 1), 0)
          cy(1) = complex(y(iat, 1), 0)
@@ -401,8 +401,8 @@ contains
          ! TODO: realpart() and imagpart() are GNU intrinsics, we need to
          ! figure out a portable way to do this to support intel compilers.
 #if __GNUC__ == 0
-         write (*, *) 'ERROR: Normal mode transform not supported for non-GNU compilers'
-         call abinerror('XtoU')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Normal mode transform not supported for non-GNU compilers')
 #else
          transx(iat, 1) = realpart(cx(1))
          transy(iat, 1) = realpart(cy(1))

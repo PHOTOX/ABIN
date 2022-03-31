@@ -12,10 +12,19 @@
 !
 ! In general, each module should have their own init function,
 ! that can be called from here.
+
+module mod_init
+   implicit none
+   private
+   public :: init
+   ! For unit test
+   public :: initialize_masses
+contains   
+
 subroutine init(dt)
    use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
    use mod_const
-   use mod_interfaces, only: print_compile_info, omp_set_num_threads, print_runtime_info
+   use mod_interfaces, only: print_compile_info, omp_set_num_threads
    use mod_cmdline, only: get_cmdline
    use mod_error, only: fatal_error
    use mod_mpi, only: initialize_mpi, get_mpi_size, get_mpi_rank, mpi_barrier_wrapper
@@ -45,7 +54,7 @@ subroutine init(dt)
    use mod_water, only: watpot, check_water
    use mod_plumed, only: iplumed, plumedfile, plumed_init
    use mod_en_restraint
-   use mod_transform, only: init_mass
+   use mod_transform, only: initialize_pi_masses
    use mod_cp2k
    use mod_remd
    use mod_terampi
@@ -78,6 +87,7 @@ subroutine init(dt)
    character(len=1024) :: tc_server_name
    logical :: file_exists
    logical :: rem_comvel, rem_comrot
+   integer :: my_rank, mpi_world_size
    integer :: irand
 
    ! ABIN input parameters are read from the input file (default 'input.in')
@@ -165,8 +175,13 @@ subroutine init(dt)
          & 'MPI parallelization available only for REMD')
    end if
 
-   if (my_rank == 0 .and. mpi_world_size > 1) then
-      write (*, '(A,I3)') 'Number of MPI processes = ', mpi_world_size
+   ! Redirect stdout to /dev/null for all non-primary MPI replicas
+   if (my_rank > 0) then
+      call stdout_to_devnull()
+   end if
+
+   if (mpi_world_size > 1) then
+      write (stdout, '(A,I0)') 'Number of MPI processes = ', mpi_world_size
    end if
 
    ! We need to connect to TeraChem as soon as possible,
@@ -205,38 +220,7 @@ subroutine init(dt)
       call file_exists_or_exit(chveloc)
    end if
 
-   if (my_rank == 0) then
-      write (*, *) 'Reading MD parameters from input file ', trim(chinput)
-      write (*, *) 'Reading xyz coordinates from file ', trim(chcoords)
-      write (*, *) 'XYZ Units = '//trim(xyz_units)
-      if (chveloc /= '') then
-         write (*, *) 'Reading initial velocities [a.u.] from file ', trim(chveloc)
-      end if
-      print '(a)', chdivider
-      call print_logo()
-      print '(a)', chdivider
-      call print_compile_info()
-      print '(a)', chdivider
-      call print_runtime_info()
-      print '(a)', chdivider
-      print '(a)', '                                              '
-      select case (ipimd)
-      case (0)
-         print '(a)', '              Classical MD                    '
-      case (1)
-         print '(a)', '            Path Integral MD                  '
-      case (2)
-         print '(a)', '           Surface Hopping MD                 '
-      case (3)
-         print '(a)', '              Minimization                    '
-      case (5)
-         print '(a)', '             Landau Zener MD                  '
-      end select
-
-      print '(a)', '    using potential: '//toupper(trim(pot))
-      print '(a)', ''
-      print '(a)', chdivider
-   end if
+   call print_basic_info()
 
    ! Get number of atoms from XYZ coordinates NOW so that we can allocate arrays
 
@@ -287,10 +271,8 @@ subroutine init(dt)
    massnames = ''
    masses = -1.0D0
 
-#if ( __GNUC__ == 4 && __GNUC_MINOR__ >= 6 ) || __GNUC__ > 4
    allocate (ishake1(natom * 3 - 6))
    allocate (ishake2(natom * 3 - 6))
-#endif
    ishake1 = 0
    ishake2 = 0
 
@@ -358,10 +340,11 @@ subroutine init(dt)
    end do
 
    ! Determine atomic masses from periodic table
-   call mass_init(masses, massnames, natom)
+   call initialize_masses(masses, massnames, natom)
    ! Transform masses for PIMD
-   ! TODO: rename this function
-   call init_mass(amg, amt)
+   ! Note that amt array is used throughout the code
+   ! even for non-PI simulations.
+   call initialize_pi_masses(amg, amt)
 
    allocate (natmolt(natom))
    allocate (nshakemol(natom))
@@ -410,9 +393,7 @@ subroutine init(dt)
 
    ! resetting number of walkers to 1 in case of classical simulation
    if (ipimd == 0) then
-      if (my_rank == 0) then
-         write (*, *) 'Using velocity Verlet integrator'
-      end if
+      write (stdout, *) 'Using velocity Verlet integrator'
       md = 2
       nwalk = 1
       nabin = 1 ! TODO:safety for respashake code
@@ -427,12 +408,10 @@ subroutine init(dt)
       md = 2 ! velocity verlet
       nabin = 1
    else if (ipimd == 1 .and. inormalmodes /= 1) then
-      if (my_rank == 0) write (*, *) 'Using RESPA integrator.'
+      write (stdout, *) 'Using RESPA integrator.'
       md = 1
    else if (ipimd == 1 .and. inormalmodes == 1) then
-      if (my_rank == 0) then
-         print*,'Using velocity Verlet propagator with analytical PI normal mode propagation.'
-      end if
+      write (stdout, *) 'Using velocity Verlet propagator with analytical PI normal mode propagation.'
       nabin = 1
       md = 2
    end if
@@ -454,14 +433,12 @@ subroutine init(dt)
       end if
    end if
 
-   if (my_rank == 0) then
-      if (temp0 > 0) then
-         write (*, *) 'Initial temperature [K] =', temp0
-      else
-         write (*, *) 'Initial temperature [K] =', temp
-      end if
-      if (inose /= 0) write (*, *) 'Target temperature [K] =', temp
+   if (temp0 > 0) then
+      write (stdout, *) 'Initial temperature [K] =', temp0
+   else
+      write (stdout, *) 'Initial temperature [K] =', temp
    end if
+   if (inose /= 0) write (stdout, *) 'Target temperature [K] =', temp
 
    ! Convert temperature from Kelvins to atomic units
    temp = temp / AUtoK
@@ -513,10 +490,9 @@ subroutine init(dt)
    else if (inose == 4) then
       call gle_init(dt * 0.5 / nstep_ref)
    else if (inose == 0) then
-      write (*, '(A)') 'No thermostat. NVE ensemble.'
+      write (stdout, '(A)') 'No thermostat. NVE ensemble.'
    else
-      write (*, '(A)') 'ERROR: Invalid "inose" value!'
-      call abinerror('init')
+      call fatal_error(__FILE__, __LINE__, 'Invalid "inose" value!')
    end if
 
    ! performing RESTART from restart.xyz
@@ -626,29 +602,7 @@ subroutine init(dt)
    end if
 
    if (my_rank == 0) then
-      print*,chdivider
-      print*,''
-      print*,'                SIMULATION PARAMETERS'
-      write (*, nml=general, delim='APOSTROPHE')
-      write (*, *)
-      write (*, nml=system, delim='APOSTROPHE')
-      write (*, *)
-      if (inose >= 1) then
-         write (*, nml=nhcopt, delim='APOSTROPHE')
-         write (*, *)
-      end if
-      if (ipimd == 2) then
-         write (*, nml=sh, delim='APOSTROPHE')
-         write (*, *)
-      end if
-      if (ipimd == 5) then
-         write (*, nml=lz, delim='APOSTROPHE')
-         write (*, *)
-      end if
-      if (pot == 'mm') then
-         write (*, nml=qmmm, delim='APOSTROPHE')
-         write (*, *)
-      end if
+      call print_simulation_parameters()
    end if
 
    if (mpi_world_size > 1) then
@@ -656,12 +610,10 @@ subroutine init(dt)
       write (*, '(A,I0,A,I0)') 'MPI rank: ', my_rank, ' PID: ', GetPID()
       call mpi_barrier_wrapper()
    else
-      write (*, '(A,I0)') 'Process ID (PID): ', GetPID()
+      write (stdout, '(A,I0)') 'Process ID (PID): ', GetPID()
    end if
 
-   if (my_rank == 0) then
-!$    write (*, '(A,I0)') 'Number of OpenMP threads: ', omp_get_max_threads()
-   end if
+!$ write (stdout, '(A,I0)') 'Number of OpenMP threads: ', omp_get_max_threads()
 
    ! Open files for writing
    ! TODO: It's strange that we're passing these random params here...
@@ -908,10 +860,10 @@ contains
       inquire (FILE=chout, EXIST=file_exists)
       if (file_exists) then
          if (irest == 0) then
-            if (my_rank == 0) write (*, *) 'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
+            write (stdout, *) 'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
             error = 1
          else
-            if (my_rank == 0) write (*, *) 'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
+            write (stdout, *) 'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
          end if
       end if
 
@@ -968,46 +920,365 @@ contains
       call abinerror('init')
    end subroutine print_read_error
 
-   subroutine print_logo()
-      print '(a)', '                  _____     _    _      _ '
-      print '(a)', '        /\       |  _  \   | |  |  \   | |'
-      print '(a)', '       /  \      | |_|  |  | |  | | \  | |'
-      print '(a)', '      / /\ \     |     /   | |  | |\ \ | |'
-      print '(a)', '     / /__\ \    |=====|   | |  | | \ \| |'
-      print '(a)', '    / /____\ \   |  _   \  | |  | |  \ | |'
-      print '(a)', '   / /      \ \  | |_|  |  | |  | |   \  |'
-      print '(a)', '  /_/        \_\ |_____/   |_|  |_|    \_|'
-      print '(a)', ' '
+   subroutine print_basic_info()
+      write (stdout, *) 'Reading MD parameters from input file ', trim(chinput)
+      write (stdout, *) 'Reading xyz coordinates from file ', trim(chcoords)
+      write (stdout, *) 'XYZ Units = '//trim(xyz_units)
+      if (chveloc /= '') then
+         write (stdout, *) 'Reading initial velocities [a.u.] from file ', trim(chveloc)
+      end if
+      write (stdout, *) chdivider
+      call print_logo()
+      write (stdout, *) chdivider
+      call print_compile_info()
+      write (stdout, *) chdivider
+      if (my_rank == 0) call print_runtime_info()
+      write (stdout, *) chdivider
+      write (stdout, *) '                                              '
+      select case (ipimd)
+      case (0)
+         write (stdout, *) '              Classical MD                    '
+      case (1)
+         write (stdout, *) '            Path Integral MD                  '
+      case (2)
+         write (stdout, *) '           Surface Hopping MD                 '
+      case (3)
+         write (stdout, *) '              Minimization                    '
+      case (5)
+         write (stdout, *) '             Landau Zener MD                  '
+      end select
 
-      print '(a)', ' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek'
-      print '(a)', ' '
+      write (stdout, *) '    using potential: '//toupper(trim(pot))
+      write (stdout, *)
+      write (stdout, *) chdivider
+   end subroutine print_basic_info
+
+   subroutine print_simulation_parameters()
+      write (stdout, *) chdivider
+      write (stdout, *) ''
+      write (stdout, *) '                SIMULATION PARAMETERS'
+      write (stdout, nml=general, delim='APOSTROPHE')
+      write (stdout, *)
+      write (stdout, nml=system, delim='APOSTROPHE')
+      write (stdout, *)
+      if (inose >= 1) then
+         write (stdout, nml=nhcopt, delim='APOSTROPHE')
+         write (stdout, *)
+      end if
+      if (ipimd == 2) then
+         write (stdout, nml=sh, delim='APOSTROPHE')
+         write (stdout, *)
+      end if
+      if (ipimd == 5) then
+         write (stdout, nml=lz, delim='APOSTROPHE')
+         write (stdout, *)
+      end if
+      if (pot == 'mm') then
+         write (stdout, nml=qmmm, delim='APOSTROPHE')
+         write (stdout, *)
+      end if
+   end subroutine print_simulation_parameters
+
+   subroutine print_logo()
+      write (stdout, *) '                  _____     _    _      _ '
+      write (stdout, *) '        /\       |  _  \   | |  |  \   | |'
+      write (stdout, *) '       /  \      | |_|  |  | |  | | \  | |'
+      write (stdout, *) '      / /\ \     |     /   | |  | |\ \ | |'
+      write (stdout, *) '     / /__\ \    |=====|   | |  | | \ \| |'
+      write (stdout, *) '    / /____\ \   |  _   \  | |  | |  \ | |'
+      write (stdout, *) '   / /      \ \  | |_|  |  | |  | |   \  |'
+      write (stdout, *) '  /_/        \_\ |_____/   |_|  |_|    \_|'
+      write (stdout, *) ' '
+      write (stdout, *)
+      write (stdout, *) ' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek'
+      write (stdout, *) ' '
    end subroutine print_logo
 
 end subroutine init
+
+   ! Subroutine initialize_masses() populates the global am() array,
+   ! based on the atom names from names() array.
+   ! User can also specify non-standard isotopes/elements.
+   subroutine initialize_masses(masses, massnames, natom)
+      use mod_const, only: DP, AMU
+      use mod_files, only: stdout
+      use mod_error, only: fatal_error
+      use mod_system, only: am, names
+      real(DP), intent(in) :: masses(:)
+      character(len=2), intent(in) :: massnames(:)
+      integer, intent(in) :: natom
+      character(len=100) :: error_msg
+      integer :: i, j
+      ! Accurate values for H1 and H2 taken from:
+      ! Mohr, Taylor, Newell, Rev. Mod. Phys. 80 (2008) 633-730
+      ! Other atomic weights taken from Handbook of Chemistry and Physics, 2013
+      ! Original citation: Wieser, M. E., et al., Pure Appl. Chem. 85, 1047, 2013
+      allocate (am(natom))
+      am = -1.0D0
+      do i = 1, natom
+         select case (names(i))
+         case ('H')
+            am(i) = 1.008D0
+         case ('H1')
+            am(i) = 1.00782503207D0
+         case ('H2', 'D')
+            am(i) = 2.01410177785D0
+         case ('O')
+            am(i) = 15.999D0
+         case ('S')
+            am(i) = 32.06D0
+         case ('Se')
+            am(i) = 78.971D0
+         case ('Te')
+            am(i) = 127.60D0
+         case ('N')
+            am(i) = 14.007D0
+         case ('P')
+            am(i) = 30.973761998D0
+         case ('As')
+            am(i) = 74.921595D0
+         case ('Sb')
+            am(i) = 121.760D0
+         case ('Bi')
+            am(i) = 208.98040D0
+         case ('F')
+            am(i) = 18.998403163D0
+         case ('Cl')
+            am(i) = 35.45D0
+         case ('Br')
+            am(i) = 79.904D0
+         case ('I')
+            am(i) = 126.90447D0
+         case ('Li')
+            am(i) = 6.94D0
+         case ('Na')
+            am(i) = 22.98976928D0
+         case ('K')
+            am(i) = 39.0983D0
+         case ('Be')
+            am(i) = 9.0121831D0
+         case ('Mg')
+            am(i) = 24.305D0
+         case ('Ca')
+            am(i) = 40.078D0
+         case ('B')
+            am(i) = 10.81D0
+         case ('Al')
+            am(i) = 26.9815385D0
+         case ('C')
+            am(i) = 12.0110D0
+         case ('Si')
+            am(i) = 28.085D0
+         case ('Ge')
+            am(i) = 72.630D0
+         case ('Sn')
+            am(i) = 118.710D0
+         case ('Pb')
+            am(i) = 207.2D0
+         case ('He')
+            am(i) = 4.002602D0
+         case ('Ne')
+            am(i) = 20.1797D0
+         case ('Ar')
+            am(i) = 39.948D0
+         case ('Kr')
+            am(i) = 83.798D0
+         case ('Xe')
+            am(i) = 131.293D0
+         case ('Fe')
+            am(i) = 55.845D0
+         case ('Ti')
+            am(i) = 47.867D0
+         case ('V')
+            am(i) = 50.9415D0
+         case ('Cr')
+            am(i) = 51.9961D0
+         case ('Mn')
+            am(i) = 54.938044D0
+         case ('Co')
+            am(i) = 58.933194D0
+         case ('Ni')
+            am(i) = 58.6934D0
+         case ('Cu')
+            am(i) = 63.546D0
+         case ('Zn')
+            am(i) = 65.38D0
+         case ('Ag')
+            am(i) = 107.8682D0
+         case ('Au')
+            am(i) = 196.966569D0
+         case ('Pt')
+            am(i) = 195.084D0
+         case ('Cd')
+            am(i) = 112.414D0
+         case ('Hg')
+            am(i) = 200.592D0
+         case ('U')
+            am(i) = 238.02891D0
+         case ('Tl')
+            am(i) = 204.38D0
+         case ('Ba')
+            am(i) = 137.327D0
+         case ('Ce')
+            am(i) = 140.116D0
+         case ('Cs')
+            am(i) = 132.90545196D0
+         case ('Dy')
+            am(i) = 162.500D0
+         case ('Er')
+            am(i) = 167.259D0
+         case ('Eu')
+            am(i) = 151.964D0
+         case ('Gd')
+            am(i) = 157.25D0
+         case ('Ga')
+            am(i) = 69.723D0
+         case ('Hf')
+            am(i) = 178.49D0
+         case ('Ho')
+            am(i) = 164.93033D0
+         case ('In')
+            am(i) = 114.818D0
+         case ('Ir')
+            am(i) = 192.217D0
+         case ('La')
+            am(i) = 138.90547D0
+         case ('Lu')
+            am(i) = 174.9668D0
+         case ('Mo')
+            am(i) = 95.95D0
+         case ('Nd')
+            am(i) = 144.242D0
+         case ('Nb')
+            am(i) = 92.90637D0
+         case ('Os')
+            am(i) = 190.23D0
+         case ('Pd')
+            am(i) = 106.42D0
+         case ('Pr')
+            am(i) = 140.90766D0
+         case ('Pa')
+            am(i) = 231.03588D0
+         case ('Re')
+            am(i) = 186.207D0
+         case ('Rh')
+            am(i) = 102.90550D0
+         case ('Rb')
+            am(i) = 85.4678D0
+         case ('Ru')
+            am(i) = 101.07D0
+         case ('Sm')
+            am(i) = 150.36D0
+         case ('Sc')
+            am(i) = 44.955908D0
+         case ('Sr')
+            am(i) = 87.62D0
+         case ('Ta')
+            am(i) = 180.94788D0
+         case ('Tb')
+            am(i) = 158.92535D0
+         case ('Th')
+            am(i) = 232.0377D0
+         case ('Tm')
+            am(i) = 168.93422D0
+         case ('W')
+            am(i) = 183.84D0
+         case ('Yb')
+            am(i) = 173.054D0
+         case ('Y')
+            am(i) = 88.90584D0
+         case ('Zr')
+            am(i) = 91.224D0
+         case DEFAULT
+            write (stdout, *) 'Atom name ', names(i), ' was not found in the library.'
+            write (stdout, *) 'Using user-defined mass from input file'
+         end select
+      end do
+
+      ! Check for duplicate user defined atom names
+      do i = 1, size(massnames)
+         do j = i + 1, size(massnames)
+            if (massnames(i) == massnames(j) .and. trim(massnames(i)) /= '') then
+               error_msg = 'Duplicate atom names in input array "massnames"'
+               call fatal_error(__FILE__, __LINE__, error_msg)
+               return
+            end if
+         end do
+      end do
+
+      ! Here we overwrite library values if user provided alternative value
+      ! in the input file, or we define new atom names that are not in the library.
+      do i = 1, natom
+         do j = 1, size(massnames)
+            if (names(i) == massnames(j)) then
+
+               if (masses(j) <= 0.0D0) then
+                  call fatal_error(__FILE__, __LINE__, &
+                     & 'Mass cannot be negative. Fix arrays "masses" in the input file.')
+                  return
+               end if
+
+               write (stdout, *) 'Defining new atom ', names(i), ' with mass=', masses(j)
+
+               am(i) = masses(j)
+
+            end if
+         end do
+      end do
+
+      ! Catch any undefined masses
+      do i = 1, natom
+         if (am(i) <= 0) then
+            write (error_msg, '(a,i0,a)') 'Atomic mass for atom '//names(i)//' was not specified'
+            call fatal_error(__FILE__, __LINE__, error_msg)
+            return
+         end if
+      end do
+
+      if (natom <= 20) then
+         write (stdout, *) ''
+         write (stdout, *) '                        ATOMIC MASSES / a.u.'
+         do i = 1, natom
+            write (stdout, '(A2, A1)', advance='no') names(i), ' '
+         end do
+         write (stdout, *)
+         write (stdout, *) 'The corresponding relative atomic masses are:'
+         write (stdout, *) (am(i), i=1, natom)
+         write (stdout, *) ''
+      end if
+
+      ! Finally, convert masses to atomic units
+      am = am * AMU
+
+   end subroutine initialize_masses
 
 ! NOTE: This subroutine is outside of init()
 ! due to a conflict of 'call system()` with namelist 'system',
 ! which some compilers do not like.
 subroutine print_runtime_info()
-   use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
+   use mod_files, only: stdout
    character(len=1024) :: cmdline
-   print '(a)', ''
-   print '(a)', '          RUNTIME INFO'
-   print '(a)', ' '
-   write (*, '(A17)') "Running on node: "
+   write (stdout, *) ''
+   write (stdout, *) '          RUNTIME INFO'
+   write (stdout, *) ' '
+   write (stdout, *) "Running on node: "
    call system('uname -n')
-   write (*, '(A19)') 'Working directory: '
+   write (stdout, '(A)') 'Working directory: '
    call system('pwd')
-   write (*, *)
+   write (stdout, *)
    call get_command(cmdline)
-   write (*, *) trim(cmdline)
-   call flush (OUTPUT_UNIT)
+   write (stdout, *) trim(cmdline)
+   call flush (stdout)
    call get_command_argument(0, cmdline)
-   write (*, *)
+   write (stdout, *)
    call system('ldd '//cmdline)
-   print '(a)', ' '
+   write (stdout, *) ''
 end subroutine print_runtime_info
 
+end module mod_init
+
+! We cannot include finish in the module, since it would
+! result in circular dependencies.
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general, only: pot, pot_ref, ipimd, inormalmodes

@@ -1,9 +1,6 @@
 module mod_cp2k
    use iso_c_binding
    use mod_const, only: DP
-#ifndef USE_CP2K
-   use mod_utils, only: not_compiled_with
-#endif
    implicit none
 
    ! We are actually connecting to C interface,
@@ -62,11 +59,12 @@ contains
 #ifdef USE_CP2K
 
    subroutine init_cp2k()
-      use mod_general, only: natom, nwalk, my_rank, mpi_world_size
+      use mod_general, only: natom, nwalk, mpi_world_size
       use mod_utils, only: abinerror
       use iso_c_binding, only: C_CHAR, C_NULL_CHAR
 #ifdef USE_MPI
       use mpi
+      use mod_mpi, only: get_mpi_rank
       integer :: bead, new_size
       integer :: cp2k_mpicomm
       character(len=300) :: chsed
@@ -77,6 +75,7 @@ contains
       character(len=200, KIND=C_CHAR) :: cp2k_output_file = 'cp2k.out'
 
 #ifdef USE_MPI
+      my_rank = get_mpi_rank()
       call cp2k_init()
 
       call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
@@ -163,7 +162,7 @@ contains
    end subroutine finalize_cp2k
 
    subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
-      use mod_general, only: natom, iqmmm, idebug, nwalk ! , my_rank, mpi_world_size
+      use mod_general, only: natom, iqmmm, idebug, nwalk
       use mod_utils, only: abinerror
       use mod_interfaces, only: oniom
       use mod_utils, only: abinerror
@@ -291,7 +290,7 @@ contains
 #else
    ! Dummy functions for compilation without CP2K
    subroutine init_cp2k()
-      use mod_utils, only: abinerror
+      use mod_error, only: not_compiled_with
       call not_compiled_with('internal CP2K interface')
    end subroutine init_cp2k
 
@@ -299,16 +298,16 @@ contains
    end subroutine finalize_cp2k
 
    subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
-      use mod_utils, only: abinerror
+      use mod_error, only: not_compiled_with
       real(DP) :: x(:, :), y(:, :), z(:, :)
       real(DP) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP) :: eclas
       integer :: walkmax
+
       ! Just to squash compiler warnings :-(
       x = fx; y = fy; z = fz
       eclas = 0.0D0
       walkmax = 0
-
       call not_compiled_with('internal CP2K interface')
    end subroutine force_cp2k
 

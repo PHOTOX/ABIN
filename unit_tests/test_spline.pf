@@ -12,11 +12,13 @@ contains
 
    @before
    subroutine setup()
-      use mod_general, only: my_rank
+      use mod_files, only: stdout_to_devnull, stderr_to_stdout
       integer :: u, i
 
+      call stdout_to_devnull()
+      call stderr_to_stdout()
+
       potential_file = potfile
-      my_rank = -1
       x_grid = (/0.0D0, 1.1D0, 1.3D0/)
       y_grid = (/2.0D0, 1.2D0, 1.5D0/)
 
@@ -29,12 +31,16 @@ contains
 
    @after
    subroutine teardown()
+      use mod_files, only: reset_stdout, reset_stderr
       integer :: u
+
       call finalize_spline()
       open (newunit=u, file=potfile)
       close (u, status='delete')
       open (newunit=u, file='potential_splined.dat')
       close (u, status='delete')
+      call reset_stdout()
+      call reset_stderr()
    end subroutine teardown
 
    @test

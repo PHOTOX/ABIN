@@ -3,7 +3,7 @@
 module mod_fftw3
    use, intrinsic :: iso_c_binding
 #ifndef USE_FFTW
-   use mod_utils, only: not_compiled_with
+   use mod_error, only: not_compiled_with
    implicit none
 #endif
    private
@@ -64,13 +64,10 @@ contains
 
    ! Dummy functions when ABIN is not compiled with FFTW
    subroutine fftw_normalmodes_init(nwalk)
-      use iso_fortran_env, only: ERROR_UNIT
-      use mod_general, only: my_rank
+      use mod_files, only: stderr
       integer, intent(inout) :: nwalk
       nwalk = 0
-      if (my_rank == 0) then
-         write (ERROR_UNIT, *) 'ERROR: Normal mode transformation cannot be performed.'
-      end if
+      write (stderr, *) 'Normal mode transformation cannot be performed.'
       call not_compiled_with('FFTW library')
    end subroutine fftw_normalmodes_init
 
@@ -90,8 +87,8 @@ contains
       call not_compiled_with('FFTW library')
    end subroutine dft_cart2normalmode
 
-   ! This must be a no-op and must not call abinerror()
-   ! since it is itself called from abinerror().
+   ! This must be a no-op and must not call fatal_error()
+   ! since it is itself called from fatal_error().
    subroutine fftw_normalmodes_finalize()
    end subroutine fftw_normalmodes_finalize
 

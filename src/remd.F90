@@ -36,8 +36,8 @@ contains
 #ifdef USE_MPI
    subroutine remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
       use mpi
-      use mod_mpi, only: handle_mpi_error
-      use mod_general, only: my_rank, it
+      use mod_mpi, only: handle_mpi_error, get_mpi_rank
+      use mod_general, only: it
       use mod_random, only: vranf
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
@@ -46,9 +46,11 @@ contains
       real(DP) :: eclas_new, prob, probs(MAX_REPLICA), ran(MAX_REPLICA), rn
       integer :: source, ierr, tag_en = 10, tag_swap = 1
       integer :: status(MPI_STATUS_SIZE), i
+      integer :: my_rank
       logical :: lswap = .false., lswaps(MAX_REPLICA)
 
       ! Broadcast array of random numbers from rank 0
+      my_rank = get_mpi_rank()
       if (my_rank == 0) call vranf(ran, nreplica - 1)
 
       ! TODO: This is probably no longer needed, each mpi rank has now
@@ -128,7 +130,7 @@ contains
 
    subroutine swap_replicas(x, y, z, px, py, pz, fxc, fyc, fzc, rank1, rank2)
       use mpi
-      use mod_general, only: my_rank
+      use mod_mpi, only: get_mpi_rank
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
       real(DP), intent(inout) :: fxc(:, :), fyc(:, :), fzc(:, :)
@@ -138,11 +140,14 @@ contains
       real(DP), allocatable :: fxc_new(:, :), fyc_new(:, :), fzc_new(:, :)
       real(DP) :: scal
       integer :: status(MPI_STATUS_SIZE)
+      integer :: my_rank
 
       integer :: tag_x = 11, tag_y = 12, tag_z = 13
       integer :: tag_px = 114, tag_py = 115, tag_pz = 116
       integer :: tag_fx = 17, tag_fy = 18, tag_fz = 19
       integer :: ierr, dest, size1, size2, irank
+
+      my_rank = get_mpi_rank()
 
       ! First, rank1 sends data and rank2 receives
       size1 = size(x(:, 1))
@@ -236,13 +241,17 @@ contains
       use mpi
       use mod_error, only: fatal_error
       use mod_utils, only: int_positive
-      use mod_mpi, only: handle_mpi_error, get_mpi_size
+      use mod_mpi, only: handle_mpi_error, get_mpi_size, get_mpi_rank
+      use mod_files, only: stdout
       use mod_const, only: AUTOK
-      use mod_general, only: pot, my_rank, ipimd, irest
+      use mod_general, only: pot, ipimd, irest
       real(DP), intent(inout) :: temp, temp0
       character(len=300) :: errormsg
       real(DP) :: koef
       integer :: ierr, i
+      integer :: my_rank
+
+      my_rank = get_mpi_rank()
 
       if (irest == 0) then
          open (newunit=UREMD, file='remd.out', action='write', access='sequential')
@@ -292,7 +301,7 @@ contains
             & 'Number of MPI processes does not match number of REMD replicas.')
       end if
 
-      if (my_rank == 0) write (*, *) 'Number of REMD replicas: ', nreplica
+      write (stdout, *) 'Number of REMD replicas: ', nreplica
 
       ! Set the temperatures
       if (deltaT > 0) then
@@ -335,7 +344,7 @@ contains
 #else
 
    subroutine remd_init(temp, temp0)
-      use mod_utils, only: not_compiled_with
+      use mod_error, only: not_compiled_with
       real(DP), intent(inout) :: temp, temp0
       temp = 0.0D0; temp0 = 0.0D0
       call not_compiled_with('MPI')
