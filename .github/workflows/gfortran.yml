@@ -294,8 +294,6 @@ jobs:
       CFLAGS: -O0
       CXXLAGS: -O0
       CODECOV_NAME: ${{format('{0} GCC-{1} PLUMED-{2}', github.job, matrix.gcc_v, matrix.plumed_v)}}
-      # Compatibility with Plumed 2.8.0
-      PLUMED_DP2CUTOFF_NOSTRETCH: 1
 
     steps:
     - uses: actions/checkout@v2

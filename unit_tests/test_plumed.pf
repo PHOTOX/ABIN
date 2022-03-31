@@ -8,8 +8,6 @@ module test_plumed
    integer, parameter :: NATOMS = 2, NBEADS = 1
    real(DP) :: x(NATOMS, NBEADS), y(NATOMS, NBEADS), z(NATOMS, NBEADS)
    real(DP) :: fx(NATOMS, NBEADS), fy(NATOMS, NBEADS), fz(NATOMS, NBEADS)
-   ! Passed to the PLUMED constructor so that it doesn't print extra info.
-   logical, parameter :: SILENT = .true.
    integer :: iunit
    save
 
@@ -20,6 +18,7 @@ contains
    ! This routine is called automatically before each test.
    @before
    subroutine setup()
+      use mod_files, only: stdout_to_devnull
       use mod_general, only: natom, nwalk, dt0, it
       use mod_system, only: am
       use mod_nhc, only: temp
@@ -41,16 +40,17 @@ contains
       open (newunit=iunit, file=plumedfile, access='sequential')
       close (unit=iunit)
 
+      call stdout_to_devnull()
       ! NOTE: Some tests might need to call plumed_init() again,
       ! e.g. if they need to re-define the time step.
-      ! It seems it's okay to call it multiple times though.
-      ! Because we need to be able to setup initial variables before each test.
-      call plumed_init(SILENT)
+      ! In that case, call plumed_finalize() before calling plumed_init() again.
+      call plumed_init()
    end subroutine setup
 
    ! This routine is called automatically after each test.
    @after
    subroutine teardown()
+      use mod_files, only: reset_stdout
       use mod_system, only: am
       deallocate (am)
       ! Delete auxiliary PLUMED input file.
@@ -64,6 +64,7 @@ contains
       ! It's okay to call it multiple times though, see how it is
       ! defined in src/plumed.F90.
       call finalize_plumed()
+      call reset_stdout()
    end subroutine teardown
 
    ! Here we just test we can initialize and finalize PLUMED without dying,
@@ -95,7 +96,8 @@ contains
       dt0 = 1.0D3 / AUTOFS
 
       ! Need to call plumed_init() again since we redefined dt
-      call plumed_init(SILENT)
+      call finalize_plumed()
+      call plumed_init()
       call plumed_f_gcmd('readInputLine'//char(0), DISTANCE_ACTION)
       call plumed_f_gcmd('readInputLine'//char(0), PRINT_ACTION)
 
