@@ -147,7 +147,7 @@ contains
       integer :: tag_fx = 17, tag_fy = 18, tag_fz = 19
       integer :: ierr, dest, size1, size2, irank
 
-      my_rank = get_mpi_rank() 
+      my_rank = get_mpi_rank()
 
       ! First, rank1 sends data and rank2 receives
       size1 = size(x(:, 1))
