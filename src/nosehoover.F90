@@ -171,9 +171,9 @@ contains
    subroutine nhc_init()
       use mod_files, only: stdout
       if (imasst == 1) then
-         write (stdout, *) 'Initializing massive Nose-Hoover Chain thermostat'
+          write (stdout, *) 'Initializing massive Nosé-Hoover Chain thermostat'
       else
-         write (stdout, *) 'Initializing global Nose-Hoover Chain thermostat'
+         write (stdout, *) 'Initializing global Nosé-Hoover Chain thermostat'
       end if
 
       call check_nhc_parameters()
