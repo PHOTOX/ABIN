@@ -112,7 +112,7 @@ contains
                read (901, *, IOSTAT=ios) fxes(iat), fyes(iat), fzes(iat)
                if (ios /= 0) then
                   call fatal_error(__FILE__, __LINE__, &
-                     'Could not read gradients from file '//chforce_exc)
+                     & 'Could not read gradients from file '//chforce_exc)
                end if
                ! Conversion to forces
                fxes(iat) = -fxes(iat)
