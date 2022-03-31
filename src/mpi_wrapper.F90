@@ -65,10 +65,17 @@ contains
 
       call MPI_Finalized(finalized, ierr)
 
-      if (error_code /= 0) then
-         call MPI_Abort(MPI_COMM_WORLD, error_code, ierr)
-      else if (.not. finalized) then
-         call MPI_Finalize(ierr)
+      if (.not. finalized) then
+         ! NOTE: For some reason, MPI_Abort does not play nicely with code coverage.
+         ! Therefore, for the case of just one MPI replica, e.g. for pot == _tera_,
+         ! we only call MPI_Finalize() and terminate by `stop error_code`.
+         ! For REMD, we need to ensure that all replicas are stopped,
+         ! so MPI_Abort is safer.
+         if (error_code /= 0 .and. get_mpi_size() > 1) then
+            call MPI_Abort(MPI_COMM_WORLD, error_code, ierr)
+         else
+            call MPI_Finalize(ierr)
+         end if
       end if
    end subroutine
 

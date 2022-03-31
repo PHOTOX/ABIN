@@ -26,12 +26,15 @@ fi
 N_REPLICAS=$(egrep --only-matching 'nreplica\s*=\s*[0-9]' $ABININ | egrep -o [0-9])
 
 $MPIRUN -np $N_REPLICAS $ABINEXE -i $ABININ -v $ABINVEL > $ABINOUT
-$MPIRUN -np $N_REPLICAS $ABINEXE -i ${ABININ}2 >> $ABINOUT
+$MPIRUN -np $N_REPLICAS $ABINEXE -i ${ABININ}2 > ${ABINOUT}2
 
 # Test that ABIN stops when file EXIT is present
 touch EXIT
-$MPIRUN -np $N_REPLICAS $ABINEXE -i ${ABININ}3 >> $ABINOUT
+$MPIRUN -np $N_REPLICAS $ABINEXE -i ${ABININ}3 > ${ABINOUT}3
 rm -f EXIT
+
+# This should error out since number of MPI processes is wrong
+$MPIRUN -np 2 $ABINEXE -i ${ABININ}2 > ${ABINOUT}4 2>&1
 
 # Useful line in case you need to debug multiple MPI processes
 # $MPIRUN -np $N_REPLICAS xterm -e gdb $ABINEXE -i $ABININ -v $ABINVEL > $ABINOUT

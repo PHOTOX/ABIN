@@ -1,7 +1,6 @@
 ! Temperature Replica-Exchange MD (also known as parallel tempering)
 module mod_remd
    use mod_const, only: DP
-   use mod_utils, only: abinerror
    implicit none
    private
 
@@ -15,6 +14,8 @@ module mod_remd
 
    integer :: reps(MAX_REPLICA) = -1
    real(DP) :: ratios_cumul(MAX_REPLICA) = 0.0D0
+   ! Unit of the remd.out output file
+   integer :: UREMD
 #endif
 
    ! Number of replicas
@@ -116,11 +117,11 @@ contains
          do i = 1, nreplica - 1
             if (lswaps(i)) ratios_cumul(i) = ratios_cumul(i) + 1.0D0
          end do
-         write (20, *) '==============================================='
-         write (20, *) 'Swaping probabilities: ', (probs(i), i=2, nreplica)
-         write (20, *) 'Exchanges: ', (lswaps(i), i=1, nreplica - 1)
-         write (20, *) 'Acceptance ratios', (ratios_cumul(i) * nswap / it, i=1, nreplica - 1)
-         write (20, *) 'ReplicaTravel:', (reps(i), i=1, nreplica)
+         write (UREMD, *) '==============================================='
+         write (UREMD, *) 'Swaping probabilities: ', (probs(i), i=2, nreplica)
+         write (UREMD, *) 'Exchanges: ', (lswaps(i), i=1, nreplica - 1)
+         write (UREMD, *) 'Acceptance ratios', (ratios_cumul(i) * nswap / it, i=1, nreplica - 1)
+         write (UREMD, *) 'ReplicaTravel:', (reps(i), i=1, nreplica)
       end if
 
    end subroutine remd_swap
@@ -233,59 +234,62 @@ contains
 
    subroutine remd_init(temp, temp0)
       use mpi
+      use mod_error, only: fatal_error
+      use mod_utils, only: int_positive
       use mod_mpi, only: handle_mpi_error, get_mpi_size
       use mod_const, only: AUTOK
       use mod_general, only: pot, my_rank, ipimd, irest
       real(DP), intent(inout) :: temp, temp0
+      character(len=300) :: errormsg
       real(DP) :: koef
       integer :: ierr, i
 
       if (irest == 0) then
-         open (20, file='remd.out', action='write', access='sequential')
+         open (newunit=UREMD, file='remd.out', action='write', access='sequential')
       else
-         open (20, file='remd.out', action='write', access='append')
+         open (newunit=UREMD, file='remd.out', action='write', access='append')
       end if
-      ! First, do sanity check
-      if (nswap < 0) then
-         write (*, *) 'ERROR: nswap must be a positive integer!'
-         call abinerror('remd_init')
+
+      ! Sanity checks
+      call int_positive(nswap, 'nswap')
+
+      if (nreplica > MAX_REPLICA) then
+         write (errormsg, '(A,I0,A)') 'Maximum number of replicas ', MAX_REPLICA, ' exceeded.'
+         call fatal_error(__FILE__, __LINE__, errormsg)
       end if
 
       if (deltaT < 0 .and. Tmax < 0 .and. temp_list(1) < 0) then
-         write (*, *) 'ERROR: You did not specify deltaT, Tmax, or temp_list for REMD.'
-         call abinerror('remd_init')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'You did not specify deltaT, Tmax, or temp_list for REMD.')
       else if (deltaT > 0 .and. Tmax > 0) then
-         write (*, *) 'ERROR: You can not specify both deltaT and  Tmax for REMD!'
-         call abinerror('remd_init')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'You can not specify both deltaT and  Tmax for REMD!')
       else if (deltaT > 0 .and. temp_list(1) > 0) then
-         write (*, *) 'ERROR: You can not specify both deltaT and  temp_list() for REMD!'
-         call abinerror('remd_init')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'You can not specify both deltaT and  temp_list() for REMD!')
       else if (Tmax > 0 .and. temp_list(1) > 0) then
-         write (*, *) 'ERROR: You can not specify both Tmax and temp_list() for REMD!'
-         call abinerror('remd_init')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'You can not specify both Tmax and temp_list() for REMD!')
       end if
 
       if (pot == '_cp2k_') then
-         write (*, *) "ERROR: REMD with internal CP2K interface not supported!"
-         call abinerror('remd_init')
+         call fatal_error(__FILE__, __LINE__, &
+            & "REMD with internal CP2K interface not supported")
       end if
 
       if (ipimd > 0) then
-         write (*, *) 'REMD is currently implemented only for classical dynamics (ipimd.eq.0)!'
-         call abinerror('remd_init')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'REMD is currently implemented only for classical dynamics (mdtype=="md")')
       end if
 
-      if (nreplica <= 1) then
-         write (*, *) 'Incorrect number of REMD replicas!'
-         call abinerror('remd_init')
+      if (nreplica < 2) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Number of REMD replicas nreplica must be at least 2')
       end if
 
-      ! determine number of MPI processess and check with user input
-      i = get_mpi_size()
-      if (i /= nreplica) then
-         write (*, *) 'ERROR: Number of MPI processes does not match number of replicas.'
-         write (*, *) 'Number of processors used must equal "nreplica" parameter in input file.'
-         call abinerror('remd_init')
+      if (get_mpi_size() /= nreplica) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Number of MPI processes does not match number of REMD replicas.')
       end if
 
       if (my_rank == 0) write (*, *) 'Number of REMD replicas: ', nreplica
@@ -308,7 +312,8 @@ contains
       end if
 
       if (temp_list(my_rank + 1) <= 0) then
-         write (*, '(A,I2,A)') 'ERROR: Temperature of replica ', my_rank, ' was not set or is negative.'
+         write (errormsg, '(A,I0,A)') 'Temperature of replica ', my_rank, ' was not set or is negative.'
+         call fatal_error(__FILE__, __LINE__, errormsg)
       end if
 
       ! not sure about this
@@ -318,7 +323,7 @@ contains
       call handle_mpi_error(ierr)
       if (my_rank == 0) then
          do i = 1, nreplica
-            write (20, '(A,I2,A,F8.2)') 'Temperature of replica ', i - 1, ' is ', temp_list(i)
+            write (UREMD, '(A,I0,A,F8.2)') 'Temperature of replica ', i - 1, ' is ', temp_list(i)
          end do
       end if
       temp_list = temp_list / AUTOK
