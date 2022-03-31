@@ -1,0 +1,41 @@
+&general
+irest=1,
+nstep=8,
+irandom=729375542,
+idebug=2
+pot='molpro'
+mdtype='sh',
+dt=20.6697,
+
+nwrite=1,
+nwritex=1,
+nrest=1,
+nwritev=1,
+nwritef=1,
+xyz_units='bohr'
+/
+
+&nhcopt
+temp=0.0D0,
+inose=0,
+/
+
+&sh
+adjmom=0,               ! Use rescaling along NAC vector
+istate_init=3,		! initial electronic state
+nstate=3,		! number of electronic states
+substep=100,		! number of substeps for solving ESCH
+deltae=100.,		! maximum energy difference [eV], for which we calculate NA coupling
+integ='butcher',	! integrator for ESCHE: euler, rk4, butcher
+inac=0,
+nohop=0,		! 1 - hopping not allowed (default=0)
+decoh_alpha=0.1		! parameter for decoherence correction
+popthr=0.01
+! NOTE: This test does not conserver energy,
+! Since we're using forces for 3rd state but running on 2nd.
+! Also I manually modified some gradients and energies
+! to induce frustrated hop.
+energydifthr=1000.
+energydriftthr=1000.
+correct_decoherence=.true.
+/

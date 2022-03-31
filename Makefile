@@ -107,7 +107,7 @@ endif
 	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} clean
 
 # This will automatically generate new reference data for E2E tests
-makeref:
+makeref: ${BIN}
 	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} makeref
 
 
