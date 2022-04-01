@@ -206,7 +206,7 @@ contains
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
       use mod_sh_integ, only: sh_write_wf
-      use mod_sh, only: write_nacmrest, ntraj, istate
+      use mod_sh, only: write_nacmrest, istate
       use mod_lz, only: lz_restout
       use mod_gle, only: gle_restout, pile_restout
       use mod_random
@@ -214,7 +214,7 @@ contains
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(in) :: time_step
-      integer :: iat, iw, itrj
+      integer :: iat, iw
       integer :: my_rank
       logical :: file_exists
       character(len=200) :: chout, chsystem
@@ -267,11 +267,9 @@ contains
 
       if (ipimd == 2) then
          call write_nacmrest()
-         ! hack, only one trajectory supported at this point
-         itrj = 1
          write (102, *) chSH
-         write (102, *) istate(itrj)
-         call sh_write_wf(102, itrj)
+         write (102, *) istate
+         call sh_write_wf(102)
       end if
 
       if (ipimd == 5) then
@@ -330,7 +328,7 @@ contains
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
       use mod_sh_integ, only: sh_read_wf
-      use mod_sh, only: write_nacmrest, ntraj, istate
+      use mod_sh, only: write_nacmrest, istate
       use mod_lz, only: lz_restin
       use mod_gle, only: gle_restin, pile_restin
       use mod_random
@@ -338,7 +336,7 @@ contains
       real(DP), intent(out) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(out) :: it
-      integer :: iat, iw, itrj
+      integer :: iat, iw
       integer :: my_rank
       character(len=100) :: chtemp
       logical :: prngread
@@ -378,10 +376,8 @@ contains
       if (ipimd == 2) then
          read (111, '(A)') chtemp
          call checkchar(chtemp, chsh)
-         ! only 1 trajectory supported at this point
-         itrj = 1
-         read (111, *) istate(itrj)
-         call sh_read_wf(111, itrj)
+         read (111, *) istate
+         call sh_read_wf(111)
       end if
 
       if (ipimd == 5) then

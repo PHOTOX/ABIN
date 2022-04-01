@@ -68,8 +68,8 @@ contains
                fyes(iat) = fyr(iat, 2)
                fzes(iat) = fzr(iat, 2)
             end do
-            eclasground = en_array(1, 1)
-            eclasexc = en_array(2, 1)
+            eclasground = en_array(1)
+            eclasexc = en_array(2)
             ! TODO: need to figure out how to get eclasexc
          else
 

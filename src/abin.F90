@@ -24,7 +24,7 @@ program abin
    use mod_general, only: sim_time, pot, pot_ref, iremd, ipimd, &
       & md, nwrite, nstep, ncalc, it, inormalmodes, istage, irest
    use mod_init, only: init
-   use mod_sh, only: surfacehop, ntraj, sh_init, get_nacm, move_vars
+   use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
    use mod_utils, only: abinerror, archive_file, get_formatted_date_and_time
@@ -41,7 +41,6 @@ program abin
    implicit none
    ! TODO: These should probably be defined and stored in some module, not here
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
-   integer :: itrj
    logical :: file_exists
    integer, dimension(8) :: time_start, time_end
    integer :: my_rank
@@ -119,15 +118,13 @@ program abin
 
       ! setting initial values for surface hopping
       if (ipimd == 2) then
-         do itrj = 1, ntraj
-            if (irest /= 1) then
-               call get_nacm(itrj)
-            end if
-            call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
-            if (pot == '_tera_' .or. restrain_pot == '_tera_') then
-               call move_new2old_terash()
-            end if
-         end do
+         if (irest /= 1) then
+            call get_nacm()
+         end if
+         call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
+         if (pot == '_tera_' .or. restrain_pot == '_tera_') then
+            call move_new2old_terash()
+         end if
       else if (ipimd == 5 .and. pot == '_tera_') then
          call move_new2old_terash()
       end if
