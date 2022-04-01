@@ -224,7 +224,7 @@ contains
          fz(iat, iw) = -dxyz_all(3, iat)
       end do
 
-      ! TODO: Divide by walkmax in forces.xyz
+      ! TODO: Divide by walkmax in force_tera() instead
 !$OMP ATOMIC
       eclas = eclas + escf / walkmax
 

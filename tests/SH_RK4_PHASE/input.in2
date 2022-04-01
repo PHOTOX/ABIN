@@ -35,4 +35,5 @@ integ='rk4',	! integrator for ESCHE:euler,butcher or rk4
 inac=0,			! non-adiabatic coupling terms 0 - NAC vector; 1 - HST model
 nohop=1,		! 1 - hopping not allowed (default=0)
 decoh_alpha=0.1		! parameter for decoherence correction
+correct_decoherence=.false.
 /
