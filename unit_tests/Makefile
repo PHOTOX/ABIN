@@ -35,6 +35,10 @@ masses_EXTRA_USE := throw_with_pfunit_mod
 masses_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,masses))
 
+# This is needed for compatibility with new Plumed 2.8
+# See: https://github.com/plumed/plumed2/pull/757
+export PLUMED_DP2CUTOFF_NOSTRETCH = 1
+
 plumed_TESTS := test_plumed.pf
 plumed_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
 plumed_OTHER_SRCS := throw_with_pfunit.F90

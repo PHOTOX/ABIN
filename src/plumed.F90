@@ -35,16 +35,14 @@ module mod_plumed
 contains
 
 #ifdef USE_PLUMED
-   subroutine plumed_init(silent_output)
+   subroutine plumed_init()
       use mod_general, only: natom, irest, dt0, nrest
       use mod_const, only: ANG, AUTOFS, AMU, AVOGADRO, AUTOJ
       use mod_utils, only: c_string
       use mod_error, only: fatal_error
+      use mod_files, only: stdout
       !use mod_nhc, only: temp
       implicit none
-      ! Do not print any output (used in unit tests, unittest/test_plumed.pf)
-      logical, optional :: silent_output
-      logical :: silent
       integer, parameter :: PLUMED_RESTART = 1
       ! Conversion from ABIN to PLUMED units
       real(DP), parameter :: PLUMED_ENERGY_UNIT = AUTOJ * AVOGADRO * 1.0D-3 ! Ha -> kJ/mol
@@ -62,22 +60,15 @@ contains
       ! Verify kbt using https://www.plumed.org/doc-v2.5/user-doc/html/kt.html
       !plumed_kbt = temp * 8.3144598D0 ! in kJ/mol
 
-      silent = .false.
-      if (present(silent_output)) then
-         silent = silent_output
-      end if
-
       ! Initialize the main plumed object.
       ! This must be the very first call.
       call plumed_f_gcreate()
 
       call plumed_f_gcmd(c_string("getApiVersion"), api_version)
 
-      if (.not. silent) then
-         write (*, '(a)') 'PLUMED is ON'
-         write (*, '(a)') 'PLUMED input file is '//trim(plumedfile)
-         write (*, '(a, i0)') 'PLUMED API version: ', api_version
-      end if
+      write (stdout, '(a)') 'PLUMED is ON'
+      write (stdout, '(a)') 'PLUMED input file is '//trim(plumedfile)
+      write (stdout, '(a, i0)') 'PLUMED API version: ', api_version
 
       if (api_version < MIN_API_VERSION) then
          call fatal_error(__FILE__, __LINE__, &
@@ -104,9 +95,7 @@ contains
       call plumed_f_gcmd(c_string("setLogFile"), c_string(PLUMED_OUTPUT_FILE))
 
       if (irest == 1) then
-         if (.not. silent) then
-            write (*, *) "PLUMED RESTART ON"
-         end if
+         write (stdout, *) "PLUMED RESTART ON"
          call plumed_f_gcmd(c_string("setRestart"), PLUMED_RESTART)
       end if
 
