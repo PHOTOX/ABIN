@@ -157,11 +157,11 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 ! SH
       ! TODO: Have each state in different file?
       if (ipimd == 2) then
-         en_array(1, iw) = temp1
+         en_array(1) = temp1
          do ist1 = 2, nstate
-            read (MAXUNITS + iw, *) en_array(ist1, iw)
+            read (MAXUNITS + iw, *) en_array(ist1)
          end do
-         eclas = en_array(istate(iw), iw)
+         eclas = en_array(istate)
       end if
 ! LZ
       if (ipimd == 5) then
@@ -182,7 +182,7 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
       end if
 
       if (ipimd == 2) then
-         iost = read_forces(fx, fy, fz, natqm, tocalc(istate(iw), istate(iw)), MAXUNITS + iw)
+         iost = read_forces(fx, fy, fz, natqm, tocalc(istate, istate), MAXUNITS + iw)
       else if (ipimd == 5) then
          iost = read_forces(fx, fy, fz, natqm, tocalc_lz(istate_lz), MAXUNITS + iw) !Save only the computed state
       else

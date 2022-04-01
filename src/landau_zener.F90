@@ -12,7 +12,7 @@ module mod_lz
    use mod_const, only: DP
    use mod_utils, only: abinerror
    use mod_general, only: nwalk, pot, irest
-   use mod_array_size, only: NSTMAX, NTRAJMAX
+   use mod_array_size, only: NSTMAX
    use mod_sh, only: istate_init, istate, inac !TERA-MPI interface
    use mod_sh_integ, only: nstate
    implicit none
@@ -106,7 +106,7 @@ contains
 
       !TODO: energy drift
       call check_energy_lz(en_array_lz, istate_lz, energydifthr_lz)
-      !call check_energydrift(vx, vy, vz, itrj)
+      !call check_energydrift(vx, vy, vz)
 
       !Current state
       ist = istate_lz

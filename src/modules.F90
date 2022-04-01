@@ -12,7 +12,7 @@ module mod_array_size
    implicit none
    public
    integer, parameter :: MAXTYPES = 10
-   integer, parameter :: NSTMAX = 50, NTRAJMAX = 1
+   integer, parameter :: NSTMAX = 50
    save
 end module mod_array_size
 

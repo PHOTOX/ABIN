@@ -404,7 +404,7 @@ subroutine init(dt)
    ! Selecting proper integrator for a given MD type
    ! (controlled by variable 'md')
    if (ipimd == 2 .or. ipimd == 5) then
-      nwalk = ntraj !currently 1
+      nwalk = 1
       md = 2 ! velocity verlet
       nabin = 1
    else if (ipimd == 1 .and. inormalmodes /= 1) then

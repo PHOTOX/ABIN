@@ -58,22 +58,20 @@ contains
       real(DP) :: dip(NSTMAX * 3), tdip((NSTMAX - 1) * 3) ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
       real(DP) :: qmcharges(size(fx, 1))
       integer :: status(MPI_STATUS_SIZE)
-      integer :: ierr, iat, iw, ist1, ist2, itrj, ipom, i
+      integer :: ierr, iat, iw, ist1, ist2, ipom, i
 
-      itrj = 1
       iw = 1
 
       call wait_for_terachem(tc_comm)
 
       ! Receive energies from TC
       if (idebug > 0) write (*, '(a)') 'Receiving energies from TC.'
-      ! DH WARNING this will only work if itrj = 1
       call MPI_Recv(en_array, nstate, MPI_DOUBLE_PRECISION, &
                     MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, status, ierr)
       call handle_mpi_error(ierr)
       call check_recv_count(status, nstate, MPI_DOUBLE_PRECISION)
 
-      eclas = en_array(istate(itrj), itrj)
+      eclas = en_array(istate)
 
       ! Landau-Zener arrays
       if (ipimd == 5) then
@@ -81,7 +79,7 @@ contains
          en_array_lz(:, 3) = en_array_lz(:, 2); 
          en_array_lz(:, 2) = en_array_lz(:, 1); 
          !Store the new one
-         en_array_lz(:, 1) = en_array(:, 1)
+         en_array_lz(:, 1) = en_array(:)
       end if
 
       if (idebug > 0) write (*, '(a)') 'Receiving transition dipoles from TC.'
@@ -94,7 +92,7 @@ contains
       ! TODO: move charges and dipoles to array module and make them universal
       ! TODO: move TDIP to surface hopping module
       ! allow reading this stuff from other programs as well
-      call print_transdipoles(TDip, istate(itrj), nstate - 1)
+      call print_transdipoles(TDip, istate, nstate - 1)
 
       if (idebug > 0) write (*, '(a)') 'Receiving dipole moments from TC.'
       call MPI_Recv(Dip, nstate * 3, &
@@ -109,7 +107,7 @@ contains
       call handle_mpi_error(ierr)
       call check_recv_count(status, natqm, MPI_DOUBLE_PRECISION)
 
-      call print_charges(qmcharges, istate(itrj))
+      call print_charges(qmcharges, istate)
 
       if (idebug > 0) write (*, '(a)') 'Receiving MOs from TC.'
       call MPI_Recv(MO, nbf * nbf, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
@@ -160,7 +158,7 @@ contains
 
             ipom = 1
             ! Gradients
-            if (ist1 == ist2 .and. istate(itrj) == ist1) then
+            if (ist1 == ist2 .and. istate == ist1) then
                do iat = 1, natom
                   fx(iat, iw) = -NAC(ipom)
                   fy(iat, iw) = -NAC(ipom + 1)
@@ -188,12 +186,12 @@ contains
             else
                ! NACME
                do iat = 1, natom
-                  nacx(iat, itrj, ist1, ist2) = NAC(ipom)
-                  nacy(iat, itrj, ist1, ist2) = NAC(ipom + 1)
-                  nacz(iat, itrj, ist1, ist2) = NAC(ipom + 2)
-                  nacx(iat, itrj, ist2, ist1) = -nacx(iat, itrj, ist1, ist2)
-                  nacy(iat, itrj, ist2, ist1) = -nacy(iat, itrj, ist1, ist2)
-                  nacz(iat, itrj, ist2, ist1) = -nacz(iat, itrj, ist1, ist2)
+                  nacx(iat, ist1, ist2) = NAC(ipom)
+                  nacy(iat, ist1, ist2) = NAC(ipom + 1)
+                  nacz(iat, ist1, ist2) = NAC(ipom + 2)
+                  nacx(iat, ist2, ist1) = -nacx(iat, ist1, ist2)
+                  nacy(iat, ist2, ist1) = -nacy(iat, ist1, ist2)
+                  nacz(iat, ist2, ist1) = -nacz(iat, ist1, ist2)
                   ipom = ipom + 3
                end do
             end if
@@ -219,11 +217,10 @@ contains
       integer, intent(in) :: tc_comm
       real(DP) :: bufdoubles(100)
       real(DP) :: vels(3, size(x, 1))
-      integer :: ierr, iw, itrj, i, ist1, ist2
+      integer :: ierr, iw, i, ist1, ist2
       integer :: bufints(NSTMAX * (NSTMAX - 1) / 2 + NSTMAX)
       integer, parameter :: FMSInit = 0
 
-      itrj = 1
       iw = 1
 
       ! Send ESinit
@@ -233,10 +230,10 @@ contains
       bufints(4) = 0 ! TrajID=0 for SH
       bufints(5) = 0 ! T_FMS%CentID(1)
       bufints(6) = 0 ! T_FMS%CentID(2)
-      bufints(7) = istate(itrj) - 1 ! T_FMS%StateID ! currently not used in fms.cpp
+      bufints(7) = istate - 1 ! T_FMS%StateID ! currently not used in fms.cpp
       bufints(8) = oldWfn ! does ABIN have info about WF?
-      bufints(9) = istate(itrj) - 1 ! iCalcState-1 ! TC Target State
-      bufints(10) = istate(itrj) - 1 ! jCalcState-1
+      bufints(9) = istate - 1 ! iCalcState-1 ! TC Target State
+      bufints(10) = istate - 1 ! jCalcState-1
       bufints(11) = 0 ! first_call, not used
       bufints(12) = 0 ! FMSRestart, not used
 
@@ -255,7 +252,7 @@ contains
       end if
       do ist1 = 1, nstate
          do ist2 = ist1, nstate
-            if (ist1 == ist2 .and. ist1 == istate(itrj)) then
+            if (ist1 == ist2 .and. ist1 == istate) then
                bufints(i) = 1
             else if (ist1 == ist2) then
                ! DH hack for jirka

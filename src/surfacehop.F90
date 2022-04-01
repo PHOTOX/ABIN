@@ -2,7 +2,7 @@
 ! D. Hollas, O. Svoboda, P. Slavicek, M. Oncak
 module mod_sh
    use mod_const, only: DP
-   use mod_array_size, only: NSTMAX, NTRAJMAX
+   use mod_array_size, only: NSTMAX
    use mod_files, only: stdout, stderr
    use mod_error, only: fatal_error
    use mod_utils, only: abinerror
@@ -14,14 +14,13 @@ module mod_sh
    ! and we should check input sanity here, not in input.F90
    public :: istate_init, substep, deltaE, inac, nohop, decoh_alpha, popthr, nac_accu1, nac_accu2
    public :: surfacehop, sh_init
-   public :: istate, ntraj, tocalc, en_array
+   public :: en_array, istate, tocalc
    public :: nacx, nacy, nacz
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
    public :: energydifthr, energydriftthr, dE_S0S1_thr, adjmom, revmom
    public :: check_CIVector
    public :: ignore_state
 
-   integer, parameter :: ntraj = NTRAJMAX ! Currently not in use, set to 1
    ! Initial electronic state
    integer :: istate_init = 1
    ! Number of substeps for integrating electronic Schrodinger eq.
@@ -51,15 +50,16 @@ module mod_sh
    ! Special case for adiabatic TDDFT, terminate when close to S1-S0 crossing
    real(DP) :: dE_S0S1_thr = 0.0D0 !eV
    ! NA Couplings
-   real(DP), allocatable :: nacx(:, :, :, :), nacy(:, :, :, :), nacz(:, :, :, :)
+   real(DP), allocatable :: nacx(:, :, :), nacy(:, :, :), nacz(:, :, :)
    ! *old variables holds data from the previous step
-   real(DP), allocatable :: nacx_old(:, :, :, :), nacy_old(:, :, :, :), nacz_old(:, :, :, :)
-   real(DP), allocatable :: en_array(:, :), en_array_old(:, :)
+   real(DP), allocatable :: nacx_old(:, :, :), nacy_old(:, :, :), nacz_old(:, :, :)
+   real(DP), allocatable :: en_array(:), en_array_old(:)
    ! Initial absolute electronic energy, needed for monitoring energy drift
    real(DP) :: entot0
    ! nstatexnstate matrix, off-diagonal elements determine NAC, diagonal elements = electronic gradients
    integer, allocatable :: tocalc(:, :)
-   integer :: istate(NTRAJMAX)
+   ! Current electronic state
+   integer :: istate
    ! for ethylene 2-state SA3 dynamics
    integer :: ignore_state = 0
    save
@@ -78,16 +78,15 @@ contains
       real(DP) :: dum_fy(size(y, 1), size(y, 2))
       real(DP) :: dum_fz(size(z, 1), size(z, 2))
       real(DP) :: dum_eclas
-      integer :: itrj
 
       deltaE = deltaE / AUtoEV
 
-      allocate (nacx(natom, NTRAJMAX, nstate, nstate))
-      allocate (nacy(natom, NTRAJMAX, nstate, nstate))
-      allocate (nacz(natom, NTRAJMAX, nstate, nstate))
-      allocate (nacx_old(natom, NTRAJMAX, nstate, nstate))
-      allocate (nacy_old(natom, NTRAJMAX, nstate, nstate))
-      allocate (nacz_old(natom, NTRAJMAX, nstate, nstate))
+      allocate (nacx(natom, nstate, nstate))
+      allocate (nacy(natom, nstate, nstate))
+      allocate (nacz(natom, nstate, nstate))
+      allocate (nacx_old(natom, nstate, nstate))
+      allocate (nacy_old(natom, nstate, nstate))
+      allocate (nacz_old(natom, nstate, nstate))
       nacx = 0.0D0
       nacy = 0.0D0
       nacz = 0.0D0
@@ -95,16 +94,14 @@ contains
       nacy_old = nacx
       nacz_old = nacx
 
-      allocate (en_array(nstate, ntraj))
-      allocate (en_array_old(nstate, ntraj))
+      allocate (en_array(nstate))
+      allocate (en_array_old(nstate))
       en_array = 0.0D0
       en_array_old = en_array
 
       ! Determining the initial state
       if (irest /= 1) then
-         do itrj = 1, ntraj
-            istate(itrj) = istate_init
-         end do
+         istate = istate_init
       end if
 
       ! computing only energies, used for subsequent
@@ -116,17 +113,13 @@ contains
 
       call force_clas(dum_fx, dum_fy, dum_fz, x, y, z, dum_eclas, pot)
 
-      do itrj = 1, ntraj
 
-         call sh_set_initialwf(istate(itrj), en_array(1, itrj), itrj)
+      call sh_set_initialwf(istate, en_array(1))
 
-         ! WARNING: entot0 does not respect itrj, same for tocalc
-         entot0 = en_array(istate(itrj), itrj) + ekin_v(vx, vy, vz)
-         entot0 = entot0 * AUtoEV
+      entot0 = en_array(istate) + ekin_v(vx, vy, vz)
+      entot0 = entot0 * AUtoEV
 
-         call set_tocalc(itrj)
-
-      end do
+      call set_tocalc()
 
       if (irest == 1 .and. ipimd /= 5) then
          call read_nacmrest()
@@ -134,9 +127,8 @@ contains
 
    end subroutine sh_init
 
-   subroutine get_nacm(itrj)
+   subroutine get_nacm()
       use mod_general, only: pot
-      integer, intent(in) :: itrj
       integer :: iost, ipom, ist1, ist2
 
       ! In TeraChem SH interface, we already got NACME
@@ -153,30 +145,28 @@ contains
       if (inac == 0 .and. ipom > 0) then
          ! Calculate NACME using default accuracy
 
-         call calc_nacm(itrj, nac_accu1)
+         call calc_nacm(nac_accu1)
 
-         iost = read_nacm(itrj)
+         iost = read_nacm()
 
          if (iost /= 0 .and. nac_accu1 > nac_accu2) then
 !        if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY
-            call calc_nacm(itrj, nac_accu2)
-            iost = read_nacm(itrj)
+            call calc_nacm(nac_accu2)
+            iost = read_nacm()
          end if
 
          if (iost /= 0) then
             call fatal_error(__FILE__, __LINE__, 'Some NACMEs could not be read')
          end if
          ! we always have to set tocalc because we change it in readnacm
-         call set_tocalc(itrj)
+         call set_tocalc()
       end if
    end subroutine get_nacm
 
    ! In this routine, we decide which gradients and which NACME we need to compute
    ! TOCALC is a symmetric matrix, upper-triangle defines NACME,
    ! the diagonal defines gradients
-   subroutine set_tocalc(itrj)
-      ! WARNING: tocalc array is currently the same for all trajectories
-      integer, intent(in) :: itrj
+   subroutine set_tocalc()
       integer :: ist1, ist2
       real(DP) :: pop, pop2
 
@@ -186,7 +176,7 @@ contains
 
          do ist1 = 1, nstate - 1
             do ist2 = ist1 + 1, nstate
-               if (abs(en_array(ist1, itrj) - en_array(ist2, itrj)) < deltaE) then
+               if (abs(en_array(ist1) - en_array(ist2)) < deltaE) then
                   tocalc(ist1, ist2) = 1
                end if
             end do
@@ -197,10 +187,10 @@ contains
       if (popthr > 0) then
          ! COMPUTE NACME only if population of the states is gt.popthr
          do ist1 = 1, nstate - 1
-            pop = el_pop(ist1, itrj)
+            pop = el_pop(ist1)
             do ist2 = ist1 + 1, nstate
-               pop2 = el_pop(ist2, itrj)
-               if (pop < popthr .and. pop2 < popthr .and. ist1 /= istate(itrj) .and. ist2 /= istate(itrj)) then
+               pop2 = el_pop(ist2)
+               if (pop < popthr .and. pop2 < popthr .and. ist1 /= istate .and. ist2 /= istate) then
                   tocalc(ist1, ist2) = 0
                end if
             end do
@@ -209,14 +199,14 @@ contains
 
       ! The diagonal holds information about gradients that we need
       ! for SH, we just need the gradient of the current state
-      tocalc(istate(itrj), istate(itrj)) = 1
+      tocalc(istate, istate) = 1
    end subroutine set_tocalc
 
    subroutine write_nacmrest()
       use mod_general, only: narchive, it
       use mod_qmmm, only: natqm
       use mod_utils, only: archive_file
-      integer :: ist1, ist2, iat, itrj
+      integer :: ist1, ist2, iat
       integer :: iunit1
       logical :: file_exists
       character(len=*), parameter :: restart_file = 'restart_sh.bin'
@@ -228,8 +218,6 @@ contains
 
       open (newunit=iunit1, file=restart_file, action='write', status="new", access="sequential", form="unformatted")
 
-      do itrj = 1, ntraj
-
          do ist1 = 1, nstate - 1
 
             do ist2 = ist1 + 1, nstate
@@ -237,14 +225,15 @@ contains
                if (inac == 0) then
 
                   do iat = 1, natqm
-                     write (iunit1) nacx(iat, itrj, ist1, ist2), &
-                                  & nacy(iat, itrj, ist1, ist2), &
-                                  & nacz(iat, itrj, ist1, ist2)
+                     write (iunit1) nacx(iat, ist1, ist2), &
+                                  & nacy(iat, ist1, ist2), &
+                                  & nacz(iat, ist1, ist2)
                   end do
 
                end if
 
             end do
+
          end do
 
          ! Printing total energy at t=0, so that we can safely restart
@@ -253,11 +242,8 @@ contains
          write (iunit1) entot0
 
          if (phase == 1) then
-            call sh_write_phase_bin(iunit1, itrj)
+            call sh_write_phase_bin(iunit1)
          end if
-
-         ! ntraj enddo
-      end do
 
       close (iunit1)
 
@@ -272,7 +258,7 @@ contains
       use mod_qmmm, only: natqm
       use mod_utils, only: archive_file
       character(len=*), parameter :: restart_file = 'restart_sh.bin'
-      integer :: iost, ist1, ist2, iat, itrj
+      integer :: iost, ist1, ist2, iat
       integer :: iunit1
       logical :: file_exists
       character(len=200) :: chmsg
@@ -286,8 +272,6 @@ contains
 
       open (newunit=iunit1, file=restart_file, action="read", status="old", access="sequential", form="unformatted")
 
-      do itrj = 1, ntraj
-
          do ist1 = 1, nstate - 1
 
             do ist2 = ist1 + 1, nstate
@@ -295,17 +279,17 @@ contains
                if (inac == 0) then
 
                   do iat = 1, natqm
-                     read (iunit1, iomsg=chmsg, IOSTAT=iost) nacx(iat, itrj, ist1, ist2), &
-                                                           & nacy(iat, itrj, ist1, ist2), &
-                                                           & nacz(iat, itrj, ist1, ist2)
+                     read (iunit1, iomsg=chmsg, IOSTAT=iost) nacx(iat, ist1, ist2), &
+                                                           & nacy(iat, ist1, ist2), &
+                                                           & nacz(iat, ist1, ist2)
                      if (iost /= 0) then
                         write (*, *) 'Error reading NACME from restart file '//trim(restart_file)
                         write (*, *) chmsg
                         call abinerror('read_nacmrest')
                      end if
-                     nacx(iat, itrj, ist2, ist1) = -nacx(iat, itrj, ist1, ist2)
-                     nacy(iat, itrj, ist2, ist1) = -nacy(iat, itrj, ist1, ist2)
-                     nacz(iat, itrj, ist2, ist1) = -nacz(iat, itrj, ist1, ist2)
+                     nacx(iat, ist2, ist1) = -nacx(iat, ist1, ist2)
+                     nacy(iat, ist2, ist1) = -nacy(iat, ist1, ist2)
+                     nacz(iat, ist2, ist1) = -nacz(iat, ist1, ist2)
                   end do
 
                end if
@@ -319,19 +303,17 @@ contains
          read (iunit1) entot0
 
          if (phase == 1) then
-            call sh_read_phase_bin(iunit1, itrj)
+            call sh_read_phase_bin(iunit1)
          end if
-
-      end do
 
       close (iunit1)
       call archive_file(restart_file, it)
 
    end subroutine read_nacmrest
 
-   integer function read_nacm(itrj)
+   integer function read_nacm()
       use mod_qmmm, only: natqm
-      integer :: iost, ist1, ist2, iat, itrj, iunit
+      integer :: iost, ist1, ist2, iat, iunit
 
       iost = 0 ! needed if each tocalc=0
       open (newunit=iunit, file='nacm.dat')
@@ -341,14 +323,14 @@ contains
             if (tocalc(ist1, ist2) == 1) then
 
                do iat = 1, natqm ! reading only for QM atoms
-                  read (iunit, *, IOSTAT=iost) nacx(iat, itrj, ist1, ist2), &
-                                             & nacy(iat, itrj, ist1, ist2), &
-                                             & nacz(iat, itrj, ist1, ist2)
+                  read (iunit, *, IOSTAT=iost) nacx(iat, ist1, ist2), &
+                                             & nacy(iat, ist1, ist2), &
+                                             & nacz(iat, ist1, ist2)
                   if (iost == 0) then
                      tocalc(ist1, ist2) = 0 ! marking as read, useful if we do decreased accuracy
-                     nacx(iat, itrj, ist2, ist1) = -nacx(iat, itrj, ist1, ist2)
-                     nacy(iat, itrj, ist2, ist1) = -nacy(iat, itrj, ist1, ist2)
-                     nacz(iat, itrj, ist2, ist1) = -nacz(iat, itrj, ist1, ist2)
+                     nacx(iat, ist2, ist1) = -nacx(iat, ist1, ist2)
+                     nacy(iat, ist2, ist1) = -nacy(iat, ist1, ist2)
+                     nacz(iat, ist2, ist1) = -nacz(iat, ist1, ist2)
                   else
                      close (iunit, status='delete')
                      write (*, *) 'WARNING: NACME between states', ist1, ist2, 'not read.'
@@ -367,11 +349,11 @@ contains
       read_nacm = iost
    end function read_nacm
 
-   subroutine calc_nacm(itrj, nac_accu)
+   subroutine calc_nacm(nac_accu)
       use mod_utils, only: toupper
       use mod_general, only: it, pot
-      integer, intent(in) :: itrj, nac_accu
-      integer :: ist1, ist2, u
+      integer, intent(in) :: nac_accu
+      integer :: ist1, ist2, u, itrj
       character(len=100) :: chsystem
       open (newunit=u, file='state.dat')
       write (u, '(I2)') nstate
@@ -389,6 +371,8 @@ contains
       ! TODO: move the following line somwhere else
       ! write(*,*)'WARNING: Some NACMs not computed. Trying with decreased accuracy...'
       ! write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu
+      ! TODO: If we remove itrj here, it will be a breaking change
+      itrj = 1
       write (chsystem, '(A30,I13,I4.3,I3,A12)') chsystem, it, itrj, nac_accu, ' < state.dat'
 
       call system(chsystem)
@@ -398,33 +382,30 @@ contains
    end subroutine calc_nacm
 
    ! move arrays from new step to old step
-   subroutine move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
+   subroutine move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
       use mod_general, only: natom
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(out) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
-      integer, intent(in) :: itrj
       integer :: ist1, ist2, iat
 
       do ist1 = 1, nstate
-         en_array_old(ist1, itrj) = en_array(ist1, itrj)
+         en_array_old(ist1) = en_array(ist1)
 
          if (inac == 0) then ! nedelame, pokud nacitame rovnou dotprodukt
             do ist2 = 1, nstate
                do iat = 1, natom
-                  nacx_old(iat, itrj, ist1, ist2) = nacx(iat, itrj, ist1, ist2)
-                  nacy_old(iat, itrj, ist1, ist2) = nacy(iat, itrj, ist1, ist2)
-                  nacz_old(iat, itrj, ist1, ist2) = nacz(iat, itrj, ist1, ist2)
+                  nacx_old(iat, ist1, ist2) = nacx(iat, ist1, ist2)
+                  nacy_old(iat, ist1, ist2) = nacy(iat, ist1, ist2)
+                  nacz_old(iat, ist1, ist2) = nacz(iat, ist1, ist2)
                end do
             end do
          end if
 
       end do
 
-      do iat = 1, natom
-         vx_old(iat, itrj) = vx(iat, itrj)
-         vy_old(iat, itrj) = vy(iat, itrj)
-         vz_old(iat, itrj) = vz(iat, itrj)
-      end do
+      vx_old = vx
+      vy_old = vy
+      vz_old = vz
    end subroutine move_vars
 
    !******************************
@@ -449,20 +430,20 @@ contains
       real(DP) :: vx_newint(size(vx, 1), size(vx, 2))
       real(DP) :: vy_newint(size(vy, 1), size(vy, 2))
       real(DP) :: vz_newint(size(vz, 1), size(vz, 2))
-      real(DP) :: en_array_int(NSTMAX, NTRAJMAX), en_array_newint(NSTMAX, NTRAJMAX)
-      real(DP) :: nacx_int(size(vx, 1), NTRAJMAX, NSTMAX, NSTMAX)
-      real(DP) :: nacy_int(size(vx, 1), NTRAJMAX, NSTMAX, NSTMAX)
-      real(DP) :: nacz_int(size(vx, 1), NTRAJMAX, NSTMAX, NSTMAX)
-      real(DP) :: nacx_newint(size(vx, 1), NTRAJMAX, NSTMAX, NSTMAX)
-      real(DP) :: nacy_newint(size(vx, 1), NTRAJMAX, NSTMAX, NSTMAX)
-      real(DP) :: nacz_newint(size(vx, 1), NTRAJMAX, NSTMAX, NSTMAX)
-      real(DP) :: dotproduct_int(NSTMAX, NSTMAX, NTRAJMAX), dotproduct_newint(NSTMAX, NSTMAX, NTRAJMAX) !rename dotproduct_int
+      real(DP) :: en_array_int(NSTMAX), en_array_newint(NSTMAX)
+      real(DP) :: nacx_int(size(vx, 1), NSTMAX, NSTMAX)
+      real(DP) :: nacy_int(size(vx, 1), NSTMAX, NSTMAX)
+      real(DP) :: nacz_int(size(vx, 1), NSTMAX, NSTMAX)
+      real(DP) :: nacx_newint(size(vx, 1), NSTMAX, NSTMAX)
+      real(DP) :: nacy_newint(size(vx, 1), NSTMAX, NSTMAX)
+      real(DP) :: nacz_newint(size(vx, 1), NSTMAX, NSTMAX)
+      real(DP) :: dotproduct_int(NSTMAX, NSTMAX), dotproduct_newint(NSTMAX, NSTMAX) !rename dotproduct_int
       real(DP) :: t(NSTMAX, NSTMAX) ! switching probabilities
       real(DP) :: t_tot(NSTMAX, NSTMAX) ! cumulative switching probabilities
       real(DP) :: ran(10)
       real(DP) :: popsum !populations
-      integer :: iat, ist1, ist2, itrj, itp ! iteration counters
-      integer :: ist ! =istate(itrj)
+      integer :: iat, ist1, ist2, itp ! iteration counters
+      integer :: ist ! =istate
       real(DP) :: vect_olap, fr, frd
       real(DP) :: Ekin, dtp
       integer :: ihop
@@ -470,10 +451,8 @@ contains
       character(len=500) :: formt
       character(len=20) :: chist, chihop, chit
 
-      do itrj = 1, ntraj
-
-         call check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
-         call check_energydrift(vx, vy, vz, itrj)
+         call check_energy(vx_old, vy_old, vz_old, vx, vy, vz)
+         call check_energydrift(vx, vy, vz)
 
          t_tot = 1.0D0
 
@@ -487,19 +466,19 @@ contains
                      ! We need to flush these to zero
                      ! Need to do this here, since tocalc is changed in GET_NACME routine
                      do iat = 1, natqm
-                        nacx(iat, itrj, ist1, ist2) = 0.0D0
-                        nacy(iat, itrj, ist1, ist2) = 0.0D0
-                        nacz(iat, itrj, ist1, ist2) = 0.0D0
-                        nacx(iat, itrj, ist2, ist1) = 0.0D0
-                        nacy(iat, itrj, ist2, ist1) = 0.0D0
-                        nacz(iat, itrj, ist2, ist1) = 0.0D0
+                        nacx(iat, ist1, ist2) = 0.0D0
+                        nacy(iat, ist1, ist2) = 0.0D0
+                        nacz(iat, ist1, ist2) = 0.0D0
+                        nacx(iat, ist2, ist1) = 0.0D0
+                        nacy(iat, ist2, ist1) = 0.0D0
+                        nacz(iat, ist2, ist1) = 0.0D0
                      end do
                   end if
                end do
             end do
 
             ! This computes and reads NACME
-            call get_nacm(itrj)
+            call get_nacm()
 
             ! TODO: move this to a separate routine
             ! Calculating overlap between nacmes
@@ -510,18 +489,18 @@ contains
                   vect_olap = 0.0D0
                   do iat = 1, natom
                      vect_olap = vect_olap + &
-                        & nacx_old(iat, itrj, ist1, ist2) * nacx(iat, itrj, ist1, ist2)
+                        & nacx_old(iat, ist1, ist2) * nacx(iat, ist1, ist2)
                      vect_olap = vect_olap + &
-                        & nacy_old(iat, itrj, ist1, ist2) * nacy(iat, itrj, ist1, ist2)
+                        & nacy_old(iat, ist1, ist2) * nacy(iat, ist1, ist2)
                      vect_olap = vect_olap + &
-                        & nacz_old(iat, itrj, ist1, ist2) * nacz(iat, itrj, ist1, ist2)
+                        & nacz_old(iat, ist1, ist2) * nacz(iat, ist1, ist2)
                   end do
 
                   if (vect_olap < 0) then
                      do iat = 1, natom
-                        nacx(iat, itrj, ist1, ist2) = -nacx(iat, itrj, ist1, ist2)
-                        nacy(iat, itrj, ist1, ist2) = -nacy(iat, itrj, ist1, ist2)
-                        nacz(iat, itrj, ist1, ist2) = -nacz(iat, itrj, ist1, ist2)
+                        nacx(iat, ist1, ist2) = -nacx(iat, ist1, ist2)
+                        nacy(iat, ist1, ist2) = -nacy(iat, ist1, ist2)
+                        nacz(iat, ist1, ist2) = -nacz(iat, ist1, ist2)
                      end do
                   end if
 
@@ -538,10 +517,10 @@ contains
          ! Smaller time step for electronic population transfer
          do itp = 1, substep
 
-            ist = istate(itrj)
+            ist = istate
 
             ! pop0 is later used for Tully's fewest switches
-            pop0 = el_pop(ist, itrj)
+            pop0 = el_pop(ist)
 
             ! INTERPOLATION
             fr = real(itp, DP) / real(substep, DP)
@@ -549,31 +528,31 @@ contains
 
             call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
                              nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
-                             dotproduct_newint, fr, frd, itrj)
+                             dotproduct_newint, fr, frd)
 
             fr = real(itp - 1, DP) / real(substep, DP)
             frd = 1.0D0 - fr
 
             call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
                              nacx_int, nacy_int, nacz_int, en_array_int, &
-                             dotproduct_int, fr, frd, itrj)
+                             dotproduct_int, fr, frd)
 
             ! Integrate electronic wavefunction for one dtp time step
-            call sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, itrj, dtp)
+            call sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
 
             ! Check whether total population is 1.0
-            popsum = check_popsum(itrj)
+            popsum = check_popsum()
 
             ! Calculate switching probabilities according to Tully's fewest switches
             ! Probabilities are stored in matrix t
             ! (although at this point we calculate only the relevant part of the matrix)
-            call sh_TFS_transmat(dotproduct_int, dotproduct_newint, itrj, istate(itrj), pop0, t, dtp)
+            call sh_TFS_transmat(dotproduct_int, dotproduct_newint, istate, pop0, t, dtp)
 
             if (idebug > 1) then
                ! WARNING: this will not work for adaptive time step
                ! stepfs = (it*substep+itp-substep) * dt * AUtoFS / substep
                stepfs = (sim_time + dtp * itp - substep * dtp) * AUtoFS
-               call sh_debug_wf(ist, itrj, stepfs, t)
+               call sh_debug_wf(ist, stepfs, t)
             end if
 
             do ist1 = 1, nstate
@@ -627,7 +606,7 @@ contains
                ! Did HOP occur?
                if (ihop /= 0) then
                   if (adjmom == 0) then
-                     call hop(vx, vy, vz, ist, ihop, itrj, eclas)
+                     call hop(vx, vy, vz, ist, ihop, eclas)
                   else if (adjmom == 1) then
                      call try_hop_simple_rescale(vx, vy, vz, ist, ihop, eclas)
                   end if
@@ -651,7 +630,7 @@ contains
                   write (500, *) natom
                   write (500, *) ''
                   do iat = 1, natom
-                     write (500, *) names(iat), x(iat, itrj) / ANG, y(iat, itrj) / ANG, z(iat, itrj) / ANG
+                     write (500, *) names(iat), x(iat, 1) / ANG, y(iat, 1) / ANG, z(iat, 1) / ANG
                   end do
                   close (500)
                end if
@@ -664,7 +643,7 @@ contains
 
                Ekin = ekin_v(vx_int, vy_int, vz_int)
                if (Ekin > 1.0D-4) then ! Decoherence diverges for zero velocities
-                  call sh_decoherence_correction(en_array_int, decoh_alpha, Ekin, istate(itrj), itrj, dtp)
+                  call sh_decoherence_correction(en_array_int, decoh_alpha, Ekin, istate, dtp)
                end if
 
             end if
@@ -673,39 +652,39 @@ contains
          end do
 
          ! set tocalc array for the next step
-         call set_tocalc(itrj)
+         call set_tocalc()
 
-         popsum = check_popsum(itrj)
+         popsum = check_popsum()
 
-         call move_vars(vx, vy, vz, vx_old, vy_old, vz_old, itrj)
+         call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
 
          ! TODO: Move this to a separate function write_sh_output()
          if (modulo(it, nwrite) == 0) then
             stepfs = sim_time * AUtoFS
             write (formt, '(A10,I3,A13)') '(F15.2,I3,', nstate, 'F10.5,1F10.7)'
-            write (UPOP, fmt=formt) stepfs, istate(itrj), (el_pop(ist1, itrj), ist1=1, nstate), popsum
+            write (UPOP, fmt=formt) stepfs, istate, (el_pop(ist1), ist1=1, nstate), popsum
 
             t_tot = 1 - t_tot ! up to know, t_tot was the probability of not hopping
             write (formt, '(A10,I3,A6)') '(F15.2,I3,', nstate, 'F10.5)'
-            write (UPROB, fmt=formt) stepfs, istate(itrj), (t_tot(ist, ist1), ist1=1, nstate)
+            write (UPROB, fmt=formt) stepfs, istate, (t_tot(ist, ist1), ist1=1, nstate)
             write (formt, '(A7,I3,A7)') '(F15.2,', nstate, 'E20.10)'
-            write (UPES, fmt=formt) stepfs, (en_array(ist1, itrj), ist1=1, nstate)
+            write (UPES, fmt=formt) stepfs, (en_array(ist1), ist1=1, nstate)
             if (inac == 0) write (UNACME, *) 'Time step:', it
             do ist1 = 1, nstate - 1
                do ist2 = ist1 + 1, nstate
 
                   if (ist1 == 1 .and. ist2 == 2) then
-                     write (UDOTPROD, '(F15.2,E20.10)', advance='no') stepfs, dotproduct_int(ist1, ist2, itrj)
+                     write (UDOTPROD, '(F15.2,E20.10)', advance='no') stepfs, dotproduct_int(ist1, ist2)
                   else
-                     write (UDOTPROD, '(E20.10)', advance='no') dotproduct_int(ist1, ist2, itrj)
+                     write (UDOTPROD, '(E20.10)', advance='no') dotproduct_int(ist1, ist2)
                   end if
 
                   if (inac == 0) then
                      write (UNACME, *) 'NACME between states:', ist1, ist2
                      do iat = 1, natom
-                        write (UNACME, '(3E20.10)') nacx(iat, itrj, ist1, ist2), &
-                                                  & nacy(iat, itrj, ist1, ist2), &
-                                                  & nacz(iat, itrj, ist1, ist2)
+                        write (UNACME, '(3E20.10)') nacx(iat, ist1, ist2), &
+                                                  & nacy(iat, ist1, ist2), &
+                                                  & nacz(iat, ist1, ist2)
                      end do
                   end if
 
@@ -715,12 +694,9 @@ contains
 
          end if
 
-         ! ntraj enddo
-      end do
-
    end subroutine surfacehop
 
-   subroutine hop(vx, vy, vz, instate, outstate, itrj, eclas)
+   subroutine hop(vx, vy, vz, instate, outstate, eclas)
       use mod_general, only: natom, pot
       use mod_system, only: am
       use mod_files, only: UPOP
@@ -729,11 +705,12 @@ contains
       use mod_interfaces, only: force_clas
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(inout) :: eclas
-      integer, intent(in) :: itrj, instate, outstate
+      integer, intent(in) :: instate, outstate
       real(DP) :: a_temp, b_temp, c_temp, g_temp
       real(DP) :: ekin, ekin_new
-      integer :: iat
+      integer :: iat, iw
 
+      iw = 1
       ! Checking for frustrated hop
 
       a_temp = 0.D0
@@ -742,15 +719,15 @@ contains
       ekin = ekin_v(vx, vy, vz)
 
       do iat = 1, natom
-         a_temp = a_temp + nacx(iat, itrj, instate, outstate)**2 / am(iat)
-         a_temp = a_temp + nacy(iat, itrj, instate, outstate)**2 / am(iat)
-         a_temp = a_temp + nacz(iat, itrj, instate, outstate)**2 / am(iat)
-         b_temp = b_temp + nacx(iat, itrj, instate, outstate) * vx(iat, itrj)
-         b_temp = b_temp + nacy(iat, itrj, instate, outstate) * vy(iat, itrj)
-         b_temp = b_temp + nacz(iat, itrj, instate, outstate) * vz(iat, itrj)
+         a_temp = a_temp + nacx(iat, instate, outstate)**2 / am(iat)
+         a_temp = a_temp + nacy(iat, instate, outstate)**2 / am(iat)
+         a_temp = a_temp + nacz(iat, instate, outstate)**2 / am(iat)
+         b_temp = b_temp + nacx(iat, instate, outstate) * vx(iat, iw)
+         b_temp = b_temp + nacy(iat, instate, outstate) * vy(iat, iw)
+         b_temp = b_temp + nacz(iat, instate, outstate) * vz(iat, iw)
       end do
       a_temp = 0.5D0 * a_temp
-      c_temp = b_temp**2 + 4 * a_temp * (en_array(instate, itrj) - en_array(outstate, itrj))
+      c_temp = b_temp**2 + 4 * a_temp * (en_array(instate) - en_array(outstate))
 
       if (c_temp < 0) then
          write (*, *) '# Not enough momentum in the direction of NAC vector.'
@@ -759,8 +736,8 @@ contains
          return
       end if
 
-      istate(itrj) = outstate
-      eclas = en_array(outstate, itrj)
+      istate = outstate
+      eclas = en_array(outstate)
       write (*, '(A,I0,A,I0)') '# Hop occured from state ', instate, ' to state ', outstate
 
       ! Rescaling the velocities
@@ -773,17 +750,18 @@ contains
          g_temp = (b_temp - dsqrt(c_temp)) / 2.0D0 / a_temp
       end if
 
+      iw = 1
       do iat = 1, natom
-         vx(iat, itrj) = vx(iat, itrj) - g_temp * nacx(iat, itrj, instate, outstate) / am(iat)
-         vy(iat, itrj) = vy(iat, itrj) - g_temp * nacy(iat, itrj, instate, outstate) / am(iat)
-         vz(iat, itrj) = vz(iat, itrj) - g_temp * nacz(iat, itrj, instate, outstate) / am(iat)
+         vx(iat, iw) = vx(iat, iw) - g_temp * nacx(iat, instate, outstate) / am(iat)
+         vy(iat, iw) = vy(iat, iw) - g_temp * nacy(iat, instate, outstate) / am(iat)
+         vz(iat, iw) = vz(iat, iw) - g_temp * nacz(iat, instate, outstate) / am(iat)
       end do
       ekin_new = ekin_v(vx, vy, vz)
 
       write (*, '(A,2E20.10)') '# deltaE_pot     E_kin-total', &
-                               & en_array(outstate, itrj) - en_array(instate, itrj), ekin
+                               & en_array(outstate) - en_array(instate), ekin
 
-      call set_tocalc(itrj)
+      call set_tocalc()
       write (*, *) '# Calculating forces for the new state.'
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
@@ -791,40 +769,42 @@ contains
 
    subroutine interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
                           nacx_int, nacy_int, nacz_int, en_array_int, &
-                          dotproduct_int, fr, frd, itrj)
+                          dotproduct_int, fr, frd)
       use mod_general, only: natom
-      real(DP), intent(out) :: dotproduct_int(:, :, :)
+      real(DP), intent(out) :: dotproduct_int(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
       real(DP), intent(out) :: vx_int(:, :), vy_int(:, :), vz_int(:, :)
-      real(DP), intent(out) :: nacx_int(:, :, :, :)
-      real(DP), intent(out) :: nacy_int(:, :, :, :)
-      real(DP), intent(out) :: nacz_int(:, :, :, :)
-      real(DP), intent(out) :: en_array_int(:, :)
+      real(DP), intent(out) :: nacx_int(:, :, :)
+      real(DP), intent(out) :: nacy_int(:, :, :)
+      real(DP), intent(out) :: nacz_int(:, :, :)
+      real(DP), intent(out) :: en_array_int(:)
       real(DP) :: fr, frd
-      integer :: iat, ist1, ist2, itrj !iteration counters
+      integer :: iat, iw, ist1, ist2 !iteration counters
+
+      iw = 1
 
       do ist1 = 1, nstate
 
-         en_array_int(ist1, itrj) = en_array(ist1, itrj) * fr + en_array_old(ist1, itrj) * frd
+         en_array_int(ist1) = en_array(ist1) * fr + en_array_old(ist1) * frd
          do ist2 = 1, nstate
-            dotproduct_int(ist1, ist2, itrj) = 0.0D0
+            dotproduct_int(ist1, ist2) = 0.0D0
             do iat = 1, natom
-               nacx_int(iat, itrj, ist1, ist2) = nacx(iat, itrj, ist1, ist2) * fr + &
-                                               & nacx_old(iat, itrj, ist1, ist2) * frd
-               nacy_int(iat, itrj, ist1, ist2) = nacy(iat, itrj, ist1, ist2) * fr + &
-                                               & nacy_old(iat, itrj, ist1, ist2) * frd
-               nacz_int(iat, itrj, ist1, ist2) = nacz(iat, itrj, ist1, ist2) * fr + &
-                                               & nacz_old(iat, itrj, ist1, ist2) * frd
-               vx_int(iat, itrj) = vx(iat, itrj) * fr + vx_old(iat, itrj) * frd
-               vy_int(iat, itrj) = vy(iat, itrj) * fr + vy_old(iat, itrj) * frd
-               vz_int(iat, itrj) = vz(iat, itrj) * fr + vz_old(iat, itrj) * frd
-               dotproduct_int(ist1, ist2, itrj) = dotproduct_int(ist1, ist2, itrj) + &
-                                               & vx_int(iat, itrj) * nacx_int(iat, itrj, ist1, ist2)
-               dotproduct_int(ist1, ist2, itrj) = dotproduct_int(ist1, ist2, itrj) + &
-                                               & vy_int(iat, itrj) * nacy_int(iat, itrj, ist1, ist2)
-               dotproduct_int(ist1, ist2, itrj) = dotproduct_int(ist1, ist2, itrj) + &
-                                               & vz_int(iat, itrj) * nacz_int(iat, itrj, ist1, ist2)
+               nacx_int(iat, ist1, ist2) = nacx(iat, ist1, ist2) * fr + &
+                                               & nacx_old(iat, ist1, ist2) * frd
+               nacy_int(iat, ist1, ist2) = nacy(iat, ist1, ist2) * fr + &
+                                               & nacy_old(iat, ist1, ist2) * frd
+               nacz_int(iat, ist1, ist2) = nacz(iat, ist1, ist2) * fr + &
+                                               & nacz_old(iat, ist1, ist2) * frd
+               vx_int(iat, iw) = vx(iat, iw) * fr + vx_old(iat, iw) * frd
+               vy_int(iat, iw) = vy(iat, iw) * fr + vy_old(iat, iw) * frd
+               vz_int(iat, iw) = vz(iat, iw) * fr + vz_old(iat, iw) * frd
+               dotproduct_int(ist1, ist2) = dotproduct_int(ist1, ist2) + &
+                                               & vx_int(iat, iw) * nacx_int(iat, ist1, ist2)
+               dotproduct_int(ist1, ist2) = dotproduct_int(ist1, ist2) + &
+                                               & vy_int(iat, iw) * nacy_int(iat, ist1, ist2)
+               dotproduct_int(ist1, ist2) = dotproduct_int(ist1, ist2) + &
+                                               & vz_int(iat, iw) * nacz_int(iat, ist1, ist2)
             end do
          end do
       end do
@@ -832,41 +812,38 @@ contains
    end subroutine interpolate
 
    subroutine try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
-      use mod_general, only: natom, pot
+      use mod_general, only: pot
       use mod_kinetic, only: ekin_v
       use mod_arrays, only: fxc, fyc, fzc, x, y, z
       use mod_interfaces, only: force_clas
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(inout) :: eclas
       integer, intent(in) :: instate, outstate
-      integer :: itrj
-      integer :: iat
       real(DP) :: de, ekin, alfa, ekin_new
 
-      itrj = 1
       ekin = 0.0D0
       ekin_new = 0.0D0
 
-      dE = en_array(outstate, itrj) - en_array(instate, itrj)
+      dE = en_array(outstate) - en_array(instate)
       ekin = ekin_v(vx, vy, vz)
 
       if (ekin >= de) then
 
          alfa = dsqrt(1 - de / ekin)
 
-         do iat = 1, natom
-            vx(iat, itrj) = alfa * vx(iat, itrj)
-            vy(iat, itrj) = alfa * vy(iat, itrj)
-            vz(iat, itrj) = alfa * vz(iat, itrj)
-         end do
-         istate(itrj) = outstate
-         eclas = en_array(outstate, itrj)
+         vx = alfa * vx
+         vy = alfa * vy
+         vz = alfa * vz
+
+         ! Switch states
+         istate = outstate
+         eclas = en_array(outstate)
          ekin_new = ekin_v(vx, vy, vz)
 
          write (*, '(A,I0,A,I0)') '# Hop occured from state ', instate, ' to state ', outstate
          write (*, '(A)') '# Adjusting velocities by simple scaling.'
 
-         call set_tocalc(itrj)
+         call set_tocalc()
          write (*, '(A)') '# Calculating forces for the new state.'
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
@@ -887,20 +864,19 @@ contains
 
    end subroutine try_hop_simple_rescale
 
-   subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz, itrj)
+   subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz)
       use mod_interfaces, only: finish
       use mod_const, only: AUtoEV
       use mod_kinetic, only: ekin_v
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
-      integer, intent(in) :: itrj
       real(DP) :: ekin, ekin_old, entot, entot_old, dE_S0S1
 
       ! Special case for running MD with TDDFT:
       ! End the simulation when S1-S0 energy difference drops below certain
       ! small threshold.
       if (nstate >= 2) then
-         dE_S0S1 = en_array(2, itrj) - en_array(1, itrj)
+         dE_S0S1 = en_array(2) - en_array(1)
          dE_S0S1 = dE_S0S1 * AUtoEV
          if (dE_S0S1 < dE_S0S1_thr) then
             write (*, *) 'S1 - S0 gap dropped below threshold!'
@@ -913,36 +889,35 @@ contains
       ekin = ekin_v(vx, vy, vz)
       ekin_old = ekin_v(vx_old, vy_old, vz_old)
 
-      entot = (ekin + en_array(istate(itrj), itrj)) * AUtoEV
+      entot = (ekin + en_array(istate)) * AUtoEV
 
       ! TODO: But what if we hopped to another state?
-      ! en_array_old(istate(itrj), itrj) would not point to the correct energy,
+      ! en_array_old(istate) would not point to the correct energy,
       ! right?
       ! We need istate_old array ... but we should just refactor the whole thing...
       ! and make traj_data structure or something
-      entot_old = (ekin_old + en_array_old(istate(itrj), itrj)) * AUtoEV
+      entot_old = (ekin_old + en_array_old(istate)) * AUtoEV
 
       if (abs(entot - entot_old) > energydifthr) then
          write (stderr, *) 'ERROR:Poor energy conservation. Exiting...'
          write (stderr, *) 'Total energy difference [eV] is:', entot - entot_old
          write (stderr, *) 'The threshold was:', energydifthr
          write (stderr, *) 'Ekin_old, Ekin, Epot_old, E_pot', &
-            ekin_old, ekin, en_array_old(istate(itrj), itrj), en_array(istate(itrj), itrj)
+            ekin_old, ekin, en_array_old(istate), en_array(istate)
          call abinerror('check_energy')
       end if
 
    end subroutine check_energy
 
-   subroutine check_energydrift(vx, vy, vz, itrj)
+   subroutine check_energydrift(vx, vy, vz)
       use mod_const, only: AUtoEV
       use mod_kinetic, only: ekin_v
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
-      integer, intent(in) :: itrj
       real(DP) :: ekin, entot
 
       ekin = ekin_v(vx, vy, vz)
 
-      entot = (ekin + en_array(istate(itrj), itrj)) * AUtoEV
+      entot = (ekin + en_array(istate)) * AUtoEV
 
       if (abs(entot - entot0) > energydriftthr) then
          write (stderr, *) 'ERROR: Energy drift exceeded threshold value. Exiting...'
