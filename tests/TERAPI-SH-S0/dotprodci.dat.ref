@@ -1,4 +1,3 @@
- # Dot products between current and previous CI vectors.
  # Time  cidotprod1  cidotprod2 ... 
            0.00   1.0000000000   1.0000000000   1.0000000000
            0.00   1.0000000000   1.0000000000   1.0000000000

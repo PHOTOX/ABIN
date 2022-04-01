@@ -195,13 +195,7 @@ contains
       end do
    end function toupper
 
-   ! TODO: Maybe move this into a separate error handling module,
-   ! together with finish(), and move it to a separate file
-   ! Though need to figure out how to do it without having circular dependencies :-(
-   ! abinerror is needed everywhere, so shouldn't depend on much,
-   ! but finish() is basically dependent on everything. :-(
-   !
-   ! In any case, mod_utils should not depend on anything outside of mod_const and mod_general!
+   ! TODO: Remove this in favour of fatal_error
    subroutine abinerror(chcaller)
       use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
       use mod_interfaces, only: finish
