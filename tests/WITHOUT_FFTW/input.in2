@@ -2,7 +2,7 @@
 # if tau0_langevin is not provided for the PILE thermostat.
 # See also: https://github.com/PHOTOX/ABIN/issues/23
 &general
-pot='mmwater',
+pot='_mmwater_',
 ipimd=1,
 nwalk=4,
 inormalmodes=1,

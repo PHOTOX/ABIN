@@ -208,6 +208,8 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 !$OMP END DO
 !$OMP END PARALLEL
 
+   eclas = eclas / walkmax
+
 end
 
 subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)

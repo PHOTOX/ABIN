@@ -1,7 +1,7 @@
 &general
 nstep=20,
 irest=1,		
-pot='mmwater'
+pot='_mmwater_'
 ipimd=1,
 nwalk=4,
 imini=0,

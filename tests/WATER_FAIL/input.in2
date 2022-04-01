@@ -2,7 +2,7 @@
 &general
 watpot=5 ! only 1 - 4 are supported
 
-pot='mmwater'		
+pot='_mmwater_'		
 nstep=1,
 mdtype='MD',
 dt=20.,

@@ -1,5 +1,5 @@
 &general
-pot='mmwater',
+pot='_mmwater_',
 ipimd=1,
 nwalk=4,
 inormalmodes=1,

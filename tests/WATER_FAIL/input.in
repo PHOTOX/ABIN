@@ -2,7 +2,7 @@
 # with our mini.xyz when we request pure water force field.
 &general
 nstep=1,
-pot='mmwater'		
+pot='_mmwater_'		
 mdtype='MD',
 watpot=1
 dt=20.

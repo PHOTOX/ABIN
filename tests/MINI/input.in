@@ -1,7 +1,7 @@
 Very naive steepest descent minimization.
 
 &general
-pot='mmwater'
+pot='_mmwater_'
 mdtype='minimization'
 
 nstep=200,

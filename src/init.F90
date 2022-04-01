@@ -454,7 +454,7 @@ subroutine init(dt)
       call shake_init(x, y, z)
    end if
 
-   if (pot == 'mmwater' .or. pot_ref == 'mmwater') then
+   if (pot == '_mmwater_' .or. pot_ref == '_mmwater_') then
       call check_water(natom, names)
    end if
 
