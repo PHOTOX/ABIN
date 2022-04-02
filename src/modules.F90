@@ -23,8 +23,6 @@ module mod_general
    public
    ! Current time step
    integer :: it = 0
-   ! Denotes integrator for equations of motion, see init.F90
-   integer :: md = 1
    ! The main switch for the type of dynamics (Clasical MD, PIMD, SH...)
    integer :: ipimd = 0
    ! PIMD parameters, staging transformation, number of beads, NM transform
@@ -37,8 +35,6 @@ module mod_general
    integer :: imini = 0
    ! number of time steps (length of simulation)
    integer :: nstep = 1
-   ! denotes number of internal steps in RESPA algorithm, see mdstep.f90
-   integer :: nabin = 50, nstep_ref = 1
    ! output controls (write the propery every nwriteX step):
    ! general output
    integer :: nwrite = 1

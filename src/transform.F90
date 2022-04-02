@@ -1,6 +1,11 @@
 ! Transformation routines for PIMD and PI+GLE.
 ! We currently support staging (istage=1)
 ! and normal mode (inormalmodes=1) coordinates
+!
+! Here's the code for the function names:
+! X - cartesian coordinates
+! Q - staging coordinates
+! U - normal mode coordinates
 module mod_transform
    use, intrinsic :: iso_c_binding
    use mod_const, only: DP
@@ -146,17 +151,22 @@ contains
 
    end subroutine XtoQ
 
-   subroutine initialize_pi_masses(amg, amt)
+   subroutine initialize_pi_masses(am, amg, amt)
       use mod_const, only: PI
       use mod_general, only: istage, inormalmodes, idebug
-      use mod_system, only: am
-      real(DP), intent(out) :: amg(:, :), amt(:, :)
+      ! Physical atomic masses (already in atomic units)
+      real(DP), intent(in) :: am(:)
+      ! For PIMD, we may transform physical masses
+      ! into something else to improve sampling.
+      ! Each bead may have different mass, hence the 2D array.
+      ! This array is used throughout the code even for non-PI MD.
+      real(DP), intent(out) :: amt(:, :)
+      ! These are used for the propagation of PI bead necklaces,
+      ! see force_quantum()
+      real(DP), intent(out) :: amg(:, :)
       real(DP) :: lambda(size(amg, 2) + 1) !amg(natom,nwalk) - why +1?
       integer :: iat, iw, nmodes, odd
 
-      ! NOTE: am was converted to atomic units earlier in the init.F90
-
-      ! Setting mass array, which is only used without the stage transformation
       do iw = 1, nwalk
          do iat = 1, natom
             amg(iat, iw) = am(iat)
@@ -164,8 +174,8 @@ contains
          end do
       end do
 
-      ! transforming masses
-      ! There are two sets of masses associated with the transformed coordinates
+      ! Transforming masses for PIMD with staging coordinates..
+      ! There are two sets of masses associated with the transformed coordinates:
       ! amg according to eq. 90 in Tuckermann and amt (which has non-zero first mass)
       ! amt is associated with the kinetic energy, amg with the potential energy.
       if (istage == 1) then
@@ -179,9 +189,12 @@ contains
          end do
       end if
 
-      ! SETTING MASSES FOR NORMAL MODES
+      ! Transforming masses for PIMD with normal modes
       ! Mass rescaling for Centroid MD, not tested yet
-      if (inormalmodes == 2) then ! this one apparently does not work
+      ! WARNING: PIMD with normal modes currently does not work,
+      ! so there might be a bug in this code.
+      ! NOTE: PI+GLE and PIGLET (inormalmodes==1) require physical masses!
+      if (inormalmodes == 2) then
          do iat = 1, natom
             lambda(1) = 0
             do iw = 2, nwalk / 2
@@ -205,15 +218,6 @@ contains
                write (*, *) 'amt', (amt(iat, iw), iw=1, nwalk)
                ! write(*,*)'amg2',(amg(iat,iw)*2*sin(pi*(iw-1)/nwalk),iw=1,nwalk)
             end if
-         end do
-
-      else if (inormalmodes == 1) then
-         ! Masses are the same as physical ones: RPMD (default)
-         do iw = 1, nwalk
-            do iat = 1, natom
-               amt(iat, iw) = am(iat)
-               amg(iat, iw) = am(iat)
-            end do
          end do
       end if
 
@@ -306,7 +310,7 @@ contains
    ! Masses are also modified.
    subroutine UtoX(x, y, z, transx, transy, transz)
       use mod_fftw3, only: dft_normalmode2cart
-      use mod_general, only: nwalk, inormalmodes
+      use mod_general, only: nwalk, inormalmodes, idebug
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: transx(:, :), transy(:, :), transz(:, :)
       integer :: iat, iw
@@ -323,7 +327,9 @@ contains
       nmodes = nwalk / 2
       odd = nwalk - 2 * nmodes ! 0 if even, 1 if odd
 
-      call equant_nm(x, y, z, equant)
+      if (idebug > 0) then
+         call equant_nm(x, y, z, equant)
+      end if
 
       do iat = 1, natom
 
@@ -360,7 +366,9 @@ contains
 
       end do
 
-      call equant_cart(transx, transy, transz, equant)
+      if (idebug > 0) then
+         call equant_cart(transx, transy, transz, equant)
+      end if
    end subroutine UtoX
 
    ! This routine transforms cartesian to normal coordinates, which are stored
@@ -384,8 +392,6 @@ contains
 
       nmodes = nwalk / 2
       odd = nwalk - 2 * nmodes ! 0 if even, 1 if odd
-
-      ! call equant_cart(x, y, z, equant)
 
       do iat = 1, natom
          do iw = 1, nwalk
@@ -430,9 +436,9 @@ contains
       transz = transz / dnwalk
 
       ! write(*,*)'original cartesian to normal modes'
-      ! call print_xyz_arrays(x/ang,y/ang,z/ang)
+      ! call print_xyz_arrays(x/ang,y/ang,z/ang, natom, nwalk)
       ! write(*,*)'transformed coordinates to normal modes'
-      ! call print_xyz_arrays(transx/ang,transy/ang,transz/ang)
+      ! call print_xyz_arrays(transx/ang,transy/ang,transz/ang, natom, nwalk)
    end subroutine XtoU
 
    subroutine equant_cart(x, y, z, equant)
@@ -462,8 +468,8 @@ contains
          equantx = equantx + 0.5D0 * am(iat) * omega_n**2 * (x(iat, nwalk) - x(iat, 1))**2
          equanty = equanty + 0.5D0 * am(iat) * omega_n**2 * (y(iat, nwalk) - y(iat, 1))**2
          equantz = equantz + 0.5D0 * am(iat) * omega_n**2 * (z(iat, nwalk) - z(iat, 1))**2
-         ! write(*,*)"Quantum energy per atom in cartesian coordinates"
-         ! write(*,*)equantx, equanty, equantz, equantx+equanty+equantz
+         ! write(*,*) "Quantum energy per atom in cartesian coordinates"
+         ! write(*,*) equantx, equanty, equantz, equantx + equanty + equantz
       end do
 
       equant = equantx + equanty + equantz
@@ -472,9 +478,8 @@ contains
          write (*, *) "Quantum energy in cartesian coordinates"
          write (*, *) equantx, equanty, equantz, equant
          write (*, *) "Cartesian coordinates"
-         call print_xyz_arrays(x, y, z)
+         call print_xyz_arrays(x, y, z, natom, nwalk)
       end if
-
    end subroutine equant_cart
 
    subroutine equant_nm(x, y, z, equant)
@@ -526,7 +531,7 @@ contains
          write (*, *) "Quantum energy in normal modes coordinates"
          write (*, *) equantx, equanty, equantz, equant
          write (*, *) "Normal mode coordinates"
-         call print_xyz_arrays(x, y, z)
+         call print_xyz_arrays(x, y, z, natom, nwalk)
       end if
 
    end subroutine equant_nm

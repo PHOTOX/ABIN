@@ -22,7 +22,7 @@ program abin
    use mod_arrays
    use mod_files, only: stdout
    use mod_general, only: sim_time, pot, pot_ref, iremd, ipimd, &
-      & md, nwrite, nstep, ncalc, it, inormalmodes, istage, irest
+      & nwrite, nstep, ncalc, it, inormalmodes, istage, irest
    use mod_init, only: init
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
@@ -38,6 +38,7 @@ program abin
    use mod_terampi_sh, only: move_new2old_terash
    use mod_mpi, only: get_mpi_rank, mpi_barrier_wrapper
    use mod_remd
+   use mod_mdstep, only: mdstep, md
    implicit none
    ! TODO: These should probably be defined and stored in some module, not here
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
@@ -73,13 +74,13 @@ program abin
    write (stdout, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
    write (stdout, *) ''
 
-   ! Transform coordinates and velocities Path Integral MD
+   ! Transform coordinates and velocities for Path Integral MD
    ! (staging or normal modes)
    if (istage == 1 .or. inormalmodes > 0) then
       call initialize_pi_transforms(x, y, z, vx, vy, vz)
    end if
 
-   ! Note that 'amt' equals 'am' for non-PI simulations
+   ! Note that 'amt' equals physical atomic masses in non-PI simulations
    px = amt * vx
    py = amt * vy
    pz = amt * vz
@@ -169,8 +170,6 @@ program abin
             call respastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
          case (2)
             call verletstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
-            ! include entire Ehrenfest step, in first step, we start from pure initial state so at first step we dont
-            ! need NAMCE and take forces just as a grad E
          case (3)
             call respashake(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
          case (4)
