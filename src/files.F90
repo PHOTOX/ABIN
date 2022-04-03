@@ -64,7 +64,8 @@ contains
    end subroutine reset_stderr
 
    subroutine files_init(isbc, phase, ndist, nang, ndih)
-      use mod_general
+      use mod_general, only: ipimd, irest, iremd, pot, &
+                           & icv, ihess, idebug, nwritev, nwritef
       use mod_error, only: fatal_error
       use mod_mpi, only: get_mpi_rank
       integer, intent(in) :: isbc, phase, ndist, nang, ndih
