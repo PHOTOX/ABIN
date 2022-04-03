@@ -1,7 +1,7 @@
 &general
 irest=0,
 nstep=1,
-pot='mmwater'
+pot='_mmwater_'
 mdtype='MD',
 
 dt=20.,	

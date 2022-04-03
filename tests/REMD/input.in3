@@ -1,6 +1,6 @@
 &general
 iremd=1
-pot='mmwater'
+pot='_mmwater_'
 watpot=1
 mdtype='md'
 nstep=12,

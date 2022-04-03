@@ -42,7 +42,7 @@ extern"C" {
     double *fz,
     double *eclas,
     const int *natom,
-    const int* nwalk, 
+    const int *nwalk,
     const int *watpot)
   {
    const int nwater = *natom / 3;
@@ -61,16 +61,16 @@ extern"C" {
    h2o::ttm3f pot3;
    h2o::ttm4f pot4;
 
-   for (int iw=0;iw < *nwalk;iw++) {
+   for (int iw = 0; iw < *nwalk; iw++) {
 
       // Convert to Angstroms
-      for (int iat=0; iat < *natom;iat++) {
-         crd[3*iat] = x[iw*(*natom)+iat] / ANG;
-         crd[3*iat+1] = y[iw*(*natom)+iat] / ANG;
-         crd[3*iat+2] = z[iw*(*natom)+iat] / ANG;
+      for (int iat = 0; iat < *natom; iat++) {
+         crd[3*iat] = x[iw * (*natom) + iat] / ANG;
+         crd[3*iat + 1] = y[iw * (*natom) + iat] / ANG;
+         crd[3*iat + 2] = z[iw * (*natom) + iat] / ANG;
       }
 
-      switch ( *watpot) {
+      switch (*watpot) {
       case 1:
          E = pot1(nwater, crd, grd);
          break;
@@ -92,13 +92,16 @@ extern"C" {
       *eclas += E / AUTOKCAL;
 
       // Convert forces to atomic units (for ABIN)
-      for (int iat=0; iat < *natom;iat++) {
-         fx[iw*(*natom)+iat]=-grd[3*iat]*FAC;
-         fy[iw*(*natom)+iat]=-grd[1+3*iat]*FAC;
-         fz[iw*(*natom)+iat]=-grd[2+3*iat]*FAC;
+      for (int iat = 0; iat < *natom; iat++) {
+         fx[iw * (*natom) + iat] = -grd[3*iat] * FAC;
+         fy[iw * (*natom) + iat] = -grd[1 + 3*iat] * FAC;
+         fz[iw * (*natom) + iat] = -grd[2 + 3*iat] * FAC;
       }
 
+   // nwalk loop
    }
+
+   *eclas /= *nwalk;
 
 }
 

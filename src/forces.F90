@@ -151,7 +151,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    select case (chpot)
    case ("mm")
       call force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas)
-   case ("mmwater")
+   case ("_mmwater_")
       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
    case ("_splined_grid_")
       ! Only 1D spline grid supported at the moment
@@ -174,7 +174,6 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
       end if
    case DEFAULT
       call force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
-      eclas = eclas / walkmax
    end select
 
    ! Spherical harmonic potential

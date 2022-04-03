@@ -2,7 +2,7 @@
 nstep=2,
 irest=1,
 
-pot='mmwater'		
+pot='_mmwater_'		
 watpot=1,
 mdtype='md',
 
