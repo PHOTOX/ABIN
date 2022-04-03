@@ -5,6 +5,7 @@
 module mod_mdstep
    use mod_const, only: DP
    use mod_utils, only: abinerror
+   use mod_general, only: update_simtime
    use mod_transform
    implicit none
    private
@@ -36,21 +37,17 @@ module mod_mdstep
    end type
 
    abstract interface
-      subroutine integrator(x, y, z, px, py, pz, amt, dt, f, e)
-         import :: DP, energies, forces
+      subroutine integrator(x, y, z, px, py, pz, amt, dt, E_pot, fx, fy, fz)
+         import :: DP
          real(DP), dimension(:, :), intent(inout) :: x, y, z, px, py, pz
          real(DP), dimension(:, :), intent(in) :: amt
-         type(forces), intent(inout) :: f
-         type(energies), intent(inout) :: e
          real(DP), intent(in) :: dt
+         real(DP), intent(inout) :: E_pot
+         real(DP), dimension(:, :), intent(inout) :: fx, fy, fz
       end subroutine integrator
-   !   subroutine verle(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
-   !   subroutine respa(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
-   !   subroutine shake(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
-   !   subroutine dresp(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
    end interface
 
-   procedure(integrator), public :: mdstep
+   procedure(integrator), pointer, public :: mdstep
 
 contains
 
@@ -276,6 +273,7 @@ contains
 
       if (inose > 0) call thermostat(px, py, pz, amt, dt / 2)
 
+      call update_simtime(dt)
    end subroutine verletstep
 
    ! RESPA ALGORITHM  10.12.2012
@@ -322,6 +320,7 @@ contains
 
       call thermostat(px, py, pz, amt, dt / (2 * nabin))
 
+      call update_simtime(dt)
    end subroutine respastep
 
    ! RESPA ALGORITHM WITH RATTLE     10.12.2012
@@ -406,6 +405,7 @@ contains
 
       if (inose == 1) call shiftNHC_yosh(px, py, pz, amt, dt / (2 * nabin))
 
+      call update_simtime(dt)
    end subroutine respashake
 
    ! Double RESPA algorithm using reference low-cost potential pot_ref with smaller time step
@@ -467,6 +467,7 @@ contains
 
       if (inose > 0) call thermostat(px, py, pz, amt, dtsm / 2)
 
+      call update_simtime(dt)
    end subroutine doublerespastep
 
 end module mod_mdstep

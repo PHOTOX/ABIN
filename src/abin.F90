@@ -27,27 +27,27 @@ program abin
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
-   use mod_utils, only: abinerror, archive_file, get_formatted_date_and_time
+   use mod_utils, only: abinerror, archive_file
    use mod_transform
    use mod_mdstep
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
    use mod_interfaces
    use mod_en_restraint
-   use mod_plumed
    use mod_terampi_sh, only: move_new2old_terash
    use mod_mpi, only: get_mpi_rank, mpi_barrier_wrapper
-   use mod_remd
    use mod_mdstep, only: mdstep, md
+#ifdef USE_MPI
+   use mod_remd, only: remd_swap
+#endif
    implicit none
    ! TODO: These should probably be defined and stored in some module, not here
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
    logical :: file_exists
-   integer, dimension(8) :: time_start, time_end
+   integer, dimension(8) :: time_start
    integer :: my_rank
-   real(DP) :: total_cpu_time
 
-   call date_and_time(VALUES=time_start)
+   call date_and_time(values=time_start)
 
    ! INPUT AND INITIALIZATION SECTION
    call init(dt)
@@ -86,13 +86,14 @@ program abin
    pz = amt * vz
 
    if (ipimd == 3) then
-
       call minimize(x, y, z, fxc, fyc, fzc, eclas)
-
-   else
+      call print_footer(time_start)
+      call finish(0)
+      stop 0
+   end if
 
       write (stdout, *)
-      write (stdout, *) '#      Step     Time [fs]'
+      write (stdout, '("#",10X,A,11X,A)') 'Step','Time [fs]'
 
       ! ---------------- PROPAGATION-------------
 
@@ -100,7 +101,7 @@ program abin
       ! I don't know why the hell not.
       call mpi_barrier_wrapper()
 
-      ! getting initial forces and energies
+      ! Get initial forces and energies
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
       if (ipimd == 1) then
          call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
@@ -111,13 +112,13 @@ program abin
          call lz_rewind(en_array_lz)
       end if
 
-      ! if we use reference potential with RESPA
+      ! Get reference forces and energies for ab initio  MTS RESPA
       if (pot_ref /= '_none_') then
          call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
          call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
       end if
 
-      ! setting initial values for surface hopping
+      ! Set initial values for surface hopping
       if (ipimd == 2) then
          if (irest /= 1) then
             call get_nacm()
@@ -176,8 +177,6 @@ program abin
             call doublerespastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
          end select
 
-         sim_time = sim_time + dt
-
          vx = px / amt
          vy = py / amt
          vz = pz / amt
@@ -218,7 +217,7 @@ program abin
          end if
 #endif
 
-         ! --- Ttrajectory analysis ---
+         ! --- Trajectory analysis ---
          ! In order to analyze the output, we have to perform the back transformation
          ! Transformed (cartesian) coordinates are stored in trans matrices.
 
@@ -251,14 +250,14 @@ program abin
          end if
 
          if (modulo(it, nwrite) == 0) then
-            write (stdout, '(I20,F15.2)') it, sim_time * AUtoFS
+            write (stdout, '(I15,F15.2)') it, sim_time * AUtoFS
             call flush (OUTPUT_UNIT)
          end if
 
          ! Time step loop
       end do
 
-      ! DUMP restart file at the end of a run
+      ! Write restart file at the end of a run
       ! Because NCALC might be >1, we have to perform transformation to get the most
       ! recent coordinates and velocities
       it = it - 1
@@ -275,23 +274,8 @@ program abin
          call restout(x, y, z, vx, vy, vz, it)
       end if
 
-      ! minimization endif
-   end if
-
-   write (stdout, *) ''
-   write (stdout, '(A)') 'Job finished successfully!'
-
+   call print_footer(time_start)
    call finish(0)
-
-   call cpu_time(total_cpu_time)
-   write (stdout, '(A)') 'Total cpu time [s] (does not include ab initio calculations)'
-   write (stdout, *) total_cpu_time
-   write (stdout, '(A)') 'Total cpu time [hours] (does not include ab initio calculations)'
-   write (stdout, *) total_cpu_time / 3600.
-
-   write (stdout, '(A)') 'Job started at:  '//trim(get_formatted_date_and_time(time_start))
-   call date_and_time(VALUES=time_end)
-   write (stdout, '(A)') 'Job finished at: '//trim(get_formatted_date_and_time(time_end))
 
 contains
 
@@ -300,5 +284,27 @@ contains
       ! that should be called here (and only if irest=0)
       call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
    end subroutine clean_temp_files
+
+   function get_formatted_date_and_time(time_data) result(formatted_string)
+      character(len=25) :: formatted_string
+      integer, dimension(8), intent(in) :: time_data
+      formatted_string = ''
+      ! time_data must be get from date_and_time() intrinsic
+      ! e.g. 1:48:39   3.11.2020
+      write (formatted_string, "(I2.2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)") time_data(5), ':', &
+         time_data(6), ':', time_data(7), '  ', time_data(3), '.', time_data(2), '.', &
+         time_data(1)
+   end function get_formatted_date_and_time
+
+   subroutine print_footer(time_start)
+      integer, dimension(8), intent(in) :: time_start
+      integer, dimension(8) :: time_end
+
+      call date_and_time(values=time_end)
+      write (stdout, *) ''
+      write (stdout, '(A)') 'Job finished successfully!'
+      write (stdout, '(A)') 'Job started at:  '//trim(get_formatted_date_and_time(time_start))
+      write (stdout, '(A)') 'Job finished at: '//trim(get_formatted_date_and_time(time_end))
+   end subroutine print_footer
 
 end program abin

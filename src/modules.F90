@@ -1,8 +1,7 @@
-!-File with core modules                            created by Daniel Hollas,9.2.2012
+! File with global simulation parameters
 
 ! We are using modules to initialize some variables and
 ! for passing global variables to different subroutines.
-!------------------------------------------------------------------------------------
 
 ! mod_array_size contains various array limits.
 ! Modify here if you need larger arrays.
@@ -62,14 +61,21 @@ module mod_general
    integer :: iknow = 0
    ! Linux Process ID, populated automatically for the current ABIN process
    integer :: pid
-   ! Future variables for adaptive timestep in SH
-   real(DP) :: dt0, sim_time = 0.0D0
+   ! Initial time step (for future adaptime timestep functionality)
+   real(DP) :: dt0
+   ! Total simulation time
+   real(DP), protected :: sim_time = 0.0D0
    ! Energy restrain MD by Jiri Suchan
    integer :: en_restraint = 0
    save
+contains
+   subroutine update_simtime(dt)
+      use mod_const, only: DP
+      real(DP) :: dt
+      sim_time = sim_time + dt
+   end subroutine
 end module
 
-! Some information about simulated system, especially for distributions and shake
 ! TODO: Move this to a separate file, and think hard what should be inside this module.
 module mod_system
    use mod_const, only: DP
