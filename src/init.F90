@@ -290,8 +290,6 @@ subroutine init(dt)
    ! Allocate all basic arrays and set them to 0.0d0
    call allocate_arrays(natom, nwalk)
 
-   ! TODO: I think this is wrongly placed!
-   ! We don't have masses here, yet we pass them in to Plumed!
    if (iplumed == 1) then
       call plumed_init()
    end if

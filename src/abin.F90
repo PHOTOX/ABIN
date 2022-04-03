@@ -37,7 +37,7 @@ program abin
    use mod_terampi_sh, only: move_new2old_terash
    use mod_mpi, only: get_mpi_rank, mpi_barrier_wrapper
 #ifdef USE_MPI
-   use mod_remd, only: remd_swap
+   use mod_remd, only: remd_swap, nswap
 #endif
    implicit none
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0

@@ -55,7 +55,6 @@ contains
       end if
  
       ! Selecting proper integrator for a given MD type
-      ! (controlled by variable 'md')
       if (ipimd == 2 .or. ipimd == 5) then
          mdstep => verletstep
          nabin = 1
