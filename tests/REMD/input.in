@@ -9,6 +9,7 @@ irandom=131313,
 
 nwrite=1,
 nwritex=1,
+nwritev=1
 nrest=1,
 irest=0,
 /

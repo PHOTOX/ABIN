@@ -615,8 +615,7 @@ subroutine init(dt)
 
 !$ write (stdout, '(A,I0)') 'Number of OpenMP threads: ', omp_get_max_threads()
 
-   ! Open files for writing
-   ! TODO: It's strange that we're passing these random params here...
+   ! Open permanent files for writing
    call files_init(isbc, phase, ndist, nang, ndih)
 
    call flush (OUTPUT_UNIT)

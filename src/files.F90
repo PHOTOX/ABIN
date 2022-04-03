@@ -64,10 +64,10 @@ contains
    end subroutine reset_stderr
 
    subroutine files_init(isbc, phase, ndist, nang, ndih)
-      use mod_general
+      use mod_general, only: ipimd, irest, iremd, pot, &
+                           & icv, ihess, idebug, nwritev, nwritef
       use mod_error, only: fatal_error
       use mod_mpi, only: get_mpi_rank
-      use mod_system, only: names
       integer, intent(in) :: isbc, phase, ndist, nang, ndih
       character(len=10) :: chaccess
       integer :: i
@@ -137,119 +137,150 @@ contains
          end do
       end if
 
-!  OPEN trajectory file
-!  Trajectory file is opened later in output function trajout
-!  to prevent creating empty movie.xyz and then failing
-!  We still open when using CP2K interface, since otherwise
-!  strangely more MPI ranks can write to this file if not opened here...
-!   if(pot.eq.'_cp2k_')then
-!      open(UMOVIE,file=chfiles(UMOVIE),access=chaccess,action='write')
-!   end if
+      ! Trajectory file is opened later in output function trajout
+      ! to prevent creating empty movie.xyz and then failing
+
+      open (UTEMPER, file=chfiles(UTEMPER), access=chaccess, action='write')
 
       if (nwritev > 0) then
-!      if(iremd.eq.1)then
-!         write(chout,'(A,I2.2)')'vel.dat.',my_rank
-!      else
-!         chout='vel.dat'
-!      end if
          open (UVELOC, file=chfiles(UVELOC), access=chaccess, action='write')
       end if
 
-      if (nwritef > 0) open (UFORCE, file=chfiles(UFORCE), access=chaccess, action='write')
-
-      if (ipimd /= 1) then
-         open (UENERGY, file=chfiles(UENERGY), access=chaccess, action='write')
-         write (UENERGY, *) '#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+      if (nwritef > 0) then
+         open (UFORCE, file=chfiles(UFORCE), access=chaccess, action='write')
       end if
 
       if (ipimd == 1) then
          open (UESTENERGY, file=chfiles(UESTENERGY), access=chaccess, action='write')
-         write (UESTENERGY, *) '#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
+      else
+         open (UENERGY, file=chfiles(UENERGY), access=chaccess, action='write')
       end if
-
-      open (UTEMPER, file=chfiles(UTEMPER), access=chaccess, action='write')
-      write (UTEMPER, *) '#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
 
       if (ipimd == 5) then
          open (UPES, file=chfiles(UPES), access=chaccess, action='write')
-         write (UPES, *) '#    Time[fs] Potential energies (singlets, triplets)'
          open (UPOP, file=chfiles(UPOP), access=chaccess, action='write')
-         write (UPOP, *) '#    Time[fs] CurrentState   Populations Sum-of-Populations'
       end if
 
       if (ipimd == 2) then
          open (UPOP, file=chfiles(UPOP), access=chaccess, action='write')
-         write (UPOP, *) '#    Time[fs] CurrentState   Populations Sum-of-Populations'
          open (UPROB, file=chfiles(UPROB), access=chaccess, action='write')
-         write (UPROB, *) '#    Time[fs] CurrentState   Probabilities'
          open (UPES, file=chfiles(UPES), access=chaccess, action='write')
-         write (UPES, *) '#    Time[fs] Potential energies'
          open (UNACME, file=chfiles(UNACME), access=chaccess, action='write')
          open (UDOTPROD, file=chfiles(UDOTPROD), access=chaccess, action='write')
-         write (UDOTPROD, *) '#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'
+
          if (idebug > 1) then
             open (UBKL, file=chfiles(UBKL), access=chaccess, action='write')
-            write (UBKL, *) '# Hopping probabilities - bkl(i) [i=1,nstate]'
             open (UWFCOEF, file=chfiles(UWFCOEF), access=chaccess, action='write', recl=250)
-            write (UWFCOEF, *) '# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
             if (phase == 1) then
                open (UPHASE, file=chfiles(UPHASE), access=chaccess, action='write')
-               write (UPHASE, *) '# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
             end if
          end if
 
          if (pot == '_tera_') then
             open (UCHARGES, file=chfiles(UCHARGES), access=chaccess, action='write')
-            write (UCHARGES, *) '# Atomic charges from current electronic state'
-            write (UCHARGES, *) '# Time  state ', (names(i), i=1, natom)
             open (UDOTPRODCI, file=chfiles(UDOTPRODCI), access=chaccess, action='write')
-            write (UDOTPRODCI, *) '# Dot products between current and previous CI vectors.'
-            write (UDOTPRODCI, *) '# Time  cidotprod1  cidotprod2 ... '
             open (UDIP, file=chfiles(UDIP), access=chaccess, action='write')
-            write (UDIP, *) '# Time dip_tot.1 dip_tot.2 ... dip_x.1 dip_y.1 dip_z.1 dip_x.2 dip_y.2 dip_z.2.'
             open (UTDIP, file=chfiles(UTDIP), access=chaccess, action='write')
-            write (UTDIP, *) '# Time  st  tdip_tot.1 tdip_tot.2 ... tdip_x.1 tdip_y.1 tdip_z.1 tdip_x.2 tdip_y.2 tdip_z.2.'
          end if
       end if
 
       if (ipimd /= 2 .and. pot == '_tera_') then
          open (UCHARGES, file=chfiles(UCHARGES), access=chaccess, action='write')
-         write (UCHARGES, *) '# Atomic Mulliken charges from current electronic state'
-         write (UCHARGES, *) '# Time_step Bead_index ', (names(i), i=1, natom)
-
          open (UDIP, file=chfiles(UDIP), access=chaccess, action='write')
-         write (UDIP, *) '# Time Bead_index |D| Dx Dy Dz'
       end if
 
       if (isbc == 1) then
          open (URADIUS, file=chfiles(URADIUS), access=chaccess, action='write')
-         write (URADIUS, *) '#TimeStep     Radius[ANG]   approximate density[kg.m^3]'
       end if
 
       if (icv == 1) then
          open (UCV, file=chfiles(UCV), access=chaccess, action='write')
-         write (UCV, *) '#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
          if (ihess == 1) then
             open (UCVDCV, file=chfiles(UCVDCV), access=chaccess, action='write')
-            write (UCVDCV, *) '#         Time[fs]  Cv-DCV   Cv_cumul_DCV'
          end if
       end if
 
       ! Analysis
       if (ndist > 0) then
          open (UDIST, file=chfiles(UDIST), access=chaccess, action='write')
-         write (UDIST, '(A)') "# Distances [Angstrom]"
       end if
       if (nang > 0) then
          open (UANG, file=chfiles(UANG), access=chaccess, action='write')
-         write (UANG, '(A)') "# Angles [Degree]"
       end if
       if (ndih > 0) then
          open (UDIH, file=chfiles(UDIH), access=chaccess, action='write')
-         write (UDIH, '(A)') "# Dihedral Angles [Degree]"
+      end if
+
+      if (irest == 0) then
+         call print_file_headers()
       end if
 
    end subroutine files_init
+
+   subroutine print_file_headers()
+      use mod_general, only: ipimd, natom
+      use mod_system, only: names
+      character(len=200) :: headers(MAXUNITS)
+      integer :: i
+      logical :: lopened
+
+      headers = ''
+      headers(UTEMPER) = '#      Time[fs] Temperature T-Average Conserved_quantity_of_thermostat'
+      headers(UENERGY) = '#        Time[fs] E-potential           E-kinetic     E-Total    E-Total-Avg'
+      ! PIMD estimators
+      headers(UESTENERGY) = '#     Time[fs] E-potential  E-primitive   E-virial  CumulAvg_prim  CumulAvg_vir'
+      headers(UCV) = '#         Time[fs]  Cv-prim   Cv-vir  Cv_cumul_prim  Cv_cumul_vir'
+      headers(UCVDCV) = '#         Time[fs]  Cv-DCV   Cv_cumul_DCV'
+
+      ! Geometrical analysis
+      headers(UDIST) = "# Distances [Angstrom]"
+      headers(UANG) = "# Angles [Degree]"
+      headers(UDIH) = "# Dihedral Angles [Degree]"
+
+      headers(URADIUS) = '#TimeStep     Radius[ANG]   approximate density[kg.m^3]'
+
+      ! Surface Hopping and Landau-Zener
+      if (ipimd == 5) then
+         headers(UPES) = '#    Time[fs] Potential energies (singlets, triplets)'
+      else
+         headers(UPES) = '#    Time[fs] Potential energies'
+      end if
+
+      headers(UPOP) = '#    Time[fs] CurrentState   Populations Sum-of-Populations'
+      headers(UPHASE) = '# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
+      headers(UPROB) = '#    Time[fs] CurrentState   Probabilities'
+      headers(UDOTPROD) = '#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'
+      headers(UBKL) = '# Hopping probabilities - bkl(i) [i=1,nstate]'
+      headers(UWFCOEF) = '# WF coefficients c_real(i),i=1,nstate c_imag(i),i=1,nstate'
+
+      if (ipimd == 2 .or. ipimd == 5) then
+         headers(UDIP) = '# Time dip_tot.1 dip_tot.2 ... dip_x.1 dip_y.1 dip_z.1 dip_x.2 dip_y.2 dip_z.2.'
+      else
+         headers(UDIP) = '# Time Bead_index |D| Dx Dy Dz'
+      end if
+      headers(UCHARGES) = '# Atomic charges from current electronic state'
+      headers(UDOTPRODCI) = '# Time  cidotprod1  cidotprod2 ... '
+      headers(UTDIP) = '# Time  st  tdip_tot.1 tdip_tot.2 ... tdip_x.1 tdip_y.1 tdip_z.1 tdip_x.2 tdip_y.2 tdip_z.2.'
+
+      do i = 2, MAXUNITS
+         inquire (unit=i, opened=lopened)
+         if (lopened .and. i /= ERROR_UNIT .and. i /= OUTPUT_UNIT) then
+            if (len_trim(headers(i)) /= 0) then
+               write (i, *) trim(headers(i))
+            end if
+         end if
+      end do
+
+      ! Not sure if this is a good idea if there are many atoms
+      inquire (unit=UCHARGES, opened=lopened)
+      if (lopened) then
+         if (ipimd == 2 .or. ipimd == 5) then
+            write (UCHARGES, *) '# Time  state ', (names(i), i=1, natom)
+         else
+            write (UCHARGES, *) '# Time_step Bead_index ', (names(i), i=1, natom)
+         end if
+      end if
+   end subroutine print_file_headers
 
    subroutine close_files()
       integer :: i

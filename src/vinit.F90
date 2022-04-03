@@ -62,7 +62,7 @@ contains
 
             ! TODO: Refactor this, use a multiple of sigma
             ! to determine the maximum reasonable velocity.
-            ! call abinerror() instead of stop
+            ! call fatal_error() instead of stop
             if (abs(vx(iat, iw)) > 1D-2 .or. abs(vy(iat, iw)) > 1D-2 .or. abs(vz(iat, iw)) > 1D-2) then
                write (*, *) 'WARNING: The initial velocity of atom', iat, 'is very large.'
                write (*, *) 'Your system might blow up. Maybe try different random seed.'
