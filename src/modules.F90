@@ -59,8 +59,6 @@ module mod_general
    ! If you want to set use some exotic settings that we do not normally allow,
    ! set iknow = 1
    integer :: iknow = 0
-   ! Linux Process ID, populated automatically for the current ABIN process
-   integer :: pid
    ! Initial time step (for future adaptime timestep functionality)
    real(DP) :: dt0
    ! Total simulation time

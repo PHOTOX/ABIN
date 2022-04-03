@@ -29,19 +29,17 @@ program abin
    use mod_kinetic, only: temperature
    use mod_utils, only: abinerror, archive_file
    use mod_transform
-   use mod_mdstep
+   use mod_mdstep, only: mdstep
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
    use mod_interfaces
    use mod_en_restraint
    use mod_terampi_sh, only: move_new2old_terash
    use mod_mpi, only: get_mpi_rank, mpi_barrier_wrapper
-   use mod_mdstep, only: mdstep, md
 #ifdef USE_MPI
    use mod_remd, only: remd_swap
 #endif
    implicit none
-   ! TODO: These should probably be defined and stored in some module, not here
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
    logical :: file_exists
    integer, dimension(8) :: time_start
@@ -165,17 +163,8 @@ program abin
 
          end if
 
-         ! CALL the integrator, propagate through one time step
-         select case (md)
-         case (1)
-            call respastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
-         case (2)
-            call verletstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
-         case (3)
-            call respashake(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
-         case (4)
-            call doublerespastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
-         end select
+         ! PROPAGATE through one time step
+         call mdstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
 
          vx = px / amt
          vy = py / amt
@@ -234,7 +223,7 @@ program abin
             call QtoX(x, y, z, transx, transy, transz)
             call FQtoFX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
             call analysis(transx, transy, transz, transxv, transyv, transzv,  &
-                 &       transfxc, transfyc, transfzc, eclas, equant)
+                 &       transfxc, transfyc, transfzc, eclas)
 
          else if (inormalmodes > 0) then
 
@@ -242,10 +231,10 @@ program abin
             call UtoX(vx, vy, vz, transxv, transyv, transzv)
             call UtoX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
             call analysis(transx, transy, transz, transxv, transyv, transzv,  &
-                 &        transfxc, transfyc, transfzc, eclas, equant)
+                 &        transfxc, transfyc, transfzc, eclas)
          else
 
-            call analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas, equant)
+            call analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas)
 
          end if
 

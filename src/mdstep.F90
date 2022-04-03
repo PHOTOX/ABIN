@@ -4,37 +4,18 @@
 ! - RESPA for multiple time-step MD with reference potential.
 module mod_mdstep
    use mod_const, only: DP
-   use mod_utils, only: abinerror
    use mod_general, only: update_simtime
+   use mod_nhc, only: inose
    use mod_transform
    implicit none
    private
    public :: initialize_integrator
-   public :: verletstep, respastep, respashake, doublerespastep
-   ! Denotes integrator for equations of motion, see init.F90
-   integer, public :: md = 1
 
    ! Denotes number of internal steps in multiple-time-step RESPA algorithms
-   ! nabin - controls internal steps in PIMD integration,
-   ! nstep_ref - controls internal steps with reference potential pot_ref
-   ! TODO: Make these private
-   integer, public :: nabin = 50, nstep_ref = 1
-
-   type :: energies
-      ! Ab initio electronic energy
-      real(DP) :: e_pot
-      ! Harmonic energy of the PI bead necklace
-      real(DP) :: e_pi
-   end type
-
-   type :: forces
-      ! Ab initio forces
-      real(DP), allocatable, dimension(:, :) :: fxc, fyc, fzc
-      ! Harmonic PI forces
-      real(DP), allocatable, dimension(:, :) :: fxq, fyq, fzq
-      ! Difference forces between full and reference potential
-      real(DP), allocatable, dimension(:, :) :: fxdiff, fydiff, fzdiff
-   end type
+   ! nabin - internal steps in PIMD integration,
+   integer, public :: nabin = 50
+   ! nstep_ref - internal steps with reference potential pot_ref
+   integer, public :: nstep_ref = 1
 
    abstract interface
       subroutine integrator(x, y, z, px, py, pz, amt, dt, E_pot, fx, fy, fz)
@@ -47,55 +28,57 @@ module mod_mdstep
       end subroutine integrator
    end interface
 
-   procedure(integrator), pointer, public :: mdstep
+   procedure(integrator), pointer, public :: mdstep => NULL()
 
 contains
+
+   subroutine check_input()
+      use mod_utils, only: int_positive
+      call int_positive(nabin, 'nabin')
+      call int_positive(nstep_ref, 'nstep_ref')
+   end subroutine check_input
 
    subroutine initialize_integrator(dt, ipimd, inormalmodes, nshake, pot, pot_ref)
       use mod_const, only: AUtoFS
       use mod_error, only: fatal_error
-      use mod_general, only: nwalk
       use mod_files, only: stdout
       real(DP), intent(in) :: dt
       integer, intent(in) :: ipimd, inormalmodes, nshake
       character(len=*) :: pot, pot_ref
 
-      ! resetting number of walkers to 1 in case of classical simulation
+      call check_input()
+
       if (ipimd == 0) then
          write (stdout, *) 'Using velocity Verlet integrator'
-         md = 2
-         nwalk = 1
-         nabin = 1 ! TODO:safety for respashake code
-         ! We should probably copy shake to velocity verlet
-         ! algorithm as well
+         mdstep => verletstep
+         nabin = 1
       end if
  
       ! Selecting proper integrator for a given MD type
       ! (controlled by variable 'md')
       if (ipimd == 2 .or. ipimd == 5) then
-         nwalk = 1
-         md = 2 ! velocity verlet
+         mdstep => verletstep
          nabin = 1
       else if (ipimd == 1 .and. inormalmodes /= 1) then
          write (stdout, *) 'Using RESPA integrator for PIMD.'
-         md = 1
+         mdstep => respastep
       else if (ipimd == 1 .and. inormalmodes == 1) then
          write (stdout, *) 'Using velocity Verlet integrator with analytical PI normal mode propagation.'
+         mdstep => verletstep
          nabin = 1
-         md = 2
       end if
- 
+
       if (nshake /= 0) then
-         md = 3
+         mdstep => respashakestep
       end if
  
       if (pot_ref /= '_none_') then
-         md = 4
-         write (*, '(A)') 'Using Multiple Time-Step RESPA integrator'
-         write (*, '(A)') "Reference (cheap) potential is "//trim(pot_ref)
-         write (*, '(A, F6.2)') "with timestep [fs] ", dt / nstep_ref * AUtoFS
-         write (*, '(A)') "Full potential is "//trim(pot)
-         write (*, '(A, F6.2)') "with timestep [fs] ", dt * AUtoFS
+         mdstep => doublerespastep
+         write (stdout, '(A)') 'Using Multiple Time-Step RESPA integrator'
+         write (stdout, '(A)') "Reference (cheap) potential is "//trim(pot_ref)
+         write (stdout, '(A, F6.2)') "with timestep [fs] ", dt / nstep_ref * AUtoFS
+         write (stdout, '(A)') "Full potential is "//trim(pot)
+         write (stdout, '(A, F6.2)') "with timestep [fs] ", dt * AUtoFS
          if (ipimd /= 0) then
             call fatal_error(__FILE__, __LINE__, &
                & 'ab initio MTS is implemented only for classical MD')
@@ -106,6 +89,10 @@ contains
          end if
       end if
 
+      ! NOTE: This checks for a programming error, we sanitize user input earlier
+      if (.not. associated(mdstep) .and. ipimd /= 3) then
+         call fatal_error(__FILE__, __LINE__, 'invalid integrator')
+      end if
    end subroutine
 
    subroutine shiftX(rx, ry, rz, px, py, pz, mass, dt)
@@ -140,7 +127,6 @@ contains
    ! J. Chem. Phys. 133, 124104 ?2010?
    subroutine propagate_nm(x, y, z, px, py, pz, m, dt)
    use mod_const, only: DP, PI
-   use mod_array_size
    use mod_general, only: nwalk, natom
    use mod_nhc, only: temp
    implicit none
@@ -163,7 +149,7 @@ contains
    py_old = py
    pz_old = pz
 
-   omega_n = TEMP * NWALK
+   omega_n = temp * nwalk
 
    do iw = 2, nwalk
       k = iw - 1
@@ -173,9 +159,9 @@ contains
    ! First, propagate centroid
    iw = 1
    do iat = 1, natom
-      X(iat, iw) = X(iat, iw) + dt * PX(iat, iw) / M(iat, iw)
-      Y(iat, iw) = Y(iat, iw) + dt * PY(iat, iw) / M(iat, iw)
-      Z(iat, iw) = Z(iat, iw) + dt * PZ(iat, iw) / M(iat, iw)
+      x(iat, iw) = x(iat, iw) + dt * px(iat, iw) / m(iat, iw)
+      y(iat, iw) = y(iat, iw) + dt * py(iat, iw) / m(iat, iw)
+      z(iat, iw) = z(iat, iw) + dt * pz(iat, iw) / m(iat, iw)
    end do
 
    ! eq 23 from J. Chem. Phys. 133, 124104 2010
@@ -245,7 +231,6 @@ contains
    ! eq 23 from J. Chem. Phys. 133, 124104 2010
    subroutine verletstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
       use mod_general, only: pot, inormalmodes, en_restraint
-      use mod_nhc, only: inose
       use mod_interfaces, only: force_clas
       use mod_en_restraint
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
@@ -280,18 +265,17 @@ contains
    ! General algorithm of the propagation:
    ! see eq. 64 in Mol. Phys. 1996, vol. 87, 1117 (Martyna et al.)
    ! further info is before subroutine respa_shake
-   subroutine respastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, &
-                        fxc, fyc, fzc, fxq, fyq, fzq)
+   subroutine respastep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
       use mod_general, only: pot
-      use mod_nhc, only: inose
       use mod_interfaces, only: force_clas, force_quantum
+      use mod_arrays, only: fxq, fyq, fzq, amg
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fxc(:, :), fyc(:, :), fzc(:, :)
-      real(DP), intent(inout) :: fxq(:, :), fyq(:, :), fzq(:, :)
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
-      real(DP), intent(in) :: amg(:, :), amt(:, :)
+      real(DP), intent(in) :: amt(:, :)
       real(DP), intent(in) :: dt
-      real(DP), intent(inout) :: eclas, equant
+      real(DP), intent(inout) :: eclas
+      real(DP) :: equant
       integer :: iabin
 
       call thermostat(px, py, pz, amt, dt / (2 * nabin))
@@ -345,19 +329,19 @@ contains
    !
    ! For example, for system of chloride and 5 rigid water molecules,
    ! there will be 6 molecules and 6 NHC chains.
-   subroutine respashake(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, &
-                         fxc, fyc, fzc, fxq, fyq, fzq)
+   subroutine respashakestep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
       use mod_general, only: pot
-      use mod_nhc, only: inose, shiftNHC_yosh
+      use mod_nhc, only: shiftNHC_yosh
       use mod_shake, only: shake, nshake
       use mod_interfaces, only: force_clas, force_quantum
+      use mod_arrays, only: amg, fxq, fyq, fzq
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
-      real(DP), intent(in) :: amg(:, :), amt(:, :)
+      real(DP), intent(in) :: amt(:, :)
       real(DP), intent(in) :: dt
-      real(DP), intent(inout) :: eclas, equant
+      real(DP), intent(inout) :: eclas
       real(DP), intent(inout) :: fxc(:, :), fyc(:, :), fzc(:, :)
-      real(DP), intent(inout) :: fxq(:, :), fyq(:, :), fzq(:, :)
+      real(DP) :: equant
       integer :: iabin
 
       if (inose == 1) then
@@ -406,22 +390,22 @@ contains
       if (inose == 1) call shiftNHC_yosh(px, py, pz, amt, dt / (2 * nabin))
 
       call update_simtime(dt)
-   end subroutine respashake
+   end subroutine respashakestep
 
    ! Double RESPA algorithm using reference low-cost potential pot_ref with smaller time step
-   subroutine doublerespastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, &
-                              fxc, fyc, fzc, fxq, fyq, fzq)
+   subroutine doublerespastep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
       use mod_general, only: pot, pot_ref
-      use mod_nhc, only: inose
       use mod_interfaces, only: force_clas, force_quantum
-      use mod_arrays, only: fxc_diff, fyc_diff, fzc_diff
+      use mod_arrays, only: fxc_diff, fyc_diff, fzc_diff, &
+                          & fxq, fyq, fzq, &
+                          & amg
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fxc(:, :), fyc(:, :), fzc(:, :)
-      real(DP), intent(inout) :: fxq(:, :), fyq(:, :), fzq(:, :)
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
-      real(DP), intent(in) :: amg(:, :), amt(:, :)
+      real(DP), intent(in) :: amt(:, :)
       real(DP), intent(in) :: dt
-      real(DP), intent(inout) :: eclas, equant
+      real(DP), intent(inout) :: eclas
+      real(DP) :: equant
       real(DP) :: dtsm
       integer :: iabin, iref
 

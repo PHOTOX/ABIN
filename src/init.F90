@@ -647,9 +647,9 @@ contains
          error = 1
       end if
       if (ipimd == 1 .and. nwalk <= 1) then
-         write (*, *) 'Number of walkers for PIMD (nwalk) <=1 !'
-         write (*, *) 'Either set ipimd=0 for classical simulation or'
-         write (*, *) 'set nwalk > 1'
+         write (*, *) 'Number of walkers for PIMD (nwalk) mus be >= 1!'
+         write (*, *) 'Either set ipimd=0 for classical simulation'
+         write (*, *) 'or set nwalk > 1'
          error = 1
       end if
       if (iqmmm < 0 .or. iqmmm > 1) then
@@ -868,7 +868,6 @@ contains
       call int_nonnegative(nrest, 'nrest')
       call int_nonnegative(narchive, 'narchive')
 
-      call int_positive(nabin, 'nwalk')
       call int_positive(nwalk, 'nwalk')
       call int_positive(ncalc, 'ncalc')
 
