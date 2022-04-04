@@ -150,7 +150,9 @@ subroutine init(dt)
    open (150, file=chinput, status='OLD', delim='APOSTROPHE', action="READ")
    read (150, general)
    rewind (150)
+
    pot = tolower(pot)
+   pot_ref = tolower(pot_ref)
 
    if (pot == "_cp2k_" .or. pot_ref == "_cp2k_") then
       call init_cp2k()
