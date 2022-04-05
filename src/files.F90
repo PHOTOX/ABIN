@@ -7,8 +7,7 @@ module mod_files
    implicit none
    public
    ! Defines maximum number of units available for permanently opened files
-   ! TODO: Make MAXUNITS private, currently used in force_abin.F90
-   integer, parameter :: MAXUNITS = 50
+   integer, parameter, private :: MAXUNITS = 50
 
    integer, parameter, private :: MAXFILENAME = 50
    character(len=MAXFILENAME), private :: CHFILES(MAXUNITS)

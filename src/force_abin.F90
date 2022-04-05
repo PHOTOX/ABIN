@@ -1,204 +1,279 @@
-subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
+module mod_shell_interface
    use mod_const, only: DP, ANG
-   use mod_files, only: MAXUNITS
-   use mod_mpi, only: get_mpi_rank
-   use mod_general, only: ipimd, iqmmm, it, iremd
-   use mod_system, only: names
-   use mod_sh_integ, only: nstate
-   use mod_sh, only: tocalc, en_array, istate
-   use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
-   use mod_qmmm, only: natqm
-   use mod_utils, only: abinerror, toupper
-   use mod_io, only: read_forces
-   use mod_interfaces, only: oniom
+   use mod_error, only: fatal_error
+   use mod_files, only: stderr
    implicit none
-   real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-   real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
-   real(DP), intent(out) :: eclas
-   integer, intent(in) :: walkmax
-   character(len=*), intent(in) :: chpot
-   real(DP) :: temp1
-   character(len=100) :: chsystem
-   character(len=30) :: chgeom, chforce, fgeom
-   logical :: file_exists
-   integer :: iat, iw, itest
-   integer :: ist1, iost, ISTATUS
-   integer :: system
-   integer :: my_rank
+   private
+   public :: force_abin, oniom
 
-   my_rank = get_mpi_rank()
+   contains
 
-   eclas = 0.0D0
+   integer function open_engrad_file(fname) result(uengrad)
+      character(len=*) :: fname
+      character(len=300) :: errmsg
+      logical :: exists
+      integer :: iost
 
-   ! Format for geom.dat; needed, so that Molpro can read it
-   fgeom = '(A2,3E25.17E2)'
-
-!$OMP PARALLEL ! REDUCTION(+:eclas) alternativa k atomic
-!$OMP DO PRIVATE(temp1,chsystem,chgeom,chforce,itest,file_exists,iost)
-
-   do iw = 1, walkmax
-
-      write (chgeom, '(A,I3.3)') 'geom.dat.', iw
-      write (chforce, '(A,I3.3)') 'engrad.dat.', iw
-      if (iremd == 1) then
-         write (chgeom, '(A,I2.2)') trim(chgeom)//'.', my_rank
-         write (chforce, '(A,I2.2)') trim(chforce)//'.', my_rank
+      inquire (file=fname, exist=exists)
+      if (.not. exists) then
+         write (stderr, *) 'WARNING: File '//trim(fname)//' does not exist. Waiting..'
+         call system('sync') !mel by zajistit flush diskoveho bufferu
+         call system('sleep 0.5')
       end if
 
-!     Delete the last geometry
-      open (unit=MAXUNITS + iw, file=chgeom)
-      close (unit=MAXUNITS + iw, status='delete')
-!     WRITING GEOMETRY IN ANGSTROMS
-      open (unit=MAXUNITS + iw, file=chgeom, action='write', access='SEQUENTIAL')
-      do iat = 1, natqm
-         write (MAXUNITS + iw, fgeom, iostat=iost) names(iat), &
-                                                & x(iat, iw) / ANG, &
-                                                & y(iat, iw) / ANG, &
-                                                & z(iat, iw) / ANG
+      open (newunit=uengrad, file=fname, status='old', action='read', iostat=iost, iomsg=errmsg)
+      if (iost /= 0) then
+         write (stderr, *) trim(errmsg)
+         call fatal_error(__FILE__, __LINE__, 'Could not open file '//fname)
+      end if
+   end function open_engrad_file
+
+   subroutine write_geom(fname, at_names, x, y, z, natom, iw)
+      character(len=*), intent(in) :: fname
+      character(len=2), dimension(:), intent(in) :: at_names
+      real(DP), dimension(:, :), intent(in) :: x, y, z
+      integer, intent(in) :: natom, iw
+      ! Format for geom.dat; needed, so that Molpro can read it
+      character(len=*), parameter :: fgeom = '(A2,3E25.17E2)' 
+      integer :: u, iat
+
+      ! Delete the last geometry
+      open (newunit=u, file=fname)
+      close (u, status='delete')
+
+      open (newunit=u, file=fname, status='new', action='write', access='sequential')
+      do iat = 1, natom
+         write (u, fgeom) at_names(iat), x(iat, iw) / ANG, y(iat, iw) / ANG, z(iat, iw) / ANG
       end do
-      close (unit=MAXUNITS + iw)
+      close (u)
+   end subroutine write_geom
 
-      if (ipimd == 2) then
+   subroutine write_sh_data(nstate, tocalc)
+      integer, intent(in) :: nstate
+      integer, dimension(:, :), intent(in) :: tocalc
+      integer :: ist
+      integer :: u
 
-         open (unit=MAXUNITS + iw + 2 * walkmax, file='state.dat')
-         write (MAXUNITS + iw + 2 * walkmax, '(I2)') nstate
+      open (newunit=u, file='state.dat')
+      write (u, '(I0)') nstate
+      ! Diagonal of tocalc holds info about needed forces
+      ! tocalc(x,x) = 1 -> compute forces for electronic state X
+      ! off-diagonal elements correspond to non-adiabatic couplings
+      ! Here we only request forces, so only printing diagonal elements.
+      ! NACMs are computed separately.
+      do ist = 1, nstate
+         write (u, '(I1,A1)', advance='no') tocalc(ist, ist), ' '
+      end do
+      close (u)
+   end subroutine write_sh_data
 
-         ! Diagonal of tocalc holds info about needed forces
-         ! tocalc(x,x) = 1 -> compute forces for electronic state X
-         ! off-diagonal elements correspond to non-adiabatic couplings
-         do ist1 = 1, nstate
-            write (MAXUNITS + iw + 2 * walkmax, '(I1,A1)', advance='no') tocalc(ist1, ist1), ' '
-         end do
-         close (MAXUNITS + iw + 2 * walkmax)
+   subroutine write_lz_data(nstate, nsinglet, ntriplet, tocalc)
+      integer, intent(in) :: nstate
+      integer, intent(in) :: nsinglet, ntriplet
+      integer, dimension(:), intent(in):: tocalc
+      integer :: ist
+      integer :: u
+
+      if (nstate /= nsinglet + ntriplet) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'LZ: nstate /= nsinglet + ntriplet')
       end if
 
-!     Landau-Zener
-      if (ipimd == 5) then
+      open (newunit=u, file='state.dat')
+      write (u, '(I0)') nstate
 
-         open (unit=MAXUNITS + iw + 2 * walkmax, file='state.dat')
-         write (MAXUNITS + iw + 2 * walkmax, '(I2)') nstate_lz !How many el. states
+      ! Print for which state we need gradient
+      ! First we have singlets, then triplets
+      do ist = 1, nstate
+         if (tocalc(ist) == 1) write (u, '(I0)') ist
+      end do
+      write (u, '(I0)') nsinglet
+      write (u, '(I0)') ntriplet
+      close (u)
+   end subroutine write_lz_data
 
-         ! First we have singlets, then triplets
-         do ist1 = 1, nstate_lz
-            if (tocalc_lz(ist1) == 1) write (MAXUNITS + iw + 2 * walkmax, '(I2,A1)') ist1, ' ' !Number of gradient state
-         end do
-         write (MAXUNITS + iw + 2 * walkmax, '(I2,A1)') nsinglet_lz, ' ' !Number of singlets
-         write (MAXUNITS + iw + 2 * walkmax, '(I2,A1)') ntriplet_lz, ' ' !Number of triplets
-         close (MAXUNITS + iw + 2 * walkmax)
+   function get_shellscript(potential) result(shellscript)
+      use mod_utils, only: toupper
+      character(len=*), intent(in) :: potential
+      character(:), allocatable :: shellscript
+      logical :: exists
+
+      shellscript = './'//trim(toupper(potential))//'/r.'//potential
+      inquire (file=shellscript, exist=exists)
+      if (.not. exists) then
+         call fatal_error(__FILE__, __LINE__, 'Shell executable '//shellscript//' does not exist')
       end if
+   end function get_shellscript
 
-!     HERE we decide which program we use to obtain gradients and energies
-!     e.g. ./G09/r.g09
-      chsystem = './'//trim(toupper(chpot))//'/r.'//chpot
+   subroutine call_shell(shellscript, it, iw, ipimd)
+      use mod_utils, only: append_rank
+      character(:), allocatable, intent(in) :: shellscript
+      ! Time step
+      integer, intent(in) :: it
+      ! Bead index (perhaps appended by REMD index)
+      integer, intent(in) :: iw
+      integer, intent(in) :: ipimd
+      integer :: istatus
+      character(len=300) :: call_cmd 
 
-      inquire (FILE=chsystem, EXIST=file_exists)
-      if (.not. file_exists) then
-         write (*, *) 'File ', chsystem
-         write (*, *) 'does not exist! Exiting...'
-         call abinerror('force_abin')
-      end if
-
+      call_cmd = ''
       ! Passing arguments to bash script
       ! First argument is time step
       ! Second argument is the bead index, neccessary for parallel calculations
-      write (chsystem, '(A40,I13,I4.3)') chsystem, it, iw
+      write (call_cmd, '(A,I0,I4.3)') trim(shellscript)//' ', it, iw
+      call_cmd = append_rank(call_cmd)
 
-      if (iremd == 1) write (chsystem, '(A,I2.2)') trim(chsystem)//'.', my_rank
-
-!     for SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)
-!     TODO: This should not be hard-coded
+      ! For SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)
+      ! TODO: This should not be hard-coded
       if (ipimd == 2 .or. ipimd == 5) then
-         write (chsystem, '(A60,I3,A12)') chsystem, 7, ' < state.dat'
+         write (call_cmd, '(A,I0,A)') trim(call_cmd)//' ', 7, ' < state.dat'
       end if
 
-      !-----MAKE THE CALL----------!
-      ISTATUS = system(chsystem)
+      ! Call the shell interface script
+      istatus = system(trim(call_cmd))
 
       ! TODO: Verify that the below is true even for GCC >= 7
       ! Exit status 0 turns to 0
       ! For some reason, exit status 1 turns to 256
       ! However, this one we get by default from BASH, I don't know why.
       ! If the BASH script wants to notify ABIN, it can use e.g. exit 2
-      if (ISTATUS /= 0 .and. ISTATUS /= 256) then
-         write (*, '(A)') 'ERROR during the execution of the ab initio external program.'
-         write (*, '(A)') 'Please inspect the output files in&
-         & folder '//trim(toupper(chpot))//"/"
-         call abinerror('force_abin')
+      if (istatus /= 0 .and. istatus /= 256) then
+         write (stderr, *) 'Error during the execution of the external program.'
+         !write (stderr, *) 'Inspect the output files in&
+         !   & folder '//trim(toupper(chpot))//"/"
+         call fatal_error(__FILE__, __LINE__, 'External forces error')
       end if
+   end subroutine call_shell
 
-!     make sure that the file exist and flush the disc buffer
-      itest = 0
-      inquire (FILE=chforce, EXIST=file_exists)
-      do while (.not. file_exists .and. itest < 10)
-         write (*, *) 'WARNING:File ', chforce, ' does not exist. Waiting..'
-         ISTATUS = system('sync') !mel by zajistit flush diskoveho bufferu
-         inquire (FILE=chforce, EXIST=file_exists)
-         itest = itest + 1
+   real(DP) function read_energy(engrad_unit) result(energy)
+      integer, intent(in) :: engrad_unit
+      character(len=300) :: errmsg
+      integer :: iost
+      ! Read electronic energy from engrad.dat
+      read (engrad_unit, *, iostat=iost, iomsg=errmsg) energy
+      if (iost /= 0) then
+         !write (stderr, *) 'ERROR: Could not read energy from file ', chforce
+         write (stderr, *) trim(errmsg)
+         !write (stderr, *) 'Inspect output files from the external program in folder '//trim(toupper(chpot))
+         call fatal_error(__FILE__, __LINE__, 'Could not read energy')
+      end if
+   end function
+
+   function read_forces(fx, fy, fz, num_atom, iw, funit) result(iost)
+      use mod_files, only: stderr
+      real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
+      integer, intent(in) :: iw, funit, num_atom
+      character(len=300) :: errmsg
+      integer :: iat, iost
+
+      ! WARNING: We actually expect gradients in the file !
+      do iat = 1, num_atom
+         read (funit, *, iostat=iost) fx(iat, iw), fy(iat, iw), fz(iat, iw)
+         if (iost /= 0) then
+            write (stderr, *) trim(errmsg)
+            return
+         end if
+         ! Convert gradients to forces
+         fx(iat, iw) = -fx(iat, iw)
+         fy(iat, iw) = -fy(iat, iw)
+         fz(iat, iw) = -fz(iat, iw)
       end do
+   end function read_forces
 
-      open (unit=MAXUNITS + iw, file=chforce, status='old', ACTION='READ', IOSTAT=iost)
-      if (iost /= 0) then
-         write (*, *) 'Fatal problem when trying to open the file ', chforce
-         call abinerror('force_abin')
-      end if
+subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
+   use mod_mpi, only: get_mpi_rank
+   use mod_general, only: ipimd, iqmmm, it
+   use mod_system, only: names
+   use mod_sh_integ, only: nstate
+   use mod_sh, only: tocalc, en_array, istate
+   use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
+   use mod_qmmm, only: natqm
+   use mod_utils, only: toupper, append_rank
+   implicit none
+   real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+   real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
+   real(DP), intent(out) :: eclas
+   integer, intent(in) :: walkmax
+   character(len=*), intent(in) :: chpot
+   real(DP) :: energy
+   character(:), allocatable :: shellscript
+   character(len=50) :: chgeom, chforce
+   integer :: iw
+   integer :: ist1, iost
+   integer :: engrad_unit
 
-      ! READING ENERGY from engrad.dat
-      read (MAXUNITS + iw, *, IOSTAT=iost) temp1
-      if (iost /= 0) then
-         write (*, *) 'ERROR: Could not read energy from file ', chforce
-         write (*, *) 'Fortran ERROR = ', iost
-         write (*, *) 'This usually means, that the ab initio program failed to converge.'
-         write (*, *) 'See the appropriate output files from the external program in folder '
-         write (*, *) trim(toupper(chpot))
-         call abinerror('force_abin')
-      end if
-!$OMP ATOMIC
-      eclas = eclas + temp1
-! SH
-      ! TODO: Have each state in different file?
+   eclas = 0.0D0
+
+   ! Here we decide which program we use to obtain gradients and energies
+   ! e.g. ./G09/r.g09
+   shellscript = get_shellscript(chpot)
+
+!$OMP PARALLEL
+!$OMP DO PRIVATE(engrad_unit, energy, chgeom, chforce, iost)
+   do iw = 1, walkmax
+
+      ! Write XYZ geometry for the external program
+      write (chgeom, '(A,I3.3)') 'geom.dat.', iw
+      chgeom = append_rank(chgeom)
+      call write_geom(chgeom, names, x, y, z, natqm, iw)
+
+      ! Number of states and current state for Surface Hopping
       if (ipimd == 2) then
-         en_array(1) = temp1
-         do ist1 = 2, nstate
-            read (MAXUNITS + iw, *) en_array(ist1)
+         call write_sh_data(nstate, tocalc)
+      end if
+
+      ! Landau-Zener
+      if (ipimd == 5) then
+         call write_lz_data(nstate_lz, nsinglet_lz, ntriplet_lz, tocalc_lz)
+      end if
+
+      ! Call the external program
+      call call_shell(shellscript, it, iw, ipimd)
+
+      write (chforce, '(A,I3.3)') 'engrad.dat.', iw
+      chforce = append_rank(chforce)
+      engrad_unit = open_engrad_file(chforce)
+
+      ! Read electronic energies from engrad.dat
+      if (ipimd == 2) then
+
+         do ist1 = 1, nstate
+            en_array(ist1) = read_energy(engrad_unit)
          end do
          eclas = en_array(istate)
-      end if
-! LZ
-      if (ipimd == 5) then
-         !Move old energies by 1
+
+      else if (ipimd == 5) then
+
+         ! Move old energies by 1
          en_array_lz(:, 3) = en_array_lz(:, 2)
          en_array_lz(:, 2) = en_array_lz(:, 1)
-         !Store the new one
-         en_array_lz(1, 1) = temp1
-         do ist1 = 2, nstate_lz
-            read (MAXUNITS + iw, *, IOSTAT=iost) en_array_lz(ist1, 1)
-            if (iost /= 0) then
-               write (*, *) 'ERROR: Could not read excited state energy from file ', chforce
-               write (*, *) 'Fortran ERROR = ', iost
-               call abinerror('force_abin')
-            end if
+
+         ! Store the new on
+         do ist1 = 1, nstate_lz
+            en_array_lz(ist1, 1) = read_energy(engrad_unit)
          end do
          eclas = en_array_lz(istate_lz, 1)
+
+      else
+         energy = read_energy(engrad_unit)
+!$OMP ATOMIC
+         eclas = eclas + energy
       end if
 
-      if (ipimd == 2) then
-         iost = read_forces(fx, fy, fz, natqm, tocalc(istate, istate), MAXUNITS + iw)
-      else if (ipimd == 5) then
-         iost = read_forces(fx, fy, fz, natqm, tocalc_lz(istate_lz), MAXUNITS + iw) !Save only the computed state
+      if (ipimd == 5) then
+         ! Read only the computed state
+         iost = read_forces(fx, fy, fz, natqm, tocalc_lz(istate_lz), engrad_unit)
       else
-         ! reading energy gradients from engrad.dat
-         iost = read_forces(fx, fy, fz, natqm, iw, MAXUNITS + iw)
+         iost = read_forces(fx, fy, fz, natqm, iw, engrad_unit)
       end if
       if (iost /= 0) then
-         write (*, *) 'ERROR: Could not read gradients from file ', chforce
-         write (*, *) 'Fortran ERROR = ', iost
-         write (*, *) 'This usually means, that the ab initio program failed.'
-         write (*, *) 'See the appropriate output files from external program in folder ' &
-            //trim(toupper(chpot))//"/."
-         call abinerror('force_abin')
+         write (stderr, *) 'ERROR: Could not read gradients from file '//trim(chforce)
+         write (stderr, *) 'Inspect the output files from external program in folder ' &
+            //trim(toupper(chpot))
+         call fatal_error(__FILE__, __LINE__, 'Could not read gradients')
       end if
 
-      close (unit=MAXUNITS + iw, status='delete')
+      close (unit=engrad_unit, status='delete')
 
       if (iqmmm == 1) then
          call oniom(x, y, z, fx, fy, fz, eclas, iw)
@@ -210,82 +285,62 @@ subroutine force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
 
    eclas = eclas / walkmax
 
-end
+end subroutine force_abin
 
+! TODO: Pass natom and natqm explicitly
 subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
-   use mod_const, only: DP, ANG
-   use mod_files, only: MAXUNITS
-   use mod_general, only: natom, it
+   use mod_general, only: natom, it, ipimd
+   use mod_utils, only: append_rank
    use mod_system, only: names
    use mod_qmmm, only: natqm
-   use mod_utils, only: abinerror
+   use mod_sh_integ, only: nstate
+   use mod_sh, only: en_array, istate
    implicit none
    real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
    real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
    real(DP), intent(inout) :: eclas
    integer, intent(in) :: iw
-   character(len=100) :: chsystem
-   character(len=20) :: chgeom, chforce, fgeom
-   real(DP) :: temp1, tempx, tempy, tempz
-   logical :: file_exists
-   integer :: iat, iost, itest
+   character(:), allocatable :: shellscript
+   character(len=100) :: chgeom, chforce
+   real(DP) :: energy, tempx, tempy, tempz
+   integer :: iat, ist, iost
+   integer :: engrad_unit
 
    write (chgeom, '(A,I3.3)') 'geom_mm.dat.', iw
    write (chforce, '(A,I3.3)') 'engrad_mm.dat.', iw
-   write (chsystem, '(A)') './MM/r.mm '
+   chgeom = append_rank(chgeom)
+   chforce = append_rank(chforce)
 
-   fgeom = '(A2,3E25.17E2)'
+   shellscript = get_shellscript('mm')
 
-   inquire (FILE=chsystem, EXIST=file_exists)
-   if (.not. file_exists) then
-      write (*, *) 'File ', chsystem
-      write (*, *) 'does not exist! Exiting...'
-      call abinerror('oniom')
-   end if
+   ! Write geometry of the whole system
+   call write_geom(chgeom, names, x, y, z, natom, iw)
 
-   write (chsystem, '(A20,I13,I4.3)') chsystem, it, iw
+   call call_shell(shellscript, it, iw, ipimd)
 
-   ! WRITING GEOMETRY of the whole system
-   open (unit=MAXUNITS + iw, file=chgeom, action='write')
-   do iat = 1, natom
-      write (MAXUNITS + iw, fgeom) names(iat), x(iat, iw) / ANG, y(iat, iw) / ANG, z(iat, iw) / ANG
-   end do
-   close (unit=MAXUNITS + iw)
+   engrad_unit = open_engrad_file(chforce)
 
-   call system(chsystem)
-
-   ! make sure that the file exist and flush the disc buffer
-   itest = 0
-   inquire (FILE=chforce, EXIST=file_exists)
-   do while (.not. file_exists .and. itest < 10)
-      write (*, *) 'WARNING:File ', chforce, ' does not exist. Waiting..'
-      call system('sync') !mel by zajistit flush diskoveho bufferu
-      inquire (FILE=chforce, EXIST=file_exists)
-      itest = itest + 1
-   end do
-
-   open (unit=MAXUNITS + iw, file=chforce, status='old', ACTION='READ')
-
-   ! READING ENERGY from engrad_mm.dat
-   read (MAXUNITS + iw, *, IOSTAT=iost) temp1
-   if (iost /= 0) then
-      write (*, *) 'Fatal problem with reading energy from file ', chforce
-      write (*, *) 'This usually means, that the a program failed.'
-      write (*, *) 'See the appropriate output files in folder MM/.'
-      call abinerror('oniom')
-   end if
-
+   if (ipimd == 2) then
+      ! TODO: Surface Hopping with ONIOM not tested!
+      do ist = 1, nstate
+         en_array(ist) = en_array(ist) + read_energy(engrad_unit)
+      end do
+      eclas = en_array(istate)
+   else if (ipimd == 5) then
+      call fatal_error(__FILE__, __LINE__, 'Landau-Zener with ONIOM not implemented')
+   else
+      energy = read_energy(engrad_unit)
 !$OMP ATOMIC
-   eclas = eclas + temp1
+      eclas = eclas + energy
+   end if
 
-   ! READING energy gradients from engrad.dat
+   ! Read energy gradients from engrad.dat
    do iat = 1, natom
-      read (MAXUNITS + iw, *, IOSTAT=iost) tempx, tempy, tempz
+      read (engrad_unit, *, IOSTAT=iost) tempx, tempy, tempz
       if (iost /= 0) then
-         write (*, '(2A)') 'Fatal problem with reading gradients from file ', chforce
-         write (*, *) 'This usually means, that the ab initio program failed.'
-         write (*, *) 'See the appropriate output files in folder MM/.'
-         call abinerror('oniom')
+         write (stderr, *) 'Could not read gradients from file '//trim(chforce)
+         write (stderr, *) 'Inspect the output files in folder MM/'
+         call fatal_error(__FILE__, __LINE__, 'Could not read gradients')
       end if
       ! Conversion from gradients to forces
       fx(iat, iw) = fx(iat, iw) - tempx
@@ -293,51 +348,38 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
       fz(iat, iw) = fz(iat, iw) - tempz
    end do
 
-   close (unit=MAXUNITS + iw, status='delete')
+   close (engrad_unit, status='delete')
 
-!-----------------MM, only model QM part--------------------------
+   ! MM, only QM part
+   call write_geom(chgeom, names, x, y, z, natqm, iw)
 
-   ! WRITING GEOMETRY of the QM part
-   open (unit=MAXUNITS + iw, file=chgeom)
-   do iat = 1, natqm
-      write (MAXUNITS + iw, fgeom) names(iat), x(iat, iw) / ANG, y(iat, iw) / ANG, z(iat, iw) / ANG
-   end do
-   close (unit=MAXUNITS + iw)
+   call call_shell(shellscript, it, iw, ipimd)
 
-   call system(chsystem)
+   engrad_unit = open_engrad_file(chforce)
 
-   ! make sure that the file exist and flush the disc buffer
-   itest = 0
-   inquire (FILE=chforce, EXIST=file_exists)
-   do while (.not. file_exists .and. itest < 10)
-      write (*, *) 'WARNING:File ', chforce, ' does not exist. Waiting..'
-      call system('sync') !mel by zajistit flush diskoveho bufferu
-      inquire (FILE=chforce, EXIST=file_exists)
-      itest = itest + 1
-   end do
-
-   open (unit=MAXUNITS + iw, file=chforce, status='old', ACTION='READ')
-
-   ! READING ENERGY from engrad_mm.dat
-   read (MAXUNITS + iw, *, IOSTAT=iost) temp1
-   if (iost /= 0) then
-      write (*, *) 'Fatal problem with reading energy from file ', chforce
-      write (*, *) 'This usually means, that the external program failed.'
-      write (*, *) 'See the appropriate output files in folder MM/.'
-      call abinerror('oniom')
+   ! Here we use the substractive QM/MM scheme,
+   ! so we are substracting results from the QM-only part
+   if (ipimd == 2) then
+      ! TODO: SH with ONIOM not tested!
+      do ist = 1, nstate
+         en_array(ist) = en_array(ist) - read_energy(engrad_unit)
+      end do
+      eclas = en_array(istate)
+   else if (ipimd == 5) then
+      call fatal_error(__FILE__, __LINE__, 'Landau-Zener with ONIOM not implemented')
+   else
+      energy = read_energy(engrad_unit)
+!$OMP ATOMIC
+      eclas = eclas - energy
    end if
 
-!$OMP ATOMIC
-   eclas = eclas - temp1
-
-   ! READING gradients from engrad_mm.dat
+   ! Read gradients from engrad_mm.dat
    do iat = 1, natqm
-      read (MAXUNITS + iw, *, IOSTAT=iost) tempx, tempy, tempz
+      read (engrad_unit, *, IOSTAT=iost) tempx, tempy, tempz
       if (iost /= 0) then
-         write (*, '(2A)') 'Fatal problem with reading gradients from file ', chforce
-         write (*, *) 'This usually means, that the external program failed.'
-         write (*, *) 'See the appropriate output files in folder MM/.'
-         call abinerror('force_abin')
+         write (stderr, *) 'Could not read gradients from file '//trim(chforce)
+         write (stderr, *) 'Inspect the output files in folder MM/'
+         call fatal_error(__FILE__, __LINE__, 'Could not read gradients')
       end if
       ! Conversion to forces
       fx(iat, iw) = fx(iat, iw) + tempx
@@ -345,6 +387,8 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
       fz(iat, iw) = fz(iat, iw) + tempz
    end do
 
-   close (unit=MAXUNITS + iw, status='delete')
+   close (engrad_unit, status='delete')
 
 end subroutine oniom
+
+end module mod_shell_interface

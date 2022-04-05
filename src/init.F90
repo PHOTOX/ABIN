@@ -45,7 +45,7 @@ subroutine init(dt)
    use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
    use mod_splined_grid, only: initialize_spline, potential_file
-   use mod_utils, only: toupper, tolower, normalize_atom_name, file_exists_or_exit
+   use mod_utils, only: abinerror, toupper, tolower, normalize_atom_name, file_exists_or_exit
    use mod_vinit
    use mod_analyze_geometry
    use mod_shake

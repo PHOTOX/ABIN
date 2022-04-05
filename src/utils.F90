@@ -233,6 +233,23 @@ contains
       end do
    end subroutine print_xyz_arrays
 
+   function append_rank(string) result(output)
+      use mod_general, only: iremd
+      use mod_mpi, only: get_mpi_rank
+      character(len=*), intent(in) :: string
+      character(len=len_trim(string)+3) :: output
+      integer :: my_rank
+
+      if (iremd == 1) then
+         my_rank = get_mpi_rank()
+         output = ''
+         write (output, '(A,I2.2)') trim(string)//".", my_rank
+      else
+         output = ''
+         output = string
+      end if
+   end function append_rank
+
    subroutine archive_file(chfile, time_step)
       use mod_general, only: iremd
       use mod_mpi, only: get_mpi_rank
