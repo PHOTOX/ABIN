@@ -101,7 +101,7 @@ module mod_random
          ! Generate different random number seeds for different MPI processes.
          if (mpi_rank > 0) then
             ! NOTE: initialize_random_ints relies on vranf!
-            call initialize_random_ints()
+            call initialize_random_ints(testing_mode)
             call random_ints(irans, mpi_rank, testing_mode)
             seed = irans(mpi_rank)
             ! re-seed the prng
@@ -113,10 +113,13 @@ module mod_random
       ! Not sure how to correctly do this to make all this deterministic,
       ! since the 'seed' here is an array, see:
       ! https://stackoverflow.com/questions/51893720/correctly-setting-random-seeds-for-repeatability
-      subroutine initialize_random_ints()
+      subroutine initialize_random_ints(testing_mode)
+         logical, intent(in) :: testing_mode
          integer, allocatable :: seeds(:)
          real(DP), allocatable :: drans(:)
          integer :: n
+
+         if (testing_mode) return
 
          call random_seed(size=n)
          allocate (seeds(n))
@@ -139,6 +142,7 @@ module mod_random
          call random_number(dran)
 
          if (testing_mode) then
+            write (*, *) 'WARNING: PRNG TESTING MODE!'
             call vranf(dran, n)
          end if
 

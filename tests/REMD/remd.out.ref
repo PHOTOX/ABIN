@@ -2,12 +2,12 @@ Temperature of replica 0 is   100.00
 Temperature of replica 1 is   200.00
 Temperature of replica 2 is   300.00
  ===============================================
- Swaping probabilities:   0.11279499414960287       0.72248311823962141     
+ Swaping probabilities:    4.8339491998776414E-002   1.0000000000000000     
  Exchanges:  F T
  Acceptance ratios   0.0000000000000000        1.0000000000000000     
  ReplicaTravel:           0           2           1
  ===============================================
- Swaping probabilities:    1.0000000000000000        1.0000000000000000     
+ Swaping probabilities:   0.89690292034001107        1.0000000000000000     
  Exchanges:  T T
  Acceptance ratios  0.50000000000000000        1.0000000000000000     
  ReplicaTravel:           2           1           0
@@ -15,20 +15,20 @@ Temperature of replica 0 is   100.00
 Temperature of replica 1 is   200.00
 Temperature of replica 2 is   300.00
  ===============================================
- Swaping probabilities:    1.0000000000000000        1.0000000000000000     
- Exchanges:  T T
- Acceptance ratios  0.33333333333333331       0.33333333333333331     
- ReplicaTravel:           1           2           0
- ===============================================
- Swaping probabilities:   0.80381942380558524       0.92343197849750436     
- Exchanges:  T T
- Acceptance ratios  0.50000000000000000       0.50000000000000000     
- ReplicaTravel:           2           0           1
- ===============================================
- Swaping probabilities:   0.63771326061590117        1.0000000000000000     
+ Swaping probabilities:    3.7257232568840296E-002   1.0000000000000000     
  Exchanges:  F T
- Acceptance ratios  0.40000000000000002       0.59999999999999998     
+ Acceptance ratios   0.0000000000000000       0.33333333333333331     
+ ReplicaTravel:           0           2           1
+ ===============================================
+ Swaping probabilities:    1.0000000000000000       0.16669049012106371     
+ Exchanges:  T T
+ Acceptance ratios  0.25000000000000000       0.50000000000000000     
  ReplicaTravel:           2           1           0
+ ===============================================
+ Swaping probabilities:    1.3067642924323742E-002   1.0000000000000000     
+ Exchanges:  F T
+ Acceptance ratios  0.20000000000000001       0.59999999999999998     
+ ReplicaTravel:           2           0           1
 Temperature of replica 0 is   100.00
 Temperature of replica 1 is   200.00
 Temperature of replica 2 is   300.00
