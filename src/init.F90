@@ -69,8 +69,7 @@ subroutine init(dt)
    ! Initial temperature (read from namelist nhcopt)
    real(DP) :: temp0 = -1
    real(DP) :: masses(MAXTYPES)
-   real(DP) :: rans(10)
-   integer :: ipom, iw, iat, natom_xyz, iost
+   integer ::  iw, iat, natom_xyz, iost
    integer :: shiftdihed
    ! Number of OpenMP processes, read from ABIN input
    ! WARNING: We do NOT use OMP_NUM_THREADS environment variable!
@@ -88,7 +87,6 @@ subroutine init(dt)
    logical :: file_exists
    logical :: rem_comvel, rem_comrot
    integer :: my_rank, mpi_world_size
-   integer :: irand
 
    ! ABIN input parameters are read from the input file (default 'input.in')
    ! in the form of the standard Fortran namelist syntax.
@@ -458,27 +456,9 @@ subroutine init(dt)
       call check_water(natom, names)
    end if
 
-   ! Generate different random number seeds for different MPI processes.
-   ! TODO: The current code works only with GNU compilers.
-   if (my_rank /= 0) then
-      call srand(irandom)
-      do ipom = 0, my_rank
-#if __GNUC__ == 0
-         write (*, *) 'ERROR: REMD not supported with non-GNU compilers.'
-         call abinerror('init')
-#endif
-         ! TODO: irand is GNU extension, use random_number instead
-         ! https://gcc.gnu.org/onlinedocs/gfortran/RANDOM_005fNUMBER.html
-         ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
-         irandom = irand()
-      end do
-   end if
-
-   ! Initialize pseudo-random number generator.
-   ! This call has to happen before we read restart file
-   ! to allocate internal arrays.
-   ! If we are restarting, the PRNG state initialized here is overwritten.
-   call gautrg(rans, 0, irandom)
+   ! Initialize pseudo-random number generator
+   ! TODO: move this up in the init
+   call initialize_prng(irandom, my_rank)
 
    ! Initialize thermostat
    if (inose == 1) then

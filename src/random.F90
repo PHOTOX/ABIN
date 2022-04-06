@@ -54,6 +54,7 @@ module mod_random
       use mod_const, only: DP
       use mod_utils, only: abinerror
       private
+      public    :: initialize_prng
       public    :: gautrg, vranf, rsavef
       integer,parameter :: np=1279, nq=418
       real(DP)  :: x(np)
@@ -64,6 +65,42 @@ module mod_random
       integer   :: nroll = 1
       save
       contains
+
+      subroutine initialize_prng(seed, mpi_rank)
+         integer, intent(inout) :: seed
+         integer, intent(in) :: mpi_rank
+         integer :: irans(mpi_rank + 1)
+         real(DP) :: drans(1)
+
+         ! Not sure how to correctly do this to make all this deterministic,
+         ! since the 'seed' here is an array, see:
+         ! https://stackoverflow.com/questions/51893720/correctly-setting-random-seeds-for-repeatability
+         ! call random_seed(put=seed)
+
+         ! Generate different random number seeds for different MPI processes.
+         if (mpi_rank > 0) then
+            call random_ints(irans, mpi_rank)
+            seed = irans(mpi_rank)
+         end if
+  
+         ! Initialize pseudo-random number generator.
+         ! This call has to happen before we read restart file
+         ! to allocate internal arrays.
+         ! If we are restarting, the PRNG state initialized here is overwritten.
+         call gautrg(drans, 0, seed)
+      end subroutine
+
+      ! TODO: Make this deterministic
+      ! TODO: Test this!
+      ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
+      subroutine random_ints(iran, n)
+         integer, intent(out) :: iran(:)
+         integer, intent(in) :: n
+         real(DP) :: dran(n)
+
+         call random_number(dran)
+         iran = floor(dran * huge(n))
+      end subroutine random_ints
 
       subroutine gautrg(gran, nran, iseed)
 !     DH WARNING: initialiazation from gautrg and vranf are different
