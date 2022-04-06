@@ -86,6 +86,7 @@ subroutine init(dt)
    character(len=1024) :: tc_server_name
    logical :: file_exists
    logical :: rem_comvel, rem_comrot
+   logical :: testing_mode
    integer :: my_rank, mpi_world_size
 
    ! ABIN input parameters are read from the input file (default 'input.in')
@@ -107,7 +108,7 @@ subroutine init(dt)
       isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_sleep, narchive, xyz_units, &
       dime, ncalc, idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
       en_restraint, en_diff, en_kk, restrain_pot, &
-      pot_ref, nstep_ref, nteraservers, max_wait_time, cp2k_mpi_beads
+      pot_ref, nstep_ref, nteraservers, max_wait_time, cp2k_mpi_beads, testing_mode
 
    namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
 
@@ -458,7 +459,7 @@ subroutine init(dt)
 
    ! Initialize pseudo-random number generator
    ! TODO: move this up in the init
-   call initialize_prng(irandom, my_rank)
+   call initialize_prng(irandom, my_rank, testing_mode)
 
    ! Initialize thermostat
    if (inose == 1) then

@@ -85,9 +85,10 @@ module mod_random
       ! use it to generate random seeds for random_seed(), and then
       ! use random_number() to generate new seeds, and finally reseed vranf.
       ! Not great, hopefully not terrible.
-      subroutine initialize_prng(seed, mpi_rank)
+      subroutine initialize_prng(seed, mpi_rank, testing_mode)
          integer, intent(inout) :: seed
          integer, intent(in) :: mpi_rank
+         logical, intent(in) :: testing_mode
          integer :: irans(mpi_rank + 1)
          real(DP) :: drans(1)
 
@@ -101,7 +102,7 @@ module mod_random
          if (mpi_rank > 0) then
             ! NOTE: initialize_random_ints relies on vranf!
             call initialize_random_ints()
-            call random_ints(irans, mpi_rank)
+            call random_ints(irans, mpi_rank, testing_mode)
             seed = irans(mpi_rank)
             ! re-seed the prng
             call gautrg(drans, 0, seed)
@@ -129,12 +130,18 @@ module mod_random
 
       ! TODO: Test this!
       ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
-      subroutine random_ints(iran, n)
+      subroutine random_ints(iran, n, testing_mode)
          integer, intent(out) :: iran(:)
          integer, intent(in) :: n
+         logical, intent(in) :: testing_mode
          real(DP) :: dran(n)
 
          call random_number(dran)
+
+         if (testing_mode) then
+            call vranf(dran, n)
+         end if
+
          iran = floor(dran * huge(n))
       end subroutine random_ints
 
