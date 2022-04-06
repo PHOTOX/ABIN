@@ -66,31 +66,67 @@ module mod_random
       save
       contains
 
+      ! PRNG INITIALIZATION
+      ! We want the simulations to be repeatable so we ask the user
+      ! to provide a single random seed. Single random seed is all we need
+      ! to initialize our PRNG implemented in the vranf routine below.
+      ! 
+      ! Things get complicated for REMD, where we need to initialize
+      ! nreplica independent prngs. But we still only want a single seed
+      ! from the user, and we want repeatability.
+      ! To that end, we use a standard fortran random_number() subroutine
+      ! to generate additional random seeds from a single random seeds.
+      ! To make things deterministic, random_number() itself needs to be seeded
+      ! by a call to random_seed().
+      ! Here's the kicker: random_seed() in general requires an array of seeds :-(
+      ! https://gcc.gnu.org/onlinedocs/gcc-4.9.4/gfortran/RANDOM_005fSEED.html#RANDOM_005fSEED
+      ! 
+      ! We solve this in a roundabout way: First initialize vranf,
+      ! use it to generate random seeds for random_seed(), and then
+      ! use random_number() to generate new seeds, and finally reseed vranf.
+      ! Not great, hopefully not terrible.
       subroutine initialize_prng(seed, mpi_rank)
          integer, intent(inout) :: seed
          integer, intent(in) :: mpi_rank
          integer :: irans(mpi_rank + 1)
          real(DP) :: drans(1)
 
-         ! Not sure how to correctly do this to make all this deterministic,
-         ! since the 'seed' here is an array, see:
-         ! https://stackoverflow.com/questions/51893720/correctly-setting-random-seeds-for-repeatability
-         ! call random_seed(put=seed)
-
-         ! Generate different random number seeds for different MPI processes.
-         if (mpi_rank > 0) then
-            call random_ints(irans, mpi_rank)
-            seed = irans(mpi_rank)
-         end if
-  
          ! Initialize pseudo-random number generator.
          ! This call has to happen before we read restart file
          ! to allocate internal arrays.
          ! If we are restarting, the PRNG state initialized here is overwritten.
          call gautrg(drans, 0, seed)
+
+         ! Generate different random number seeds for different MPI processes.
+         if (mpi_rank > 0) then
+            ! NOTE: initialize_random_ints relies on vranf!
+            call initialize_random_ints()
+            call random_ints(irans, mpi_rank)
+            seed = irans(mpi_rank)
+            ! re-seed the prng
+            call gautrg(drans, 0, seed)
+         end if
       end subroutine
 
-      ! TODO: Make this deterministic
+      ! TODO: Test this!
+      ! Not sure how to correctly do this to make all this deterministic,
+      ! since the 'seed' here is an array, see:
+      ! https://stackoverflow.com/questions/51893720/correctly-setting-random-seeds-for-repeatability
+      subroutine initialize_random_ints()
+         integer, allocatable :: seeds(:)
+         real(DP), allocatable :: drans(:)
+         integer :: n
+
+         call random_seed(size=n)
+         allocate (seeds(n))
+         allocate (drans(n))
+
+         call vranf(drans, n)
+         seeds = floor(drans * huge(n))
+
+         call random_seed(put=seeds)
+      end subroutine initialize_random_ints
+
       ! TODO: Test this!
       ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
       subroutine random_ints(iran, n)
