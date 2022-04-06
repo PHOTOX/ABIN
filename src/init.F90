@@ -45,7 +45,8 @@ subroutine init(dt)
    use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
    use mod_splined_grid, only: initialize_spline, potential_file
-   use mod_utils, only: abinerror, toupper, tolower, normalize_atom_name, file_exists_or_exit
+   use mod_utils, only: abinerror, toupper, tolower, normalize_atom_name, &
+                     &  append_rank, file_exists_or_exit
    use mod_vinit
    use mod_analyze_geometry
    use mod_shake
@@ -213,9 +214,9 @@ subroutine init(dt)
    end if
 
    if (iremd == 1) then
-      write (chcoords, '(A,I2.2)') trim(chcoords)//'.', my_rank
+      chcoords = append_rank(chcoords)
       if (chveloc /= '') then
-         write (chveloc, '(A,I2.2)') trim(chveloc)//'.', my_rank
+         chveloc = append_rank(chveloc)
       end if
    end if
 
@@ -814,32 +815,24 @@ contains
          write (*, *) 'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
          error = 1
       end if
-      if ((natmm + natqm /= natom) .and. iqmmm > 0) then
-         write (*, *) 'Natmm+natqm not equal to natom!'
+      if ((natmm + natqm /= natom)) then
+         write (*, *) 'Natmm+natqm /= natom!'
          error = 1
       end if
 
-      if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'movie.xyz.', my_rank
-      else
-         chout = 'movie.xyz'
-      end if
-      inquire (FILE=chout, EXIST=file_exists)
+      chout = append_rank('movie.xyz')
+      inquire (file=chout, exist=file_exists)
       if (file_exists) then
          if (irest == 0) then
             write (stdout, *) 'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
             error = 1
          else
-            write (stdout, *) 'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
+            write (stdout, *) 'File "movie.xyz" exists and irest=1. Trajectory will be appended.'
          end if
       end if
 
-      if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'restart.xyz.', my_rank
-      else
-         chout = 'restart.xyz'
-      end if
-      inquire (FILE=chout, EXIST=file_exists)
+      chout = append_rank('restart.xyz')
+      inquire (file=chout, exist=file_exists)
       if (file_exists) then
          if (irest == 0) then
             write (*, *) 'File ', trim(chout), ' exists. Please (re)move it or set irest=1.'

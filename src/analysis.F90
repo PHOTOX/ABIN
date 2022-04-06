@@ -3,7 +3,8 @@
 ! TODO: Separate restart to its own module
 module mod_analysis
    use mod_const, only: DP
-   use mod_files
+   use mod_files, only: stderr, stdout, UMOVIE, UFORCE
+   use mod_utils, only: append_rank
    implicit none
    private
    public :: trajout, restout, analysis, restin
@@ -86,24 +87,19 @@ contains
    subroutine trajout(x, y, z, time_step)
       use mod_const, only: ANG
       use mod_files, only: UMOVIE
-      use mod_general, only: nwalk, natom, iremd, sim_time
+      use mod_general, only: nwalk, natom, sim_time
       use mod_mpi, only: get_mpi_rank
       use mod_system, only: names
       implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: time_step
       integer :: iat, iw
-      integer :: my_rank
       character(len=20) :: chout
       logical :: lopened
 
-      my_rank = get_mpi_rank()
-
       inquire (UMOVIE, opened=lopened)
-
       if (.not. lopened) then
-         chout = 'movie.xyz'
-         if (iremd == 1) write (chout, '(A,I2.2)') trim(chout)//'.', my_rank
+         chout = append_rank('movie.xyz')
          open (UMOVIE, file=chout, access='append', action="write")
       end if
 
@@ -195,7 +191,7 @@ contains
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
                              iremd, pot, narchive, sim_time
       use mod_mpi, only: get_mpi_rank
-      use mod_utils, only: archive_file
+      use mod_utils, only: archive_file, append_rank
       use mod_nhc, only: inose, nhc_restout
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
@@ -222,11 +218,7 @@ contains
          call write_wfn()
       end if
 
-      if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'restart.xyz.', my_rank
-      else
-         chout = 'restart.xyz'
-      end if
+      chout = append_rank('restart.xyz')
 
       inquire (FILE=chout, EXIST=file_exists)
       if (file_exists) then
@@ -238,9 +230,7 @@ contains
          end if
       end if
 
-      ! open(102, file=chout, action='WRITE',recl=250)
-      ! intel compilers don't write too many columns on single line
-      open (102, file=chout, action='WRITE')
+      open (102, file=chout, action='write')
 
       write (102, *) time_step, sim_time
 
@@ -316,7 +306,7 @@ contains
    ! It is called from subroutine init.
    subroutine restin(x, y, z, vx, vy, vz, it)
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
-                             iremd, pot, update_simtime
+                             pot, update_simtime
       use mod_nhc, only: readNHC, inose, nhc_restin
       use mod_mpi, only: get_mpi_rank
       use mod_estimators
@@ -332,23 +322,15 @@ contains
       integer, intent(out) :: it
       real(DP) :: sim_time
       integer :: iat, iw
-      integer :: my_rank
       character(len=100) :: chtemp
       logical :: prngread
-      character(len=20) :: chin
+      character(len=50) :: chin
 
-      my_rank = get_mpi_rank()
       prngread = .false.
 
-      if (iremd == 1) then
-         write (chin, '(A,I2.2)') 'restart.xyz.', my_rank
-      else
-         chin = 'restart.xyz'
-      end if
+      chin = append_rank('restart.xyz')
 
-      if (my_rank == 0) then
-         write (*, *) 'irest=1, Reading geometry, velocities and other information from restart.xyz'
-      end if
+      write (stdout, *) 'irest=1, Reading geometry, velocities and other information from restart.xyz'
 
       open (111, file=chin, status="OLD", action="READ")
       read (111, *) it, sim_time
@@ -440,9 +422,8 @@ contains
          character(len=*) :: chin, chref
 
          if (trim(adjustl(chin)) /= trim(chref)) then
-            write (*, *) 'ERROR while reading from restart.xyz.'
-            write (*, *) 'I read: ', chin
-            write (*, *) 'but expected: ', chref
+            write (stderr, *) 'ERROR while reading from restart.xyz.'
+            write (stderr, *) 'I read "'//chin//'" but expected '//chref
             call abinerror('restin')
          end if
       end subroutine checkchar

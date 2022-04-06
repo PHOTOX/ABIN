@@ -3,6 +3,7 @@ module mod_utils
    use mod_const, only: DP
    use mod_interfaces
    use mod_error, only: fatal_error
+   use mod_files, only: stdout, stderr
    implicit none
    public
 contains
@@ -10,11 +11,11 @@ contains
    real(DP) function get_distance(x, y, z, at1, at2, iw) result(r)
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: at1, at2, iw
-      character(len=*), parameter :: error_msg = 'Atom indices in get_distance() must be unique'
 
       if (at1 == at2) then
          r = 0
-         call fatal_error(__FILE__, __LINE__, error_msg)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Atom indices in get_distance() must be unique')
          return
       end if
 
@@ -31,11 +32,11 @@ contains
       real(DP) :: vec1x, vec1y, vec1z
       real(DP) :: vec2x, vec2y, vec2z
       integer :: at1, at2, at3
-      character(len=*), parameter :: error_msg = 'Atom indices in get_angle() must be unique'
 
       if (at1 == at2 .or. at1 == at3 .or. at2 == at3) then
          angle = 0
-         call fatal_error(__FILE__, __LINE__, error_msg)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Atom indices in get_angle() must be unique')
          return
       end if
 
@@ -86,14 +87,11 @@ contains
              & )
 
       if (sign > 0) get_dihedral = shiftdih - get_dihedral
-
-      return
    end function get_dihedral
 
    function sanitize_string(string) result(return_string)
       character(len=*), intent(in) :: string
       character(len=len(string)) :: return_string
-      character(len=len(string) + 200) :: error_msg
       character(len=1) :: ch
       integer :: c, i
 
@@ -104,8 +102,8 @@ contains
          ! check for almost all nonalphabetical chars from ASCII table
          ! allow dash, slash and dot -/.
          if (c < 44 .or. (c > 57 .and. c < 65) .or. c > 172) then
-            error_msg = 'Suspicious character "'//ch//'" in input string "'//string//'"'
-            call fatal_error(__FILE__, __LINE__, error_msg)
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Suspicious character "'//ch//'" in input string "'//string//'"')
          end if
       end do
 
@@ -199,7 +197,6 @@ contains
    subroutine abinerror(chcaller)
       use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
       use mod_interfaces, only: finish
-      use mod_files, only: stdout
       character(len=*), intent(in) :: chcaller
       integer, dimension(8) :: time_end
       integer :: u
@@ -262,14 +259,10 @@ contains
       my_rank = get_mpi_rank()
       if (my_rank == 0 .or. iremd == 1) then
          write (chit, *) time_step
-         if (iremd == 1) then
-            write (charch, '(A,I2.2)') trim(chfile)//".", my_rank
-         else
-            charch = trim(chfile)
-         end if
+         charch = append_rank(chfile)
          chsystem = 'cp '//trim(charch)//'  '//trim(charch)//'.'//adjustl(chit)
-         write (*, *) 'Archiving file ', trim(charch)
-         write (*, *) trim(chsystem)
+         write (stdout, *) 'Archiving file ', trim(charch)
+         write (stdout, *) trim(chsystem)
          call system(chsystem)
       end if
    end subroutine archive_file
