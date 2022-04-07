@@ -42,7 +42,6 @@ contains
 
    subroutine energy_restraint(x, y, z, px, py, pz, eclas)
       use mod_general, only: natom, nwalk, dt0 ! dt0 is the time step
-      use mod_const, only: AMU
       use mod_system, only: am
       use mod_sh, only: en_array
       use mod_terampi_sh, only: force_terash
@@ -50,7 +49,6 @@ contains
       ! TODO: Eclas is not modified in this routine, but probably should be
       real(DP), intent(inout) :: eclas
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
-      ! DH: I am surprised this works, since natom is not a constant
       real(DP), dimension(natom) :: fxgs, fygs, fzgs, fxes, fyes, fzes
       real(DP) :: eclasexc, eclasground, Egrad, deltaE, lambda, lsum, deltaEnext, convercrit, deltaD
       integer :: ios, iat, iat2, iw

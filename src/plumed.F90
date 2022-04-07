@@ -78,6 +78,8 @@ contains
       end if
 
       ! Set units for conversion between PLUMED and ABIN.
+      ! TODO: Verify in Plumed docs that DP is what we want to pass here?
+      ! DP is a Fortran kind, so it can depend on the compiler!
       call plumed_f_gcmd(c_string("setRealPrecision"), DP)
       call plumed_f_gcmd(c_string("setMDEnergyUnits"), PLUMED_ENERGY_UNIT)
       call plumed_f_gcmd(c_string("setMDLengthUnits"), PLUMED_LENGTH_UNIT)
@@ -171,6 +173,7 @@ contains
       call plumed_f_gcmd(c_string("setPositionsX"), xx)
       call plumed_f_gcmd(c_string("setPositionsY"), yy)
       call plumed_f_gcmd(c_string("setPositionsZ"), zz)
+      ! TODO: Why don't we set masses just once in the init?
       call plumed_f_gcmd(c_string("setMasses"), am)
       call plumed_f_gcmd(c_string("setEnergy"), eclas)
       call plumed_f_gcmd(c_string("setForcesX"), fxx)
