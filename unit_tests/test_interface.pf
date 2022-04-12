@@ -1,0 +1,103 @@
+! Testing functions for analytical potentials.
+module test_interface
+   use funit
+   use mod_const, only: DP
+   use mod_shell_interface_private
+   implicit none
+   integer, parameter :: NATOM = 2, NBEAD = 2
+   real(DP), dimension(NATOM, NBEAD) :: x, y, z, fx, fy, fz
+
+contains
+
+   @before
+   subroutine setup()
+      use mod_files, only: stdout_to_devnull, stderr_to_stdout
+      use mod_qmmm, only: natqm, natmm
+      use mod_general, only: ipimd
+      use mod_system, only: names
+
+      ipimd = 1
+      natqm = NATOM
+      natmm = 0
+      x = 1.0D0
+      y = 1.0D0
+      z = 1.0D0
+
+      fx = 0.0D0
+      fy = 0.0D0
+      fz = 0.0D0
+
+      allocate(names(NATOM), source='C')
+
+      call stdout_to_devnull()
+      !call stderr_to_stdout()
+   end subroutine setup
+
+   @after
+   subroutine teardown()
+      use mod_files, only: reset_stdout, reset_stderr
+      use mod_system, only: names
+
+      call reset_stdout()
+      call reset_stderr()
+      deallocate(names)
+   end subroutine teardown
+
+   @test
+   subroutine test_missing_script()
+      character(len=*), parameter :: potential = 'dummy'
+      character(:), allocatable :: shellscript
+      !real(DP) :: energy
+
+      !call force_abin(x, y, z, fx, fy, fz, energy, potential, NBEAD)
+      shellscript = get_shellscript(potential)
+      @assertExceptionRaised('Shell executable ./DUMMY/r.dummy does not exist')
+   end subroutine
+
+   @test
+   subroutine test_missing_engrad_file()
+      character(len=*), parameter :: engrad_fname= 'engrad.dat'
+      integer :: u
+
+      u = open_engrad_file(engrad_fname)
+      close(u, status='delete')
+      @assertExceptionRaised('Could not open file engrad.dat')
+   end subroutine
+
+   @test
+   subroutine test_shell_error()
+      character(len=:), allocatable :: script
+
+      script = 'dummy.sh'
+      call call_shell(script, it=0, iw=0, ipimd=1)
+      @assertExceptionRaised('External forces error')
+   end subroutine
+
+   @test
+   subroutine test_invalid_energy2()
+      character(len=:), allocatable :: script
+      character(len=*), parameter :: fname='dummy.dat'
+      real(DP) :: energy
+      integer :: u = 147
+
+      open (unit=u, file=fname, status='new')
+      energy = read_energy(u)
+      close(u, status='delete')
+      @assertExceptionRaised('Could not read energy from file '//trim(fname))
+   end subroutine
+
+   @test
+   @disable
+   subroutine test_invalid_energy()
+      character(len=:), allocatable :: script
+      character(len=*), parameter :: fname='dummy.dat'
+      real(DP) :: energy
+      integer :: u
+
+      open (newunit=u, file=fname, status='new')
+      energy = read_energy(u)
+      close(u, status='delete')
+      @assertExceptionRaised('Could not read energy from file '//trim(fname))
+   end subroutine
+
+end module test_interface

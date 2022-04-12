@@ -1,10 +1,12 @@
-module mod_shell_interface
+module mod_shell_interface_private
    use mod_const, only: DP, ANG
    use mod_error, only: fatal_error
    use mod_files, only: stderr
    implicit none
-   private
-   public :: force_abin, oniom
+   ! Everything is public in this module for unit tests,
+   ! but in the program one should only use mod_shell_interface,
+   ! which re-exports public interface, at the end of this file.
+   public
 
    contains
 
@@ -147,15 +149,16 @@ module mod_shell_interface
 
    real(DP) function read_energy(engrad_unit) result(energy)
       integer, intent(in) :: engrad_unit
-      character(len=300) :: errmsg
+      character(len=300) :: errmsg, fname
       integer :: iost
+      logical :: lopened
+
       ! Read electronic energy from engrad.dat
       read (engrad_unit, *, iostat=iost, iomsg=errmsg) energy
       if (iost /= 0) then
-         !write (stderr, *) 'ERROR: Could not read energy from file ', chforce
          write (stderr, *) trim(errmsg)
-         !write (stderr, *) 'Inspect output files from the external program in folder '//trim(toupper(chpot))
-         call fatal_error(__FILE__, __LINE__, 'Could not read energy')
+         inquire (unit=engrad_unit, opened=lopened, name=fname)
+         call fatal_error(__FILE__, __LINE__, 'Could not read energy from file '//trim(fname))
       end if
    end function
 
@@ -391,4 +394,12 @@ subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
 
 end subroutine oniom
 
+end module mod_shell_interface_private
+
+! Re-export public interface
+module mod_shell_interface
+   use mod_shell_interface_private
+   implicit none
+   private
+   public :: force_abin, oniom
 end module mod_shell_interface
