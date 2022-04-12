@@ -87,7 +87,6 @@ contains
    end subroutine
 
    @test
-   @disable
    subroutine test_invalid_energy()
       character(len=:), allocatable :: script
       character(len=*), parameter :: fname='dummy.dat'
