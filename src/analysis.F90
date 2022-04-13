@@ -414,13 +414,13 @@ contains
    contains
 
       subroutine checkchar(chin, chref)
-         use mod_utils, only: abinerror
-         character(len=*) :: chin, chref
+         use mod_error, only: fatal_error
+         character(len=*), intent(in):: chin, chref
 
          if (trim(adjustl(chin)) /= trim(chref)) then
-            write (stderr, *) 'ERROR while reading from restart.xyz.'
-            write (stderr, *) 'I read "'//chin//'" but expected '//chref
-            call abinerror('restin')
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Invalid restart file restart.xyz'//new_line('a')//&
+               & 'I read "'//trim(adjustl(chin))//'" but expected "'//trim(chref)//'"')
          end if
       end subroutine checkchar
 

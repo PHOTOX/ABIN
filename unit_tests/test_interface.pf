@@ -1,4 +1,6 @@
-! Testing functions for analytical potentials.
+! Testing the shell interface to external ab initio programs.
+! Here we mostly test various error conditions.
+! The full interface is tested in tests/ABINITIO and tests/QMMM.
 module test_interface
    use funit
    use mod_const, only: DP
@@ -67,16 +69,24 @@ contains
 
    @test
    subroutine test_shell_error()
-      character(len=:), allocatable :: script
+      character(len=:), allocatable :: shellscript
+      integer :: u
 
-      script = 'dummy.sh'
-      call call_shell(script, it=0, iw=0, ipimd=1)
+      shellscript = 'dummy.sh'
+      open (newunit=u, file=shellscript, action='write')
+      write (u, *) '#!/bin/bash'
+      write (u, *) 'exit 2'
+      close (u)
+      call system('chmod 755 '//shellscript)
+      call call_shell(shellscript, it=10, iw=1, ipimd=1)
       @assertExceptionRaised('External forces error')
+
+      open (newunit=u, file=shellscript)
+      close (u, status='delete')
    end subroutine
 
    @test
    subroutine test_invalid_energy()
-      character(len=:), allocatable :: script
       character(len=*), parameter :: fname='dummy.dat'
       real(DP) :: energy
       integer :: u
