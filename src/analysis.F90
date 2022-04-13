@@ -19,7 +19,7 @@ module mod_analysis
 contains
 
    ! Contains all analysis stuff
-   subroutine analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas, equant)
+   subroutine analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas)
       use mod_analyze_ext, only: analyze_ext
       use mod_estimators, only: estimators
       use mod_general, only: it, ipimd, icv, nwrite, nwritef, nwritev, &
@@ -33,13 +33,7 @@ contains
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: fxc(:, :), fyc(:, :), fzc(:, :)
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
-      real(DP), intent(in) :: eclas, equant
-      real(DP) :: energy
-
-      ! eclas is the ab initio energy averaged per bead,
-      ! equant is additional harmonic energy between PI beads (from force_quantum)
-      ! TODO: Print equant or energy somewhere
-      energy = eclas + equant
+      real(DP), intent(in) :: eclas
 
       if (modulo(it, nwrite) == 0 .and. idebug > 0) then
          call remove_rotations(x, y, z, vx, vy, vz, am, .false.)
@@ -322,7 +316,7 @@ contains
    ! It is called from subroutine init.
    subroutine restin(x, y, z, vx, vy, vz, it)
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
-                             iremd, pot, sim_time
+                             iremd, pot, update_simtime
       use mod_nhc, only: readNHC, inose, nhc_restin
       use mod_mpi, only: get_mpi_rank
       use mod_estimators
@@ -336,6 +330,7 @@ contains
       real(DP), intent(out) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(out) :: it
+      real(DP) :: sim_time
       integer :: iat, iw
       integer :: my_rank
       character(len=100) :: chtemp
@@ -357,6 +352,7 @@ contains
 
       open (111, file=chin, status="OLD", action="READ")
       read (111, *) it, sim_time
+      call update_simtime(sim_time)
       read (111, '(A)') chtemp
       call checkchar(chtemp, chcoords)
       do iw = 1, nwalk

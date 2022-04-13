@@ -107,7 +107,7 @@ contains
       real(DP) :: ran(natom * 3 * nwalk)
       integer :: iat, iw, pom
 
-      langham = langham + ekin_p(px, py, pz)
+      langham = langham + ekin_p(px, py, pz, m, natom, nwalk)
 
       pom = 1
       call gautrg(ran, natom * 3 * nwalk)
@@ -123,7 +123,7 @@ contains
          end do
       end do
 
-      langham = langham - ekin_p(px, py, pz)
+      langham = langham - ekin_p(px, py, pz, m, natom, nwalk)
    end subroutine
 
    subroutine finalize_pile()
@@ -482,7 +482,7 @@ contains
       real(DP), intent(in) :: m(:, :)
       integer :: i, iat, iw
 
-      langham = langham + ekin_p(px, py, pz)
+      langham = langham + ekin_p(px, py, pz, m, natom, nwalk)
 
       do iw = 1, nwalk
 
@@ -520,7 +520,7 @@ contains
 
       end do
 
-      langham = langham - ekin_p(px, py, pz)
+      langham = langham - ekin_p(px, py, pz, m, natom, nwalk)
    end subroutine gle_step
 
    subroutine gle_propagate(p, T, S, mass, iw)

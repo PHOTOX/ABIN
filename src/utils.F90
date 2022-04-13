@@ -220,19 +220,17 @@ contains
       stop 1
    end subroutine abinerror
 
-   subroutine print_xyz_arrays(fx, fy, fz)
-      use mod_general, only: nwalk, natom
-      use mod_const, only: DP
-      implicit none
-      real(KIND=DP), intent(in) :: fx(:, :), fy(:, :), fz(:, :)
+   subroutine print_xyz_arrays(fx, fy, fz, natom, nwalk)
+      use mod_files, only: stdout
+      real(DP), dimension(:, :), intent(in) :: fx, fy, fz
+      integer, intent(in) :: natom, nwalk
       integer :: iat, iw
 
       do iw = 1, nwalk
          do iat = 1, natom
-            write (*, *) fx(iat, iw), fy(iat, iw), fz(iat, iw)
+            write (stdout, *) fx(iat, iw), fy(iat, iw), fz(iat, iw)
          end do
       end do
-
    end subroutine print_xyz_arrays
 
    subroutine archive_file(chfile, time_step)
@@ -281,13 +279,11 @@ contains
          time_data(1)
    end function get_formatted_date_and_time
 
-   ! TODO: Pass masses as a parameter,
-   ! handle also non-canonical masses for PIMD
-   real(DP) function ekin_p(px, py, pz)
-      use mod_general, only: nwalk, natom
-      use mod_system, only: am
+   real(DP) function ekin_p(px, py, pz, mass, natom, nwalk)
       implicit none
-      real(DP), intent(in) :: px(:, :), py(:, :), pz(:, :)
+      real(DP), dimension(:, :), intent(in) :: px, py, pz
+      real(DP), dimension(:, :), intent(in) :: mass
+      integer, intent(in) :: natom, nwalk
       real(DP) :: tmp
       integer :: iw, iat
 
@@ -296,7 +292,7 @@ contains
       do iw = 1, nwalk
          do iat = 1, natom
             tmp = px(iat, iw)**2 + py(iat, iw)**2 + pz(iat, iw)**2
-            ekin_p = ekin_p + 0.5D0 * tmp / am(iat)
+            ekin_p = ekin_p + 0.5D0 * tmp / mass(iat, iw)
          end do
       end do
    end function ekin_p

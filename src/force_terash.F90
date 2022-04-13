@@ -276,9 +276,8 @@ contains
       call MPI_SSend(bufints, nstate * (nstate - 1) / 2 + nstate, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
-      ! temporary hack
-      bufdoubles(1) = sim_time ! * AUtoFS !* dt
       ! Send Time
+      bufdoubles(1) = sim_time
       call MPI_Send(bufdoubles, 1, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 

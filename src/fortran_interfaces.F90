@@ -49,13 +49,6 @@ module mod_interfaces
          character(len=*), intent(in) :: chpot
       end subroutine force_wrapper
 
-      subroutine propagate_nm(x, y, z, px, py, pz, amg, dt)
-         import :: DP
-         real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
-         real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
-         real(DP), intent(in) :: amg(:, :), dt
-      end subroutine propagate_nm
-
       subroutine oniom(x, y, z, fx, fy, fz, eclas, iw)
          import :: DP
          real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
