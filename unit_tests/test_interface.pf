@@ -29,7 +29,7 @@ contains
       fy = 0.0D0
       fz = 0.0D0
 
-      allocate(names(NATOM), source='C')
+      allocate (names(NATOM), source='C')
 
       call stdout_to_devnull()
       call stderr_to_stdout()
@@ -42,7 +42,7 @@ contains
 
       call reset_stdout()
       call reset_stderr()
-      deallocate(names)
+      deallocate (names)
    end subroutine teardown
 
    @test
@@ -56,13 +56,13 @@ contains
 
    @test
    subroutine test_missing_engrad_file()
-      character(len=*), parameter :: engrad_fname= 'engrad.dat'
+      character(len=*), parameter :: engrad_fname = 'engrad.dat'
       integer :: u
 
       u = open_engrad_file(engrad_fname)
       ! NOTE: Deleting the file via a close statement results in
       ! runtime error for certain compiler versions/compiler flags.
-      close(u) ! status='delete')
+      close (u) ! status='delete')
       @assertExceptionRaised('Could not open file engrad.dat')
       call system('rm -f '//engrad_fname)
    end subroutine
@@ -87,7 +87,7 @@ contains
 
    @test
    subroutine test_invalid_energy()
-      character(len=*), parameter :: fname='dummy.dat'
+      character(len=*), parameter :: fname = 'dummy.dat'
       real(DP) :: energy
       integer :: u
 
@@ -97,13 +97,13 @@ contains
       u = 133
       open (unit=u, file=fname, status='new')
       energy = read_energy(u)
-      close(u, status='delete')
+      close (u, status='delete')
       @assertExceptionRaised('Could not read energy from file '//trim(fname))
    end subroutine
 
    @test
    subroutine test_invalid_gradients()
-      character(len=*), parameter :: fname='dummy.dat'
+      character(len=*), parameter :: fname = 'dummy.dat'
       integer :: u
 
       u = 100
@@ -111,6 +111,6 @@ contains
       write (u, *) '# Invalid line'
       call read_forces(fx, fy, fz, num_atom=NATOM, iw=1, engrad_unit=u)
       @assertExceptionRaised('Could not read gradients from file '//trim(fname))
-      close(u, status='delete')
+      close (u, status='delete')
    end subroutine
 end module test_interface
