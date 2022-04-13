@@ -101,4 +101,16 @@ contains
       @assertExceptionRaised('Could not read energy from file '//trim(fname))
    end subroutine
 
+   @test
+   subroutine test_invalid_gradients()
+      character(len=*), parameter :: fname='dummy.dat'
+      integer :: u
+
+      u = 100
+      open (unit=u, file=fname, status='new')
+      write (u, *) '# Invalid line'
+      call read_forces(fx, fy, fz, num_atom=NATOM, iw=1, engrad_unit=u)
+      @assertExceptionRaised('Could not read gradients from file '//trim(fname))
+      close(u, status='delete')
+   end subroutine
 end module test_interface
