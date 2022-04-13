@@ -60,8 +60,11 @@ contains
       integer :: u
 
       u = open_engrad_file(engrad_fname)
-      close(u, status='delete')
+      ! NOTE: Deleting the file via a close statement results in
+      ! runtime error for certain compiler versions/compiler flags.
+      close(u) ! status='delete')
       @assertExceptionRaised('Could not open file engrad.dat')
+      call system('rm -f '//engrad_fname)
    end subroutine
 
    @test
