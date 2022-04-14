@@ -28,7 +28,7 @@ contains
    subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
       use mod_utils, only: abinerror
       use mod_general, only: iqmmm
-      use mod_interfaces, only: oniom
+      use mod_shell_interface, only: oniom
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas

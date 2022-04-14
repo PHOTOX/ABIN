@@ -126,7 +126,6 @@ end subroutine force_clas
 
 subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_const, only: DP
-   use mod_interfaces, only: force_abin
    use mod_general, only: natom, ipimd
    use mod_water, only: watpot
    use mod_force_mm, only: force_LJ_Coulomb
@@ -135,6 +134,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_potentials, only: force_harmonic_rotor, force_harmonic_oscillator, force_morse, force_doublewell
    use mod_splined_grid, only: force_splined_grid
    use mod_cp2k, only: force_cp2k
+   use mod_shell_interface, only: force_abin
    use mod_force_tera, only: force_tera
    use mod_terampi_sh, only: force_terash
    implicit none

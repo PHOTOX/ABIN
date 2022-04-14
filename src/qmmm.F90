@@ -9,5 +9,4 @@ module mod_qmmm
    ! NOT used anywhere at the moment
    !character(len=10)    :: qmmmtype='NA'
    ! Maybe move iqmmm here
-   ! TODO: Move ONIOM here
 end module mod_qmmm
