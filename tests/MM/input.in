@@ -18,8 +18,8 @@ temp=100,
 
 &qmmm
 natmm=3
-attypes='O','H'
-eps=4.0e-2,4.0e-4
-rmin=3.,0.1
+mm_types='O','H'
+LJ_eps=4.0e-2,4.0e-4
+LJ_rmin=3.,0.1
 q=-0.01,0.01
 /

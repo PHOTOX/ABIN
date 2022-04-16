@@ -40,7 +40,7 @@ subroutine init(dt)
    use mod_sh
    use mod_lz
    use mod_qmmm, only: natqm, natmm
-   use mod_force_mm
+   use mod_force_mm, only: initialize_mm
    use mod_gle
    use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
@@ -68,6 +68,15 @@ subroutine init(dt)
    real(DP) :: r0_morse = -1, d0_morse = -1, k_morse = -1
    real(DP) :: k = -1, r0 = -1
    real(DP) :: kx = -1, ky = -1, kz = -1
+   ! Lennard-Jones parameteres and Coulomb charges (pot=_mm_)
+   ! All input parameters are expected to be in atomic units,
+   ! except LJ_rmin which should be in angstroms.
+   ! User-specified atomic types read from the input file
+   character(len=2), allocatable :: mm_types(:)
+   ! Coulomb charges correspoding to the atomic types defined above
+   real(DP), allocatable :: q(:)
+   ! L-J parameters
+   real(DP), allocatable :: LJ_rmin(:), LJ_eps(:)
    ! Initial temperature (read from namelist nhcopt)
    real(DP) :: temp0 = -1
    ! User-defined masses in relative atomic units
@@ -130,7 +139,7 @@ subroutine init(dt)
 
    namelist /lz/ initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz
 
-   namelist /qmmm/ natqm, natmm, q, rmin, eps, attypes
+   namelist /qmmm/ natqm, natmm, q, LJ_rmin, LJ_eps, mm_types
 
    chcoords = 'mini.dat'
    xyz_units = 'angstrom'
@@ -279,11 +288,11 @@ subroutine init(dt)
    massnames = ''
 
    ! Lennard-Jones / Coulomb parameters
-   allocate (attypes(natom))
-   allocate (rmin(natom), source=-1.0D0)
+   allocate (mm_types(natom))
+   allocate (LJ_rmin(natom), source=-1.0D0)
    allocate (q(natom), source=0.0D0)
-   allocate (eps(natom), source=-1.0D0)
-   attypes = ''
+   allocate (LJ_eps(natom), source=-1.0D0)
+   mm_types = ''
 
    allocate (ishake1(natom * 3 - 6), source=0)
    allocate (ishake2(natom * 3 - 6), source=0)
@@ -566,7 +575,7 @@ subroutine init(dt)
       call initialize_spline(natom)
    end if
    if (pot == '_mm_' .or. pot_ref == '_mm_') then
-      call initialize_mm(natom)
+      call initialize_mm(natom, names, mm_types, q, LJ_rmin, LJ_eps)
    end if
 
    if (my_rank == 0) then
