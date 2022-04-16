@@ -571,20 +571,12 @@ module mod_random
       subroutine rsavef(iout, lread)
          use mod_utils, only: abinerror
          integer,intent(in) :: iout  !where do we write the state
-!         integer,intent(in) :: isave !0=read,1=save
          logical,intent(out),optional :: lread
          character(len=*),parameter   :: chprng='PRNG STATE (OPTIONAL)'
          character(len=50)  :: readstring
          integer            :: iost,i
-         logical            :: lexist,lopened
 
          if(present(lread)) lread=.false.
-
-         inquire(unit=iout,exist=lexist,opened=lopened)
-         if(lexist.and..not.lopened)then
-            write(*,*)'Unit for PRNG state must be opened! Exiting...'
-            call abinerror('rsavef')
-         end if
 
          if (present(lread))then
             read(iout,'(A)',iostat=iost)readstring

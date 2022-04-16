@@ -45,7 +45,8 @@ subroutine init(dt)
    use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_random
    use mod_splined_grid, only: initialize_spline, potential_file
-   use mod_utils, only: toupper, tolower, normalize_atom_name, file_exists_or_exit
+   use mod_utils, only: abinerror, toupper, tolower, normalize_atom_name, &
+                     &  append_rank, file_exists_or_exit
    use mod_vinit
    use mod_analyze_geometry
    use mod_shake
@@ -59,6 +60,7 @@ subroutine init(dt)
    use mod_remd
    use mod_terampi
    use mod_terampi_sh
+   use mod_mdstep, only: initialize_integrator, nabin, nstep_ref
    implicit none
    real(DP), intent(out) :: dt
    ! Input parameters for analytical potentials
@@ -68,6 +70,7 @@ subroutine init(dt)
    real(DP) :: kx = -1, ky = -1, kz = -1
    ! Initial temperature (read from namelist nhcopt)
    real(DP) :: temp0 = -1
+   ! User-defined masses in relative atomic units
    real(DP), allocatable :: masses(:)
    real(DP) :: rans(10)
    integer :: ipom, iw, iat, natom_xyz, iost
@@ -148,7 +151,9 @@ subroutine init(dt)
    open (150, file=chinput, status='OLD', delim='APOSTROPHE', action="READ")
    read (150, general)
    rewind (150)
+
    pot = tolower(pot)
+   pot_ref = tolower(pot_ref)
 
    if (pot == "_cp2k_" .or. pot_ref == "_cp2k_") then
       call init_cp2k()
@@ -209,9 +214,9 @@ subroutine init(dt)
    end if
 
    if (iremd == 1) then
-      write (chcoords, '(A,I2.2)') trim(chcoords)//'.', my_rank
+      chcoords = append_rank(chcoords)
       if (chveloc /= '') then
-         write (chveloc, '(A,I2.2)') trim(chveloc)//'.', my_rank
+         chveloc = append_rank(chveloc)
       end if
    end if
 
@@ -261,30 +266,27 @@ subroutine init(dt)
       scaleveloc = 0
    end if
 
-! for future multiple time step integration in SH
+   ! for future multiple time step integration in SH
    dt0 = dt
 
-   ! We have to initialize here, because we read them from input
+   ! We have these allocate these arrays here
+   ! because we read them from input file.
    allocate (names(natom))
-   allocate (masses(natom))
    allocate (massnames(natom))
+   allocate (masses(natom), source=-1.0_DP)
+
    names = ''
    massnames = ''
-   masses = -1.0D0
 
+   ! Lennard-Jones / Coulomb parameters
    allocate (attypes(natom))
-   allocate (rmin(natom))
-   allocate (q(natom))
-   allocate (eps(natom))
+   allocate (rmin(natom), source=-1.0D0)
+   allocate (q(natom), source=0.0D0)
+   allocate (eps(natom), source=-1.0D0)
    attypes = ''
-   rmin = -1.0D0
-   eps = -1.0D0
-   q = 0.0D0
 
-   allocate (ishake1(natom * 3 - 6))
-   allocate (ishake2(natom * 3 - 6))
-   ishake1 = 0
-   ishake2 = 0
+   allocate (ishake1(natom * 3 - 6), source=0)
+   allocate (ishake2(natom * 3 - 6), source=0)
 
    ! By default, remove COM translation and rotation
    ! Unless restarting or taking velocities from a file
@@ -350,11 +352,16 @@ subroutine init(dt)
    end do
 
    ! Determine atomic masses from periodic table
-   call initialize_masses(masses, massnames, natom)
+   ! names - array of atomic names read from the XYZ structure
+   ! masses - user-defined atomic masses
+   ! massnames - atomic symbols of user-defined masses
+   ! am - the output array of atomic masses in atomic units
+   call initialize_masses(names, masses, massnames, natom, am)
+
    ! Transform masses for PIMD
    ! Note that amt array is used throughout the code
    ! even for non-PI simulations.
-   call initialize_pi_masses(amg, amt)
+   call initialize_pi_masses(am, amg, amt)
 
    allocate (natmolt(natom))
    allocate (nshakemol(natom))
@@ -401,47 +408,7 @@ subroutine init(dt)
    ! Check whether input parameters make sense
    call check_inputsanity()
 
-   ! resetting number of walkers to 1 in case of classical simulation
-   if (ipimd == 0) then
-      write (stdout, *) 'Using velocity Verlet integrator'
-      md = 2
-      nwalk = 1
-      nabin = 1 ! TODO:safety for respashake code
-      ! We should probably copy shake to velocity verlet
-      ! algorithm as well
-   end if
-
-   ! Selecting proper integrator for a given MD type
-   ! (controlled by variable 'md')
-   if (ipimd == 2 .or. ipimd == 5) then
-      nwalk = 1
-      md = 2 ! velocity verlet
-      nabin = 1
-   else if (ipimd == 1 .and. inormalmodes /= 1) then
-      write (stdout, *) 'Using RESPA integrator.'
-      md = 1
-   else if (ipimd == 1 .and. inormalmodes == 1) then
-      write (stdout, *) 'Using velocity Verlet propagator with analytical PI normal mode propagation.'
-      nabin = 1
-      md = 2
-   end if
-
-   if (nshake /= 0) then
-      md = 3
-   end if
-
-   if (pot_ref /= '_none_') then
-      md = 4
-      write (*, '(A)') 'Using Multiple Time-Step RESPA integrator'
-      write (*, '(A)') "Reference (cheap) potential is "//trim(pot_ref)
-      write (*, '(A, F6.2)') "with timestep [fs] ", dt / nstep_ref * AUtoFS
-      write (*, '(A)') "Full potential is "//trim(pot)
-      write (*, '(A, F6.2)') "with timestep [fs] ", dt * AUtoFS
-      if (ipimd /= 0) then
-         call fatal_error(__FILE__, __LINE__, &
-            & 'ab initio MTS is implemented only for classical MD')
-      end if
-   end if
+   call initialize_integrator(dt, ipimd, inormalmodes, nshake, pot_ref, pot_ref)
 
    if (temp0 > 0) then
       write (stdout, *) 'Initial temperature [K] =', temp0
@@ -680,9 +647,9 @@ contains
          error = 1
       end if
       if (ipimd == 1 .and. nwalk <= 1) then
-         write (*, *) 'Number of walkers for PIMD (nwalk) <=1 !'
-         write (*, *) 'Either set ipimd=0 for classical simulation or'
-         write (*, *) 'set nwalk > 1'
+         write (*, *) 'Number of walkers for PIMD (nwalk) mus be >= 1!'
+         write (*, *) 'Either set ipimd=0 for classical simulation'
+         write (*, *) 'or set nwalk > 1'
          error = 1
       end if
       if (iqmmm < 0 .or. iqmmm > 1) then
@@ -847,32 +814,24 @@ contains
          write (*, *) 'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
          error = 1
       end if
-      if ((natmm + natqm /= natom) .and. iqmmm > 0) then
-         write (*, *) 'Natmm+natqm not equal to natom!'
+      if ((natmm + natqm /= natom)) then
+         write (*, *) 'Natmm+natqm /= natom!'
          error = 1
       end if
 
-      if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'movie.xyz.', my_rank
-      else
-         chout = 'movie.xyz'
-      end if
-      inquire (FILE=chout, EXIST=file_exists)
+      chout = append_rank('movie.xyz')
+      inquire (file=chout, exist=file_exists)
       if (file_exists) then
          if (irest == 0) then
             write (stdout, *) 'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
             error = 1
          else
-            write (stdout, *) 'File "movie.xyz" exists and irest=1.Trajectory will be appended.'
+            write (stdout, *) 'File "movie.xyz" exists and irest=1. Trajectory will be appended.'
          end if
       end if
 
-      if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'restart.xyz.', my_rank
-      else
-         chout = 'restart.xyz'
-      end if
-      inquire (FILE=chout, EXIST=file_exists)
+      chout = append_rank('restart.xyz')
+      inquire (file=chout, exist=file_exists)
       if (file_exists) then
          if (irest == 0) then
             write (*, *) 'File ', trim(chout), ' exists. Please (re)move it or set irest=1.'
@@ -901,7 +860,6 @@ contains
       call int_nonnegative(nrest, 'nrest')
       call int_nonnegative(narchive, 'narchive')
 
-      call int_positive(nabin, 'nwalk')
       call int_positive(nwalk, 'nwalk')
       call int_positive(ncalc, 'ncalc')
 
@@ -999,22 +957,26 @@ end subroutine init
    ! Subroutine initialize_masses() populates the global am() array,
    ! based on the atom names from names() array.
    ! User can also specify non-standard isotopes/elements.
-   subroutine initialize_masses(masses, massnames, natom)
+   subroutine initialize_masses(names, masses, massnames, natom, am)
       use mod_const, only: DP, AMU
       use mod_files, only: stdout
       use mod_error, only: fatal_error
-      use mod_system, only: am, names
+      ! Atomic names of simulated structure
+      character(len=2), intent(in) :: names(natom)
       real(DP), intent(in) :: masses(:)
       character(len=2), intent(in) :: massnames(:)
       integer, intent(in) :: natom
+      real(DP), allocatable, intent(out) :: am(:)
       character(len=100) :: error_msg
       integer :: i, j
+
+      allocate (am(natom))
+      am = -1.0D0
+
       ! Accurate values for H1 and H2 taken from:
       ! Mohr, Taylor, Newell, Rev. Mod. Phys. 80 (2008) 633-730
       ! Other atomic weights taken from Handbook of Chemistry and Physics, 2013
       ! Original citation: Wieser, M. E., et al., Pure Appl. Chem. 85, 1047, 2013
-      allocate (am(natom))
-      am = -1.0D0
       do i = 1, natom
          select case (names(i))
          case ('H')
