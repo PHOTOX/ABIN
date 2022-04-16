@@ -6,6 +6,7 @@
 ! This is invoked via pot='_mm_'
 module mod_force_mm
    use mod_const, only: DP
+   use mod_files, only: stdout, stderr
    implicit none
    private
    public :: initialize_mm, force_LJ_Coulomb
@@ -31,6 +32,7 @@ contains
    subroutine initialize_mm(natom)
       use mod_utils, only: normalize_atom_name
       integer, intent(in) :: natom
+      real(DP) :: q_total
       integer :: iat
 
       allocate (inames(natom))
@@ -42,6 +44,12 @@ contains
 
       call inames_init(natom)
       call ABr_init(natom)
+
+      q_total = calc_total_charge(q, natom)
+      write (stdout, '(A,F6.3,A)') 'Total system charge = ', q_total, ' a.u.'
+      if (q_total /= 0.0D0) then
+         write (stderr, *) 'WARNING: total charge is not zero!'
+      end if
    end subroutine
 
    subroutine inames_init(natom)
@@ -87,6 +95,17 @@ contains
          end do
       end do
    end subroutine
+
+   real(DP) function calc_total_charge(q, natom) result(charge)
+      real(DP), intent(in) :: q(:)
+      integer, intent(in) :: natom
+      integer :: iat
+
+      charge = 0.0D0
+      do iat = 1, natom
+         charge = charge + q(inames(iat))
+      end do
+   end function calc_total_charge
 
    subroutine force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas, walkmax)
       use mod_general, only: natom
