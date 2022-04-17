@@ -89,6 +89,10 @@ contains
       call random_number(x)
       call random_number(y)
       call random_number(z)
+      ! Shifting coordinates to prevent too close contacts
+      x = x + 10.0D0
+      y = y + 10.0D0
+      z = z + 10.0D0
       ! Two beads have the same coordinates
       x(:, 2) = x(:, 1)
       y(:, 2) = y(:, 1)
