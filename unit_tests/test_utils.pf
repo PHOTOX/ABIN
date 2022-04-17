@@ -232,15 +232,4 @@ contains
       @assertExceptionRaised('Could not find file "CRAZY_FILE"')
    end subroutine test_file_exists_or_exit
 
-   ! This test is not from utils, but I have nowhere to place it ATM
-   @test
-   subroutine test_stdout_redirect_fail()
-      use mod_files, only: stdout_to_devnull
-
-      call stdout_to_devnull()
-      ! The second call here is invalid since we cannot open /dev/null twice
-      call stdout_to_devnull()
-      @assertExceptionRaised('Could not open file /dev/null')
-   end subroutine
-
 end module test_utils
