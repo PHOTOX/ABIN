@@ -48,8 +48,8 @@ contains
 
       call initialize_LJ(LJ_rmin, LJ_eps, num_types, natom)
 
-      call flush(stdout)
-      call flush(stderr)
+      call flush (stdout)
+      call flush (stderr)
       write (stdout, '(A)') ''
    end subroutine initialize_mm
 
@@ -79,7 +79,7 @@ contains
       integer :: i, itype
 
       num_types = count_atom_types(atom_types)
-      allocate(attypes(num_types))
+      allocate (attypes(num_types))
       attypes = ''
 
       itype = 1
@@ -129,7 +129,7 @@ contains
       integer, intent(in) :: num_types, natom
       real(DP) :: q_total
 
-      allocate(q(num_types))
+      allocate (q(num_types))
       q(:) = charges(:num_types)
 
       q_total = calc_total_charge(q, natom)
@@ -178,7 +178,6 @@ contains
 
    subroutine force_mm(x, y, z, fx, fy, fz, eclas, walkmax)
       use mod_general, only: natom
-      use mod_qmmm, only: natqm
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
