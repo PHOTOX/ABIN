@@ -7,6 +7,7 @@ module mod_force_mm
    use mod_const, only: DP
    use mod_files, only: stdout, stderr
    use mod_error, only: fatal_error
+   use mod_utils, only: real_positive
    implicit none
    private
    public :: initialize_mm, finalize_mm, force_mm
@@ -46,6 +47,7 @@ contains
 
       call initialize_charges(charges, num_types, natom)
 
+      call validate_LJ_params(LJ_rmin, LJ_eps, num_types)
       call initialize_LJ(LJ_rmin, LJ_eps, num_types, natom)
 
       call flush (stdout)
@@ -95,8 +97,8 @@ contains
    ! Example: Water molecule
    ! names = (/ 'O', 'H', 'H' /)
    ! attypes = (/ 'O', 'H' /)
-   ! inames = (/ 1, 2, 2 /)
    ! q = (/ -0.84, 0.42 /)
+   ! inames = (/ 1, 2, 2 /)
    subroutine initialize_inames(names, attypes, natom)
       character(len=2), intent(in) :: names(:)
       character(len=2), intent(in) :: attypes(:)
@@ -149,6 +151,16 @@ contains
          charge = charge + q(inames(iat))
       end do
    end function calc_total_charge
+
+   subroutine validate_LJ_params(rmin, eps, num_types)
+      real(DP), intent(in) :: rmin(:), eps(:)
+      integer, intent(in) :: num_types
+      integer :: i
+      do i = 1, num_types
+         call real_positive(eps(i), 'lj_eps')
+         call real_positive(rmin(i), 'lj_rmin')
+      end do
+   end subroutine validate_LJ_params
 
    subroutine initialize_LJ(rmin, eps, num_types, natom)
       use mod_const, only: ANG
