@@ -1263,6 +1263,7 @@ subroutine finish(error_code)
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
    use mod_splined_grid, only: finalize_spline
+   use mod_force_mm, only: finalize_mm
    use mod_mpi, only: finalize_mpi
    implicit none
    integer, intent(in) :: error_code
@@ -1300,7 +1301,10 @@ subroutine finish(error_code)
 
    if (pot == '_splined_grid_') then
       call finalize_spline()
+   else if (pot == '_mm_') then
+      call finalize_mm()
    end if
+
    ! MPI_FINALIZE is called in this routine as well
    if (pot == '_cp2k_') then
       call finalize_cp2k()

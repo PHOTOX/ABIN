@@ -9,7 +9,7 @@ module mod_force_mm
    use mod_error, only: fatal_error
    implicit none
    private
-   public :: initialize_mm, force_mm
+   public :: initialize_mm, finalize_mm, force_mm
 
    ! Lennard-Jones combination rules
    ! Only Lorentz-Berthelot rules are currently implemented
@@ -53,13 +53,20 @@ contains
       write (stdout, '(A)') ''
    end subroutine initialize_mm
 
+   subroutine finalize_mm()
+      if (allocated(inames)) deallocate (inames)
+      if (allocated(Aij)) deallocate (Aij)
+      if (allocated(Bij)) deallocate (Bij)
+      if (allocated(q)) deallocate (q)
+   end subroutine finalize_mm
+
    integer function count_atom_types(atom_types) result(num_types)
       character(len=2), intent(in) :: atom_types(:)
-      integer :: iat
+      integer :: i
 
       num_types = 0
-      do iat = 1, size(atom_types)
-         if (atom_types(iat) == '') cycle
+      do i = 1, size(atom_types)
+         if (len_trim(atom_types(i)) == 0) exit
          num_types = num_types + 1
       end do
    end function count_atom_types
@@ -69,15 +76,17 @@ contains
       character(len=2), intent(in) :: atom_types(:)
       character(len=2), allocatable :: attypes(:)
       integer :: num_types
-      integer :: iat
+      integer :: i, itype
 
       num_types = count_atom_types(atom_types)
       allocate(attypes(num_types))
       attypes = ''
 
-      do iat = 1, size(atom_types)
-         if (atom_types(iat) == '') cycle
-         attypes(iat) = normalize_atom_name(atom_types(iat))
+      itype = 1
+      do i = 1, size(atom_types)
+         if (len_trim(atom_types(i)) == 0) exit
+         attypes(itype) = normalize_atom_name(atom_types(i))
+         itype = itype + 1
       end do
    end function normalize_atom_types
 
@@ -95,7 +104,10 @@ contains
       integer :: iat, iat2
       logical :: assigned
 
-      allocate (inames(natom))
+      ! NOTE: We assign default value 1 to avoid segfaults in unit tests
+      ! We check below that all atoms are mapped properly.
+      allocate (inames(natom), source=1)
+
       do iat = 1, natom
          assigned = .false.
          do iat2 = 1, size(attypes)
@@ -155,7 +167,7 @@ contains
             j = inames(iat2)
             if (LJcomb == 'LB') then
                ! WARNING: We expect rmin in angstroms!
-               rij = 0.5 * (rmin(i) + rmin(j)) * ANG
+               rij = 0.5D0 * (rmin(i) + rmin(j)) * ANG
                epsij = dsqrt(eps(i) * eps(j))
             end if
             Bij(i, j) = 2 * 6 * epsij * rij**6
@@ -197,14 +209,13 @@ contains
                fy(iat2, iw) = fy(iat2, iw) - (kLJ + kC) * dy
                fz(iat1, iw) = fz(iat1, iw) + (kLJ + kC) * dz
                fz(iat2, iw) = fz(iat2, iw) - (kLJ + kC) * dz
-               eclas = eclas + ri3 * (ri3 * Aij(i, j) / 12 - Bij(i, j) / 6) / walkmax
-               eclas = eclas + q(i) * q(j) / dsqrt(r) / walkmax
+               eclas = eclas + ri3 * (ri3 * Aij(i, j) / 12 - Bij(i, j) / 6)
+               eclas = eclas + q(i) * q(j) / dsqrt(r)
             end do
          end do
       end do
 
-      ! TODO: Divide by nwalkmax at the end
-
+      eclas = eclas / walkmax
    end subroutine force_mm
 
 end module mod_force_mm
