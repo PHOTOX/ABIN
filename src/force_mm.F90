@@ -7,7 +7,7 @@ module mod_force_mm
    use mod_const, only: DP
    use mod_files, only: stdout, stderr
    use mod_error, only: fatal_error
-   use mod_utils, only: real_positive
+   use mod_utils, only: real_nonnegative
    implicit none
    private
    public :: initialize_mm, finalize_mm, force_mm
@@ -157,8 +157,8 @@ contains
       integer, intent(in) :: num_types
       integer :: i
       do i = 1, num_types
-         call real_positive(eps(i), 'lj_eps')
-         call real_positive(rmin(i), 'lj_rmin')
+         call real_nonnegative(eps(i), 'lj_eps')
+         call real_nonnegative(rmin(i), 'lj_rmin')
       end do
    end subroutine validate_LJ_params
 
