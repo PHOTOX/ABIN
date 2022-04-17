@@ -190,9 +190,6 @@ contains
       do iw = 1, walkmax
          do iat1 = 1, natom
             do iat2 = iat1 + 1, natom
-               if (iat2 <= natqm) then
-                  cycle
-               end if
                dx = x(iat1, iw) - x(iat2, iw)
                dy = y(iat1, iw) - y(iat2, iw)
                dz = z(iat1, iw) - z(iat2, iw)
