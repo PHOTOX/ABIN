@@ -3,6 +3,7 @@ module test_prng
    use funit
    use mod_const, only: DP
    use mod_files, only: stdout_to_devnull, reset_stdout
+   use mod_prng_init
    use mod_random
    implicit none
    save
