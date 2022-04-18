@@ -590,7 +590,7 @@ module mod_random
                call abinerror('rsavef')
             else
                read(iout,*)init,last
-               read(iout,*)isave,gsave
+               read (iout,*) isave, gsave
                do i=1,np
                   read(iout,*)x(i)
                end do
@@ -599,7 +599,7 @@ module mod_random
          else
             write(iout,'(A)')chprng
             write(iout,*)init,last
-            write(iout,*)isave,gsave
+            write(iout,'(I0,X,ES24.16E3)')isave,gsave
             do i=1,np
                write(iout,*)x(i)
             end do
