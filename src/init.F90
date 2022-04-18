@@ -43,7 +43,7 @@ subroutine init(dt)
    use mod_force_mm
    use mod_gle
    use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
-   use mod_random
+   use mod_prng_init, only: initialize_prng
    use mod_splined_grid, only: initialize_spline, potential_file
    use mod_utils, only: abinerror, toupper, tolower, normalize_atom_name, &
                      &  append_rank, file_exists_or_exit

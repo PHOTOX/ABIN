@@ -55,7 +55,6 @@ module mod_random
       use mod_error, only: fatal_error
       use mod_files, only: stdout, stderr
       private
-      public    :: initialize_prng
       public    :: gautrg, vranf, rsavef
       integer,parameter :: np=1279, nq=418
       real(DP)  :: x(np)
@@ -66,175 +65,6 @@ module mod_random
       integer   :: nroll = 1
       save
       contains
-
-      ! PRNG INITIALIZATION
-      ! We want the simulations to be repeatable so we ask the user
-      ! to provide a single random seed. Single random seed is all we need
-      ! to initialize our PRNG implemented in the vranf routine below.
-      ! 
-      ! Things get complicated for REMD, where we need to initialize
-      ! nreplica independent prngs. But we still only want a single seed
-      ! from the user, and we want repeatability.
-      ! To that end, we use a standard fortran random_number() subroutine
-      ! to generate additional random seeds from a single random seeds.
-      ! To make things deterministic, random_number() itself needs to be seeded
-      ! by a call to random_seed().
-      ! Here's the kicker: random_seed() in general requires an array of seeds :-(
-      ! https://gcc.gnu.org/onlinedocs/gcc-4.9.4/gfortran/RANDOM_005fSEED.html#RANDOM_005fSEED
-      ! 
-      ! We solve this in a roundabout way: First initialize vranf,
-      ! use it to generate random seeds for random_seed(), and then
-      ! use random_number() to generate new seeds, and finally reseed vranf.
-      ! Not great, hopefully not terrible.
-      subroutine initialize_prng(seed, mpi_rank, testing_mode)
-         integer, intent(inout) :: seed
-         integer, intent(in) :: mpi_rank
-         logical, intent(in) :: testing_mode
-         integer :: irans(mpi_rank + 1)
-         real(DP) :: drans(1)
-
-         write (stdout, *) 'Initializing pseudo-random number generator'
-
-         ! If the user does not provide the seed, or provides negative one,
-         ! we will determine it automatically. Note that the seed is
-         ! passed back so that it can be printed in init.F90
-         if (seed <= 0) then
-            seed = get_random_seed()
-            if (mpi_rank > 0) then
-               write (*, '(A,I0,A,I0)') 'MPI rank = ', mpi_rank, ' Seed = ', seed
-            else 
-               write (stdout, '(A,I0,A,I0)') 'MPI rank = ', mpi_rank, ' Seed = ', seed
-            end if
-         end if
-
-         ! Initialize pseudo-random number generator.
-         ! This call has to happen before we read restart file
-         ! to allocate internal arrays.
-         ! If we are restarting, the PRNG state initialized here is overwritten.
-         call gautrg(drans, 0, seed)
-
-         ! Generate different random number seeds for different MPI processes.
-         if (mpi_rank > 0) then
-            ! NOTE: initialize_random_ints relies on vranf!
-            call initialize_random_ints(testing_mode)
-            call random_ints(irans, mpi_rank, testing_mode)
-            seed = irans(mpi_rank)
-            ! re-seed the prng
-            call gautrg(drans, 0, seed)
-         end if
-      end subroutine
-
-      ! If the user doesn't provide initial random seed via
-      ! 'irandom' variable in the input file, we will take it
-      ! from unix kernel via /dev/urandom.
-      ! https://linux.die.net/man/4/urandom
-      !
-      ! Code taken from:
-      ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
-      !
-      ! For REMD, this will make the seed unique for each replica.
-      ! Unfortunatelly, we don't currently provide a way for a user
-      ! to set custom seed for each replica separately, so the approach
-      ! used here makes the REMD simulations non-repeatable.
-      ! To have repeatable REMD simulations, user should provide irandom
-      ! in the input file such that this function is not called.
-      integer function get_random_seed() result(seed)
-         integer :: un, istat
-         integer :: getpid, pid
-         integer, dimension(8) :: dt
-         integer :: t
-
-         open (newunit=un, file="/dev/urandom", access="stream", &
-            & form="unformatted", action="read", status="old", iostat=istat)
-         if (istat == 0) then
-            write (stdout, *) 'Getting random seed from /dev/urandom'
-            read(un) seed
-            close(un)
-            seed = iabs(seed)
-         else
-            write (stdout, *) 'Could not open /dev/urandom'//new_line('A')//&
-               & 'Using date and time to get random seed'
-            ! Fallback to XOR:ing the current time and pid. The PID is
-            ! useful in case one launches multiple instances of the same
-            ! program in parallel.
-            call date_and_time(values=dt)
-            ! Seconds of Unix time
-            ! NOTE: We are allowing the integer overflow here.
-            ! We could make t type be int64, but that would produce
-            ! compiler warning. The likelihood of this code be actually
-            ! used is low (/dev/urandom should always be available in most unix systems)
-            ! so it is fine, better to have clean compilation.
-            ! Hence, t is negative, and not the current unix time. :-(
-            t = (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 &
-                 + dt(2) * 31 * 24 * 60 * 60 * 1000 &
-                 + dt(3) * 24 * 60 * 60 * 1000 &
-                 + dt(5) * 60 * 60 * 1000 &
-                 + dt(6) * 60 * 1000 + dt(7) * 1000 &
-                 + dt(8)
-            pid = getpid()
-            seed = ieor(t, int(pid, kind(t)))
-            seed = abs(seed)
-            call flush(stderr)
-         end if
-      end function
-
-      ! TODO: Test this!
-      ! Not sure how to correctly do this to make all this deterministic,
-      ! since the 'seed' here is an array, see:
-      ! https://stackoverflow.com/questions/51893720/correctly-setting-random-seeds-for-repeatability
-      subroutine initialize_random_ints(testing_mode)
-         logical, intent(in) :: testing_mode
-         integer, allocatable :: seeds(:)
-         real(DP), allocatable :: drans(:)
-         integer :: n
-
-         if (testing_mode) return
-
-         call random_seed(size=n)
-         allocate (seeds(n))
-         allocate (drans(n))
-
-         ! TODO: Use lcg below instead of vranf
-         call vranf(drans, n)
-         seeds = floor(drans * huge(n))
-
-         call random_seed(put=seeds)
-      contains
-         ! This simple PRNG might not be good enough for real work, but is
-         ! sufficient for seeding a better PRNG.
-         ! Taken from:
-         ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
-         integer function lcg(s)
-            use, intrinsic :: iso_fortran_env, only: int64
-            integer(int64) :: s
-
-            if (s == 0) then
-               s = 104729
-            else
-               s = mod(s, 4294967296_int64)
-            end if
-            s = mod(s * 279470273_int64, 4294967291_int64)
-            lcg = int(mod(s, int(huge(0), int64)), kind(0))
-         end function lcg
-      end subroutine initialize_random_ints
-
-      ! TODO: Test this!
-      ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
-      subroutine random_ints(iran, n, testing_mode)
-         integer, intent(out) :: iran(:)
-         integer, intent(in) :: n
-         logical, intent(in) :: testing_mode
-         real(DP) :: dran(n)
-
-         call random_number(dran)
-
-         if (testing_mode) then
-            write (stderr, *) 'WARNING: PRNG TESTING MODE!'
-            call vranf(dran, n)
-         end if
-
-         iran = floor(dran * huge(n))
-      end subroutine random_ints
 
       subroutine gautrg(gran, nran, iseed)
 !     DH WARNING: initialiazation from gautrg and vranf are different
@@ -784,3 +614,190 @@ module mod_random
       end subroutine rsavef
            
 end module mod_random
+
+module mod_prng_init
+   use mod_const, only: DP
+   use mod_files, only: stdout, stderr
+   ! We initialize our PRNG via call to gautrg
+   ! with optional seed parameter.
+   use mod_random, only: gautrg
+   ! TODO: Remove this dependency
+   use mod_random, only: vranf
+   implicit none
+   private
+   public    :: initialize_prng
+
+contains
+
+   ! PRNG INITIALIZATION
+   ! We want the simulations to be repeatable so we ask the user
+   ! to provide a single random seed. Single random seed is all we need
+   ! to initialize our PRNG implemented in the vranf routine in mod_random.
+   ! 
+   ! Things get complicated for REMD, where we need to initialize
+   ! nreplica independent prngs. But we still only want a single seed
+   ! from the user, and we want repeatability.
+   ! To that end, we use a standard fortran random_number() subroutine
+   ! to generate additional random seeds from a single random seeds.
+   ! To make things deterministic, random_number() itself needs to be seeded
+   ! by a call to random_seed().
+   ! Here's the kicker: random_seed() in general requires an array of seeds :-(
+   ! https://gcc.gnu.org/onlinedocs/gcc-4.9.4/gfortran/RANDOM_005fSEED.html#RANDOM_005fSEED
+   ! 
+   ! We solve this in a roundabout way: First initialize vranf,
+   ! use it to generate random seeds for random_seed(), and then
+   ! use random_number() to generate new seeds, and finally reseed vranf.
+   ! Not great, hopefully not terrible.
+   subroutine initialize_prng(seed, mpi_rank, testing_mode)
+      integer, intent(inout) :: seed
+      integer, intent(in) :: mpi_rank
+      logical, intent(in) :: testing_mode
+      integer :: irans(mpi_rank + 1)
+      real(DP) :: drans(1)
+
+      write (stdout, *) 'Initializing pseudo-random number generator'
+
+      ! If the user does not provide the seed, or provides negative one,
+      ! we will determine it automatically. Note that the seed is
+      ! passed back so that it can be printed in init.F90
+      if (seed <= 0) then
+         seed = get_random_seed()
+         if (mpi_rank > 0) then
+            write (*, '(A,I0,A,I0)') 'MPI rank = ', mpi_rank, ' Seed = ', seed
+         else 
+            write (stdout, '(A,I0,A,I0)') 'MPI rank = ', mpi_rank, ' Seed = ', seed
+         end if
+      end if
+
+      ! Initialize pseudo-random number generator.
+      ! This call has to happen before we read restart file
+      ! to allocate internal arrays.
+      ! If we are restarting, the PRNG state initialized here is overwritten.
+      call gautrg(drans, 0, seed)
+
+      ! Generate different random number seeds for different MPI processes.
+      if (mpi_rank > 0) then
+         ! NOTE: initialize_random_ints relies on vranf!
+         call initialize_random_ints(testing_mode)
+         call random_ints(irans, mpi_rank, testing_mode)
+         seed = irans(mpi_rank)
+         ! re-seed the prng
+         call gautrg(drans, 0, seed)
+      end if
+   end subroutine
+
+   ! If the user doesn't provide initial random seed via
+   ! 'irandom' variable in the input file, we will take it
+   ! from unix kernel via /dev/urandom.
+   ! https://linux.die.net/man/4/urandom
+   !
+   ! Code taken from:
+   ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
+   !
+   ! For REMD, this will make the seed unique for each replica.
+   ! Unfortunatelly, we don't currently provide a way for a user
+   ! to set custom seed for each replica separately, so the approach
+   ! used here makes the REMD simulations non-repeatable.
+   ! To have repeatable REMD simulations, user should provide irandom
+   ! in the input file such that this function is not called.
+   integer function get_random_seed() result(seed)
+      integer :: un, istat
+      integer :: getpid, pid
+      integer, dimension(8) :: dt
+      integer :: t
+
+      open (newunit=un, file="/dev/urandom", access="stream", &
+         & form="unformatted", action="read", status="old", iostat=istat)
+      if (istat == 0) then
+         write (stdout, *) 'Getting random seed from /dev/urandom'
+         read(un) seed
+         close(un)
+         seed = iabs(seed)
+      else
+         write (stdout, *) 'Could not open /dev/urandom'//new_line('A')//&
+            & 'Using date and time to get random seed'
+         ! Fallback to XOR:ing the current time and pid. The PID is
+         ! useful in case one launches multiple instances of the same
+         ! program in parallel.
+         call date_and_time(values=dt)
+         ! Seconds of Unix time
+         ! NOTE: We are allowing the integer overflow here.
+         ! We could make t type be int64, but that would produce
+         ! compiler warning. The likelihood of this code be actually
+         ! used is low (/dev/urandom should always be available in most unix systems)
+         ! so it is fine, better to have clean compilation.
+         ! Hence, t is negative, and not the current unix time. :-(
+         t = (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 &
+              + dt(2) * 31 * 24 * 60 * 60 * 1000 &
+              + dt(3) * 24 * 60 * 60 * 1000 &
+              + dt(5) * 60 * 60 * 1000 &
+              + dt(6) * 60 * 1000 + dt(7) * 1000 &
+              + dt(8)
+         pid = getpid()
+         seed = ieor(t, int(pid, kind(t)))
+         seed = abs(seed)
+      end if
+   end function
+
+   ! TODO: Test this!
+   ! Not sure how to correctly do this to make all this deterministic,
+   ! since the 'seed' here is an array, see:
+   ! https://stackoverflow.com/questions/51893720/correctly-setting-random-seeds-for-repeatability
+   subroutine initialize_random_ints(testing_mode)
+      logical, intent(in) :: testing_mode
+      integer, allocatable :: seeds(:)
+      real(DP), allocatable :: drans(:)
+      integer :: n
+
+      if (testing_mode) return
+
+      call random_seed(size=n)
+      allocate (seeds(n))
+      allocate (drans(n))
+
+      ! TODO: Use lcg below instead of vranf
+      call vranf(drans, n)
+      seeds = floor(drans * huge(n))
+
+      call random_seed(put=seeds)
+   end subroutine initialize_random_ints
+
+   ! TODO: Test this!
+   ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
+   ! NOTE: If we ever need random integers in other parts of ABIN,
+   ! we can make this subroutine public.
+   subroutine random_ints(iran, n, testing_mode)
+      integer, intent(out) :: iran(:)
+      integer, intent(in) :: n
+      logical, intent(in) :: testing_mode
+      real(DP) :: dran(n)
+
+      call random_number(dran)
+
+      if (testing_mode) then
+         write (stderr, *) 'WARNING: PRNG TESTING MODE!'
+         ! TODO: Use lcg function below
+         call vranf(dran, n)
+      end if
+
+      iran = floor(dran * huge(n))
+   end subroutine random_ints
+
+   ! This simple PRNG might not be good enough for real work, but is
+   ! sufficient for seeding a better PRNG.
+   ! Taken from:
+   ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
+   integer function lcg(s)
+      use, intrinsic :: iso_fortran_env, only: int64
+      integer(int64) :: s
+
+      if (s == 0) then
+         s = 104729
+      else
+         s = mod(s, 4294967296_int64)
+      end if
+      s = mod(s * 279470273_int64, 4294967291_int64)
+      lcg = int(mod(s, int(huge(0), int64)), kind(0))
+   end function lcg
+
+end module mod_prng_init
