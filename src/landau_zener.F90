@@ -507,7 +507,7 @@ contains
 
       write (fileunit, *) istate_lz
       do ist = 1, nstate_lz
-         write (fileunit, *) en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3)
+         write (fileunit, '(3ES25.16E3)') en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3)
       end do
 
    end subroutine lz_restout
