@@ -1,0 +1,62 @@
+! Testing pseudo-random number generator implemented in random.F90
+module test_prng
+   use funit
+   use mod_const, only: DP
+   use mod_files, only: stdout_to_devnull, reset_stdout
+   use mod_random
+   implicit none
+   save
+
+contains
+
+   @before
+   subroutine setup()
+      call stdout_to_devnull()
+   end subroutine setup
+
+   @after
+   subroutine teardown()
+      call reset_stdout()
+   end subroutine teardown
+
+   @test
+   subroutine test_prng_errors()
+      real(DP) :: ran(1)
+
+      ! Calling prngs before initialization causes error
+      call vranf(ran, 1)
+      @assertExceptionRaised('Incorrect initialization in vranf')
+
+      ! TODO: This results in FPE
+      !call gautrg(ran, 1)
+      !@assertExceptionRaised('Incorrect initialization in vranf')
+
+      call vranf(ran, 0, -10)
+      @assertExceptionRaised('Random number seed must be a positive integer!')
+
+      call gautrg(ran, 0, -10)
+      @assertExceptionRaised('Random number seed must be a positive integer!')
+   end subroutine
+
+   @test
+   subroutine test_prng_init()
+      integer :: irandom = 472890098
+      real(DP) :: rn1(10), rn2(10)
+
+      call initialize_prng(seed=irandom, mpi_rank=0, testing_mode=.false.)
+      call vranf(rn1, 10)
+
+      ! Reinitializing the prng should produce the same sequence
+      call initialize_prng(seed=irandom, mpi_rank=0, testing_mode=.false.)
+      call vranf(rn2, 10)
+
+      @assertEqual(rn1, rn2)
+
+      ! Different random seed should produce different sequence
+      irandom = irandom + 1
+      call initialize_prng(seed=irandom, mpi_rank=0, testing_mode=.false.)
+      call vranf(rn2, 10)
+      @assertNotEqual(rn1, rn2)
+   end subroutine
+
+end module test_prng
