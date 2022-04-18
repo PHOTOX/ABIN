@@ -112,7 +112,6 @@ module mod_random
       real(DP) :: fac, trig
       real(DP) :: tiny, twopi, pi4
       integer :: i, newran
-!     save isave,gsave,tiny,twopi,pi4,scf,ccf
       save tiny,twopi,pi4,scf,ccf
 !     data isave/-1/
 
@@ -584,10 +583,10 @@ module mod_random
          integer :: i
 
          write (uout,'(A)') chprng
-         write (uout, *) init, last
-         write (uout, *) isave, gsave
+         write (uout, '(I0,X,I0)') init, last
+         write (uout, '(I0,X,ES24.16E3)') isave, gsave
          do i = 1, np
-            write (uout, *) x(i)
+            write (uout, '(ES24.16E3)') x(i)
          end do
       end subroutine write_prng_state
 
