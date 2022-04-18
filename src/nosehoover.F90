@@ -383,7 +383,7 @@ contains
          do inh = 1, nchain
             do iw = 1, nwalk
                do iat = 1, natom
-                  write (u, *) pnhx(iat, iw, inh), pnhy(iat, iw, inh), pnhz(iat, iw, inh)
+                  write (u, '(3ES25.17)') pnhx(iat, iw, inh), pnhy(iat, iw, inh), pnhz(iat, iw, inh)
                end do
             end do
          end do
@@ -393,7 +393,7 @@ contains
          do inh = 1, nchain
             do iw = 1, nwalk
                do iat = 1, nmolt
-                  write (u, *) pnhx(iat, iw, inh)
+                  write (u, '(ES25.17)') pnhx(iat, iw, inh)
                end do
             end do
          end do

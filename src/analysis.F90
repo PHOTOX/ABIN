@@ -298,7 +298,7 @@ contains
 
          do iw = 1, nwalk
             do iat = 1, natom
-               write (urest, *) x(iat, iw), y(iat, iw), z(iat, iw)
+               write (urest, '(3ES25.17)') x(iat, iw), y(iat, iw), z(iat, iw)
             end do
          end do
       end subroutine write_xyz
@@ -432,7 +432,7 @@ contains
 
          do iw = 1, nwalk
             do iat = 1, natom
-               read (urest, *) x(iat, iw), y(iat, iw), z(iat, iw)
+               read (urest, '(3ES25.17)') x(iat, iw), y(iat, iw), z(iat, iw)
             end do
          end do
       end subroutine read_xyz
