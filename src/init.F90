@@ -193,6 +193,9 @@ subroutine init(dt)
       call initialize_terachem_interface(trim(tc_server_name))
    end if
 
+   ! Initialize pseudo-random number generator
+   call initialize_prng(seed=irandom, mpi_rank=my_rank, testing_mode=testing_mode)
+
    if (mdtype /= '') then
       mdtype = tolower(mdtype)
       select case (mdtype)
@@ -424,10 +427,6 @@ subroutine init(dt)
    if (pot == '_mmwater_' .or. pot_ref == '_mmwater_') then
       call check_water(natom, names)
    end if
-
-   ! Initialize pseudo-random number generator
-   ! TODO: move this up in the init
-   call initialize_prng(irandom, my_rank, testing_mode)
 
    ! Initialize thermostat
    if (inose == 1) then

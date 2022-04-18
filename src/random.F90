@@ -52,7 +52,8 @@ module mod_random
 !     parameter (np=2281,nq=715)
 !     parameter (np=4423,nq=1393)
       use mod_const, only: DP
-      use mod_utils, only: abinerror
+      use mod_error, only: fatal_error
+      use mod_files, only: stdout, stderr
       private
       public    :: initialize_prng
       public    :: gautrg, vranf, rsavef
@@ -142,7 +143,7 @@ module mod_random
          call random_number(dran)
 
          if (testing_mode) then
-            write (*, *) 'WARNING: PRNG TESTING MODE!'
+            write (stderr, *) 'WARNING: PRNG TESTING MODE!'
             call vranf(dran, n)
          end if
 
@@ -224,10 +225,11 @@ module mod_random
         twopi=pi4*8
       end if
 
-      if(present(iseed))then
-         if(iseed.le.0)then
-            write(*,*)'ERROR: Random number seed must be a positive non-zero integer!'
-            call abinerror('gautrg')
+      if (present(iseed)) then
+         if (iseed < 0) then
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Random number seed must be a positive integer!')
+            return
          end if
          call vranf(gran, 0, iseed)
       end if
@@ -345,24 +347,23 @@ module mod_random
       real(DP) :: x1, x2, x3, x4
       integer :: i, j, k, left, loop, limit
 
-
-      if(present(iseed))then
-         if(iseed.le.0)then
-            write(*,*)'ERROR: Random number seed must be a positive non-zero integer!'
-            call abinerror('vranf')
+      if (present(iseed)) then
+         if (iseed <= 0) then
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Random number seed must be a positive integer!')
+            return
          end if
          ! table initialization by xuinit
-         call xuinit(x,np,nq,0,nexec,iseed,init,last)
+         call xuinit(x, np, nq, 0, nexec, iseed, init, last)
       end if
 
-!      fibonacci generator updates elements of x in a cyclic fashion
-!      and copies them into ranv in blocks of max. length np.
-!      loop split into chunks of max. length nq to avoid recurrence.
-!      unrolling improves performance on superscalar machines.
+      !  fibonacci generator updates elements of x in a cyclic fashion
+      !  and copies them into ranv in blocks of max. length np.
+      !  loop split into chunks of max. length nq to avoid recurrence.
+      !  unrolling improves performance on superscalar machines.
 
-
-      if(nran.gt.0) then
-        if(init.ne.0) then
+      if (nran.gt.0) then
+        if (init.ne.0) then
           j=0
           left=nran
    10     continue
@@ -481,11 +482,11 @@ module mod_random
           left=nran-j
           if(left.gt.0) goto 10
         else
-          write(*,*)'ERROR: incorrect initialization in vranf'
-          call abinerror('vranf')
+           call fatal_error(__FILE__, __LINE__, &
+              & 'Incorrect initialization in vranf')
+           return
         end if
       end if
-      return
       end subroutine vranf
 
 !-----------------------------------------------------------------------
@@ -522,15 +523,18 @@ module mod_random
       integer :: ix, i, k1, j
       logical :: high
 
-      if(nq.ge.np.or.iseed.eq.0) then
-        write(*,*)'illegal seed parameter(s) in xuinit'
-        call abinerror('xuinit')
-      else
+      if (nq >= np .or. iseed == 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Illegal seed parameter(s) in xuinit')
+         return
+      end if
 
-!     set table to zero and exercise the bit generator a little
+      ! set table to zero and exercise the bit generator a little
 
-      ix=iabs(iseed)
-      if(ix.ne.0) then
+      ix = iabs(iseed)
+      ! TODO: This if seems to be redundant, we guard agains
+      ! zero seed above
+      if (ix.ne.0) then
         do i=1,np
           x(i)=zero
           k1=ix/ib
@@ -538,13 +542,13 @@ module mod_random
           if(ix.lt.0) ix=ix+ip
         end do
 
-!       assemble np numbers with mantissa length nbit from random bits
-!      'high' toggle compensates for bias from odd ip
+        !  assemble np numbers with mantissa length nbit from random bits
+        ! 'high' toggle compensates for bias from odd ip
 
         high=.true.
         do i=1,np
-            add=half
-            do j=1,nbit
+           add=half
+           do j=1,nbit
               k1=ix/ib
               ix=ia*(ix-k1*ib)-k1*ic
               if(ix.lt.0) ix=ix+ip
@@ -556,14 +560,14 @@ module mod_random
                 high=.true.
               end if
               add=add*half
-            end do
-          end do
-          if(nexec.gt.0) call xuwarm(y, np, nq, mode, nbit*nexec)
-        end if
-        init=ix
-        last=0
+           end do
+        end do
+
+        if(nexec.gt.0) call xuwarm(y, np, nq, mode, nbit*nexec)
+
       end if
-      return
+      init=ix
+      last=0
       end subroutine xuinit
 
 !-----------------------------------------------------------------------
@@ -589,9 +593,10 @@ module mod_random
       integer, intent(in) :: mode, nexec, np, nq
       integer :: i, k
 
-      if(nq.ge.np.or.np.eq.0.or.nq.eq.0) then
-        write(*,*)'ERROR: illegal table parameter(s)'
-        call abinerror('xuwarm')
+      if (nq.ge.np.or.np.eq.0.or.nq.eq.0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Illegal table parameter(s) in xuwarm')
+         return
       else
 
 !      exercise the generator for nexec rounds of np prn's
@@ -625,7 +630,7 @@ module mod_random
       end subroutine xuwarm
 
 
-      FUNCTION R1MACH()
+      function R1MACH()
       real(DP), parameter :: ONE=1.D0, TWO=2.D0, HALF=0.5D0
       real(DP) :: R1MACH
       real(DP) :: eps
@@ -650,11 +655,9 @@ module mod_random
       RETURN
       END FUNCTION R1MACH
 
-
-!     ROUTINE RSAVEF, reads or writes the state of the generator
+      ! ROUTINE RSAVEF, reads or writes the state of the generator
       subroutine rsavef(iout, lread)
-         use mod_utils, only: abinerror
-         integer,intent(in) :: iout  !where do we write the state
+         integer,intent(in) :: iout  ! file unit where we write the state
 !         integer,intent(in) :: isave !0=read,1=save
          logical,intent(out),optional :: lread
          character(len=*),parameter   :: chprng='PRNG STATE (OPTIONAL)'
@@ -662,38 +665,39 @@ module mod_random
          integer            :: iost,i
          logical            :: lexist,lopened
 
-         if(present(lread)) lread=.false.
+         if (present(lread)) lread=.false.
 
-         inquire(unit=iout,exist=lexist,opened=lopened)
-         if(lexist.and..not.lopened)then
-            write(*,*)'Unit for PRNG state must be opened! Exiting...'
-            call abinerror('rsavef')
+         inquire (unit=iout, exist=lexist, opened=lopened)
+         if(lexist .and. .not. lopened) then
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Unit for reading/writing PRNG state not opened')
+            return
          end if
 
-         if (present(lread))then
-            read(iout,'(A)',iostat=iost)readstring
-            if(iost /= 0)then
-               write(*,*)'PRNG state not present in restart.xyz. Ignoring...'
-               write(*,*)'Random seed from input parameter file will be used.'
-            else if (chprng.ne.trim(readstring)) then
-               write(*,*)'ERROR: PRNG STATE IN RESTART FILE SEEMS TO BE BROKEN.'
-               write(*,*)'Expected:',chprng
-               write(*,*)'Got',readstring
-               call abinerror('rsavef')
+         if (present(lread)) then
+            read (iout, '(A)', iostat=iost) readstring
+            if (iost /= 0) then
+               write (stderr, *) 'WARNING: PRNG state not present in restart.xyz'
+               write (stderr, *) 'Random seed from input file will be used.'
+            else if (chprng /= trim(readstring)) then
+               write (*,*) 'Expected: ', chprng
+               write (*,*) 'Got: ', readstring
+               call fatal_error(__FILE__, __LINE__, &
+                  & 'PRNG STATE IN RESTART FILE SEEMS TO BE BROKEN.')
             else
-               read(iout,*)init,last
-               read(iout,*)isave,gsave
-               do i=1,np
-                  read(iout,*)x(i)
+               read (iout, *) init, last
+               read (iout, *) isave, gsave
+               do i = 1, np
+                  read (iout, *) x(i)
                end do
                lread=.true.
             end if
          else
-            write(iout,'(A)')chprng
-            write(iout,*)init,last
-            write(iout,*)isave,gsave
-            do i=1,np
-               write(iout,*)x(i)
+            write (iout,'(A)')chprng
+            write (iout, *) init, last
+            write (iout, *) isave, gsave
+            do i = 1, np
+               write (iout, *) x(i)
             end do
          end if
       end subroutine rsavef
