@@ -14,10 +14,9 @@ rem_comrot=.true.       ! this is a default value, remove rotations at the begin
 &general
 conatom=1
 nproc=1
-nstep=10,
+nstep=1,
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
 idebug=1
-iknow=0
 
 pot='_mmwater_'		
 mdtype='MD',		! classical MD

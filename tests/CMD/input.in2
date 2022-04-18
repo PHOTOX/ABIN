@@ -4,33 +4,20 @@
 
 &general
 iknow=1
-nstep=20,
-irest=1,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
-idebug=0
+nstep=2,
+irest=1,
 
-pot='_mmwater_'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
-ipimd=0,		!classical simulation 0, quantum simulation 1
-nwalk=1,		!number of random walkers 
-imini=10000,		!equilibration period,!not properly implemented yet
-istage=0,		!staging transformation (1), without staging (0)
+pot='_mmwater_'
+ipimd=0,
+imini=10000,
 
-dt=20.,			!number of steps and timestep
-irandom=131313,  	!random seed
+dt=20.,
+irandom=131313,
 
-nwrite=1,		! how often some output should be printed (estimators etc.)
-nwritex=1,		! how often should we print coordinates?
-nrest=1,		! how often we print restart files?
-
-isbc=0,			! spherical boundary conditions
-rb_sbc=10.9d0,              ! radius of the cluster for sbc
-kb_sbc=0.1d0,		! force constant for spherical potential,in A
-
-icv=0,			! do we compute heat capacities? meaningfull only with hessian
-ihess=0,		! do we have hessian?
-anal_ext=0,		! do we call user-defined function analyze_ext?
-natom=3,		!number of atoms
+nwrite=1,
+nwritex=1,
+nrest=1,
 /
-
 
 &nhcopt
 inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
@@ -39,4 +26,3 @@ tau0=0.0015
 nrespnose=3
 nyosh=1
 /
-
