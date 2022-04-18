@@ -29,6 +29,6 @@ subroutine print_compile_info()
    write (stdout, *)
 
    write (stdout, *) 'This program was compiled by '//compiler_version()
-   write (stdout, *) 'using the compiler options:'
+   write (stdout, *) 'using the following compiler options:'
    write (stdout, *) compiler_options()
 end subroutine print_compile_info

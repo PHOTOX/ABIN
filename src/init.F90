@@ -74,6 +74,9 @@ subroutine init(dt)
    real(DP), allocatable :: masses(:)
    integer ::  iw, iat, natom_xyz, iost
    integer :: shiftdihed
+   ! Random number seed
+   ! Negative value means we get the seed from /dev/urandom
+   integer :: irandom = -1
    ! Number of OpenMP processes, read from ABIN input
    ! WARNING: We do NOT use OMP_NUM_THREADS environment variable!
    integer :: nproc
@@ -194,9 +197,6 @@ subroutine init(dt)
       call initialize_terachem_interface(trim(tc_server_name))
    end if
 
-   ! Initialize pseudo-random number generator
-   call initialize_prng(seed=irandom, mpi_rank=my_rank, testing_mode=testing_mode)
-
    if (mdtype /= '') then
       mdtype = tolower(mdtype)
       select case (mdtype)
@@ -228,6 +228,9 @@ subroutine init(dt)
    end if
 
    call print_basic_info()
+
+   ! Initialize pseudo-random number generator
+   call initialize_prng(seed=irandom, mpi_rank=my_rank, testing_mode=testing_mode)
 
    ! Get number of atoms from XYZ coordinates NOW so that we can allocate arrays
 
