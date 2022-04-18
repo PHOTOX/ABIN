@@ -114,7 +114,7 @@ def parse_diff(fname, absolute_tolerance):
 
 
 if __name__ == '__main__':
-   absolute_tolerance = 1e-15
+   absolute_tolerance = 2e-15
    # If an individual test needs a higher tolerance, it can do so
    # by specifying the exponent in file "NUM_THRE" in the test folder.
    # For example, NUM_THRE containing "3" will set tolerance = 1e-3

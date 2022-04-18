@@ -630,7 +630,7 @@ contains
                   write (500, *) natom
                   write (500, *) ''
                   do iat = 1, natom
-                     write (500, *) names(iat), x(iat, 1) / ANG, y(iat, 1) / ANG, z(iat, 1) / ANG
+                     write (500, '(A,3ES25.16E3)') names(iat), x(iat, 1) / ANG, y(iat, 1) / ANG, z(iat, 1) / ANG
                   end do
                   close (500)
                end if
