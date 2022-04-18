@@ -704,6 +704,7 @@ contains
       integer :: un, istat
       integer :: getpid, pid
       integer, dimension(8) :: dt
+      integer(int64) :: rate
       integer(int64) :: t
 
       open (newunit=un, file="/dev/urandom", access="stream", &
@@ -714,19 +715,23 @@ contains
          close(un)
          seed = iabs(seed)
       else
-         write (stdout, *) 'Could not open /dev/urandom'//new_line('A')//&
-            & 'Using date and time to get random seed'
          ! Fallback to XOR:ing the current time and pid. The PID is
          ! useful in case one launches multiple instances of the same
          ! program in parallel.
-         call date_and_time(values=dt)
-         ! Seconds of Unix time
-         t = (dt(1) - 1970) * 365_int64 * 24 * 60 * 60 * 1000 &
-            + dt(2) * 31_int64 * 24 * 60 * 60 * 1000 &
-            + dt(3) * 24_int64 * 60 * 60 * 1000 &
-            + dt(5) * 60 * 60 * 1000 &
-            + dt(6) * 60 * 1000 + dt(7) * 1000 &
-            + dt(8)
+         write (stdout, *) 'Could not open /dev/urandom'//new_line('A')//&
+            & 'Using date and time to get random seed'
+         ! https://gcc.gnu.org/onlinedocs/gfortran/SYSTEM_005fCLOCK.html
+         call system_clock(count=t, count_rate=rate)
+         if (rate == 0) then
+            call date_and_time(values=dt)
+            ! Seconds of Unix time
+            t = (dt(1) - 1970) * 365_int64 * 24 * 60 * 60 * 1000 &
+               + dt(2) * 31_int64 * 24 * 60 * 60 * 1000 &
+               + dt(3) * 24_int64 * 60 * 60 * 1000 &
+               + dt(5) * 60 * 60 * 1000 &
+               + dt(6) * 60 * 1000 + dt(7) * 1000 &
+               + dt(8)
+         end if
          pid = getpid()
          seed = int(ieor(t, int(pid, kind(t))))
          seed = abs(seed)
