@@ -363,6 +363,7 @@ module mod_random
       !  unrolling improves performance on superscalar machines.
 
       if (nran.gt.0) then
+         ! TODO: Move this if condition to an early return
         if (init.ne.0) then
           j=0
           left=nran
@@ -563,9 +564,12 @@ module mod_random
            end do
         end do
 
-        if(nexec.gt.0) call xuwarm(y, np, nq, mode, nbit*nexec)
+        if (nexec > 0) then
+           call xuwarm(y, np, nq, mode, nbit*nexec)
+        end if
 
       end if
+
       init=ix
       last=0
       end subroutine xuinit
