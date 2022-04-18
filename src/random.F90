@@ -616,16 +616,15 @@ module mod_random
 end module mod_random
 
 module mod_prng_init
+   use, intrinsic :: iso_fortran_env, only: int64
    use mod_const, only: DP
    use mod_files, only: stdout, stderr
    ! We initialize our PRNG via call to gautrg
    ! with optional seed parameter.
    use mod_random, only: gautrg
-   ! TODO: Remove this dependency
-   use mod_random, only: vranf
    implicit none
    private
-   public    :: initialize_prng
+   public :: initialize_prng
 
 contains
 
@@ -636,6 +635,7 @@ contains
    ! 
    ! Things get complicated for REMD, where we need to initialize
    ! nreplica independent prngs. But we still only want a single seed
+   !
    ! from the user, and we want repeatability.
    ! To that end, we use a standard fortran random_number() subroutine
    ! to generate additional random seeds from a single random seeds.
@@ -643,11 +643,12 @@ contains
    ! by a call to random_seed().
    ! Here's the kicker: random_seed() in general requires an array of seeds :-(
    ! https://gcc.gnu.org/onlinedocs/gcc-4.9.4/gfortran/RANDOM_005fSEED.html#RANDOM_005fSEED
-   ! 
-   ! We solve this in a roundabout way: First initialize vranf,
-   ! use it to generate random seeds for random_seed(), and then
-   ! use random_number() to generate new seeds, and finally reseed vranf.
-   ! Not great, hopefully not terrible.
+   ! We solve this by using a very simple PRNG that only requires single random seed.
+   !
+   ! We also allow the user to not provide a seed at all (or provide negative seed),
+   ! in which case we determine it from /dev/urandom.
+   ! We print it to the output so that the simulation can be exactly repeated if needed.
+   ! (in this case repeatability is not possible for REMD).
    subroutine initialize_prng(seed, mpi_rank, testing_mode)
       integer, intent(inout) :: seed
       integer, intent(in) :: mpi_rank
@@ -669,21 +670,19 @@ contains
          end if
       end if
 
-      ! Initialize pseudo-random number generator.
-      ! This call has to happen before we read restart file
-      ! to allocate internal arrays.
-      ! If we are restarting, the PRNG state initialized here is overwritten.
-      call gautrg(drans, 0, seed)
+      call initialize_fortran_prng(seed)
 
       ! Generate different random number seeds for different MPI processes.
       if (mpi_rank > 0) then
-         ! NOTE: initialize_random_ints relies on vranf!
-         call initialize_random_ints(testing_mode)
          call random_ints(irans, mpi_rank, testing_mode)
          seed = irans(mpi_rank)
-         ! re-seed the prng
-         call gautrg(drans, 0, seed)
       end if
+
+      ! Initialize our custom pseudo-random number generator.
+      ! This call has to happen before we read the restart file,
+      ! to allocate internal arrays.
+      ! If we are restarting, the PRNG state initialized here is overwritten.
+      call gautrg(drans, 0, seed)
    end subroutine
 
    ! If the user doesn't provide initial random seed via
@@ -739,47 +738,52 @@ contains
       end if
    end function
 
-   ! TODO: Test this!
-   ! Not sure how to correctly do this to make all this deterministic,
-   ! since the 'seed' here is an array, see:
+   ! Initializing PRNG subroutine random_number() defined in Fortran standard
    ! https://stackoverflow.com/questions/51893720/correctly-setting-random-seeds-for-repeatability
-   subroutine initialize_random_ints(testing_mode)
-      logical, intent(in) :: testing_mode
+   subroutine initialize_fortran_prng(user_seed)
+      integer, intent(in) :: user_seed
       integer, allocatable :: seeds(:)
-      real(DP), allocatable :: drans(:)
-      integer :: n
+      integer :: i, seed_size
+      integer(int64) :: s
 
-      if (testing_mode) return
+      call random_seed(size=seed_size)
+      allocate (seeds(seed_size))
 
-      call random_seed(size=n)
-      allocate (seeds(n))
-      allocate (drans(n))
-
-      ! TODO: Use lcg below instead of vranf
-      call vranf(drans, n)
-      seeds = floor(drans * huge(n))
+      ! We're use a simple PRNG defined below for the initial seed state
+      s = int(user_seed, kind(s))
+      do i = 1, seed_size
+         s = lcg(s)
+         seeds(i) = int(s)
+      end do
 
       call random_seed(put=seeds)
-   end subroutine initialize_random_ints
+      ! TODO: Prime the prng by discarding first 100 values
+   end subroutine initialize_fortran_prng
 
-   ! TODO: Test this!
+   ! PRNG for integers, based on random_number()
    ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
    ! NOTE: If we ever need random integers in other parts of ABIN,
    ! we can make this subroutine public.
+   ! WARNING: By design, random_ints() will produce the same sequence
+   ! for each MPI replica, unless the random seed is determined automatically from /dev/urandom
    subroutine random_ints(iran, n, testing_mode)
       integer, intent(out) :: iran(:)
       integer, intent(in) :: n
       logical, intent(in) :: testing_mode
       real(DP) :: dran(n)
-
-      call random_number(dran)
+      integer(int64), save :: s = 0_int64
+      integer :: i
 
       if (testing_mode) then
          write (stderr, *) 'WARNING: PRNG TESTING MODE!'
-         ! TODO: Use lcg function below
-         call vranf(dran, n)
+         do i = 1, n
+            s = lcg(s)
+            iran(i) = int(s)
+         end do
+         return
       end if
 
+      call random_number(dran)
       iran = floor(dran * huge(n))
    end subroutine random_ints
 
@@ -788,7 +792,6 @@ contains
    ! Taken from:
    ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
    integer function lcg(s)
-      use, intrinsic :: iso_fortran_env, only: int64
       integer(int64) :: s
 
       if (s == 0) then
