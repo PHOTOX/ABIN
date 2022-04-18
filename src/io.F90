@@ -1,7 +1,8 @@
 module mod_io
    use mod_const, only: DP
    implicit none
-   ! TODO: Use more descriptive names for these
+   public
+   ! TODO: Move these to individial functions
    character(len=50) :: format1 = '(1I8)', format2 = '(1E12.4)', format3 = '(3E12.4)'
    character(len=50) :: format4 = '(1F8.4)', format5 = '(I8,I3)'
 contains
@@ -76,31 +77,5 @@ contains
       write (UTDIP, *)
 
    end subroutine print_transdipoles
-
-   function read_forces(fx, fy, fz, num_atom, iw, funit) result(iost)
-      real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
-      integer, intent(in) :: iw, funit, num_atom
-      integer :: iat, iost
-
-      iost = 0
-      ! For SH or EH, when we did not calculate forces...
-      ! Needs to be rewritten anyway...
-      if (iw < 1) then
-         return
-      end if
-
-      ! WARNING: We actually expect gradients in the file !
-      do iat = 1, num_atom
-         read (funit, *, IOSTAT=iost) fx(iat, iw), fy(iat, iw), fz(iat, iw)
-         if (iost /= 0) then
-            return
-         end if
-         ! Convert gradients to forces
-         fx(iat, iw) = -fx(iat, iw)
-         fy(iat, iw) = -fy(iat, iw)
-         fz(iat, iw) = -fz(iat, iw)
-      end do
-
-   end function read_forces
 
 end module mod_io

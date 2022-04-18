@@ -662,21 +662,12 @@ module mod_random
       ! ROUTINE RSAVEF, reads or writes the state of the generator
       subroutine rsavef(iout, lread)
          integer,intent(in) :: iout  ! file unit where we write the state
-!         integer,intent(in) :: isave !0=read,1=save
          logical,intent(out),optional :: lread
          character(len=*),parameter   :: chprng='PRNG STATE (OPTIONAL)'
          character(len=50)  :: readstring
          integer            :: iost,i
-         logical            :: lexist,lopened
 
          if (present(lread)) lread=.false.
-
-         inquire (unit=iout, exist=lexist, opened=lopened)
-         if(lexist .and. .not. lopened) then
-            call fatal_error(__FILE__, __LINE__, &
-               & 'Unit for reading/writing PRNG state not opened')
-            return
-         end if
 
          if (present(lread)) then
             read (iout, '(A)', iostat=iost) readstring

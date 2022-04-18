@@ -203,9 +203,9 @@ contains
    subroutine finalize_plumed()
       ! This must be a no-op!
       ! This routine is called from finalize()
-      ! Which is in turn called by abinerror()
-      ! So if we called `not_compiled_with()` here,
-      ! We'd enter an infinite loop!
+      ! which is in turn called by fatal_error()
+      ! If we called `not_compiled_with()` here,
+      ! we'd enter an infinite loop!
    end subroutine finalize_plumed
 
    subroutine force_plumed(x, y, z, fx, fy, fz, eclas)
