@@ -26,7 +26,8 @@ contains
    end subroutine print_help
 
    subroutine get_cmdline(chinput, chcoords, chveloc, tc_server_name)
-      use mod_utils, only: abinerror, file_exists_or_exit
+      use mod_error, only: fatal_error
+      use mod_utils, only: file_exists_or_exit
       character(len=*), intent(inout) :: chinput, chcoords, chveloc, tc_server_name
       character(len=len(chinput)) :: arg
       integer :: i
@@ -65,9 +66,8 @@ contains
             call get_command_argument(i, arg)
             read (arg, '(A)') tc_server_name
          case default
-            write (*, '(A)') 'Invalid command line argument '//arg
             call print_help()
-            call abinerror('get_cmdline')
+            call fatal_error(__FILE__, __LINE__, 'Invalid command line argument')
          end select
 
       end do

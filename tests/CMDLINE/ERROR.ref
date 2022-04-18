@@ -1,2 +1,1 @@
- FATAL ERROR encountered in subroutine: get_cmdline
- Check standard output for further information.
+ERROR in cmdline.F90: Invalid command line argument
