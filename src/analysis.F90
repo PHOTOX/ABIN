@@ -229,7 +229,7 @@ contains
 
       open (newunit=urest, file=chout, action='write')
 
-      write (urest, *) time_step, sim_time
+      write (urest, '(I0,X,ES24.16E3)') time_step, sim_time
 
       write (urest, *) chcoords
       call write_xyz(x, y, z, natom, nwalk, urest)
@@ -432,7 +432,7 @@ contains
 
          do iw = 1, nwalk
             do iat = 1, natom
-               read (urest, '(3ES25.17)') x(iat, iw), y(iat, iw), z(iat, iw)
+               read (urest, '(3ES25.16E3)') x(iat, iw), y(iat, iw), z(iat, iw)
             end do
          end do
       end subroutine read_xyz
