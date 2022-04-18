@@ -8,7 +8,7 @@ nwalk=4,                ! 4 is usually sufficient for PIGLE simulations
 istage=0,               ! for PIGLE, istage must be 0
 nstep=50000,		! number of steps
 dt=20.,			! timestep [au]
-irandom=1651563,  	! random seed
+
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
