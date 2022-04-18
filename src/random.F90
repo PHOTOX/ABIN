@@ -745,6 +745,7 @@ contains
       integer, allocatable :: seeds(:)
       integer :: i, seed_size
       integer(int64) :: s
+      real(DP) :: drans(100)
 
       call random_seed(size=seed_size)
       allocate (seeds(seed_size))
@@ -757,7 +758,8 @@ contains
       end do
 
       call random_seed(put=seeds)
-      ! TODO: Prime the prng by discarding first 100 values
+      ! Prime the prng by discarding first 100 values
+      call random_number(drans)
    end subroutine initialize_fortran_prng
 
    ! PRNG for integers, based on random_number()
