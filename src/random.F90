@@ -55,7 +55,8 @@ module mod_random
       use mod_error, only: fatal_error
       use mod_files, only: stdout, stderr
       private
-      public    :: gautrg, vranf, rsavef
+      public :: gautrg, vranf
+      public :: write_prng_state, read_prng_state
       integer,parameter :: np=1279, nq=418
       real(DP)  :: x(np)
       integer   :: last, init
@@ -63,6 +64,8 @@ module mod_random
       real(DP)  :: gsave
       integer   :: isave = -1
       integer   :: nroll = 1
+      ! For restart file
+      character(len=*), parameter :: chprng='PRNG STATE (OPTIONAL)'
       save
       contains
 
@@ -575,44 +578,46 @@ module mod_random
       RETURN
       END FUNCTION R1MACH
 
-      ! ROUTINE RSAVEF, reads or writes the state of the generator
-      subroutine rsavef(iout, lread)
-         integer,intent(in) :: iout  ! file unit where we write the state
-         logical,intent(out),optional :: lread
-         character(len=*),parameter   :: chprng='PRNG STATE (OPTIONAL)'
-         character(len=50)  :: readstring
-         integer            :: iost,i
+      ! Write PRNG state into opened restart file
+      subroutine write_prng_state(uout)
+         integer, intent(in) :: uout
+         integer :: i
 
-         if (present(lread)) lread=.false.
+         write (uout,'(A)') chprng
+         write (uout, *) init, last
+         write (uout, *) isave, gsave
+         do i = 1, np
+            write (uout, *) x(i)
+         end do
+      end subroutine write_prng_state
 
-         if (present(lread)) then
-            read (iout, '(A)', iostat=iost) readstring
-            if (iost /= 0) then
-               write (stderr, *) 'WARNING: PRNG state not present in restart.xyz'
-               write (stderr, *) 'Random seed from input file will be used.'
-            else if (chprng /= trim(readstring)) then
-               write (*,*) 'Expected: ', chprng
-               write (*,*) 'Got: ', readstring
-               call fatal_error(__FILE__, __LINE__, &
-                  & 'PRNG STATE IN RESTART FILE SEEMS TO BE BROKEN.')
-            else
-               read (iout, *) init, last
-               read (iout, *) isave, gsave
-               do i = 1, np
-                  read (iout, *) x(i)
-               end do
-               lread=.true.
-            end if
+      ! Read PRNG state from opened restart file
+      subroutine read_prng_state(uin)
+         integer, intent(in) :: uin
+         character(len=len(chprng) + 20) :: readstring
+         integer :: i, iost
+
+         read (uin, '(A)', iostat=iost) readstring
+         ! The assumption here is that the PRNG state is at the
+         ! end of the restart file. It is okay if it is missing,
+         ! we simply use the seed from input file.
+         if (iost /= 0) then
+            write (stderr, *) 'WARNING: PRNG state not present in restart.xyz'
+            write (stderr, *) 'Random seed from input file will be used.'
+         else if (chprng /= trim(adjustl(readstring))) then
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Unexpected line in restart file when trying to read prng state.'//&
+               & new_line('a')//'Expected: '//chprng//&
+               & new_line('a')//'Got: '//trim(adjustl(readstring)))
          else
-            write (iout,'(A)')chprng
-            write (iout, *) init, last
-            write (iout, *) isave, gsave
+            read (uin, *) init, last
+            read (uin, *) isave, gsave
             do i = 1, np
-               write (iout, *) x(i)
+               read (uin, *) x(i)
             end do
          end if
-      end subroutine rsavef
-           
+      end subroutine read_prng_state
+
 end module mod_random
 
 module mod_prng_init
