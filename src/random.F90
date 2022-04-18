@@ -689,6 +689,7 @@ contains
    ! 'irandom' variable in the input file, we will take it
    ! from unix kernel via /dev/urandom.
    ! https://linux.die.net/man/4/urandom
+   ! As fallback, we use current date/time and PID.
    !
    ! Code taken from:
    ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
@@ -703,7 +704,7 @@ contains
       integer :: un, istat
       integer :: getpid, pid
       integer, dimension(8) :: dt
-      integer :: t
+      integer(int64) :: t
 
       open (newunit=un, file="/dev/urandom", access="stream", &
          & form="unformatted", action="read", status="old", iostat=istat)
@@ -720,20 +721,14 @@ contains
          ! program in parallel.
          call date_and_time(values=dt)
          ! Seconds of Unix time
-         ! NOTE: We are allowing the integer overflow here.
-         ! We could make t type be int64, but that would produce
-         ! compiler warning. The likelihood of this code be actually
-         ! used is low (/dev/urandom should always be available in most unix systems)
-         ! so it is fine, better to have clean compilation.
-         ! Hence, t is negative, and not the current unix time. :-(
-         t = (dt(1) - 1970) * 365 * 24 * 60 * 60 * 1000 &
-              + dt(2) * 31 * 24 * 60 * 60 * 1000 &
-              + dt(3) * 24 * 60 * 60 * 1000 &
-              + dt(5) * 60 * 60 * 1000 &
-              + dt(6) * 60 * 1000 + dt(7) * 1000 &
-              + dt(8)
+         t = (dt(1) - 1970) * 365_int64 * 24 * 60 * 60 * 1000 &
+            + dt(2) * 31_int64 * 24 * 60 * 60 * 1000 &
+            + dt(3) * 24_int64 * 60 * 60 * 1000 &
+            + dt(5) * 60 * 60 * 1000 &
+            + dt(6) * 60 * 1000 + dt(7) * 1000 &
+            + dt(8)
          pid = getpid()
-         seed = ieor(t, int(pid, kind(t)))
+         seed = int(ieor(t, int(pid, kind(t))))
          seed = abs(seed)
       end if
    end function
