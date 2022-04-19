@@ -1,28 +1,34 @@
-# TESTING basic CMD restart
+# TESTING basic CMD
+# TESTING independence of the order of namelists
+# TESTING atom constraints
+# TESTING removing COM rotations
 # TESTING nyosh = 1
 # TESTING iknow
-
-&general
-iknow=1
-nstep=2,
-irest=1,
-
-pot='_mmwater_'
-ipimd=0,
-imini=10000,
-
-dt=20.,
-irandom=131313,
-
-nwrite=1,
-nwritex=1,
-nrest=1,
-/
-
 &nhcopt
 inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
 temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 tau0=0.0015
 nrespnose=3
-nyosh=1
+nyosh=1                 ! Turn off Suzuki-Yoshida integration scheme (NOT RECOMMENDED!)
+rem_comrot=.true.       ! this is a default value, remove rotations at the beginning
+/
+
+&general
+conatom=1
+nproc=1
+nstep=2,
+irest=1,
+idebug=1
+iknow=1
+
+pot='_mmwater_'		
+mdtype='MD',		! classical MD
+
+dt=20.,			! number of steps and timestep
+irandom=131313,  	! random seed
+
+nwrite=1,
+nwritex=1,
+nrest=1,
+nwritef=1,
 /
