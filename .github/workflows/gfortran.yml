@@ -51,8 +51,6 @@ jobs:
         # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
         key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
 
-    # TODO: We should specify a specific commit in install_pfunit.sh
-    # so that we're not dependent on changes in pFUnit
     - name: Download and build pFUnit
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_pfunit.sh ${HOME}/pfunit
@@ -69,11 +67,12 @@ jobs:
       run: make e2etest
 
     # TODO: Separate unit test coverage
-    - name: Upload code coverage to Codecov
-      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
-      # For debugging purposes, use the locally modified BASH uploader
-      #run:  gcov --version && cd src &&  bash ../.github/codecov_bash_uploader.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
-
+    - name: Codecov upload
+      uses: codecov/codecov-action@v3.0.0
+        name: codecov-umbrella
+        fail_ci_if_error: true
+        verbose: true
+        gcov: true
 
   optimized_build:
     name: Optimized build
@@ -117,19 +116,14 @@ jobs:
     - name: Run End-to-End tests
       run: make e2etest
 
-  # Consider whether this needs to be a separate job
-  # or whether it should be default for all builds
   # Here we just take the defaults everywhere, except turning on FFTW
-  # TODO: We actually need to build our own FFTW for different
-  # GFortran versions
+  # To use FFTW with other Gfortran versions, we would need to build it.
   fftw_build:
-    # NOTE: I tried using `ubuntu-20.04` instead of `ubuntu-latest` which still points to Ubuntu 18.
+    # NOTE: I tried using `ubuntu-20.04` instead of `ubuntu-18.04`.
     # https://github.com/actions/virtual-environments#available-environments
     # However, some tests started to fail, with small numerical differences ~1E-15.
     # Not sure why, since default gfortran on 20.04 is 9.3.0, i.e. the same as we already
     # test above. I tested this with both -O0 and -O2. 
-    # When Github upgrades it's ubuntu-latest image we might run into problems.
-    # We should regenerate our all our tests with GFortran 7 on Neon before that happens.
     runs-on: ubuntu-18.04
     name: FFTW build
     needs: basic_build
