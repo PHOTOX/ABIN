@@ -58,9 +58,8 @@ jobs:
     - name: Codecov upload unit tests
       uses: codecov/codecov-action@v3.0.0
       with:
-        name: unit-tests
+        name: ${{env.CODECOV_NAME}}
         flags: unittests
-        fail_ci_if_error: true
         gcov: true
 
     - name: Run End-to-End tests
@@ -159,6 +158,13 @@ jobs:
 
     - name: Run Unit tests
       run: make unittest
+
+    - name: Codecov upload unit tests
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        flags: unittests
+        gcov: true
 
     - name: Run End-to-End tests
       run: make e2etest
@@ -335,6 +341,13 @@ jobs:
 
     - name: Run Unit tests
       run: make unittest
+
+    - name: Codecov upload unit tests
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        flags: unittests
+        gcov: true
 
     - name: Run End-to-End tests
       run: make e2etest
