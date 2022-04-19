@@ -655,11 +655,11 @@ contains
    ! in which case we determine it from /dev/urandom.
    ! We print it to the output so that the simulation can be exactly repeated if needed.
    ! (in this case repeatability is not possible for REMD).
-   subroutine initialize_prng(seed, mpi_rank, testing_mode)
+   subroutine initialize_prng(seed, mpi_rank)
       integer, intent(inout) :: seed
       integer, intent(in) :: mpi_rank
-      logical, intent(in) :: testing_mode
-      integer :: irans(mpi_rank + 1)
+      integer(int64) :: new_seed
+      integer :: i
       real(DP) :: drans(1)
 
       write (stdout, *) 'Initializing pseudo-random number generator'
@@ -676,13 +676,16 @@ contains
          end if
       end if
 
-      call initialize_fortran_prng(seed)
-
       ! Generate different random number seeds for different MPI processes.
       if (mpi_rank > 0) then
-         call random_ints(irans, mpi_rank, testing_mode)
-         seed = irans(mpi_rank)
+         new_seed = int(seed, kind(new_seed))
+         do i = 1, mpi_rank
+            new_seed = lcg(new_seed)
+         end do
+         seed = int(new_seed, kind(seed))
       end if
+      
+      call initialize_fortran_prng(seed)
 
       ! Initialize our custom pseudo-random number generator.
       ! This call has to happen before we read the restart file,
@@ -768,28 +771,12 @@ contains
       call random_number(drans)
    end subroutine initialize_fortran_prng
 
-   ! PRNG for integers, based on random_number()
+   ! PRNG for integers, based on Fortran standard subroutine random_number()
    ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
-   ! NOTE: If we ever need random integers in other parts of ABIN,
-   ! we can make this subroutine public.
-   ! WARNING: By design, random_ints() will produce the same sequence
-   ! for each MPI replica, unless the random seed is determined automatically from /dev/urandom
-   subroutine random_ints(iran, n, testing_mode)
+   subroutine random_ints(iran, n)
       integer, intent(out) :: iran(:)
       integer, intent(in) :: n
-      logical, intent(in) :: testing_mode
       real(DP) :: dran(n)
-      integer(int64), save :: s = 0_int64
-      integer :: i
-
-      if (testing_mode) then
-         write (stderr, *) 'WARNING: PRNG TESTING MODE!'
-         do i = 1, n
-            s = lcg(s)
-            iran(i) = int(s)
-         end do
-         return
-      end if
 
       call random_number(dran)
       iran = floor(dran * huge(n))

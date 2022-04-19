@@ -6,9 +6,6 @@ mdtype='md'
 nstep=10,
 dt=40.,	
 irandom=131313,
-! To ensure reproducibility of prng accross compilers
-! DO NOT USE IN PRODUCTION !
-testing_mode=.true.
 
 nwrite=1,
 nwritex=1,

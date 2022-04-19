@@ -6,9 +6,6 @@ mdtype='md'
 nstep=5,
 dt=40.,			!number of steps and timestep
 irandom=131313,  	!random seed
-! To ensure reproducibility of prng accross compilers
-! DO NOT USE IN PRODUCTION !
-testing_mode=.true.
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?

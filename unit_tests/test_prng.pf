@@ -44,18 +44,18 @@ contains
       integer :: irandom = 472890098
       real(DP) :: rn1(10), rn2(10)
 
-      call initialize_prng(seed=irandom, mpi_rank=0, testing_mode=.false.)
+      call initialize_prng(seed=irandom, mpi_rank=0)
       call vranf(rn1, 10)
 
       ! Reinitializing the prng should produce the same sequence
-      call initialize_prng(seed=irandom, mpi_rank=0, testing_mode=.false.)
+      call initialize_prng(seed=irandom, mpi_rank=0)
       call vranf(rn2, 10)
 
       @assertEqual(rn1, rn2)
 
       ! Different random seed should produce different sequence
       irandom = irandom + 1
-      call initialize_prng(seed=irandom, mpi_rank=0, testing_mode=.false.)
+      call initialize_prng(seed=irandom, mpi_rank=0)
       call vranf(rn2, 10)
       @assertNotEqual(rn1, rn2)
    end subroutine

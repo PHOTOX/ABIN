@@ -35,7 +35,7 @@ program abin_randomint
 
    call initialize_fortran_prng(seed)
 
-   call random_ints(irans, nran, testing_mode=.false.)
+   call random_ints(irans, nran)
 
    do i = 1, nran
       write (*, '(I0)') irans(i)

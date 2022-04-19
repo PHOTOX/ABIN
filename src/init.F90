@@ -101,7 +101,6 @@ subroutine init(dt)
    character(len=1024) :: tc_server_name
    logical :: file_exists
    logical :: rem_comvel, rem_comrot
-   logical :: testing_mode
    integer :: my_rank, mpi_world_size
 
    ! ABIN input parameters are read from the input file (default 'input.in')
@@ -123,7 +122,7 @@ subroutine init(dt)
       isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_sleep, narchive, xyz_units, &
       dime, ncalc, idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
       en_restraint, en_diff, en_kk, restrain_pot, &
-      pot_ref, nstep_ref, nteraservers, max_wait_time, cp2k_mpi_beads, testing_mode
+      pot_ref, nstep_ref, nteraservers, max_wait_time, cp2k_mpi_beads
 
    namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
 
@@ -239,7 +238,7 @@ subroutine init(dt)
    call print_basic_info()
 
    ! Initialize pseudo-random number generator
-   call initialize_prng(seed=irandom, mpi_rank=my_rank, testing_mode=testing_mode)
+   call initialize_prng(seed=irandom, mpi_rank=my_rank)
 
    ! Get number of atoms from XYZ coordinates NOW so that we can allocate arrays
 
