@@ -128,7 +128,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_const, only: DP
    use mod_general, only: natom, ipimd
    use mod_water, only: watpot
-   use mod_force_mm, only: force_LJ_Coulomb
+   use mod_force_mm, only: force_mm
    use mod_sbc, only: force_sbc, isbc
    use mod_plumed, only: iplumed, force_plumed
    use mod_potentials, only: force_harmonic_rotor, force_harmonic_oscillator, force_morse, force_doublewell
@@ -149,8 +149,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    ! Here we decide which forces we want.
    ! By default we call an external program in force_abin routine
    select case (chpot)
-   case ("mm")
-      call force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas)
+   case ("_mm_")
+      call force_mm(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_mmwater_")
       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
    case ("_splined_grid_")

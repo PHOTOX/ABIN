@@ -81,6 +81,13 @@ pot_EXTRA_USE := throw_with_pfunit_mod
 pot_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,pot))
 
+mm_TESTS := test_mm.pf
+mm_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+mm_OTHER_SRCS := throw_with_pfunit.F90
+mm_EXTRA_USE := throw_with_pfunit_mod
+mm_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,mm))
+
 spline_TESTS := test_spline.pf
 spline_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
 spline_OTHER_SRCS := throw_with_pfunit.F90
@@ -95,7 +102,7 @@ interface_EXTRA_USE := throw_with_pfunit_mod
 interface_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,interface))
 
-all : utils masses plumed fftw terapi gle nhc pot spline interface
+all : utils masses plumed fftw terapi gle nhc pot mm spline interface
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
@@ -109,12 +116,13 @@ test : clean_plumed_output clean_terapi_output clean_gle_output
 	./gle
 	./nhc
 	./pot
+	./mm
 	./spline
 	./interface
 
 clean : clean_plumed_output clean_terapi_output clean_gle_output
 	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 ERROR
-	/bin/rm -f masses utils plumed fftw terapi gle pot spline interface
+	/bin/rm -f masses utils plumed fftw terapi gle pot mm spline interface
 
 clean_plumed_output :
 	/bin/rm -f bck.* plumed_*.dat
