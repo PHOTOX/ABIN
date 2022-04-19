@@ -146,7 +146,7 @@ contains
 
       call force_mm(x, y, z, fx, fy, fz, eclas, NWALK)
       @assertEqual(E_min, eclas, message='zero energy in minimum', tolerance=1E-14)
-      @assertEqual(fzero, fx, message='zero fx in minimum', tolerance=1E-14)
+      @assertEqual(fzero, fx, message='zero fx in minimum', tolerance=1E-13)
       @assertEqual(fzero, fy, 'zero fy in minimum')
       @assertEqual(fzero, fz, 'zero fz in minimum')
    end subroutine
