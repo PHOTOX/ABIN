@@ -55,16 +55,22 @@ jobs:
     - name: Run Unit tests
       run: make unittest
 
+    - name: Codecov upload unit tests
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: unit-tests
+        flags: unittests
+        fail_ci_if_error: true
+        gcov: true
+
     - name: Run End-to-End tests
       run: make e2etest
 
-    # TODO: Separate unit test coverage
     - name: Codecov upload
       uses: codecov/codecov-action@v3.0.0
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        verbose: true
         gcov: true
 
   optimized_build:
@@ -162,7 +168,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        verbose: true
         gcov: true
 
   mpich_build:
@@ -222,7 +227,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        verbose: true
         gcov: true
 
   openmpi_build:
@@ -275,9 +279,7 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        verbose: true
         gcov: true
-
 
   plumed_build:
     name: PLUMED build
@@ -342,5 +344,4 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        verbose: true
         gcov: true
