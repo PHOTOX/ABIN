@@ -278,17 +278,6 @@ contains
       end if
    end subroutine file_exists_or_exit
 
-   function get_formatted_date_and_time(time_data) result(formatted_string)
-      character(len=25) :: formatted_string
-      integer, dimension(8), intent(in) :: time_data
-      formatted_string = ''
-      ! time_data must be get from date_and_time() intrinsic
-      ! e.g. 1:48:39   3.11.2020
-      write (formatted_string, "(I2.2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)") time_data(5), ':', &
-         time_data(6), ':', time_data(7), '  ', time_data(3), '.', time_data(2), '.', &
-         time_data(1)
-   end function get_formatted_date_and_time
-
    real(DP) function ekin_p(px, py, pz, mass, natom, nwalk)
       implicit none
       real(DP), dimension(:, :), intent(in) :: px, py, pz
