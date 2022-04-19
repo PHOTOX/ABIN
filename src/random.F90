@@ -629,6 +629,8 @@ module mod_prng_init
    implicit none
    private
    public :: initialize_prng
+   ! Used in utils/abin-randomint.f90
+   public :: get_random_seed, initialize_fortran_prng, random_ints
 
 contains
 
@@ -687,7 +689,7 @@ contains
       ! to allocate internal arrays.
       ! If we are restarting, the PRNG state initialized here is overwritten.
       call gautrg(drans, 0, seed)
-   end subroutine
+   end subroutine initialize_prng
 
    ! If the user doesn't provide initial random seed via
    ! 'irandom' variable in the input file, we will take it
@@ -740,7 +742,7 @@ contains
          seed = int(ieor(t, int(pid, kind(t))))
          seed = abs(seed)
       end if
-   end function
+   end function get_random_seed
 
    ! Initializing PRNG subroutine random_number() defined in Fortran standard
    ! https://stackoverflow.com/questions/51893720/correctly-setting-random-seeds-for-repeatability

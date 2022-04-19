@@ -67,7 +67,8 @@ contains
             read (arg, '(A)') tc_server_name
          case default
             call print_help()
-            call fatal_error(__FILE__, __LINE__, 'Invalid command line argument')
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Invalid command line argument "'//trim(arg)//'"')
          end select
 
       end do

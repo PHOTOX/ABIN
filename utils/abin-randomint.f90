@@ -1,95 +1,92 @@
-!-------------------------------------
-!- Small utility to generate random integers.
-!- Daniel Hollas, 21.8.2014
-
-! Compile as: gfortran abin-randomint.f90 ../random.f90 -o abin-randomint
-! See subroutine  PrintHelp for more information.
-
+! -------------------------------------
+! A program to generate 32-bit random integers
+! based on fortran intrinsic random_number(),
+! as implemented in ABIN.
+!
+! Can be used to deterministically generate
+! random seeds for a set of trajectories.
+!
+! Compile as:
+! $ gfortran -O2 -fopenmp -I"src/" utils/abin-randomint.f90 -Lsrc/ -labin -Lwater_potentials/ -lwater -lstdc++
+!
+! See subroutine print_help() for more information.
+! -------------------------------------
 program abin_randomint
-use mod_random
-implicit none
-integer              :: iseed0, iseed1, nran, i
-real                 :: x = 0.0
-integer              :: iout = 6, iran
-real*8, allocatable  :: ranv(:)
-integer              :: imax = 2147483647 !maximum default integer on most systems
-   ! seed should be set to a large odd integer according to the manual
-   iseed1 = 7654321
-   ! secnds(x) gives number of seconds-x elapsed since midnight
+   use mod_files, only: stdout_to_devnull
+   use mod_prng_init, only: initialize_fortran_prng, random_ints, get_random_seed
+   implicit none
+   integer :: seed = -1, nran = 1
+   integer, allocatable :: irans(:)
+   integer :: i, u
 
-   call Get_cmdline(iseed0, nran, imax)
+   call get_cmdline(seed, nran)
 
+   call stdout_to_devnull()
 
-   ! When iseed < 0, take iseed randomly based on current time in seconds
-   if ( iseed0 < 0 )then
-      ! the 2*int(secnds(x)) is always even (int=gives integer) so seed is always odd
-      iseed1 = iseed1+2*int(secnds(x))
-   else
-      iseed1 = iseed0
+   if (seed <= 0) then
+      seed = get_random_seed()
    end if
 
-   open(100,file="iseed0",action="write")
-   write(100,*)iseed1
-   close(100)
+   open (newunit=u, file="iseed0", action="write")
+   write (u, '(I0)') seed
+   close (u)
 
-   allocate( ranv(nran) )
+   allocate (irans(nran))
 
-   call vranf(ranv,nran,iseed1,iout)
+   call initialize_fortran_prng(seed)
 
-   do i=1,nran
-      ranv(i)=ranv(i)*imax
-      iran=nint( ranv(i) )
-      write(*,*)iran
+   call random_ints(irans, nran, testing_mode=.false.)
+
+   do i = 1, nran
+      write (*, '(I0)') irans(i)
    end do
+end program
 
-   deallocate (ranv)
-
-end
-
-subroutine Get_cmdline(iseed0, nran, imax)
-implicit none
-integer,intent(out)  :: iseed0, nran
-integer, intent(inout) :: imax
-character(len=100)   :: arg
-integer              :: i, cac
+subroutine get_cmdline(iseed, nran)
+   use, intrinsic :: iso_fortran_env, only: ERROR_UNIT
+   implicit none
+   integer, intent(inout) :: iseed, nran
+   character(len=300) :: arg
+   integer :: i
 
    i = 0
-   cac = command_argument_count()
-   if ( cac.lt.2.or.cac.gt.3)then
-      call PrintHelp()
-      call PrintInputError()
-   end if
+   do while (i < command_argument_count())
 
-   call get_command_argument(1, arg)
-   read(arg,*)iseed0
+      i = i + 1
+      call get_command_argument(i, arg)
 
-   call get_command_argument(2, arg)
-   read(arg,*)nran
+      select case (arg)
+      case ('-h', '--help')
+         call print_help()
+         stop 0
+      case ('-s', '--seed')
+         i = i + 1
+         call get_command_argument(i, arg)
+         read (arg, '(I10)') iseed
+      case ('-n', '--num')
+         i = i + 1
+         call get_command_argument(i, arg)
+         read (arg, '(I10)') nran
+      case default
+         call print_help()
+         print*,''
+         write (ERROR_UNIT, *) 'ERROR: Invalid command line option "'//trim(arg)//'"'
+         stop 1
+      end select
 
-   if (cac.eq.3)then
-      call get_command_argument(3, arg)
-      read(arg,*)imax
-   end if
+   end do
+end subroutine get_cmdline
 
-end subroutine Get_cmdline
-
-subroutine PrintHelp()
-implicit none
-    print '(a)', 'Program for generating random integers from interval [0,imax).'
-    print '(a)', 'It is based on substractive lagged fibonacci PRNG implemented by M. Lewerence.'
-    print '(a)', 'USAGE: ./abin-randomint <seed> <n_ran> [<imax>]'
-    print '(a)', ''
-    print '(a)', 'Without cmdline options, this help is printed.'
-    print '(a)', ''
-    print '(a)', 'cmdline options: ( They must be in correct order!)'
-    print '(a)', ''
-    print '(a)', '  <seed>    random seed to initialize the PRNG.' 
-    print '(a)', '            If negative, we use seed based on current time.' 
-    print '(a)', '  <n_ran>   How many random numbers to generate?' 
-    print '(a)', '  <imax>    (OPTIONAL) Maximum integer. (default is 2147483647)' 
-end subroutine PrintHelp
-
-subroutine PrintInputError()
-  write(*,*)'Error during reading command line options. Exiting...'
-  stop 1
-end subroutine PrintInputError
+subroutine print_help()
+   implicit none
+   print '(a)', 'Program for generating 32-bit random integers from interval [0,2147483647).'
+   print '(a)', ''
+   print '(a)', 'USAGE: ./abin-randomint [-s <seed>] [-n <n_ran>]'
+   print '(a)', ''
+   print '(a)', 'optional command line options:'
+   print '(a)', ''
+   print '(a)', '  -h, --help         print help and exit'
+   print '(a)', '  -s/--seed <seed>   random seed to initialize the PRNG'
+   print '(a)', '                     If negative, seed is taken from the OS (default)'
+   print '(a)', '  -n/--num <n_ran>   how many random numbers (default=1)'
+end subroutine print_help
