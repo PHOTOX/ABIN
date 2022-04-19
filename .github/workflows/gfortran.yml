@@ -69,6 +69,7 @@ jobs:
     # TODO: Separate unit test coverage
     - name: Codecov upload
       uses: codecov/codecov-action@v3.0.0
+      with:
         name: codecov-umbrella
         fail_ci_if_error: true
         verbose: true
