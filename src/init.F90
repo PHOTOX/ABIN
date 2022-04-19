@@ -40,7 +40,7 @@ subroutine init(dt)
    use mod_sh
    use mod_lz
    use mod_qmmm, only: natqm, natmm
-   use mod_force_mm
+   use mod_force_mm, only: initialize_mm
    use mod_gle
    use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
    use mod_prng_init, only: initialize_prng
@@ -68,6 +68,15 @@ subroutine init(dt)
    real(DP) :: r0_morse = -1, d0_morse = -1, k_morse = -1
    real(DP) :: k = -1, r0 = -1
    real(DP) :: kx = -1, ky = -1, kz = -1
+   ! Lennard-Jones parameteres and Coulomb charges (pot=_mm_)
+   ! All input parameters are expected to be in atomic units,
+   ! except LJ_rmin which should be in angstroms.
+   ! User-specified atomic types read from the input file
+   character(len=2), allocatable :: mm_types(:)
+   ! Coulomb charges correspoding to the atomic types defined above
+   real(DP), allocatable :: q(:)
+   ! L-J parameters
+   real(DP), allocatable :: LJ_rmin(:), LJ_eps(:)
    ! Initial temperature (read from namelist nhcopt)
    real(DP) :: temp0 = -1
    ! User-defined masses in relative atomic units
@@ -132,7 +141,7 @@ subroutine init(dt)
 
    namelist /lz/ initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz
 
-   namelist /qmmm/ natqm, natmm, q, rmin, eps, attypes
+   namelist /qmmm/ natqm, natmm, q, LJ_rmin, LJ_eps, mm_types
 
    chcoords = 'mini.dat'
    xyz_units = 'angstrom'
@@ -255,7 +264,7 @@ subroutine init(dt)
 
    ! This line is super important,
    ! cause we actually use natqm in many parts of the code
-   if (iqmmm == 0 .and. pot /= 'mm') then
+   if (iqmmm == 0 .and. pot /= '_mm_') then
       natqm = natom
    end if
 
@@ -274,13 +283,21 @@ subroutine init(dt)
    ! for future multiple time step integration in SH
    dt0 = dt
 
-   ! We have to initialize here, because we read them from input
+   ! We have these allocate these arrays here
+   ! because we read them from input file.
    allocate (names(natom))
    allocate (massnames(natom))
    allocate (masses(natom), source=-1.0_DP)
+
    names = ''
-   attypes = ''
    massnames = ''
+
+   ! Lennard-Jones / Coulomb parameters
+   allocate (mm_types(natom))
+   allocate (LJ_rmin(natom), source=-1.0D0)
+   allocate (q(natom), source=0.0D0)
+   allocate (LJ_eps(natom), source=-1.0D0)
+   mm_types = ''
 
    allocate (ishake1(natom * 3 - 6), source=0)
    allocate (ishake2(natom * 3 - 6), source=0)
@@ -387,7 +404,7 @@ subroutine init(dt)
       call remd_init(temp, temp0)
    end if
 
-   if (iqmmm > 0 .or. pot == 'mm') then
+   if (iqmmm > 0 .or. pot == '_mm_') then
       read (150, qmmm)
       rewind (150)
    end if
@@ -524,6 +541,7 @@ subroutine init(dt)
       call en_rest_init(natom)
    end if
 
+   ! Initialize in-built analytical potentials
    if (pot == '_doublewell_' .or. pot_ref == '_doublewell_') then
       call doublewell_init(natom, lambda_dw, d0_dw, k_dw, r0_dw, vy, vz)
    end if
@@ -539,18 +557,8 @@ subroutine init(dt)
    if (pot == '_splined_grid_' .or. pot_ref == '_splined_grid_') then
       call initialize_spline(natom)
    end if
-
-   if (pot == 'mm') then
-      ! TODO: Move this to a single subroutine in force_mm.F90
-      allocate (inames(natom))
-      do iat = 1, MAXTYPES
-         if (attypes(iat) == '') exit
-         attypes(iat) = normalize_atom_name(attypes(iat))
-      end do
-      ! inames initialization for the MM part.
-      ! We do this also because string comparison is very costly
-      call inames_init()
-      call ABr_init()
+   if (pot == '_mm_' .or. pot_ref == '_mm_') then
+      call initialize_mm(natom, names, mm_types, q, LJ_rmin, LJ_eps)
    end if
 
    if (my_rank == 0) then
@@ -915,7 +923,7 @@ contains
          write (stdout, nml=lz, delim='APOSTROPHE')
          write (stdout, *)
       end if
-      if (pot == 'mm') then
+      if (iqmmm > 0 .or. pot == '_mm_') then
          write (stdout, nml=qmmm, delim='APOSTROPHE')
          write (stdout, *)
       end if
@@ -1238,6 +1246,7 @@ subroutine finish(error_code)
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
    use mod_splined_grid, only: finalize_spline
+   use mod_force_mm, only: finalize_mm
    use mod_mpi, only: finalize_mpi
    implicit none
    integer, intent(in) :: error_code
@@ -1275,7 +1284,10 @@ subroutine finish(error_code)
 
    if (pot == '_splined_grid_') then
       call finalize_spline()
+   else if (pot == '_mm_') then
+      call finalize_mm()
    end if
+
    ! MPI_FINALIZE is called in this routine as well
    if (pot == '_cp2k_') then
       call finalize_cp2k()
