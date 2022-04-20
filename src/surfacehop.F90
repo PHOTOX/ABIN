@@ -355,6 +355,8 @@ contains
       integer, intent(in) :: nac_accu
       integer :: ist1, ist2, u, itrj
       character(len=100) :: chsystem
+      external system
+
       open (newunit=u, file='state.dat')
       write (u, '(I2)') nstate
       ! we print upper triangular part of tocalc matrix to file state.dat
@@ -373,7 +375,7 @@ contains
       ! write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu
       ! TODO: If we remove itrj here, it will be a breaking change
       itrj = 1
-      write (chsystem, '(A30,I13,I4.3,I3,A12)') chsystem, it, itrj, nac_accu, ' < state.dat'
+      write (chsystem, '(A,I13,I4.3,I3,A)') trim(chsystem), it, itrj, nac_accu, ' < state.dat'
 
       call system(chsystem)
 
