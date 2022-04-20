@@ -103,7 +103,7 @@ jobs:
     - name: Build ABIN
       run: ./configure && make
       env:
-        FFLAGS: -O0 -fopenmp
+        FFLAGS: -O0 -fopenmp -warn all,noextern
 
     - name: Run End-to-End tests
       run: make e2etest
