@@ -371,45 +371,41 @@ module mod_random
       ! set table to zero and exercise the bit generator a little
 
       ix = iabs(iseed)
-      ! TODO: This if seems to be redundant, we guard agains
-      ! zero seed above
-      if (ix.ne.0) then
-        do i=1,np
-          x(i)=zero
-          k1=ix/ib
-          ix=ia*(ix-k1*ib)-k1*ic
-          if(ix.lt.0) ix=ix+ip
-        end do
 
-        !  assemble np numbers with mantissa length nbit from random bits
-        ! 'high' toggle compensates for bias from odd ip
+      do i = 1, np
+         x(i) = zero
+         k1 = ix / ib
+         ix = ia * (ix - k1 * ib) - k1 * ic
+         if (ix < 0) ix = ix + ip
+      end do
 
-        high=.true.
-        do i=1,np
-           add=half
-           do j=1,nbit
-              k1=ix/ib
-              ix=ia*(ix-k1*ib)-k1*ic
-              if(ix.lt.0) ix=ix+ip
-              if(high) then
-                if(ix.ge.iphalf) y(i)=y(i)+add
-                high=.false.
-              else
-                if(ix.gt.iphalf) y(i)=y(i)+add
-                high=.true.
-              end if
-              add=add*half
-           end do
-        end do
+      !  assemble np numbers with mantissa length nbit from random bits
+      ! 'high' toggle compensates for bias from odd ip
 
-        if (nexec > 0) then
-           call xuwarm(y, np, nq, mode, nbit*nexec)
-        end if
+      high = .true.
+      do i = 1, np
+         add = half
+         do j = 1, nbit
+            k1 = ix / ib
+            ix = ia * (ix - k1 * ib) - k1 * ic
+            if (ix < 0) ix = ix + ip
+            if (high) then
+               if (ix >= iphalf) y(i) = y(i) + add
+               high = .false.
+            else
+               if (ix > iphalf) y(i) = y(i) + add
+               high = .true.
+            end if
+            add = add * half
+         end do
+      end do
 
+      if (nexec > 0) then
+         call xuwarm(y, np, nq, mode, nbit * nexec)
       end if
 
-      init=ix
-      last=0
+      init = ix
+      last = 0
       end subroutine xuinit
 
 !-----------------------------------------------------------------------
