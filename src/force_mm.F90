@@ -1,108 +1,229 @@
-! Simple subroutine for calculation of
-! Coulomb and Lennard-Jones forces and energies
+! A toy code for Coulomb and Lennard-Jones forces and energies
 
 ! Currently, this module does not support QMMM,
-! Instead we can only do pure MM with LJ and Coulomb potential
-! This is invoked via pot='mm'
+! only pure MM with LJ and Coulomb potentials (no other bonding terms).
+! This is invoked via pot='_mm_'
 module mod_force_mm
    use mod_const, only: DP
-   use mod_array_size, only: MAXTYPES
-   use mod_utils, only: abinerror
-   use mod_qmmm, only: natmm, natqm
+   use mod_files, only: stdout, stderr
+   use mod_error, only: fatal_error
+   use mod_utils, only: real_nonnegative
    implicit none
    private
-   public :: inames_init, ABr_init, force_LJ_Coulomb
-   ! TODO: These should all be private
-   public :: attypes, q, rmin, eps
-   character(len=2) :: attypes(MAXTYPES)
-   ! L-J Combination rules
-   character(len=10), parameter :: LJcomb = 'LB' !no other option for now
-   real(DP) :: q(MAXTYPES), rmin(MAXTYPES), eps(MAXTYPES)
-   real(DP), allocatable :: AIJ(:, :), BIJ(:, :)
+   public :: initialize_mm, finalize_mm, force_mm
+
+   ! Lennard-Jones combination rules
+   ! Only Lorentz-Berthelot rules are currently implemented
+   ! https://en.wikipedia.org/wiki/Combining_rules#Lorentz-Berthelot_rules
+   character(len=10), parameter :: LJcomb = 'LB'
+
+   ! Mapping of atomic types to atoms in the system
+   integer, allocatable :: inames(:)
+
+   ! User-specified Coulomb charges
+   real(DP), allocatable :: q(:)
+
+   ! Internal two-particle L-J parameters
+   real(DP), allocatable :: Aij(:, :), Bij(:, :)
    save
 contains
-   subroutine inames_init()
-      use mod_general, only: natom
-      use mod_system, only: inames, names
-      integer :: i, iat2, pom
 
-      do i = 1, natom
-         pom = 0
-         do iat2 = 1, natom
-            if (names(i) == attypes(iat2)) then
-               inames(i) = iat2
-               pom = 1
+   subroutine initialize_mm(natom, names, atom_types, charges, LJ_rmin, LJ_eps)
+      integer, intent(in) :: natom
+      character(len=2), intent(in) :: names(:), atom_types(:)
+      real(DP), intent(in) :: LJ_rmin(:), LJ_eps(:)
+      real(DP), intent(in) :: charges(:)
+      character(len=2), allocatable :: normalized_atom_types(:)
+      integer :: num_types
+
+      write (stdout, '(A)') ''
+      write (stdout, '(A)') 'Initializing MM potential'
+
+      normalized_atom_types = normalize_atom_types(atom_types)
+      num_types = size(normalized_atom_types)
+      write (stdout, '(A,I0,A)') 'Found ', num_types, ' user-defined atom types'
+
+      call initialize_inames(names, normalized_atom_types, natom)
+
+      call initialize_charges(charges, num_types, natom)
+
+      call validate_LJ_params(LJ_rmin, LJ_eps, num_types)
+      call initialize_LJ(LJ_rmin, LJ_eps, num_types, natom)
+
+      call flush (stdout)
+      call flush (stderr)
+      write (stdout, '(A)') ''
+   end subroutine initialize_mm
+
+   subroutine finalize_mm()
+      if (allocated(inames)) deallocate (inames)
+      if (allocated(Aij)) deallocate (Aij)
+      if (allocated(Bij)) deallocate (Bij)
+      if (allocated(q)) deallocate (q)
+   end subroutine finalize_mm
+
+   integer function count_atom_types(atom_types) result(num_types)
+      character(len=2), intent(in) :: atom_types(:)
+      integer :: i
+
+      num_types = 0
+      do i = 1, size(atom_types)
+         if (len_trim(atom_types(i)) == 0) exit
+         num_types = num_types + 1
+      end do
+   end function count_atom_types
+
+   function normalize_atom_types(atom_types) result(attypes)
+      use mod_utils, only: normalize_atom_name
+      character(len=2), intent(in) :: atom_types(:)
+      character(len=2), allocatable :: attypes(:)
+      integer :: num_types
+      integer :: i, itype
+
+      num_types = count_atom_types(atom_types)
+      allocate (attypes(num_types))
+      attypes = ''
+
+      itype = 1
+      do i = 1, size(atom_types)
+         if (len_trim(atom_types(i)) == 0) exit
+         attypes(itype) = normalize_atom_name(atom_types(i))
+         itype = itype + 1
+      end do
+   end function normalize_atom_types
+
+   ! Here we create the mapping from atom index
+   ! to corresponding atom type, stored in array inames.
+   ! Example: Water molecule
+   ! names = (/ 'O', 'H', 'H' /)
+   ! attypes = (/ 'O', 'H' /)
+   ! q = (/ -0.84, 0.42 /)
+   ! inames = (/ 1, 2, 2 /)
+   subroutine initialize_inames(names, attypes, natom)
+      character(len=2), intent(in) :: names(:)
+      character(len=2), intent(in) :: attypes(:)
+      integer, intent(in) :: natom
+      integer :: iat, iat2
+      logical :: assigned
+
+      ! NOTE: We assign default value 1 to avoid segfaults in unit tests
+      ! We check below that all atoms are mapped properly.
+      allocate (inames(natom), source=1)
+
+      do iat = 1, natom
+         assigned = .false.
+         do iat2 = 1, size(attypes)
+            if (names(iat) == attypes(iat2)) then
+               inames(iat) = iat2
+               assigned = .true.
                exit
             end if
          end do
-         if (pom == 0) then
-            write (*, *) 'Atom name does not have atom type for qmmm parameters. Exiting....'
-            call abinerror('inames_init')
+         if (.not. assigned) then
+            call fatal_error(__FILE__, __LINE__,&
+               & 'Atom name '//trim(names(iat))//' does not have corresponding atom type in MM parameters')
          end if
       end do
+   end subroutine initialize_inames
 
-   end subroutine inames_init
+   subroutine initialize_charges(charges, num_types, natom)
+      real(DP), intent(in) :: charges(:)
+      integer, intent(in) :: num_types, natom
+      real(DP) :: q_total
 
-   subroutine ABr_init()
+      allocate (q(num_types))
+      q(:) = charges(:num_types)
+
+      q_total = calc_total_charge(q, natom)
+      write (stdout, '(A,F6.3,A)') 'Total system charge = ', q_total, ' a.u.'
+      if (q_total /= 0.0D0) then
+         write (stderr, *) 'WARNING: total charge is not zero!'
+      end if
+   end subroutine initialize_charges
+
+   real(DP) function calc_total_charge(q, natom) result(charge)
+      real(DP), intent(in) :: q(:)
+      integer, intent(in) :: natom
+      integer :: iat
+
+      charge = 0.0D0
+      do iat = 1, natom
+         charge = charge + q(inames(iat))
+      end do
+   end function calc_total_charge
+
+   subroutine validate_LJ_params(rmin, eps, num_types)
+      real(DP), intent(in) :: rmin(:), eps(:)
+      integer, intent(in) :: num_types
+      integer :: i
+      do i = 1, num_types
+         call real_nonnegative(eps(i), 'lj_eps')
+         call real_nonnegative(rmin(i), 'lj_rmin')
+      end do
+   end subroutine validate_LJ_params
+
+   subroutine initialize_LJ(rmin, eps, num_types, natom)
       use mod_const, only: ANG
-      use mod_general, only: natom
-      use mod_system, only: inames
-      integer :: iat1, iat2, i1, i2
+      real(DP), intent(in) :: rmin(:), eps(:)
+      integer, intent(in) :: num_types, natom
+      integer :: iat1, iat2, i, j
       real(DP) :: epsij, rij
-      allocate (AIJ(natom, natom))
-      allocate (BIJ(natom, natom))
+
+      ! Aij and Bij are two-particle combined L-J parameters
+      ! https://en.wikipedia.org/wiki/Combining_rules
+      allocate (Aij(num_types, num_types))
+      allocate (Bij(num_types, num_types))
       do iat1 = 1, natom
          do iat2 = 1, natom
-            i1 = inames(iat1)
-            i2 = inames(iat2)
+            i = inames(iat1)
+            j = inames(iat2)
             if (LJcomb == 'LB') then
-               rij = 0.5 * (rmin(i1) + rmin(i2)) * ang
-               epsij = dsqrt(eps(i1) * eps(i2))
+               ! WARNING: We expect rmin in angstroms!
+               rij = 0.5D0 * (rmin(i) + rmin(j)) * ANG
+               epsij = dsqrt(eps(i) * eps(j))
             end if
-            BIJ(i1, i2) = 2 * 6 * epsij * rij**6
-            AIJ(i1, i2) = 12 * epsij * rij**12
+            Bij(i, j) = 2 * 6 * epsij * rij**6
+            Aij(i, j) = 12 * epsij * rij**12
          end do
       end do
-   end subroutine
+   end subroutine initialize_LJ
 
-   subroutine force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas)
-      use mod_array_size
-      use mod_general
-      use mod_system, only: inames
-      implicit none
+   subroutine force_mm(x, y, z, fx, fy, fz, eclas, walkmax)
+      use mod_general, only: natom
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
-      integer :: iw, iat1, iat2, i1, i2
+      integer, intent(in) :: walkmax
+      integer :: iw, iat1, iat2, i, j
       real(DP) :: r, kLJ, kC
       real(DP) :: ri, ri3, dx, dy, dz
 
-      do iw = 1, nwalk
+      do iw = 1, walkmax
          do iat1 = 1, natom
             do iat2 = iat1 + 1, natom
-               if (iat2 <= natqm) cycle
                dx = x(iat1, iw) - x(iat2, iw)
                dy = y(iat1, iw) - y(iat2, iw)
                dz = z(iat1, iw) - z(iat2, iw)
                r = dx**2 + dy**2 + dz**2
                ri = 1 / r
                ri3 = ri * ri * ri
-               i1 = inames(iat1)
-               i2 = inames(iat2)
-               kLJ = ri3 * (ri3 * AIJ(i1, i2) - BIJ(i1, i2)) * ri
-               kC = q(i1) * q(i2) * dsqrt(ri3)
+               i = inames(iat1)
+               j = inames(iat2)
+               kLJ = ri3 * (ri3 * Aij(i, j) - Bij(i, j)) * ri
+               kC = q(i) * q(j) * dsqrt(ri3)
                fx(iat1, iw) = fx(iat1, iw) + (kLJ + kC) * dx
                fx(iat2, iw) = fx(iat2, iw) - (kLJ + kC) * dx
                fy(iat1, iw) = fy(iat1, iw) + (kLJ + kC) * dy
                fy(iat2, iw) = fy(iat2, iw) - (kLJ + kC) * dy
                fz(iat1, iw) = fz(iat1, iw) + (kLJ + kC) * dz
                fz(iat2, iw) = fz(iat2, iw) - (kLJ + kC) * dz
-               eclas = eclas + ri3 * (ri3 * AIJ(i1, i2) / 12 - BIJ(i1, i2) / 6) / nwalk
-               eclas = eclas + q(i1) * q(i2) / dsqrt(r) / nwalk
+               eclas = eclas + ri3 * (ri3 * Aij(i, j) / 12 - Bij(i, j) / 6)
+               eclas = eclas + q(i) * q(j) / dsqrt(r)
             end do
          end do
       end do
 
-   end subroutine force_LJ_Coulomb
+      eclas = eclas / walkmax
+   end subroutine force_mm
 
 end module mod_force_mm

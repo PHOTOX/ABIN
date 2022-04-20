@@ -11,4 +11,3 @@ let natom1=natom+1
 
 let lines=timestep*natom1+natom1
 head -$lines engrad.dat.$ibead.all.ref | tail -$natom1 > ../engrad.dat.$ibead
-

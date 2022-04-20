@@ -166,6 +166,7 @@ contains
       real(DP) :: I(0:8), Iinv(0:8)
       real(DP) :: Omx, Omy, Omz, Om_tot
       integer :: iat, iw
+      logical :: linear
 
       ! Current code cannot handle linear systems...
       ! We will probably crash in the case of linear n-atoms...
@@ -222,7 +223,11 @@ contains
          I(8) = (xx + yy)
 
          ! inverse of tensor
-         call mat_inv_3x3(I, Iinv)
+         call mat_inv_3x3(I, Iinv, linear)
+         if (linear) then
+            print*,'WARNING: Linear system detected, cannot remove rotational velocity.'
+            return
+         end if
 
          ! rotation: angular velocity
          Omx = 0.0D0
@@ -253,10 +258,13 @@ contains
 
    contains
       ! brute force inverse of 3x3 matrix
-      subroutine mat_inv_3x3(a, ainv)
+      subroutine mat_inv_3x3(a, ainv, linear)
          real(DP), intent(in) :: a(0:8)
          real(DP), intent(out) :: ainv(0:8)
+         logical, intent(out) :: linear
          real(DP) :: det, minor_det(0:8)
+
+         linear = .false.
 
          minor_det(0) = a(4) * a(8) - a(5) * a(7)
          minor_det(1) = a(3) * a(8) - a(5) * a(6)
@@ -269,6 +277,10 @@ contains
          minor_det(8) = a(0) * a(4) - a(1) * a(3)
 
          det = a(0) * minor_det(0) - a(1) * minor_det(1) + a(2) * minor_det(2)
+         if (det == 0) then
+            linear = .true.
+            return
+         end if
 
          ainv(0) = minor_det(0) / det
          ainv(1) = -minor_det(3) / det
@@ -281,7 +293,7 @@ contains
          ainv(8) = minor_det(8) / det
       end subroutine mat_inv_3x3
 
-   end subroutine REMOVE_ROTATIONS
+   end subroutine remove_rotations
 
    subroutine constrainP(px, py, pz, constrained_atoms)
       use mod_general, only: nwalk
