@@ -70,8 +70,8 @@ contains
 
       seeds = irandom
       do i = 1, nreplica
-         call initialize_prng(seed=seeds(i), mpi_rank=i-1)
-         call vranf(rn(i,:), nran)
+         call initialize_prng(seed=seeds(i), mpi_rank=i - 1)
+         call vranf(rn(i, :), nran)
       end do
 
       @assertEqual(irandom, seeds(1), "seed unchanged for rank0")
@@ -80,9 +80,9 @@ contains
       @assertTrue(irandom /= seeds(2), "seed changed for rank1")
       @assertTrue(seeds(2) /= seeds(3), "seeds not equal for rank1 and rank2")
 
-      @assertNotEqual(rn(1,:), rn(2,:))
-      @assertNotEqual(rn(1,:), rn(3,:))
-      @assertNotEqual(rn(2,:), rn(3,:))
+      @assertNotEqual(rn(1, :), rn(2, :))
+      @assertNotEqual(rn(1, :), rn(3, :))
+      @assertNotEqual(rn(2, :), rn(3, :))
    end subroutine test_remd_prng
 
    @test

@@ -113,7 +113,6 @@ module mod_random
       real(DP) :: tiny, twopi, pi4
       integer :: i, newran
       save tiny,twopi,pi4,scf,ccf
-!     data isave/-1/
 
 !      POLYNOMIAL FROM CHEBYSHEV APPROXIMATION ON [ 0.000, 0.790]
 !      FOR COS(X) WITH ABSOLUTE ERROR LESS THAN 0.2220E-14
@@ -620,7 +619,7 @@ module mod_random
 end module mod_random
 
 module mod_prng_init
-   use, intrinsic :: iso_fortran_env, only: int64
+   use, intrinsic :: iso_fortran_env, only: INT64
    use mod_const, only: DP
    use mod_files, only: stdout, stderr
    ! We initialize our PRNG via call to gautrg
@@ -638,7 +637,7 @@ contains
    ! We want the simulations to be repeatable so we ask the user
    ! to provide a single random seed. Single random seed is all we need
    ! to initialize our PRNG implemented in the vranf routine in mod_random.
-   ! 
+   !
    ! Things get complicated for REMD, where we need to initialize
    ! nreplica independent prngs. But we still only want a single seed
    !
@@ -658,7 +657,7 @@ contains
    subroutine initialize_prng(seed, mpi_rank)
       integer, intent(inout) :: seed
       integer, intent(in) :: mpi_rank
-      integer(int64) :: new_seed
+      integer(INT64) :: new_seed
       integer :: i
       real(DP) :: drans(1)
 
@@ -671,7 +670,7 @@ contains
          seed = get_random_seed()
          if (mpi_rank > 0) then
             write (*, '(A,I0,A,I0)') 'MPI rank = ', mpi_rank, ' Seed = ', seed
-         else 
+         else
             write (stdout, '(A,I0,A,I0)') 'MPI rank = ', mpi_rank, ' Seed = ', seed
          end if
       end if
@@ -684,7 +683,7 @@ contains
          end do
          seed = int(new_seed, kind(seed))
       end if
-      
+
       call initialize_fortran_prng(seed)
 
       ! Initialize our custom pseudo-random number generator.
@@ -713,15 +712,15 @@ contains
       integer :: un, istat
       integer :: getpid, pid
       integer, dimension(8) :: dt
-      integer(int64) :: rate
-      integer(int64) :: t
+      integer(INT64) :: rate
+      integer(INT64) :: t
 
       open (newunit=un, file="/dev/urandom", access="stream", &
          & form="unformatted", action="read", status="old", iostat=istat)
       if (istat == 0) then
          write (stdout, *) 'Getting random seed from /dev/urandom'
-         read(un) seed
-         close(un)
+         read (un) seed
+         close (un)
          seed = iabs(seed)
       else
          ! Fallback to XOR:ing the current time and pid. The PID is
@@ -734,12 +733,12 @@ contains
          if (rate == 0) then
             call date_and_time(values=dt)
             ! Seconds of Unix time
-            t = (dt(1) - 1970) * 365_int64 * 24 * 60 * 60 * 1000 &
-               + dt(2) * 31_int64 * 24 * 60 * 60 * 1000 &
-               + dt(3) * 24_int64 * 60 * 60 * 1000 &
-               + dt(5) * 60 * 60 * 1000 &
-               + dt(6) * 60 * 1000 + dt(7) * 1000 &
-               + dt(8)
+            t = (dt(1) - 1970) * 365_INT64 * 24 * 60 * 60 * 1000 &
+                + dt(2) * 31_INT64 * 24 * 60 * 60 * 1000 &
+                + dt(3) * 24_INT64 * 60 * 60 * 1000 &
+                + dt(5) * 60 * 60 * 1000 &
+                + dt(6) * 60 * 1000 + dt(7) * 1000 &
+                + dt(8)
          end if
          pid = getpid()
          seed = int(ieor(t, int(pid, kind(t))))
@@ -753,7 +752,7 @@ contains
       integer, intent(in) :: user_seed
       integer, allocatable :: seeds(:)
       integer :: i, seed_size
-      integer(int64) :: s
+      integer(INT64) :: s
       real(DP) :: drans(100)
 
       call random_seed(size=seed_size)
@@ -787,15 +786,15 @@ contains
    ! Taken from:
    ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
    integer function lcg(s)
-      integer(int64) :: s
+      integer(INT64) :: s
 
       if (s == 0) then
          s = 104729
       else
-         s = mod(s, 4294967296_int64)
+         s = mod(s, 4294967296_INT64)
       end if
-      s = mod(s * 279470273_int64, 4294967291_int64)
-      lcg = int(mod(s, int(huge(0), int64)), kind(0))
+      s = mod(s * 279470273_INT64, 4294967291_INT64)
+      lcg = int(mod(s, int(huge(0), INT64)), kind(0))
    end function lcg
 
 end module mod_prng_init
