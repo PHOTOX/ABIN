@@ -1229,6 +1229,8 @@ end subroutine init
 subroutine print_runtime_info()
    use mod_files, only: stdout
    character(len=1024) :: cmdline
+   external system
+
    write (stdout, *) ''
    write (stdout, *) '          RUNTIME INFO'
    write (stdout, *) ' '

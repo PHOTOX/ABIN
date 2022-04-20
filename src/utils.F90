@@ -250,6 +250,7 @@ contains
    subroutine archive_file(chfile, time_step)
       use mod_general, only: iremd
       use mod_mpi, only: get_mpi_rank
+      external system
       integer, intent(in) :: time_step
       character(len=*), intent(in) :: chfile
       character(len=200) :: chsystem

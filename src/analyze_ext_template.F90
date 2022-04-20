@@ -16,6 +16,7 @@ contains
       ! use mod_arrays, only: x, y, z
       character(len=100) :: chsystem
       character(len=50) :: chit
+      external system
 
       ! Launch external BASH script.
       ! Can be used e.g. to analyze wavefunction on-the-fly
