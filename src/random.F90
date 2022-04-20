@@ -555,22 +555,25 @@ contains
    ! to provide a single random seed. Single random seed is all we need
    ! to initialize our PRNG implemented in the vranf routine in mod_random.
    !
-   ! Things get complicated for REMD, where we need to initialize
-   ! nreplica independent prngs. But we still only want a single seed
-   !
-   ! from the user, and we want repeatability.
-   ! To that end, we use a standard fortran random_number() subroutine
-   ! to generate additional random seeds from a single random seeds.
-   ! To make things deterministic, random_number() itself needs to be seeded
-   ! by a call to random_seed().
-   ! Here's the kicker: random_seed() in general requires an array of seeds :-(
-   ! https://gcc.gnu.org/onlinedocs/gcc-4.9.4/gfortran/RANDOM_005fSEED.html#RANDOM_005fSEED
-   ! We solve this by using a very simple PRNG that only requires single random seed.
-   !
    ! We also allow the user to not provide a seed at all (or provide negative seed),
    ! in which case we determine it from /dev/urandom.
    ! We print it to the output so that the simulation can be exactly repeated if needed.
    ! (in this case repeatability is not possible for REMD).
+   !
+   ! Things get complicated for REMD, where we need to initialize
+   ! nreplica independent prngs, but we still want only a single seed
+   ! from the user, and we want repeatability. We solve this by generating
+   ! additional seeds by a another much more simple PRNG in function lcg(),
+   ! taken from the Gfortran documentation.
+   !
+   ! We also implement additional high-quality integer PRNG, random_ints(),
+   ! which uses the random_number() subroutine, as defined in Fortran standard.
+   ! Unfortunately, we cannot use this routine for deterministic generation of REMD seeds,
+   ! because random_number() itself needs to be seeded by a call to random_seed().
+   ! Here's the kicker: random_seed() in general requires an array of seeds :-(
+   ! https://gcc.gnu.org/onlinedocs/gcc-4.9.4/gfortran/RANDOM_005fSEED.html#RANDOM_005fSEED
+   ! Also, random_number() implementation depends on the compiler,
+   ! so it is not a good fit for out test suite.
    subroutine initialize_prng(seed, mpi_rank)
       integer, intent(inout) :: seed
       integer, intent(in) :: mpi_rank
@@ -601,6 +604,8 @@ contains
          seed = int(new_seed, kind(seed))
       end if
 
+      ! Initializes PRNG for integers, random_ints(),
+      ! currently not in use in ABIN, but used in utils/abin-randomint.f90
       call initialize_fortran_prng(seed)
 
       ! Initialize our custom pseudo-random number generator.
@@ -621,7 +626,7 @@ contains
    !
    ! For REMD, this will make the seed unique for each replica.
    ! Unfortunatelly, we don't currently provide a way for a user
-   ! to set custom seed for each replica separately, so the approach
+   ! to set custom seed for each replica separately so the approach
    ! used here makes the REMD simulations non-repeatable.
    ! To have repeatable REMD simulations, user should provide irandom
    ! in the input file such that this function is not called.
