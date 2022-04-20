@@ -77,8 +77,8 @@ contains
       @assertEqual(irandom, seeds(1), "seed unchanged for rank0")
       ! For some reason, comparing integers with assertNotEqual does not work.
       !@assertNotEqual(irandom, seeds(2), "seed changed for rank1")
-      @assertNotEqual(irandom, seeds(2), "seed changed for rank1")
-      @assertNotEqual(seeds(2), seeds(3), "seeds not equal for rank1 and rank2")
+      @assertNotEqual(real(irandom), real(seeds(2)), "seed changed for rank1")
+      @assertNotEqual(real(seeds(2)), real(seeds(3)), "seeds not equal for rank1 and rank2")
 
       @assertNotEqual(rn(1,:), rn(2,:))
       @assertNotEqual(rn(1,:), rn(3,:))
