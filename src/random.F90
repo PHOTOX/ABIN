@@ -102,7 +102,6 @@ module mod_random
       implicit none
       integer, intent(in) :: nran
       integer, intent(in), optional :: iseed
-      ! TODO: Should probably be intent(out)
       real(DP), intent(inout) :: gran(nran)
 
       real(DP),parameter  :: two=2.d0,twom=-two,one=1.d0

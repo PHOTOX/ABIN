@@ -31,7 +31,8 @@ contains
       call vranf(ran, 1)
       @assertExceptionRaised('Incorrect initialization in vranf')
 
-      ! TODO: This results in FPE
+      ! This results in FPE
+      ! because we do not return from gautrg after the exception is caught
       !call gautrg(ran, 1)
       !@assertExceptionRaised('Incorrect initialization in vranf')
 
@@ -63,6 +64,32 @@ contains
       call initialize_prng(seed=irandom, mpi_rank=0)
       call read_prng_state(u)
       call vranf(rn_restart(nran/2+1:nran), nran/2)
+
+      close (u, status='delete')
+
+      @assertEqual(rn, rn_restart, "same sequence after restart")
+   end subroutine
+
+   subroutine test_prng_restart_gautrg()
+      integer :: irandom = 35789302
+      integer, parameter :: nran = 10
+      real(DP) :: rn(nran), rn_restart(nran)
+      integer :: u
+
+      ! Generate reference without restart
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call gautrg(rn, nran)
+
+      open (newunit=u, file='prng.dat')
+
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call gautrg(rn_restart, nran/2)
+      call write_prng_state(u)
+
+      rewind (u)
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call read_prng_state(u)
+      call gautrg(rn_restart(nran/2+1:nran), nran/2)
 
       close (u, status='delete')
 
