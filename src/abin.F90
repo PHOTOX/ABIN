@@ -40,7 +40,6 @@ program abin
    use mod_remd, only: remd_swap, nswap
 #endif
    implicit none
-   external system
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
    logical :: file_exists
    integer, dimension(8) :: time_start

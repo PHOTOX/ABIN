@@ -138,7 +138,6 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_force_tera, only: force_tera
    use mod_terampi_sh, only: force_terash
    implicit none
-   external force_water
    real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
    real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
    real(DP), intent(out) :: e_pot

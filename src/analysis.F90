@@ -197,7 +197,6 @@ contains
       integer :: iw, my_rank, urest
       logical :: file_exists
       character(len=200) :: chout, chsystem
-      external system
 
       my_rank = get_mpi_rank()
 

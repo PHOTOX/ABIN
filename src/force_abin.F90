@@ -148,7 +148,6 @@ contains
       character(len=300) :: errmsg
       logical :: exists
       integer :: iost
-      external system
 
       inquire (file=fname, exist=exists)
       if (.not. exists) then

@@ -431,7 +431,6 @@ contains
       use mod_general, only: it, sim_time, narchive
       use mod_sh_integ, only: nstate
       use mod_utils, only: archive_file
-      external system
       character(len=*), parameter :: fname = 'wfn.bin'
       logical :: file_exists
       integer :: uwfn

@@ -9,7 +9,6 @@ module mod_sh
    use mod_sh_integ
    implicit none
    private
-   external system
    ! TODO: We should make some of these private
    ! We would need to read sh namelist inside this module
    ! and we should check input sanity here, not in input.F90
@@ -356,6 +355,7 @@ contains
       integer, intent(in) :: nac_accu
       integer :: ist1, ist2, u, itrj
       character(len=100) :: chsystem
+      external system
 
       open (newunit=u, file='state.dat')
       write (u, '(I2)') nstate
