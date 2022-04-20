@@ -141,11 +141,4 @@ contains
       @assertNotEqual(real(irandom), real(seed1))
       close (u)
    end subroutine
-
-   @test
-   subroutine test1()
-      integer :: int1=1, int2=2
-      @assertNotEqual(int1, int2, "test")
-   end subroutine test1
-
 end module test_prng
