@@ -75,10 +75,10 @@ contains
       end do
 
       @assertEqual(irandom, seeds(1), "seed unchanged for rank0")
-      ! For some reason, comparing integers with assertNotEqual does not work.
-      !@assertNotEqual(irandom, seeds(2), "seed changed for rank1")
-      @assertNotEqual(real(irandom), real(seeds(2)), "seed changed for rank1")
-      @assertNotEqual(real(seeds(2)), real(seeds(3)), "seeds not equal for rank1 and rank2")
+      ! Comparing integers with assertNotEqual does not work :-(
+      ! https://github.com/Goddard-Fortran-Ecosystem/pFUnit/issues/353
+      @assertTrue(irandom /= seeds(2), "seed changed for rank1")
+      @assertTrue(seeds(2) /= seeds(3), "seeds not equal for rank1 and rank2")
 
       @assertNotEqual(rn(1,:), rn(2,:))
       @assertNotEqual(rn(1,:), rn(3,:))
@@ -91,6 +91,7 @@ contains
       integer, parameter :: nran = 10
       integer :: rn1(nran), rn2(nran)
       integer :: seed
+      integer :: i
 
       seed = irandom
       call initialize_prng(seed=seed, mpi_rank=0)
@@ -105,14 +106,18 @@ contains
       seed = seed + 1
       call initialize_prng(seed=seed, mpi_rank=0)
       call random_ints(rn2, nran)
-      @assertNotEqual(real(rn1), real(rn2), "different seeds")
+      do i = 1, nran
+         @assertTrue(rn1(i) /= rn2(i), "different seeds")
+      end do
 
       seed = irandom
 
       ! Different ranks produce different sequence
       call initialize_prng(seed=seed, mpi_rank=1)
       call random_ints(rn2, nran)
-      @assertNotEqual(real(rn1), real(rn2), "different ranks")
+      do i = 1, nran
+         @assertTrue(rn1(i) /= rn2(i), "different ranks")
+      end do
    end subroutine
 
    @test
@@ -123,22 +128,25 @@ contains
 
       seed1 = irandom
       call initialize_prng(seed=seed1, mpi_rank=0)
-      @assertNotEqual(real(irandom), real(seed1))
+      @assertTrue(irandom /= seed1)
+      @assertGreaterThan(seed1, 0)
 
+      ! Should provide different seed each time
       seed2 = irandom
       call initialize_prng(seed=seed2, mpi_rank=0)
-      @assertNotEqual(real(seed1), real(seed2))
+      @assertTrue(seed1 /= seed2)
 
+      ! Should also work with higher mpi ranks
       seed1 = irandom
       call initialize_prng(seed=seed1, mpi_rank=2)
-      @assertNotEqual(real(irandom), real(seed1))
+      @assertTrue(irandom /= seed1)
 
       ! Try blocking /dev/random to test fallback code
       ! (works with GCC-7, newer compilers may actually allow opening the same file twice)
       open (newunit=u, file='/dev/urandom')
       seed1 = irandom
       call initialize_prng(seed=seed1, mpi_rank=0)
-      @assertNotEqual(real(irandom), real(seed1))
+      @assertTrue(irandom /= seed1)
       close (u)
    end subroutine
 end module test_prng
