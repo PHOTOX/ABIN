@@ -60,4 +60,85 @@ contains
       @assertNotEqual(rn1, rn2)
    end subroutine
 
+   @test
+   subroutine test_remd_prng()
+      integer, parameter :: irandom = 4328970
+      integer, parameter :: nreplica = 3, nran = 10
+      integer :: seeds(nreplica)
+      real(DP) :: rn(nreplica, nran)
+      integer :: i
+
+      seeds = irandom
+      do i = 1, nreplica
+         call initialize_prng(seed=seeds(i), mpi_rank=i-1)
+         call vranf(rn(i,:), nran)
+      end do
+
+      @assertEqual(irandom, seeds(1), "seed unchanged for rank0")
+      ! For some reason, comparing integers with assertNotEqual does not work.
+      !@assertNotEqual(irandom, seeds(2), "seed changed for rank1")
+      @assertNotEqual(real(irandom), real(seeds(2)), "seed changed for rank1")
+      @assertNotEqual(real(seeds(2)), real(seeds(3)), "seeds not equal for rank1 and rank2")
+
+      @assertNotEqual(rn(1,:), rn(2,:))
+      @assertNotEqual(rn(1,:), rn(3,:))
+      @assertNotEqual(rn(2,:), rn(3,:))
+   end subroutine test_remd_prng
+
+   @test
+   subroutine test_random_ints()
+      integer, parameter :: irandom = 2345235
+      integer, parameter :: nran = 10
+      integer :: rn1(nran), rn2(nran)
+      integer :: seed
+
+      seed = irandom
+      call initialize_prng(seed=seed, mpi_rank=0)
+      call random_ints(rn1, nran)
+
+      ! Re-seeding with the same seed provides the same sequence
+      call initialize_prng(seed=seed, mpi_rank=0)
+      call random_ints(rn2, nran)
+      @assertEqual(rn1, rn2, "same seed")
+
+      ! Different seeds produce different sequence
+      seed = seed + 1
+      call initialize_prng(seed=seed, mpi_rank=0)
+      call random_ints(rn2, nran)
+      @assertNotEqual(real(rn1), real(rn2), "different seeds")
+
+      seed = irandom
+
+      ! Different ranks produce different sequence
+      call initialize_prng(seed=seed, mpi_rank=1)
+      call random_ints(rn2, nran)
+      @assertNotEqual(real(rn1), real(rn2), "different ranks")
+   end subroutine
+
+   @test
+   subroutine test_get_random_seed()
+      integer, parameter :: irandom = -1
+      integer :: seed1, seed2
+      integer :: u
+
+      seed1 = irandom
+      call initialize_prng(seed=seed1, mpi_rank=0)
+      @assertNotEqual(real(irandom), real(seed1))
+
+      seed2 = irandom
+      call initialize_prng(seed=seed2, mpi_rank=0)
+      @assertNotEqual(real(seed1), real(seed2))
+
+      seed1 = irandom
+      call initialize_prng(seed=seed1, mpi_rank=2)
+      @assertNotEqual(real(irandom), real(seed1))
+
+      ! Try blocking /dev/random to test fallback code
+      ! (works with GCC-7, newer compilers may actually allow opening the same file twice)
+      open (newunit=u, file='/dev/urandom')
+      seed1 = irandom
+      call initialize_prng(seed=seed1, mpi_rank=0)
+      @assertNotEqual(real(irandom), real(seed1))
+      close (u)
+   end subroutine
 end module test_prng
