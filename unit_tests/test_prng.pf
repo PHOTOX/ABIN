@@ -2,7 +2,8 @@
 module test_prng
    use funit
    use mod_const, only: DP
-   use mod_files, only: stdout_to_devnull, reset_stdout
+   use mod_files, only: stdout_to_devnull, reset_stdout,&
+                      & stderr_to_stdout, reset_stderr
    use mod_prng_init
    use mod_random
    implicit none
@@ -13,11 +14,13 @@ contains
    @before
    subroutine setup()
       call stdout_to_devnull()
+      call stderr_to_stdout()
    end subroutine setup
 
    @after
    subroutine teardown()
       call reset_stdout()
+      call reset_stderr()
    end subroutine teardown
 
    @test
@@ -37,6 +40,51 @@ contains
 
       call gautrg(ran, 0, -10)
       @assertExceptionRaised('Random number seed must be a positive integer!')
+   end subroutine
+
+   @test
+   subroutine test_prng_restart()
+      integer :: irandom = 35789302
+      integer, parameter :: nran = 10
+      real(DP) :: rn(nran), rn_restart(nran)
+      integer :: u
+
+      ! Generate reference without restart
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call vranf(rn, nran)
+
+      open (newunit=u, file='prng.dat')
+
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call vranf(rn_restart, nran/2)
+      call write_prng_state(u)
+
+      rewind (u)
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call read_prng_state(u)
+      call vranf(rn_restart(nran/2+1:nran), nran/2)
+
+      close (u, status='delete')
+
+      @assertEqual(rn, rn_restart, "same sequence after restart")
+   end subroutine
+
+   @test
+   subroutine test_prng_restart_errors()
+      integer :: u
+
+      open (newunit=u, file='prng.dat')
+      ! Should skip if no state is found
+      call read_prng_state(u)
+
+      rewind (u)
+      write (u, *) 'Invalid state'
+      rewind (u)
+      call read_prng_state(u)
+      call assertExceptionRaised( &
+         & 'Unexpected line in restart file when trying to read prng state.'//new_line('a')//&
+         & 'Expected: PRNG STATE (OPTIONAL)'//new_line('a')//&
+         & 'Got: Invalid state')
    end subroutine
 
    @test
