@@ -117,7 +117,6 @@ module mod_random
 !      POLYNOMIAL FROM CHEBYSHEV APPROXIMATION ON [ 0.000, 0.790]
 !      FOR COS(X) WITH ABSOLUTE ERROR LESS THAN 0.2220E-14
 
-!      real(DP),parameter,dimension(npoly) ::  ccf = &
        DATA ccf/ 0.9999999999999986D+00, 0.6612476846390664D-13, &
                -0.4999999999989523D+00,-0.5434658088910759D-10, &
                 0.4166666737609693D-01,-0.4648977428396692D-08, &
@@ -274,60 +273,59 @@ module mod_random
          call xuinit(x, np, nq, 0, nexec, iseed, init, last)
       end if
 
+      if (nran > 0 .and. init == 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Incorrect initialization in vranf')
+         return
+      end if
+
       !  fibonacci generator updates elements of x in a cyclic fashion
       !  and copies them into ranv in blocks of max. length np.
       !  loop split into chunks of max. length nq to avoid recurrence.
 
-      if (nran.gt.0) then
-         ! TODO: Move this if condition to an early return
-        if (init.ne.0) then
-          j=0
-          left=nran
-   10     continue
-          loop=min(nq,left+last)-last
+      if (nran > 0) then
+         j = 0
+         left = nran
+10       continue
+         loop = min(nq, left + last) - last
 
-          do 500 i=last+1,last+loop
-          x1=x(i)-x(i+np-nq)
-          if(x1.lt.zero) x1=x1+one
-          x(i)=x1
-          j=j+1
-          ranv(j)=x1
-  500     continue
+         do 500 i = last + 1, last + loop
+            x1 = x(i) - x(i + np - nq)
+            if (x1 < zero) x1 = x1 + one
+            x(i) = x1
+            j = j + 1
+            ranv(j) = x1
+  500    continue
 
-          if(last.lt.nratio*nq) then
-            do 650 k=1,nratio-1
-            limit=min((k+1)*nq,left+last)
-            loop=limit-max(k*nq,last)
+         if (last < nratio * nq) then
+            do 650 k = 1, nratio - 1
+               limit = min((k + 1) * nq, left + last)
+               loop = limit - max(k * nq, last)
 
-            do 600 i=max(k*nq,last)+1,max(k*nq,last)+loop
-            x1=x(i)-x(i-nq)
-            if(x1.lt.zero) x1=x1+one
-            x(i)=x1
-            j=j+1
-            ranv(j)=x1
-  600       continue
-  650       continue
-          end if
+               do 600 i = max(k * nq, last) + 1, max(k * nq, last) + loop
+                  x1 = x(i) - x(i - nq)
+                  if (x1 < zero) x1 = x1 + one
+                  x(i) = x1
+                  j = j + 1
+                  ranv(j) = x1
+  600      continue
+  650      continue
+         end if
 
-          limit=min(np,left+last)
-          loop=limit-max(nratio*nq,last)
+         limit = min(np, left + last)
+         loop = limit - max(nratio * nq, last)
 
-          do 700 i=max(nratio*nq,last)+1,max(nratio*nq,last)+loop
-          x1=x(i)-x(i-nq)
-          if(x1.lt.zero) x1=x1+one
-          x(i)=x1
-          j=j+1
-          ranv(j)=x1
-  700     continue
+         do 700 i = max(nratio * nq, last) + 1, max(nratio * nq, last) + loop
+            x1 = x(i) - x(i - nq)
+            if (x1 < zero) x1 = x1 + one
+            x(i) = x1
+            j = j + 1
+            ranv(j) = x1
+  700    continue
 
-          last=mod(limit,np)
-          left=nran-j
-          if(left.gt.0) goto 10
-        else
-           call fatal_error(__FILE__, __LINE__, &
-              & 'Incorrect initialization in vranf')
-           return
-        end if
+         last = mod(limit, np)
+         left = nran - j
+         if (left > 0) goto 10
       end if
       end subroutine vranf
 
