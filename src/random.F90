@@ -63,11 +63,11 @@ module mod_random
       ! gautrg variables determining its state
       real(DP)  :: gsave
       integer   :: isave = -1
-      integer   :: nroll = 1
       ! For restart file
       character(len=*), parameter :: chprng='PRNG STATE (OPTIONAL)'
       save
       contains
+
 
       subroutine gautrg(gran, nran, iseed)
 !     DH WARNING: initialiazation from gautrg and vranf are different
@@ -259,9 +259,9 @@ module mod_random
       real(DP), intent(out) :: ranv(nran)
       integer, intent(in) :: nran
       integer, intent(in), optional :: iseed
-      integer, parameter :: nratio=np/nq, nexec=4, mroll=4
+      integer, parameter :: nratio=np/nq, nexec=4
       real(DP), parameter :: zero = 0.0D0, one = 1.0D0
-      real(DP) :: x1, x2, x3, x4
+      real(DP) :: x1
       integer :: i, j, k, left, loop, limit
 
       if (present(iseed)) then
@@ -277,7 +277,6 @@ module mod_random
       !  fibonacci generator updates elements of x in a cyclic fashion
       !  and copies them into ranv in blocks of max. length np.
       !  loop split into chunks of max. length nq to avoid recurrence.
-      !  unrolling improves performance on superscalar machines.
 
       if (nran.gt.0) then
          ! TODO: Move this if condition to an early return
@@ -285,11 +284,7 @@ module mod_random
           j=0
           left=nran
    10     continue
-          if(nroll.gt.1) then
-            loop=mod((min(nq,left+last)-last),mroll)
-          else
-            loop=min(nq,left+last)-last
-          end if
+          loop=min(nq,left+last)-last
 
           do 500 i=last+1,last+loop
           x1=x(i)-x(i+np-nq)
@@ -298,36 +293,11 @@ module mod_random
           j=j+1
           ranv(j)=x1
   500     continue
-          if(nroll.gt.1) then
-            do 501 i=last+loop+1,min(nq,left+last),mroll
-            x1=x(i)-x(i+np-nq)
-            x2=x(i+1)-x(i+1+np-nq)
-            x3=x(i+2)-x(i+2+np-nq)
-            x4=x(i+3)-x(i+3+np-nq)
-            if(x1.lt.zero) x1=x1+one
-            if(x2.lt.zero) x2=x2+one
-            if(x3.lt.zero) x3=x3+one
-            if(x4.lt.zero) x4=x4+one
-            x(i)=x1
-            x(i+1)=x2
-            x(i+2)=x3
-            x(i+3)=x4
-            ranv(j+1)=x1
-            ranv(j+2)=x2
-            ranv(j+3)=x3
-            ranv(j+4)=x4
-            j=j+4
-  501       continue
-          end if
 
           if(last.lt.nratio*nq) then
             do 650 k=1,nratio-1
             limit=min((k+1)*nq,left+last)
-            if(nroll.gt.1) then
-              loop=mod((limit-max(k*nq,last)),mroll)
-            else
-              loop=limit-max(k*nq,last)
-            end if
+            loop=limit-max(k*nq,last)
 
             do 600 i=max(k*nq,last)+1,max(k*nq,last)+loop
             x1=x(i)-x(i-nq)
@@ -336,36 +306,11 @@ module mod_random
             j=j+1
             ranv(j)=x1
   600       continue
-            if(nroll.gt.1) then
-              do 601 i=max(k*nq,last)+loop+1,limit,mroll
-              x1=x(i)-x(i-nq)
-              x2=x(i+1)-x(i+1-nq)
-              x3=x(i+2)-x(i+2-nq)
-              x4=x(i+3)-x(i+3-nq)
-              if(x1.lt.zero) x1=x1+one
-              if(x2.lt.zero) x2=x2+one
-              if(x3.lt.zero) x3=x3+one
-              if(x4.lt.zero) x4=x4+one
-              x(i)=x1
-              x(i+1)=x2
-              x(i+2)=x3
-              x(i+3)=x4
-              ranv(j+1)=x1
-              ranv(j+2)=x2
-              ranv(j+3)=x3
-              ranv(j+4)=x4
-              j=j+4
-  601         continue
-            end if
   650       continue
           end if
 
           limit=min(np,left+last)
-          if(nroll.gt.1) then
-            loop=mod((limit-max(nratio*nq,last)),mroll)
-          else
-            loop=limit-max(nratio*nq,last)
-          end if
+          loop=limit-max(nratio*nq,last)
 
           do 700 i=max(nratio*nq,last)+1,max(nratio*nq,last)+loop
           x1=x(i)-x(i-nq)
@@ -374,27 +319,6 @@ module mod_random
           j=j+1
           ranv(j)=x1
   700     continue
-          if(nroll.gt.1) then
-            do 701 i=max(nratio*nq,last)+loop+1,limit,mroll
-            x1=x(i)-x(i-nq)
-            x2=x(i+1)-x(i+1-nq)
-            x3=x(i+2)-x(i+2-nq)
-            x4=x(i+3)-x(i+3-nq)
-            if(x1.lt.zero) x1=x1+one
-            if(x2.lt.zero) x2=x2+one
-            if(x3.lt.zero) x3=x3+one
-            if(x4.lt.zero) x4=x4+one
-            x(i)=x1
-            x(i+1)=x2
-            x(i+2)=x3
-            x(i+3)=x4
-            ranv(j+1)=x1
-            ranv(j+2)=x2
-            ranv(j+3)=x3
-            ranv(j+4)=x4
-            j=j+4
-  701       continue
-          end if
 
           last=mod(limit,np)
           left=nran-j
