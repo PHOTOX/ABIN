@@ -47,6 +47,10 @@ check_for_openmpi() {
   fi
 }
 
+check_for_intelmpi() {
+  which mpiifort > /dev/null
+}
+
 set_mpich_vars() {
   if [[ -z ${MPI_PATH-} ]];then
     export MPIRUN=mpirun

@@ -26,6 +26,10 @@ fi
 
 # Exit early for OpenMPI build.
 check_for_openmpi
+# Exit early for IntelMPI.
+# IntelMPI does seem to have hydra_nameserver,
+# but for some reason it cannot bind to port on GHA.
+check_for_intelmpi
 
 # We relaunch the nameserver in each subtest
 # due to the bug in hydra_nameserver
