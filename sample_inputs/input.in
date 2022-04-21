@@ -11,7 +11,7 @@ mdtype='md',		! 'md' = classical MD
 nwalk=1,		! number of random walkers 
 nstep=5000,		! number of steps
 dt=20.,			! timestep [au]
-irandom=111313,  	! random seed
+
 
 nwrite=10,		! how often some output should be printed (estimators etc.)
 nwritex=5,		! how often should we print coordinates?

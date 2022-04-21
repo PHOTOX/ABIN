@@ -45,10 +45,6 @@ module mod_general
    integer :: irest = 0
    integer :: icv = 0, anal_ext = 0, idebug = 0
    integer :: ihess
-   ! Random number seed
-   ! TODO: Default should be set from urandom see:
-   ! https://linux.die.net/man/4/urandom
-   integer :: irandom = 156873
    ! Number of atoms, taken from XYZ geometry
    integer :: natom = 0
    ! Switch for internal QM/MM, experimental!!

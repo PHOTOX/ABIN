@@ -5,7 +5,7 @@ pot='g09'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,o
 mdtype='md',		! md = classical MD
 nstep=50000,		! number of steps
 dt=20.,			! timestep [au]
-irandom=1651563,  	! random seed
+
 irest=0,		! should we restart from restart.xyz? (ignoring input coordinates and velocities)
 
 nwrite=1,		! how often some output should be printed (estimators etc.)

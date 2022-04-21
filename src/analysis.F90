@@ -199,7 +199,7 @@ contains
       use mod_sh, only: write_nacmrest, istate
       use mod_lz, only: lz_restout
       use mod_gle, only: gle_restout, pile_restout
-      use mod_random
+      use mod_random, only: write_prng_state
       use mod_terampi_sh, only: write_wfn
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
@@ -280,7 +280,7 @@ contains
       end if
 
       ! write current state of PRNG
-      call rsavef(urest)
+      call write_prng_state(urest)
 
       close (urest)
 
@@ -318,7 +318,7 @@ contains
       use mod_sh, only: write_nacmrest, istate
       use mod_lz, only: lz_restin
       use mod_gle, only: gle_restin, pile_restin
-      use mod_random
+      use mod_random, only: read_prng_state
       use mod_terampi_sh, only: read_wfn
       real(DP), intent(out) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
@@ -327,9 +327,6 @@ contains
       integer :: iw, urest
       character(len=100) :: chtemp
       character(len=50) :: chin
-      logical :: prngread
-
-      prngread = .false.
 
       chin = append_rank('restart.xyz')
 
@@ -396,11 +393,10 @@ contains
          end if
       end if
 
-      ! Trying to restart PRNG
-      ! prngread is optional argument determining, whether we write or read
-      ! currently,prngread is not used, since vranf is initialize BEFORE restart
-      ! and is possibly rewritten here
-      call rsavef(urest, prngread)
+      ! Read PRNG state (optional)
+      ! By now, PRNG is already initialized, so if the state
+      ! is not found in the restart file, we simply march on.
+      call read_prng_state(urest)
 
       close (urest)
 
