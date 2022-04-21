@@ -23,6 +23,7 @@ launch_hydra_nameserver $MPICH_HYDRA
 
 TC_PORT="test$IDX"
 ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM -M $TC_PORT"
+MPIRUN="$MPIRUN -n 1"
 
 trap cleanup INT ABRT TERM EXIT
 
