@@ -82,9 +82,9 @@ jobs:
       #CXX: icpc
       APT_PACKAGES: >-
         intel-oneapi-compiler-fortran
+        intel-oneapi-mpi
+        intel-oneapi-mpi-devel
 
-      # intel-oneapi-mpi
-      # intel-oneapi-mpi-devel
       # intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
 
     steps:
@@ -103,8 +103,8 @@ jobs:
     - name: Install Intel oneAPI compiler
       run: |
         sudo apt-get install ${{ env.APT_PACKAGES }}
-        grep -C 10 'must be sources' /opt/intel/oneapi/setvars.sh
-        source /opt/intel/oneapi/setvars.sh --help
+        #grep -C 10 'must be sources' /opt/intel/oneapi/setvars.sh
+        source /opt/intel/oneapi/setvars.sh --help || true
         source /opt/intel/oneapi/setvars.sh
         printenv >> $GITHUB_ENV
 
