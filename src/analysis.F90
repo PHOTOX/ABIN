@@ -103,19 +103,15 @@ contains
          open (UMOVIE, file=chout, access='append', action="write")
       end if
 
-      ! printing with slightly lower precision for saving space
-      ! could be probably much lower
-10    format(A2, 3E18.8E2)
-
       do iw = 1, nwalk
          write (UMOVIE, *) natom
          ! In the future, we should get rid of the time step?
          write (UMOVIE, '(A10,I20,A15,F15.2)') 'Time step:', time_step, ' Sim. Time [au]', sim_time
          do iat = 1, natom
-            write (UMOVIE, 10) names(iat), x(iat, iw) / ANG, y(iat, iw) / ANG, z(iat, iw) / ANG
+            ! printing with slightly lower precision for saving space
+            write (UMOVIE, '(A2,3E18.8E2)') names(iat), x(iat, iw) / ANG, y(iat, iw) / ANG, z(iat, iw) / ANG
          end do
       end do
-
    end subroutine trajout
 
    subroutine forceout(x, y, z, fx, fy, fz, fUNIT)
@@ -127,7 +123,6 @@ contains
       real(DP) :: fx_tot, fy_tot, fz_tot
       real(DP) :: fx_rot, fy_rot, fz_rot
       integer :: iat, iw
-      character(len=40) :: fgeom, fkom
 
       ! Calculate net translational and rotational gradient (should be close to zero)
       fx_tot = 0.0D0; fy_tot = 0.0D0; fz_tot = 0.0D0
@@ -144,10 +139,7 @@ contains
          end do
       end do
 
-      fgeom = '(A2,3E18.10E2)'
-      fkom = '(A10,3E13.5E2,A14,3E13.5E2)'
-
-      ! TODO: Include somehow the timestep in the output
+      ! TODO: Include the timestep in the output
       ! Either here:
       ! write(funit, *)natom, it
       ! or maybe better here
@@ -155,15 +147,16 @@ contains
       !                & 'net force:',fx_tot,fy_tot,fz_tot, &
       !                & 'torque force:',fx_rot,fy_rot,fz_rot
       write (funit, *) natom
-      write (funit, fkom) 'net force:', fx_tot, fy_tot, fz_tot, &
-                        & ' torque force:', fx_rot, fy_rot, fz_rot
+      write (funit, '(A10,3E13.5E2,A14,3E13.5E2)') &
+         & 'net force:', fx_tot, fy_tot, fz_tot, &
+         & ' torque force:', fx_rot, fy_rot, fz_rot
+
       do iw = 1, nwalk
          do iat = 1, natom
             ! Printing in atomic units
-            write (funit, fgeom) names(iat), fx(iat, iw), fy(iat, iw), fz(iat, iw)
+            write (funit, '(A2,3E18.10E2)') names(iat), fx(iat, iw), fy(iat, iw), fz(iat, iw)
          end do
       end do
-
    end subroutine forceout
 
    subroutine velout(vx, vy, vz)
@@ -172,19 +165,16 @@ contains
       use mod_files, only: UVELOC
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer :: iat, iw
-      character(len=20) :: fgeom
 
-      fgeom = '(A2,3E18.10E2)'
-      write (UVELOC, *) natom
-      write (UVELOC, *) 'Time step:', it
+      write (UVELOC, '(I0)') natom
+      write (UVELOC, '(A,I0)') 'Time step: ', it
 
       do iw = 1, nwalk
          do iat = 1, natom
             ! Printing in atomic units
-            write (UVELOC, fgeom) names(iat), vx(iat, iw), vy(iat, iw), vz(iat, iw)
+            write (UVELOC, '(A2,3E18.10E2)') names(iat), vx(iat, iw), vy(iat, iw), vz(iat, iw)
          end do
       end do
-
    end subroutine velout
 
    subroutine restout(x, y, z, vx, vy, vz, time_step)
@@ -229,7 +219,7 @@ contains
 
       open (newunit=urest, file=chout, action='write')
 
-      write (urest, *) time_step, sim_time
+      write (urest, '(I0,X,ES24.16E3)') time_step, sim_time
 
       write (urest, *) chcoords
       call write_xyz(x, y, z, natom, nwalk, urest)
@@ -264,17 +254,17 @@ contains
       end if
 
       write (urest, *) chAVG
-      write (urest, *) est_temp_cumul
-      write (urest, *) est_prim_cumul, est_vir_cumul
-      write (urest, *) entot_cumul
+      write (urest, '(ES24.16E3)') est_temp_cumul
+      write (urest, '(2ES25.16E3)') est_prim_cumul, est_vir_cumul
+      write (urest, '(ES24.16E3)') entot_cumul
 
       if (icv == 1) then
-         write (urest, '(3E25.16)') est_prim2_cumul, est_prim_vir, est_vir2_cumul
-         write (urest, '(2E25.16)') cv_prim_cumul, cv_vir_cumul
+         write (urest, '(3ES25.16E3)') est_prim2_cumul, est_prim_vir, est_vir2_cumul
+         write (urest, '(2ES25.16E3)') cv_prim_cumul, cv_vir_cumul
          if (ihess == 1) then
-            write (urest, *) cv_dcv_cumul
+            write (urest, '(ES24.16E3)') cv_dcv_cumul
             do iw = 1, nwalk
-               write (urest, *) cvhess_cumul(iw)
+               write (urest, '(ES24.16E3)') cvhess_cumul(iw)
             end do
          end if
       end if
@@ -298,7 +288,7 @@ contains
 
          do iw = 1, nwalk
             do iat = 1, natom
-               write (urest, *) x(iat, iw), y(iat, iw), z(iat, iw)
+               write (urest, '(3ES25.16E3)') x(iat, iw), y(iat, iw), z(iat, iw)
             end do
          end do
       end subroutine write_xyz
@@ -428,7 +418,7 @@ contains
 
          do iw = 1, nwalk
             do iat = 1, natom
-               read (urest, *) x(iat, iw), y(iat, iw), z(iat, iw)
+               read (urest, '(3ES25.16E3)') x(iat, iw), y(iat, iw), z(iat, iw)
             end do
          end do
       end subroutine read_xyz

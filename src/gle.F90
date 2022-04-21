@@ -355,23 +355,21 @@ contains
 
    subroutine pile_restout(u)
       integer, intent(in) :: u
-      write (u, *) langham
+      write (u, '(ES24.16E3)') langham
    end subroutine
 
    subroutine gle_restin(u)
       use mod_general, only: natom, nwalk
       ! Restart file unit
       integer, intent(in) :: u
-      character(len=50) :: chformat
       integer :: iat, iw, is
 
-      write (chformat, '(A1,I1,A7)') '(', ns, 'E25.16)'
       do iw = 1, nwalk
          do iat = 1, natom * 3
             do is = 1, ns - 1
-               read (u, '(1E25.16)', advance="no") ps(iat, is, iw)
+               read (u, '(ES25.16E3)', advance="no") ps(iat, is, iw)
             end do
-            read (u, '(1E25.16)') ps(iat, ns, iw)
+            read (u, '(ES25.16E3)') ps(iat, ns, iw)
          end do
       end do
       read (u, *) langham
@@ -384,7 +382,7 @@ contains
       character(len=50) :: chformat
       integer :: iat, iw, is
 
-      write (chformat, '(A1,I0,A7)') '(', ns, 'E25.16)'
+      write (chformat, '(A1,I0,A)') '(', ns, 'ES25.16E3)'
       do iw = 1, nwalk
          do iat = 1, natom * 3
             write (u, fmt=trim(chformat)) (ps(iat, is, iw), is=1, ns)

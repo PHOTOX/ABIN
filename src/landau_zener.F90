@@ -101,7 +101,7 @@ contains
       integer :: ist ! =istate_lz
       real(DP) :: Ekin, Epot, Epot2, dE, hop_rdnum, hop_rdnum2, vel_rescale, stepfs, molveloc, grad_diff
       real(DP) :: one = 1.0D0
-      character(len=100) :: formt, fmt_in, fmt_out !, chSOC='SOC.dat'
+      character(len=100) :: formt, fmt_in, fmt_out
 
       !TODO: energy drift
       call check_energy_lz(en_array_lz, istate_lz, energydifthr_lz)
@@ -371,7 +371,7 @@ contains
 
       integer :: itest, iost, ISTATUS, system, row, col
       integer :: soc_unit
-      character(len=20) :: chSOC = 'SOC.dat'
+      character(len=*), parameter :: chSOC = 'SOC.dat'
       character(len=100) :: chsystem
       logical :: file_exists
 
@@ -384,10 +384,9 @@ contains
             & 'File '//trim(chsystem)//' does not exist!')
       end if
 
-      write (chsystem, '(A30,I4.3)') chsystem, 1 !iw
-      write (chsystem, '(A40,A14)') chsystem, ' < ./state.dat'
-      !CALL TO SYSTEM
-      ISTATUS = system(chsystem)
+      write (chsystem, '(A,I4.3)') trim(chsystem)//" ", 1 !iw
+      chsystem = trim(chsystem)//' < ./state.dat'
+      istatus = system(chsystem)
       if (ISTATUS /= 0 .and. ISTATUS /= 256) then
          write (stderr, *) 'ERROR: Something went wrong during the execution of the ab initio external program.'
          write (stderr, *) 'Inspect the output files in folder '//trim(toupper(chpot))//"/"
@@ -401,7 +400,6 @@ contains
       do while (.not. file_exists .and. itest < 10)
          write (stderr, *) 'WARNING:File ', chSOC, ' does not exist. Waiting..'
          ISTATUS = system('sync') !mel by zajistit flush diskoveho bufferu
-         !call system('sync')
          inquire (FILE=chSOC, EXIST=file_exists)
          itest = itest + 1
       end do
@@ -507,7 +505,7 @@ contains
 
       write (fileunit, *) istate_lz
       do ist = 1, nstate_lz
-         write (fileunit, *) en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3)
+         write (fileunit, '(3ES25.16E3)') en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3)
       end do
 
    end subroutine lz_restout

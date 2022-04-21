@@ -1,23 +1,20 @@
 &general
-pot='_mmwater_'		!not done yet,options should be g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho
-ipimd=0,		!classical simulation 0, quantum simulation 1
-nwalk=1,		!number of random walkers 
-imini=0,		!equilibration period,!not properly implemented yet
-istage=0,		!staging transformation (1), without staging (0)
-nstep=20,		!
-dt=20.,			!number of steps and timestep
-irandom=131313,  	!random seed
+pot='_mmwater_'
+mdtype='md'
+nstep=2,
+dt=20.,
+irandom=131313,
 
-nwrite=1,		! how often some output should be printed (estimators etc.)
-nwritex=1,		! how often should we print coordinates?
+nwrite=1,
+nwritex=1,
 nwritev=1,
-nrest=1,		! how often we print restart files?
-irest=1,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+nrest=1,
+irest=1,
 
 isbc=1,			! spherical boundary conditions
-!rb_sbc=10.0d0,              ! radius of the cluster for sbc
-kb_sbc=0.01d0,		! force constant for spherical potential,in A
-natom=159,		!number of atoms
+! Determine the radius automatically
+!rb_sbc=10.0d0,         ! radius of the cluster for sbc
+kb_sbc=0.01d0,		! force constant for spherical potential, a.u.
 /
 
 &system
@@ -40,10 +37,11 @@ ishake2=2,3,5,6,9,10,12,13,
 /
 
 &nhcopt
+rem_comrot=.false.
 nmolt=53
 natmolt=53*3
-nshakemol=2,2,0,2,2,3*0,            ! number of constraints in molecules
-imasst=0
+nshakemol=2,2,0,2,2,3*0,  ! number of constraints in molecules
+imasst=0  ! Use global thermostat (massive thermostat not possible with shake)
 inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0
 nchain=4,		! number of nose-hoover chains
 temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]

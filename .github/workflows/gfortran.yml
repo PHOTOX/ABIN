@@ -72,6 +72,49 @@ jobs:
         fail_ci_if_error: true
         gcov: true
 
+  intel_build:
+    name: Intel OneAPI build
+    runs-on: ubuntu-20.04
+    env:
+      FC: mpiifort
+      # Use GCC for C++ code to speed up the build
+      #CC: icc
+      #CXX: icpc
+      APT_PACKAGES: >-
+        intel-oneapi-compiler-fortran
+        intel-oneapi-mpi
+        intel-oneapi-mpi-devel
+
+      # intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
+
+    - name: Add Intel repository
+      run: |
+        wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        rm GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+        sudo apt-get update
+
+    - name: Install Intel oneAPI compiler
+      run: |
+        sudo apt-get install ${{ env.APT_PACKAGES }}
+        source /opt/intel/oneapi/setvars.sh
+        printenv >> $GITHUB_ENV
+
+    - name: Build ABIN
+      run: ./configure --mpi "" && make
+      env:
+        FFLAGS: -O0 -fopenmp -warn all,noextern
+
+    - name: Run End-to-End tests
+      run: make e2etest
+
+
   optimized_build:
     name: Optimized build
     runs-on: ubuntu-18.04

@@ -1,5 +1,5 @@
 &general
-nstep=20,
+nstep=2,
 irest=1,
 idebug=0
 iknow=0

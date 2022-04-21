@@ -37,10 +37,10 @@ trap local_cleanup INT ABRT TERM EXIT
 let NUM_JOBS=N_TERA_SERVERS+1
 declare -A job_pids
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
-   $MPIRUN ./$TCEXE $TC_SERVER_NAME.$itera > $TCOUT.$itera 2>&1 &
+   $MPIRUN -n 1 ./$TCEXE $TC_SERVER_NAME.$itera > $TCOUT.$itera 2>&1 &
    job_pids[$itera]=$!
 }
-sleep 1
+sleep 2
 # Grep port names from TC output, pass to ABIN via a file.
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
   grep 'port name' $TCOUT.$itera | awk -F"port name: " '{print $2;exit}' > $TC_PORT_FILE.$itera

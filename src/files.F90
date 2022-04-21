@@ -259,7 +259,7 @@ contains
       end if
       headers(UCHARGES) = '# Atomic charges from current electronic state'
       headers(UDOTPRODCI) = '# Time  cidotprod1  cidotprod2 ... '
-      headers(UTDIP) = '# Time  st  tdip_tot.1 tdip_tot.2 ... tdip_x.1 tdip_y.1 tdip_z.1 tdip_x.2 tdip_y.2 tdip_z.2.'
+      headers(UTDIP) = '# Time state tdip_tot.1..N tdip_x.1 tdip_y.1 tdip_z.1 ...'
 
       do i = 2, MAXUNITS
          inquire (unit=i, opened=lopened)
