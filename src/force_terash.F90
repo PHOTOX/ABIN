@@ -437,7 +437,7 @@ contains
 
       inquire (FILE=fname, EXIST=file_exists)
       if (file_exists) then
-         call system('mv '//fname//' '//fname//'.old')
+         call execute_command_line('mv '//fname//' '//fname//'.old')
       end if
 
       open (newunit=uwfn, file=fname, action='write', status="new", access="sequential", form="unformatted")

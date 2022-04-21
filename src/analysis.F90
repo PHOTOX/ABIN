@@ -211,9 +211,9 @@ contains
       if (file_exists) then
          chsystem = 'cp '//trim(chout)//'  '//trim(chout)//'.old'
          if (iremd == 1) then
-            call system(chsystem)
+            call execute_command_line(chsystem)
          else if (my_rank == 0) then
-            call system(chsystem)
+            call execute_command_line(chsystem)
          end if
       end if
 

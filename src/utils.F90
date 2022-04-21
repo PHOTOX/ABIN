@@ -263,7 +263,8 @@ contains
          chsystem = 'cp '//trim(charch)//'  '//trim(charch)//'.'//adjustl(chit)
          write (stdout, *) 'Archiving file ', trim(charch)
          write (stdout, *) trim(chsystem)
-         call system(chsystem)
+         ! TODO: Catch errors here
+         call execute_command_line(chsystem)
       end if
    end subroutine archive_file
 

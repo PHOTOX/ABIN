@@ -369,7 +369,7 @@ contains
       real(DP), intent(inout) :: soc_matrix(:, :)
       character(len=*), intent(in) :: chpot
 
-      integer :: itest, iost, ISTATUS, system, row, col
+      integer :: iost, istatus, row, col
       integer :: soc_unit
       character(len=*), parameter :: chSOC = 'SOC.dat'
       character(len=100) :: chsystem
@@ -386,23 +386,21 @@ contains
 
       write (chsystem, '(A,I4.3)') trim(chsystem)//" ", 1 !iw
       chsystem = trim(chsystem)//' < ./state.dat'
-      istatus = system(chsystem)
-      if (ISTATUS /= 0 .and. ISTATUS /= 256) then
+      call execute_command_line(trim(chsystem), exitstat=istatus)
+      if (istatus /= 0 .and. istatus /= 256) then
          write (stderr, *) 'ERROR: Something went wrong during the execution of the ab initio external program.'
          write (stderr, *) 'Inspect the output files in folder '//trim(toupper(chpot))//"/"
          write (stderr, *) 'CALL:', chsystem
          call fatal_error(__FILE__, __LINE__, 'Could not compute SOC matrix')
       end if
 
-      !make sure that the file exist and flush the disc buffer
-      itest = 0
+      ! make sure that the file exist and flush the disc buffer
       inquire (FILE=chSOC, EXIST=file_exists)
-      do while (.not. file_exists .and. itest < 10)
+      if (.not. file_exists) then
          write (stderr, *) 'WARNING:File ', chSOC, ' does not exist. Waiting..'
-         ISTATUS = system('sync') !mel by zajistit flush diskoveho bufferu
-         inquire (FILE=chSOC, EXIST=file_exists)
-         itest = itest + 1
-      end do
+         call execute_command_line('sync')
+         call execute_command_line('sleep 0.5')
+      end if
 
       open (newunit=soc_unit, file=chSOC, status='old', ACTION='READ', IOSTAT=iost)
       if (iost /= 0) then

@@ -1205,9 +1205,6 @@ contains
 
    end subroutine initialize_masses
 
-! NOTE: This subroutine is outside of init()
-! due to a conflict of 'call system()` with namelist 'system',
-! which some compilers do not like.
    subroutine print_runtime_info()
       use mod_files, only: stdout
       character(len=1024) :: cmdline
@@ -1215,16 +1212,16 @@ contains
       write (stdout, *) '          RUNTIME INFO'
       write (stdout, *) ' '
       write (stdout, *) "Running on node: "
-      call system('uname -n')
+      call execute_command_line('uname -n')
       write (stdout, '(A)') 'Working directory: '
-      call system('pwd')
+      call execute_command_line('pwd')
       write (stdout, *)
       call get_command(cmdline)
       write (stdout, *) trim(cmdline)
       call flush (stdout)
       call get_command_argument(0, cmdline)
       write (stdout, *)
-      call system('ldd '//cmdline)
+      call execute_command_line('ldd '//cmdline)
       write (stdout, *) ''
    end subroutine print_runtime_info
 

@@ -15,13 +15,11 @@ contains
       ! If you need other input arrays, import them from modules
       ! use mod_arrays, only: x, y, z
       character(len=100) :: chsystem
-      character(len=50) :: chit
 
       ! Launch external BASH script.
       ! Can be used e.g. to analyze wavefunction on-the-fly
-      write (chit, *) it
-      chsystem = './analyze_ext.sh '//trim(chit)
-      call system(chsystem)
+      write (chsystem, '(A,I0)') './analyze_ext.sh ', it
+      call execute_command_line(chsystem)
    end subroutine analyze_ext
 
 end module mod_analyze_ext

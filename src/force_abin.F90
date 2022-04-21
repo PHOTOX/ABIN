@@ -114,7 +114,7 @@ contains
       ! Bead index (perhaps appended by REMD index)
       integer, intent(in) :: iw
       integer, intent(in) :: ipimd
-      integer :: istatus, system
+      integer :: istatus
       character(len=300) :: call_cmd
 
       call_cmd = ''
@@ -125,14 +125,15 @@ contains
       call_cmd = append_rank(call_cmd)
 
       ! For SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)
-      ! TODO: This should not be hard-coded
+      ! TODO: This threshold should not be hard-coded
       if (ipimd == 2 .or. ipimd == 5) then
          write (call_cmd, '(A,I0,A)') trim(call_cmd)//' ', 7, ' < state.dat'
       end if
 
       ! Call the shell interface script
-      istatus = system(trim(call_cmd))
+      call execute_command_line(trim(call_cmd), exitstat=istatus)
 
+      ! TODO: Test whether this is true for execute_command_line
       ! NOTE: For some reason, shell exit status 1 turns into 256
       ! However, this one we also get by default from BASH, I don't know why.
       ! If the BASH script wants to exit with an error, it should use e.g. 'exit 2'
@@ -152,8 +153,9 @@ contains
       inquire (file=fname, exist=exists)
       if (.not. exists) then
          write (stderr, *) 'WARNING: File '//trim(fname)//' does not exist. Waiting..'
-         call system('sync') !mel by zajistit flush diskoveho bufferu
-         call system('sleep 0.5')
+         ! Should flush HDD buffer
+         call execute_command_line('sync')
+         call execute_command_line('sleep 0.5')
       end if
 
       open (newunit=uengrad, file=fname, status='old', action='read', iostat=iost, iomsg=errmsg)

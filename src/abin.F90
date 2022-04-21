@@ -156,7 +156,7 @@ program abin
          call mpi_barrier_wrapper()
 
          if (my_rank == 0) then
-            call system('rm EXIT')
+            call execute_command_line('rm EXIT')
          end if
 
          exit ! break from time loop
@@ -271,7 +271,7 @@ contains
    subroutine clean_temp_files()
       ! TODO: Implement "clean" bash function in abin interfaces
       ! that should be called here (and only if irest=0)
-      call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+      call execute_command_line('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
    end subroutine clean_temp_files
 
    function get_formatted_date_and_time(time_data) result(formatted_string)

@@ -213,7 +213,7 @@ contains
 
       inquire (FILE=restart_file, EXIST=file_exists)
       chsystem = 'mv '//trim(restart_file)//'  '//trim(restart_file)//'.old'
-      if (file_exists) call system(chsystem)
+      if (file_exists) call execute_command_line(chsystem)
 
       open (newunit=iunit1, file=restart_file, action='write', status="new", access="sequential", form="unformatted")
 
@@ -375,7 +375,7 @@ contains
       itrj = 1
       write (chsystem, '(A,I13,I4.3,I3,A)') trim(chsystem), it, itrj, nac_accu, ' < state.dat'
 
-      call system(chsystem)
+      call execute_command_line(chsystem)
 
       ! TODO: catch errors here
 
