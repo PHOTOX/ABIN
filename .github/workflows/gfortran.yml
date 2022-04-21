@@ -103,13 +103,11 @@ jobs:
     - name: Install Intel oneAPI compiler
       run: |
         sudo apt-get install ${{ env.APT_PACKAGES }}
-        #grep -C 10 'must be sources' /opt/intel/oneapi/setvars.sh
-        source /opt/intel/oneapi/setvars.sh --help || true
         source /opt/intel/oneapi/setvars.sh
         printenv >> $GITHUB_ENV
 
     - name: Build ABIN
-      run: ./configure && make
+      run: ./configure --mpi "" && make
       env:
         FFLAGS: -O0 -fopenmp -warn all,noextern
 
