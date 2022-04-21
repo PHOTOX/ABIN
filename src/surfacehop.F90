@@ -355,7 +355,6 @@ contains
       integer, intent(in) :: nac_accu
       integer :: ist1, ist2, u, itrj
       character(len=100) :: chsystem
-      external system
 
       open (newunit=u, file='state.dat')
       write (u, '(I2)') nstate
