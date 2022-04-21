@@ -512,8 +512,8 @@ contains
 
    subroutine lz_restin(fileunit, x, y, z, vx, vy, vz)
       integer, intent(in) :: fileunit
-      real(DP), intent(out) :: x(:, :), y(:, :), z(:, :)
-      real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer :: ist
 
       read (fileunit, *) istate_lz
