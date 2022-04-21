@@ -60,7 +60,7 @@ check_for_intelmpi() {
 set_mpich_vars() {
   if [[ -z ${MPI_PATH-} ]];then
     export MPIRUN=mpirun
-    export MPICXX=mpicxx
+    export MPICXX=mpiicpc
     export MPICH_HYDRA=hydra_nameserver
   else
     export MPIRUN=$MPI_PATH/bin/mpirun
