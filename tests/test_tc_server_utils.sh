@@ -16,7 +16,7 @@ launch_hydra_nameserver() {
   # to workaround the existing bug in it.
   # https://github.com/pmodels/mpich/issues/5058
   CMD=$1
-  hydra=$(ps -C hydra_nameserver -o pid= || true)
+  hydra=$(ps -C hydra_nameserve -o pid= || true)
   if [[ -n ${hydra} ]];then
     kill_processes $hydra
   fi
@@ -60,7 +60,7 @@ check_for_intelmpi() {
 set_mpich_vars() {
   if [[ -z ${MPI_PATH-} ]];then
     export MPIRUN=mpirun
-    export MPICXX=mpiicpc
+    export MPICXX=mpicxx
     export MPICH_HYDRA=hydra_nameserver
   else
     export MPIRUN=$MPI_PATH/bin/mpirun
