@@ -75,11 +75,11 @@ jobs:
   intel_build:
     name: Intel OneAPI build
     runs-on: ubuntu-20.04
-    needs: basic_build
     env:
       FC: ifort
-      CC: icc
-      CXX: icpc
+      # Use GCC for C++ code to speed up the build
+      #CC: icc
+      #CXX: icpc
 
     steps:
     - uses: actions/checkout@v2
@@ -96,7 +96,7 @@ jobs:
 
     - name: Install Intel oneAPI compiler
       run: |
-        sudo apt-get install intel-oneapi-compiler-fortran intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
+        sudo apt-get install intel-oneapi-compiler-fortran #intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
         source /opt/intel/oneapi/setvars.sh
         printenv >> $GITHUB_ENV
 
