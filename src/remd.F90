@@ -48,6 +48,7 @@ contains
       integer :: status(MPI_STATUS_SIZE), i
       integer :: my_rank
       logical :: lswap = .false., lswaps(MAX_REPLICA)
+      character(len=100) :: formt
 
       ! Broadcast array of random numbers from rank 0
       my_rank = get_mpi_rank()
@@ -119,11 +120,13 @@ contains
          do i = 1, nreplica - 1
             if (lswaps(i)) ratios_cumul(i) = ratios_cumul(i) + 1.0D0
          end do
-         write (UREMD, *) '==============================================='
-         write (UREMD, *) 'Swaping probabilities: ', (probs(i), i=2, nreplica)
+         write (formt, '("(A,",I0,"F7.4)")') nreplica - 1
+         write (UREMD, '(A)') '===================================='
+         write (UREMD, formt) 'Swaping probabilities: ', (probs(i), i=2, nreplica)
          write (UREMD, *) 'Exchanges: ', (lswaps(i), i=1, nreplica - 1)
-         write (UREMD, *) 'Acceptance ratios', (ratios_cumul(i) * nswap / it, i=1, nreplica - 1)
-         write (UREMD, *) 'ReplicaTravel:', (reps(i), i=1, nreplica)
+         write (UREMD, formt) 'Acceptance ratios', (ratios_cumul(i) * nswap / it, i=1, nreplica - 1)
+         write (formt, '("(A,",I0,"I4)")') nreplica
+         write (UREMD, formt) 'ReplicaTravel:', (reps(i), i=1, nreplica)
       end if
 
    end subroutine remd_swap
@@ -332,7 +335,7 @@ contains
       call handle_mpi_error(ierr)
       if (my_rank == 0) then
          do i = 1, nreplica
-            write (UREMD, '(A,I0,A,F8.2)') 'Temperature of replica ', i - 1, ' is ', temp_list(i)
+            write (UREMD, '("Temperature of replica ",I0," is ",F6.2," K")') i - 1, temp_list(i)
          end do
       end if
       temp_list = temp_list / AUTOK
