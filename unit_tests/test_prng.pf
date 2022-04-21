@@ -57,13 +57,13 @@ contains
       open (newunit=u, file='prng.dat')
 
       call initialize_prng(seed=irandom, mpi_rank=0)
-      call vranf(rn_restart, nran/2)
+      call vranf(rn_restart, nran / 2)
       call write_prng_state(u)
 
       rewind (u)
       call initialize_prng(seed=irandom, mpi_rank=0)
       call read_prng_state(u)
-      call vranf(rn_restart(nran/2+1:nran), nran/2)
+      call vranf(rn_restart(nran / 2 + 1:nran), nran / 2)
 
       close (u, status='delete')
 
@@ -83,13 +83,13 @@ contains
       open (newunit=u, file='prng.dat')
 
       call initialize_prng(seed=irandom, mpi_rank=0)
-      call gautrg(rn_restart, nran/2)
+      call gautrg(rn_restart, nran / 2)
       call write_prng_state(u)
 
       rewind (u)
       call initialize_prng(seed=irandom, mpi_rank=0)
       call read_prng_state(u)
-      call gautrg(rn_restart(nran/2+1:nran), nran/2)
+      call gautrg(rn_restart(nran / 2 + 1:nran), nran / 2)
 
       close (u, status='delete')
 

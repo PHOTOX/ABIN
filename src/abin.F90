@@ -90,178 +90,178 @@ program abin
       stop 0
    end if
 
-      write (stdout, *)
-      write (stdout, '("#",10X,A,11X,A)') 'Step','Time [fs]'
+   write (stdout, *)
+   write (stdout, '("#",10X,A,11X,A)') 'Step', 'Time [fs]'
 
-      ! ---------------- PROPAGATION-------------
+   ! ---------------- PROPAGATION-------------
 
-      ! Without this Barrier, ranks > 0 do not write geom.dat in force_clas
-      ! I don't know why the hell not.
-      call mpi_barrier_wrapper()
+   ! Without this Barrier, ranks > 0 do not write geom.dat in force_clas
+   ! I don't know why the hell not.
+   call mpi_barrier_wrapper()
 
-      ! Get initial forces and energies
-      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
-      if (ipimd == 1) then
-         call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
+   ! Get initial forces and energies
+   call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+   if (ipimd == 1) then
+      call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
+   end if
+
+   ! Correct energy history for LZ
+   if (ipimd == 5) then
+      call lz_rewind(en_array_lz)
+   end if
+
+   ! Get reference forces and energies for ab initio  MTS RESPA
+   if (pot_ref /= '_none_') then
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
+      call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
+   end if
+
+   ! Set initial values for surface hopping
+   if (ipimd == 2) then
+      if (irest /= 1) then
+         call get_nacm()
       end if
-
-      ! Correct energy history for LZ
-      if (ipimd == 5) then
-         call lz_rewind(en_array_lz)
-      end if
-
-      ! Get reference forces and energies for ab initio  MTS RESPA
-      if (pot_ref /= '_none_') then
-         call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
-         call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
-      end if
-
-      ! Set initial values for surface hopping
-      if (ipimd == 2) then
-         if (irest /= 1) then
-            call get_nacm()
-         end if
-         call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
-         if (pot == '_tera_' .or. restrain_pot == '_tera_') then
-            call move_new2old_terash()
-         end if
-      else if (ipimd == 5 .and. pot == '_tera_') then
+      call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
+      if (pot == '_tera_' .or. restrain_pot == '_tera_') then
          call move_new2old_terash()
       end if
+   else if (ipimd == 5 .and. pot == '_tera_') then
+      call move_new2old_terash()
+   end if
 
-      ! LOOP OVER TIME STEPS
-      ! "it" variable is set to 0 or read from restart.xyz in subroutine init
-      it = it + 1
-      do it = (it), nstep
+   ! LOOP OVER TIME STEPS
+   ! "it" variable is set to 0 or read from restart.xyz in subroutine init
+   it = it + 1
+   do it = (it), nstep
 
-         ! This barrier is needed so that all MPI processes see the file 'EXIT'
-         ! if it is present (we delete it below before we stop the program).
-         call mpi_barrier_wrapper()
+      ! This barrier is needed so that all MPI processes see the file 'EXIT'
+      ! if it is present (we delete it below before we stop the program).
+      call mpi_barrier_wrapper()
 
-         inquire (FILE="EXIT", EXIST=file_exists)
-         if (file_exists) then
-            write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
-            if (istage == 1) then
-               call QtoX(vx, vy, vz, transxv, transyv, transzv)
-               call QtoX(x, y, z, transx, transy, transz)
-               call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
-            else if (inormalmodes > 0) then
-               call UtoX(x, y, z, transx, transy, transz)
-               call UtoX(vx, vy, vz, transxv, transyv, transzv)
-               call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
-            else
-               call restout(x, y, z, vx, vy, vz, it - 1)
-            end if
-
-            call mpi_barrier_wrapper()
-
-            if (my_rank == 0) then
-               call system('rm EXIT')
-            end if
-
-            exit ! break from time loop
-
-         end if
-
-         ! PROPAGATE through one time step
-         call mdstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
-
-         vx = px / amt
-         vy = py / amt
-         vz = pz / amt
-
-         ! SURFACE HOPPING SECTION
-         ! SH is called here, Ehrenfest inside the Verlet MD step
-         if (ipimd == 2) then
-
-            call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
-
-            px = amt * vx
-            py = amt * vy
-            pz = amt * vz
-
-            ! TODO: this should be in the surfacehop routine
-            if (pot == '_tera_') then
-               call move_new2old_terash()
-            end if
-
-         end if
-
-         ! LANDAU ZENER HOPPING
-         if (ipimd == 5) then
-            call lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, pot)
-            px = amt * vx
-            py = amt * vy
-            pz = amt * vz
-
-            if (pot == '_tera_') then
-               call move_new2old_terash()
-            end if
-         end if
-
-#ifdef USE_MPI
-         ! SWAP REMD REPLICAS
-         if (iremd == 1 .and. modulo(it, nswap) == 0) then
-            call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
-         end if
-#endif
-
-         ! --- Trajectory analysis ---
-         ! In order to analyze the output, we have to perform the back transformation
-         ! Transformed (cartesian) coordinates are stored in trans matrices.
-
-         ! Enter this section only every ncalc step
-         if (modulo(it, ncalc) /= 0) then
-            cycle
-         end if
-
-         call temperature(px, py, pz, amt, eclas)
-
+      inquire (FILE="EXIT", EXIST=file_exists)
+      if (file_exists) then
+         write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
          if (istage == 1) then
-
             call QtoX(vx, vy, vz, transxv, transyv, transzv)
             call QtoX(x, y, z, transx, transy, transz)
-            call FQtoFX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
-            call analysis(transx, transy, transz, transxv, transyv, transzv,  &
-                 &       transfxc, transfyc, transfzc, eclas)
-
+            call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
          else if (inormalmodes > 0) then
-
             call UtoX(x, y, z, transx, transy, transz)
             call UtoX(vx, vy, vz, transxv, transyv, transzv)
-            call UtoX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
-            call analysis(transx, transy, transz, transxv, transyv, transzv,  &
-                 &        transfxc, transfyc, transfzc, eclas)
+            call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
          else
-
-            call analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas)
-
+            call restout(x, y, z, vx, vy, vz, it - 1)
          end if
 
-         if (modulo(it, nwrite) == 0) then
-            write (stdout, '(I15,F15.2)') it, sim_time * AUtoFS
-            call flush (OUTPUT_UNIT)
+         call mpi_barrier_wrapper()
+
+         if (my_rank == 0) then
+            call system('rm EXIT')
          end if
 
-         ! Time step loop
-      end do
+         exit ! break from time loop
 
-      ! Write restart file at the end of a run
-      ! Because NCALC might be >1, we have to perform transformation to get the most
-      ! recent coordinates and velocities
-      it = it - 1
+      end if
+
+      ! PROPAGATE through one time step
+      call mdstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
+
+      vx = px / amt
+      vy = py / amt
+      vz = pz / amt
+
+      ! SURFACE HOPPING SECTION
+      ! SH is called here, Ehrenfest inside the Verlet MD step
+      if (ipimd == 2) then
+
+         call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
+
+         px = amt * vx
+         py = amt * vy
+         pz = amt * vz
+
+         ! TODO: this should be in the surfacehop routine
+         if (pot == '_tera_') then
+            call move_new2old_terash()
+         end if
+
+      end if
+
+      ! LANDAU ZENER HOPPING
+      if (ipimd == 5) then
+         call lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, pot)
+         px = amt * vx
+         py = amt * vy
+         pz = amt * vz
+
+         if (pot == '_tera_') then
+            call move_new2old_terash()
+         end if
+      end if
+
+#ifdef USE_MPI
+      ! SWAP REMD REPLICAS
+      if (iremd == 1 .and. modulo(it, nswap) == 0) then
+         call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
+      end if
+#endif
+
+      ! --- Trajectory analysis ---
+      ! In order to analyze the output, we have to perform the back transformation
+      ! Transformed (cartesian) coordinates are stored in trans matrices.
+
+      ! Enter this section only every ncalc step
+      if (modulo(it, ncalc) /= 0) then
+         cycle
+      end if
+
+      call temperature(px, py, pz, amt, eclas)
 
       if (istage == 1) then
+
          call QtoX(vx, vy, vz, transxv, transyv, transzv)
          call QtoX(x, y, z, transx, transy, transz)
-         call restout(transx, transy, transz, transxv, transyv, transzv, it)
+         call FQtoFX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
+         call analysis(transx, transy, transz, transxv, transyv, transzv,  &
+              &       transfxc, transfyc, transfzc, eclas)
+
       else if (inormalmodes > 0) then
+
          call UtoX(x, y, z, transx, transy, transz)
          call UtoX(vx, vy, vz, transxv, transyv, transzv)
-         call restout(transx, transy, transz, transxv, transyv, transzv, it)
+         call UtoX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
+         call analysis(transx, transy, transz, transxv, transyv, transzv,  &
+              &        transfxc, transfyc, transfzc, eclas)
       else
-         call restout(x, y, z, vx, vy, vz, it)
+
+         call analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas)
+
       end if
+
+      if (modulo(it, nwrite) == 0) then
+         write (stdout, '(I15,F15.2)') it, sim_time * AUtoFS
+         call flush (OUTPUT_UNIT)
+      end if
+
+      ! Time step loop
+   end do
+
+   ! Write restart file at the end of a run
+   ! Because NCALC might be >1, we have to perform transformation to get the most
+   ! recent coordinates and velocities
+   it = it - 1
+
+   if (istage == 1) then
+      call QtoX(vx, vy, vz, transxv, transyv, transzv)
+      call QtoX(x, y, z, transx, transy, transz)
+      call restout(transx, transy, transz, transxv, transyv, transzv, it)
+   else if (inormalmodes > 0) then
+      call UtoX(x, y, z, transx, transy, transz)
+      call UtoX(vx, vy, vz, transxv, transyv, transzv)
+      call restout(transx, transy, transz, transxv, transyv, transzv, it)
+   else
+      call restout(x, y, z, vx, vy, vz, it)
+   end if
 
    call print_footer(time_start)
    call finish(0)
