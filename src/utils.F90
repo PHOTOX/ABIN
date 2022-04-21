@@ -234,7 +234,7 @@ contains
       use mod_general, only: iremd
       use mod_mpi, only: get_mpi_rank
       character(len=*), intent(in) :: string
-      character(len=len_trim(string)+3) :: output
+      character(len=len_trim(string) + 3) :: output
       integer :: my_rank
 
       if (iremd == 1) then

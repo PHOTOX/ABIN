@@ -28,7 +28,7 @@ module mod_mdstep
       end subroutine integrator
    end interface
 
-   procedure(integrator), pointer, public :: mdstep => NULL()
+   procedure(integrator), pointer, public :: mdstep => null()
 
 contains
 
@@ -53,7 +53,7 @@ contains
          mdstep => verletstep
          nabin = 1
       end if
- 
+
       ! Selecting proper integrator for a given MD type
       if (ipimd == 2 .or. ipimd == 5) then
          mdstep => verletstep
@@ -70,7 +70,7 @@ contains
       if (nshake /= 0) then
          mdstep => respashakestep
       end if
- 
+
       if (pot_ref /= '_none_') then
          mdstep => doublerespastep
          write (stdout, '(A)') 'Using Multiple Time-Step RESPA integrator'
@@ -125,71 +125,71 @@ contains
    ! Efficient stochastic thermostatting of path integral molecular dynamics
    ! J. Chem. Phys. 133, 124104 ?2010?
    subroutine propagate_nm(x, y, z, px, py, pz, m, dt)
-   use mod_const, only: DP, PI
-   use mod_general, only: nwalk, natom
-   use mod_nhc, only: temp
-   implicit none
-   real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
-   real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
-   real(DP), intent(in) :: m(:, :)
-   real(DP), intent(in) :: dt
-   real(DP), dimension(natom, nwalk) :: x_old, y_old, z_old
-   real(DP), dimension(natom, nwalk) :: px_old, py_old, pz_old
-   real(DP), dimension(nwalk) :: omega(nwalk)
-   real(DP) :: omega_n, om, omt, c, s
-   integer :: iat, iw, k
+      use mod_const, only: DP, PI
+      use mod_general, only: nwalk, natom
+      use mod_nhc, only: temp
+      implicit none
+      real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
+      real(DP), intent(in) :: m(:, :)
+      real(DP), intent(in) :: dt
+      real(DP), dimension(natom, nwalk) :: x_old, y_old, z_old
+      real(DP), dimension(natom, nwalk) :: px_old, py_old, pz_old
+      real(DP), dimension(nwalk) :: omega(nwalk)
+      real(DP) :: omega_n, om, omt, c, s
+      integer :: iat, iw, k
 
-   ! expecting m = am = physical masses
+      ! expecting m = am = physical masses
 
-   x_old = x
-   y_old = y
-   z_old = z
-   px_old = px
-   py_old = py
-   pz_old = pz
+      x_old = x
+      y_old = y
+      z_old = z
+      px_old = px
+      py_old = py
+      pz_old = pz
 
-   omega_n = temp * nwalk
+      omega_n = temp * nwalk
 
-   do iw = 2, nwalk
-      k = iw - 1
-      omega(iw) = 2 * omega_n * sin(k * PI / nwalk)
-   end do
-
-   ! First, propagate centroid
-   iw = 1
-   do iat = 1, natom
-      x(iat, iw) = x(iat, iw) + dt * px(iat, iw) / m(iat, iw)
-      y(iat, iw) = y(iat, iw) + dt * py(iat, iw) / m(iat, iw)
-      z(iat, iw) = z(iat, iw) + dt * pz(iat, iw) / m(iat, iw)
-   end do
-
-   ! eq 23 from J. Chem. Phys. 133, 124104 2010
-   ! exact propagation of a free ring polymer in normal mode coordinates
-   do iw = 2, nwalk
-      om = omega(iw)
-      omt = omega(iw) * dt
-      c = cos(omt)
-      s = sin(omt)
-      do iat = 1, natom
-         ! Propagate positions
-         x(iat, iw) = x_old(iat, iw) * c &
-                      + px_old(iat, iw) * s / m(iat, iw) / om
-         y(iat, iw) = y_old(iat, iw) * c &
-                      + py_old(iat, iw) * s / m(iat, iw) / om
-         z(iat, iw) = z_old(iat, iw) * c &
-                      + pz_old(iat, iw) * s / m(iat, iw) / om
-
-         ! propagate momenta
-         px(iat, iw) = px_old(iat, iw) * c &
-                       - x_old(iat, iw) * s * m(iat, iw) * om
-         py(iat, iw) = py_old(iat, iw) * c &
-                       - y_old(iat, iw) * s * m(iat, iw) * om
-         pz(iat, iw) = pz_old(iat, iw) * c &
-                       - z_old(iat, iw) * s * m(iat, iw) * om
-
+      do iw = 2, nwalk
+         k = iw - 1
+         omega(iw) = 2 * omega_n * sin(k * PI / nwalk)
       end do
 
-   end do
+      ! First, propagate centroid
+      iw = 1
+      do iat = 1, natom
+         x(iat, iw) = x(iat, iw) + dt * px(iat, iw) / m(iat, iw)
+         y(iat, iw) = y(iat, iw) + dt * py(iat, iw) / m(iat, iw)
+         z(iat, iw) = z(iat, iw) + dt * pz(iat, iw) / m(iat, iw)
+      end do
+
+      ! eq 23 from J. Chem. Phys. 133, 124104 2010
+      ! exact propagation of a free ring polymer in normal mode coordinates
+      do iw = 2, nwalk
+         om = omega(iw)
+         omt = omega(iw) * dt
+         c = cos(omt)
+         s = sin(omt)
+         do iat = 1, natom
+            ! Propagate positions
+            x(iat, iw) = x_old(iat, iw) * c &
+                         + px_old(iat, iw) * s / m(iat, iw) / om
+            y(iat, iw) = y_old(iat, iw) * c &
+                         + py_old(iat, iw) * s / m(iat, iw) / om
+            z(iat, iw) = z_old(iat, iw) * c &
+                         + pz_old(iat, iw) * s / m(iat, iw) / om
+
+            ! propagate momenta
+            px(iat, iw) = px_old(iat, iw) * c &
+                          - x_old(iat, iw) * s * m(iat, iw) * om
+            py(iat, iw) = py_old(iat, iw) * c &
+                          - y_old(iat, iw) * s * m(iat, iw) * om
+            pz(iat, iw) = pz_old(iat, iw) * c &
+                          - z_old(iat, iw) * s * m(iat, iw) * om
+
+         end do
+
+      end do
 
    end subroutine propagate_nm
 

@@ -401,7 +401,7 @@ contains
 
       subroutine checkchar(chin, chref)
          use mod_error, only: fatal_error
-         character(len=*), intent(in):: chin, chref
+         character(len=*), intent(in) :: chin, chref
 
          if (trim(adjustl(chin)) /= trim(chref)) then
             call fatal_error(__FILE__, __LINE__, &
