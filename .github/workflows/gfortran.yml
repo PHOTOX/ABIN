@@ -82,9 +82,10 @@ jobs:
       #CXX: icpc
       APT_PACKAGES: >-
         intel-oneapi-compiler-fortran
-        # intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
         intel-oneapi-mpi
         intel-oneapi-mpi-devel
+
+      # intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
 
     steps:
     - uses: actions/checkout@v2
