@@ -48,7 +48,13 @@ check_for_openmpi() {
 }
 
 check_for_intelmpi() {
-  which mpiifort > /dev/null
+  if which mpiifort > /dev/null;then
+    echo "Skipping this test for IntelMPI build"
+    for f in `ls *ref`;do
+      cp $f `basename $f .ref`
+    done
+    exit 1
+  fi
 }
 
 set_mpich_vars() {
