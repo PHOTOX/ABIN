@@ -76,7 +76,7 @@ jobs:
     name: Intel OneAPI build
     runs-on: ubuntu-20.04
     env:
-      FC: ifort
+      FC: mpiifort
       # Use GCC for C++ code to speed up the build
       #CC: icc
       #CXX: icpc
