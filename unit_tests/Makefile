@@ -35,6 +35,13 @@ masses_EXTRA_USE := throw_with_pfunit_mod
 masses_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,masses))
 
+prng_TESTS := test_prng.pf
+prng_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+prng_OTHER_SRCS := throw_with_pfunit.F90
+prng_EXTRA_USE := throw_with_pfunit_mod
+prng_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,prng))
+
 # This is needed for compatibility with new Plumed 2.8
 # See: https://github.com/plumed/plumed2/pull/757
 export PLUMED_DP2CUTOFF_NOSTRETCH = 1
@@ -102,13 +109,14 @@ interface_EXTRA_USE := throw_with_pfunit_mod
 interface_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,interface))
 
-all : utils masses plumed fftw terapi gle nhc pot mm spline interface
+all : utils prng masses plumed fftw terapi gle nhc pot mm spline interface
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
 
 test : clean_plumed_output clean_terapi_output clean_gle_output
 	./utils
+	./prng
 	./masses
 	./plumed
 	./fftw

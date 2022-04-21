@@ -5,7 +5,7 @@ pot='mmwater'
 mdtype='md'
 nstep=10,
 dt=20.,
-irandom=131313,
+
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?

@@ -43,7 +43,7 @@ subroutine init(dt)
    use mod_force_mm, only: initialize_mm
    use mod_gle
    use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
-   use mod_random
+   use mod_prng_init, only: initialize_prng
    use mod_splined_grid, only: initialize_spline, potential_file
    use mod_utils, only: abinerror, toupper, tolower, normalize_atom_name, &
                      &  append_rank, file_exists_or_exit
@@ -81,9 +81,11 @@ subroutine init(dt)
    real(DP) :: temp0 = -1
    ! User-defined masses in relative atomic units
    real(DP), allocatable :: masses(:)
-   real(DP) :: rans(10)
-   integer :: ipom, iw, iat, natom_xyz, iost
+   integer ::  iw, iat, natom_xyz, iost
    integer :: shiftdihed
+   ! Random number seed
+   ! Negative value means we get the seed from /dev/urandom
+   integer :: irandom = -1
    ! Number of OpenMP processes, read from ABIN input
    ! WARNING: We do NOT use OMP_NUM_THREADS environment variable!
    integer :: nproc
@@ -100,7 +102,6 @@ subroutine init(dt)
    logical :: file_exists
    logical :: rem_comvel, rem_comrot
    integer :: my_rank, mpi_world_size
-   integer :: irand
 
    ! ABIN input parameters are read from the input file (default 'input.in')
    ! in the form of the standard Fortran namelist syntax.
@@ -235,6 +236,9 @@ subroutine init(dt)
    end if
 
    call print_basic_info()
+
+   ! Initialize pseudo-random number generator
+   call initialize_prng(seed=irandom, mpi_rank=my_rank)
 
    ! Get number of atoms from XYZ coordinates NOW so that we can allocate arrays
 
@@ -443,28 +447,6 @@ subroutine init(dt)
    if (pot == '_mmwater_' .or. pot_ref == '_mmwater_') then
       call check_water(natom, names)
    end if
-
-   ! Generate different random number seeds for different MPI processes.
-   ! TODO: The current code works only with GNU compilers.
-   if (my_rank /= 0) then
-      call srand(irandom)
-      do ipom = 0, my_rank
-#if __GNUC__ == 0
-         write (*, *) 'ERROR: REMD not supported with non-GNU compilers.'
-         call abinerror('init')
-#endif
-         ! TODO: irand is GNU extension, use random_number instead
-         ! https://gcc.gnu.org/onlinedocs/gfortran/RANDOM_005fNUMBER.html
-         ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
-         irandom = irand()
-      end do
-   end if
-
-   ! Initialize pseudo-random number generator.
-   ! This call has to happen before we read restart file
-   ! to allocate internal arrays.
-   ! If we are restarting, the PRNG state initialized here is overwritten.
-   call gautrg(rans, 0, irandom)
 
    ! Initialize thermostat
    if (inose == 1) then

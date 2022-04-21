@@ -1,0 +1,227 @@
+! Testing pseudo-random number generator implemented in random.F90
+module test_prng
+   use funit
+   use mod_const, only: DP
+   use mod_files, only: stdout_to_devnull, reset_stdout,&
+                      & stderr_to_stdout, reset_stderr
+   use mod_prng_init
+   use mod_random
+   implicit none
+   save
+
+contains
+
+   @before
+   subroutine setup()
+      call stdout_to_devnull()
+      call stderr_to_stdout()
+   end subroutine setup
+
+   @after
+   subroutine teardown()
+      call reset_stdout()
+      call reset_stderr()
+   end subroutine teardown
+
+   @test
+   subroutine test_prng_errors()
+      real(DP) :: ran(1)
+
+      ! Calling prngs before initialization causes error
+      call vranf(ran, 1)
+      @assertExceptionRaised('Incorrect initialization in vranf')
+
+      ! This results in FPE
+      ! because we do not return from gautrg after the exception is caught
+      !call gautrg(ran, 1)
+      !@assertExceptionRaised('Incorrect initialization in vranf')
+
+      call vranf(ran, 0, -10)
+      @assertExceptionRaised('Random number seed must be a positive integer!')
+
+      call gautrg(ran, 0, -10)
+      @assertExceptionRaised('Random number seed must be a positive integer!')
+   end subroutine
+
+   @test
+   subroutine test_prng_restart()
+      integer :: irandom = 35789302
+      integer, parameter :: nran = 10
+      real(DP) :: rn(nran), rn_restart(nran)
+      integer :: u
+
+      ! Generate reference without restart
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call vranf(rn, nran)
+
+      open (newunit=u, file='prng.dat')
+
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call vranf(rn_restart, nran/2)
+      call write_prng_state(u)
+
+      rewind (u)
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call read_prng_state(u)
+      call vranf(rn_restart(nran/2+1:nran), nran/2)
+
+      close (u, status='delete')
+
+      @assertEqual(rn, rn_restart, "same sequence after restart")
+   end subroutine
+
+   subroutine test_prng_restart_gautrg()
+      integer :: irandom = 35789302
+      integer, parameter :: nran = 10
+      real(DP) :: rn(nran), rn_restart(nran)
+      integer :: u
+
+      ! Generate reference without restart
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call gautrg(rn, nran)
+
+      open (newunit=u, file='prng.dat')
+
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call gautrg(rn_restart, nran/2)
+      call write_prng_state(u)
+
+      rewind (u)
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call read_prng_state(u)
+      call gautrg(rn_restart(nran/2+1:nran), nran/2)
+
+      close (u, status='delete')
+
+      @assertEqual(rn, rn_restart, "same sequence after restart")
+   end subroutine
+
+   @test
+   subroutine test_prng_restart_errors()
+      integer :: u
+
+      open (newunit=u, file='prng.dat')
+      ! Should skip if no state is found
+      call read_prng_state(u)
+
+      rewind (u)
+      write (u, *) 'Invalid state'
+      rewind (u)
+      call read_prng_state(u)
+      call assertExceptionRaised( &
+         & 'Unexpected line in restart file when trying to read prng state.'//new_line('a')//&
+         & 'Expected: PRNG STATE (OPTIONAL)'//new_line('a')//&
+         & 'Got: Invalid state')
+   end subroutine
+
+   @test
+   subroutine test_prng_init()
+      integer :: irandom = 472890098
+      real(DP) :: rn1(10), rn2(10)
+
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call vranf(rn1, 10)
+
+      ! Reinitializing the prng should produce the same sequence
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call vranf(rn2, 10)
+
+      @assertEqual(rn1, rn2)
+
+      ! Different random seed should produce different sequence
+      irandom = irandom + 1
+      call initialize_prng(seed=irandom, mpi_rank=0)
+      call vranf(rn2, 10)
+      @assertNotEqual(rn1, rn2)
+   end subroutine
+
+   @test
+   subroutine test_remd_prng()
+      integer, parameter :: irandom = 4328970
+      integer, parameter :: nreplica = 3, nran = 10
+      integer :: seeds(nreplica)
+      real(DP) :: rn(nreplica, nran)
+      integer :: i
+
+      seeds = irandom
+      do i = 1, nreplica
+         call initialize_prng(seed=seeds(i), mpi_rank=i - 1)
+         call vranf(rn(i, :), nran)
+      end do
+
+      @assertEqual(irandom, seeds(1), "seed unchanged for rank0")
+      ! Comparing integers with assertNotEqual does not work :-(
+      ! https://github.com/Goddard-Fortran-Ecosystem/pFUnit/issues/353
+      @assertTrue(irandom /= seeds(2), "seed changed for rank1")
+      @assertTrue(seeds(2) /= seeds(3), "seeds not equal for rank1 and rank2")
+
+      @assertNotEqual(rn(1, :), rn(2, :))
+      @assertNotEqual(rn(1, :), rn(3, :))
+      @assertNotEqual(rn(2, :), rn(3, :))
+   end subroutine test_remd_prng
+
+   @test
+   subroutine test_random_ints()
+      integer, parameter :: irandom = 2345235
+      integer, parameter :: nran = 10
+      integer :: rn1(nran), rn2(nran)
+      integer :: seed
+      integer :: i
+
+      seed = irandom
+      call initialize_prng(seed=seed, mpi_rank=0)
+      call random_ints(rn1, nran)
+
+      ! Re-seeding with the same seed provides the same sequence
+      call initialize_prng(seed=seed, mpi_rank=0)
+      call random_ints(rn2, nran)
+      @assertEqual(rn1, rn2, "same seed")
+
+      ! Different seeds produce different sequence
+      seed = seed + 1
+      call initialize_prng(seed=seed, mpi_rank=0)
+      call random_ints(rn2, nran)
+      do i = 1, nran
+         @assertTrue(rn1(i) /= rn2(i), "different seeds")
+      end do
+
+      seed = irandom
+
+      ! Different ranks produce different sequence
+      call initialize_prng(seed=seed, mpi_rank=1)
+      call random_ints(rn2, nran)
+      do i = 1, nran
+         @assertTrue(rn1(i) /= rn2(i), "different ranks")
+      end do
+   end subroutine
+
+   @test
+   subroutine test_get_random_seed()
+      integer, parameter :: irandom = -1
+      integer :: seed1, seed2
+      integer :: u
+
+      seed1 = irandom
+      call initialize_prng(seed=seed1, mpi_rank=0)
+      @assertTrue(irandom /= seed1)
+      @assertGreaterThan(seed1, 0)
+
+      ! Should provide different seed each time
+      seed2 = irandom
+      call initialize_prng(seed=seed2, mpi_rank=0)
+      @assertTrue(seed1 /= seed2)
+
+      ! Should also work with higher mpi ranks
+      seed1 = irandom
+      call initialize_prng(seed=seed1, mpi_rank=2)
+      @assertTrue(irandom /= seed1)
+
+      ! Try blocking /dev/random to test fallback code
+      ! (works with GCC-7, newer compilers may actually allow opening the same file twice)
+      open (newunit=u, file='/dev/urandom')
+      seed1 = irandom
+      call initialize_prng(seed=seed1, mpi_rank=0)
+      @assertTrue(irandom /= seed1)
+      close (u)
+   end subroutine
+end module test_prng

@@ -1,28 +1,24 @@
 #!/bin/bash
 
-#---------------------------------------------------------------------------------
-#  Create_Trajectories                   Daniel Hollas, Ondrej Svoboda 2016
-
-# This script generates and executes a set of dynamical trajectories using ABIN.
-# Initial geometries are taken sequentially from a XYZ movie file.
-# Initial velocities are optiononaly taken sequentially from a XYZ file.
-
-# The script is designed both for surface hopping and adiabatic AIMD.
+# ---------------------------------------------------------------------------------
+# create_trajectories.sh - Generate and execute a set ABIN simulations
+#
+# Initial geometries (and optionally velocities) are taken sequentially from XYZ movie files.
 
 # The trajectories are executed and stored in $folder.
 
 # Files needed in this folder:
 #	$inputdir : template directory with ABIN input files (mainly input.in and r.abin)
-# 	traj-randomint PRNG program should be in your $PATH.
+# 	abin-randomint PRNG program for generating random seeds, should be in your $PATH.
 #---------------------------------------------------------------------------------
 
 #######-----SETUP---#############
-irandom0=156863189          # random seed, set negative for random seed based on time
-movie=traj_nh4.xyz      # PATH TO a XYZ movie with initial geometries
-veloc=vels_nh4.xyz     # PATH to XYZ initial velocities, leave blank if you do not have them
-isample=1	     # initial number of traj
-nsample=100	     # number of trajectories
-folder=MP2-NH4           # Name of the folder with trajectories
+irandom0=156863189  # random seed, set negative for random seed based on time
+movie=coords.xyz    # PATH TO a XYZ movie with initial geometries
+veloc=vels.xyz      # PATH to XYZ initial velocities (optional)
+isample=1	    # initial number of traj
+nsample=100	    # number of trajectories
+folder=MP2-NH4      # Name of the folder with trajectories
 inputdir=TEMPLATE-$folder   # Directory with input files for ABIN
 abin_input=$inputdir/input.in   # main input file for ABIN
 launch_script=$inputdir/r.abin	# this is the file that is submitted by qsub
@@ -31,9 +27,10 @@ rewrite=0            # if =1 -> rewrite trajectories that already exist
 jobs=20              # number of batch jobs to submit. Trajectories will be distributed accordingly.
 
 # Number of atoms is determined automatically from input.in
-natom=$(awk -F"[! ,=]+" '{if($1=="natom")print $2}' $abin_input) #number of atoms
+# TODO: Determine number of atoms from the first line of the coordinate file
+natom=$(awk -F"[! ,=]+" '{if($1=="natom")print $2}' $abin_input)
 molname=$folder      # Name of the job in the queue
-##########END OF SETUP##########
+########## END OF SETUP ##########
 
 
 function Folder_not_found {
@@ -116,9 +113,9 @@ w=0 #current number of simulations in current j-th job
 
 #--------------------generation of random numbers--------------------------------
 echo "Generating $nsample random integers."
-trajs-randomint $irandom0 $nsample > iran.dat
+abin-randomint $irandom0 $nsample > iran.dat
 if [[ $? -ne "0" ]];then
-   Error "trajs-randomint"
+   Error "abin-randomint"
 fi
 
 #--------------------------------------------------------------------------------
