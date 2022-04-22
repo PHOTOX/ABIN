@@ -181,7 +181,7 @@ contains
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
                              iremd, pot, narchive, sim_time
       use mod_mpi, only: get_mpi_rank
-      use mod_utils, only: archive_file, append_rank
+      use mod_utils, only: rename_file, archive_file, append_rank
       use mod_nhc, only: inose, nhc_restout
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
@@ -195,8 +195,7 @@ contains
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(in) :: time_step
       integer :: iw, my_rank, urest
-      logical :: file_exists
-      character(len=200) :: chout, chsystem
+      character(len=200) :: chout
 
       my_rank = get_mpi_rank()
 
@@ -206,15 +205,10 @@ contains
       end if
 
       chout = append_rank('restart.xyz')
-
-      inquire (file=chout, exist=file_exists)
-      if (file_exists) then
-         chsystem = 'cp '//trim(chout)//'  '//trim(chout)//'.old'
-         if (iremd == 1) then
-            call execute_command_line(chsystem)
-         else if (my_rank == 0) then
-            call execute_command_line(chsystem)
-         end if
+      if (iremd == 1) then
+         call rename_file(chout, trim(chout)//'.old')
+      else if (my_rank == 0) then
+         call rename_file(chout, trim(chout)//'.old')
       end if
 
       open (newunit=urest, file=chout, action='write')

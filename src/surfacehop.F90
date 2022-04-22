@@ -204,16 +204,12 @@ contains
    subroutine write_nacmrest()
       use mod_general, only: narchive, it
       use mod_qmmm, only: natqm
-      use mod_utils, only: archive_file
+      use mod_utils, only: rename_file, archive_file
       integer :: ist1, ist2, iat
       integer :: iunit1
-      logical :: file_exists
       character(len=*), parameter :: restart_file = 'restart_sh.bin'
-      character(len=200) :: chsystem
 
-      inquire (FILE=restart_file, EXIST=file_exists)
-      chsystem = 'mv '//trim(restart_file)//'  '//trim(restart_file)//'.old'
-      if (file_exists) call execute_command_line(chsystem)
+      call rename_file(restart_file, trim(restart_file)//'.old')
 
       open (newunit=iunit1, file=restart_file, action='write', status="new", access="sequential", form="unformatted")
 

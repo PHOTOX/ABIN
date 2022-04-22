@@ -430,15 +430,11 @@ contains
    subroutine write_wfn()
       use mod_general, only: it, sim_time, narchive
       use mod_sh_integ, only: nstate
-      use mod_utils, only: archive_file
+      use mod_utils, only: rename_file, archive_file
       character(len=*), parameter :: fname = 'wfn.bin'
-      logical :: file_exists
       integer :: uwfn
 
-      inquire (FILE=fname, EXIST=file_exists)
-      if (file_exists) then
-         call execute_command_line('mv '//fname//' '//fname//'.old')
-      end if
+      call rename_file(fname, fname//'.old')
 
       open (newunit=uwfn, file=fname, action='write', status="new", access="sequential", form="unformatted")
 
