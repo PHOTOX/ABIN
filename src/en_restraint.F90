@@ -67,16 +67,14 @@ contains
             end do
             eclasground = en_array(1)
             eclasexc = en_array(2)
-            ! TODO: need to figure out how to get eclasexc
          else
 
             ! Should be done as a separate call eventually..
-!      call force_abin(x, y, z, fxr, fyr, fzr, energy)
 
             write (chforce_ground, '(A,I3.3)') 'engrad.ground.dat.', iw
             write (chforce_exc, '(A,I3.3)') 'engrad.exc.dat.', iw
 
-!-----READING energy of groud state (engrad.ground.dat)
+            !-----READING energy of groud state (engrad.ground.dat)
             open (901, file=chforce_ground, status='OLD', iostat=ios, action='read')
             if (ios /= 0) then
                call fatal_error(__FILE__, __LINE__, 'Could not open file '//chforce_ground)
@@ -190,14 +188,13 @@ contains
 
             !write (*, *) 'deltaE', deltaE
             !write (*, *) 'Force constant:', en_kk
+            !Output to en_restraint.dat
             write (formt, '(A27)') '(F16.8,E20.10,E20.10,F16.8)'
             write (UERMD, fmt=formt) excE * AUTOEV, deltaE, 0.0, 0.0
 
          end if
 
       end do
-      !write (*, *) '--using 3 state (MD,GS,ES) version--'
-      !write (*, *) ''
 
    end subroutine energy_restraint
 
