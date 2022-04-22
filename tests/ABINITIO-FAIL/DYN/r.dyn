@@ -1,0 +1,21 @@
+#!/bin/bash
+cd DYN
+
+timestep=$1
+ibead=$2
+input=input$ibead
+geom=../geom.dat.$ibead
+
+natom=`cat $geom | wc -l`
+let natom1=natom+1
+
+let lines=timestep*natom1+natom1
+# Use the same energies and forces for all beads
+head -$lines engrad.dat.all.ref | tail -$natom1 > ../engrad.dat.$ibead
+
+# Simulate ab initio failure for the second bead
+echo "$ibead"
+if [[ $ibead = "001" ]];then
+  echo "Premature exit2"
+  exit 2
+fi
