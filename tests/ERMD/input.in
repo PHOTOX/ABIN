@@ -1,0 +1,31 @@
+This is a sample input file for ABIN for CMD simulation
+
+&general
+pot='g09er'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,qchem 
+natom=5,		!number of atoms
+ipimd=0,		! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
+imini=0,		! equilibration period (should be at least 2000), or number of steps for minimization
+nstep=3,		! number of steps
+dt=1.,			! timestep [au]
+irandom=1658563,  	! random seed
+irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
+
+nwrite=1,		! how often some output should be printed (estimators etc.)
+nwritex=1,		! how often should we print coordinates?
+nrest=50,		! how often we print restart files?
+nwritev=1,		! how often we print velocities?
+
+en_restraint=1,		! energy restrain dynamics, must use proper external script
+en_kk=0.0,                 ! force constant for umbrella restrain energy dynamics
+en_diff=0.21,             ! targeted energy 7eV=0.26
+/
+
+
+&nhcopt
+temp0=300,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
+inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2
+/
+
+
+----------------------END OF INPUT---------------------------------------------
+!!!!!EVERYTHING BELOW IS IGNORED!!!!
