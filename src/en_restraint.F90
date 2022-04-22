@@ -2,7 +2,6 @@ module mod_en_restraint
    use mod_const, only: DP, AUTOEV
    use mod_files, only: stderr, stdout
    use mod_error, only: fatal_error
-   ! TODO: en_restraint should live here, not in mod_general
    use mod_general, only: en_restraint
    implicit none
    public
@@ -34,7 +33,6 @@ contains
             & 'en_restraint must be either 0, 1 (Lagrange multipliers) or 2 (umbrella, define en_kk)')
       end if
 
-      ! TODO: This should deallocate in finalize_en_rest()
       allocate (fxr(natom, 2)) ! two states, not beads.
       allocate (fyr(natom, 2))
       allocate (fzr(natom, 2))
@@ -45,14 +43,15 @@ contains
       use mod_system, only: am
       use mod_sh, only: en_array
       use mod_terampi_sh, only: force_terash
+      use mod_files, only: UERMD
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       ! TODO: Eclas is not modified in this routine, but probably should be
       real(DP), intent(inout) :: eclas
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
       real(DP), dimension(natom) :: fxgs, fygs, fzgs, fxes, fyes, fzes
-      real(DP) :: eclasexc, eclasground, Egrad, deltaE, lambda, lsum, deltaEnext, convercrit, deltaD
+      real(DP) :: eclasexc, eclasground, excE, deltaE, lambda, lsum, deltaEnext, convercrit, deltaD
       integer :: ios, iat, iat2, iw
-      character(len=30) :: chforce_ground, chforce_exc
+      character(len=30) :: formt, chforce_ground, chforce_exc
 
       do iw = 1, nwalk
 
@@ -123,9 +122,9 @@ contains
          end if
 
          ! Energy difference
-         Egrad = eclasexc - eclasground
-         write (stdout, '(A,I0,A,F16.8,A)') 'Energy difference ES-GS (', iw, ') is', Egrad * AUTOEV, ' eV'
-         deltaE = (Egrad - en_diff)
+         excE = eclasexc - eclasground
+         !write (stdout, '(A,I0,A,F16.8,A)') 'Energy difference ES-GS (', iw, ') is', excE * AUTOEV, ' eV'
+         deltaE = (excE - en_diff)
 
          if (en_restraint == 1) then
             !======== A) Computing lagrange multiplier lambda =========
@@ -165,11 +164,15 @@ contains
                end do
 
                convercrit = deltaEnext
-               write (*, *) 'deltaEnext', deltaEnext
+               !write (*, *) 'deltaEnext', deltaEnext
 
             end do
-            write (*, *) 'deltaE', deltaE
-            write (*, *) 'Lambda multiplier:', lambda
+            !write (*, *) 'deltaE', deltaE
+            !write (*, *) 'Lambda multiplier:', lambda
+
+            !Output to en_restraint.dat
+            write (formt, '(A27)') '(F16.8,E20.10,E20.10,F16.8)' 
+            write (UERMD, fmt=formt) excE * AUTOEV, deltaE, deltaEnext, lambda
 
          else if (en_restraint == 2) then
             !======= B) Quadratic restraint =============
@@ -185,14 +188,16 @@ contains
             ! TODO:
             eclas = eclas ! + quadratic_restraint_energy
 
-            write (*, *) 'deltaE', deltaE
-            write (*, *) 'Force constant:', en_kk
+            !write (*, *) 'deltaE', deltaE
+            !write (*, *) 'Force constant:', en_kk
+            write (formt, '(A27)') '(F16.8,E20.10,E20.10,F16.8)'
+            write (UERMD, fmt=formt) excE * AUTOEV, deltaE, 0.0, 0.0
 
          end if
 
       end do
-      write (*, *) '--using 3 state (MD,GS,ES) version--'
-      write (*, *) ''
+      !write (*, *) '--using 3 state (MD,GS,ES) version--'
+      !write (*, *) ''
 
    end subroutine energy_restraint
 
