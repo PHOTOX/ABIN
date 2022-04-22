@@ -271,7 +271,7 @@ contains
       headers(UDOTPRODCI) = '# Time  cidotprod1  cidotprod2 ... '
       headers(UTDIP) = '# Time state tdip_tot.1..N tdip_x.1 tdip_y.1 tdip_z.1 ...'
 
-      headers(UERMD) = '# Energy difference ES-GS (eV), deltaE (Ha), deltaE_next (Ha), Lambda multiplier'
+      headers(UERMD) = '# Step, energy difference ES-GS (eV), deltaE (Ha), deltaE_next (Ha), Lambda multiplier'
 
       do i = 2, MAXUNITS
          inquire (unit=i, opened=lopened)
