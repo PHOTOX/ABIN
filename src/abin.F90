@@ -2,7 +2,7 @@
 !  ABIN: Multipurpose ab initio MD program.
 !  The potential is calculated on-the-fly by an external program.
 !------------------------------------------------------------------
-!  Copyright (C) 2014             D.Hollas, M.Oncak, O.Svoboda and P.Slavicek
+!  Copyright (C) 2014    D.Hollas, J.Suchan, M.Oncak, O.Svoboda and P.Slavicek
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -27,13 +27,14 @@ program abin
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
-   use mod_utils, only: abinerror, archive_file
-   use mod_transform
+   use mod_utils, only: del_file, archive_file
+   use mod_transform, only: initialize_pi_transforms, &
+                           & qtox, utox, fqtofx
    use mod_mdstep, only: mdstep
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
    use mod_interfaces
-   use mod_en_restraint
+   use mod_en_restraint, only: restrain_pot
    use mod_terampi_sh, only: move_new2old_terash
    use mod_mpi, only: get_mpi_rank, mpi_barrier_wrapper
 #ifdef USE_MPI
@@ -138,7 +139,7 @@ program abin
       ! if it is present (we delete it below before we stop the program).
       call mpi_barrier_wrapper()
 
-      inquire (FILE="EXIT", EXIST=file_exists)
+      inquire (file="EXIT", exist=file_exists)
       if (file_exists) then
          write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
          if (istage == 1) then
@@ -156,7 +157,7 @@ program abin
          call mpi_barrier_wrapper()
 
          if (my_rank == 0) then
-            call execute_command_line('rm EXIT')
+            call del_file('EXIT')
          end if
 
          exit ! break from time loop

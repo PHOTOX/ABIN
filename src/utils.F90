@@ -247,6 +247,14 @@ contains
       end if
    end function append_rank
 
+   subroutine del_file(fname)
+      character(len=*) :: fname
+      integer :: u, iost
+
+      open (newunit=u, file=fname, iostat=iost, status='old')
+      if (iost == 0) close (u, status='delete')
+   end subroutine del_file
+
    subroutine archive_file(chfile, time_step)
       use mod_general, only: iremd
       use mod_mpi, only: get_mpi_rank

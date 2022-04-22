@@ -4,20 +4,13 @@
 module test_interface
    use funit
    use mod_const, only: DP
+   use mod_utils, only: del_file
    use mod_shell_interface_private
    implicit none
    integer, parameter :: NATOM = 2, NBEAD = 2
    real(DP), dimension(NATOM, NBEAD) :: x, y, z, fx, fy, fz
 
 contains
-
-   subroutine del_file(fname)
-      character(len=*) :: fname
-      integer :: u
-
-      open (newunit=u, file=fname)
-      close (u, status='delete')
-   end subroutine del_file
 
    @before
    subroutine setup()

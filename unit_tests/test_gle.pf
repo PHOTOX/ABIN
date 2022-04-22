@@ -3,17 +3,10 @@ module test_gle
    use funit
    use mod_gle_private
    use mod_const, only: DP
+   use mod_utils, only: del_file
    implicit none
 
 contains
-
-   subroutine del_file(fname)
-      character(len=*) :: fname
-      integer :: u
-
-      open (newunit=u, file=fname)
-      close (u, status='delete')
-   end subroutine del_file
 
    @test
    subroutine test_write_read_propagator()
