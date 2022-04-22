@@ -1239,6 +1239,7 @@ subroutine finish(error_code)
    use mod_nhc, only: inose, finalize_nhc
    use mod_gle, only: finalize_gle, finalize_pile
    use mod_lz, only: lz_finalize
+   use mod_en_restraint, only: en_restraint, en_rest_finalize
    use mod_transform, only: finalize_normalmodes
    use mod_cp2k, only: finalize_cp2k
    use mod_plumed, only: iplumed, finalize_plumed
@@ -1279,6 +1280,10 @@ subroutine finish(error_code)
    ! Cleanup Landau-Zener
    if (ipimd == 5) then
       call lz_finalize()
+   end if
+
+   if (en_restraint >= 1) then
+      call en_rest_finalize() 
    end if
 
    if (pot == '_splined_grid_') then

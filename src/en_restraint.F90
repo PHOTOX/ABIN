@@ -196,4 +196,8 @@ contains
 
    end subroutine energy_restraint
 
+   subroutine en_rest_finalize()
+      deallocate (fxr, fyr, fzr)
+   end subroutine en_rest_finalize
+
 end module mod_en_restraint
