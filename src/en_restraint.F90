@@ -1,5 +1,5 @@
 module mod_en_restraint
-   use mod_const, only: DP
+   use mod_const, only: DP, AUTOEV
    use mod_files, only: stderr, stdout
    use mod_error, only: fatal_error
    ! TODO: en_restraint should live here, not in mod_general
@@ -124,7 +124,7 @@ contains
 
          ! Energy difference
          Egrad = eclasexc - eclasground
-         write (stdout, *) 'Energy difference ES-GS (', iw, ') is', Egrad * 2625.5697
+         write (stdout, '(A,I0,A,F16.8,A)') 'Energy difference ES-GS (', iw, ') is', Egrad * AUTOEV, ' eV'
          deltaE = (Egrad - en_diff)
 
          if (en_restraint == 1) then
