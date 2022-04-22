@@ -2,10 +2,12 @@ module mod_en_restraint
    use mod_const, only: DP
    use mod_files, only: stderr, stdout
    use mod_error, only: fatal_error
-   ! TODO: en_restraint should live here, not in mod_general
    use mod_general, only: en_restraint
    implicit none
-   public
+   private
+   public :: restrain_pot, en_diff, en_kk
+   public :: en_rest_init, energy_restraint
+
    real(DP) :: en_diff, en_kk
    real(DP), allocatable :: fxr(:, :), fyr(:, :), fzr(:, :)
    character(len=200) :: restrain_pot = 'none'
@@ -34,7 +36,6 @@ contains
             & 'en_restraint must be either 0, 1 (Lagrange multipliers) or 2 (umbrella, define en_kk)')
       end if
 
-      ! TODO: This should deallocate in finalize_en_rest()
       allocate (fxr(natom, 2)) ! two states, not beads.
       allocate (fyr(natom, 2))
       allocate (fzr(natom, 2))
@@ -51,7 +52,7 @@ contains
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
       real(DP), dimension(natom) :: fxgs, fygs, fzgs, fxes, fyes, fzes
       real(DP) :: eclasexc, eclasground, Egrad, deltaE, lambda, lsum, deltaEnext, convercrit, deltaD
-      integer :: ios, iat, iat2, iw
+      integer :: ios, iat, iat2, iw, u
       character(len=30) :: chforce_ground, chforce_exc
 
       do iw = 1, nwalk
@@ -77,16 +78,17 @@ contains
             write (chforce_ground, '(A,I3.3)') 'engrad.ground.dat.', iw
             write (chforce_exc, '(A,I3.3)') 'engrad.exc.dat.', iw
 
-!-----READING energy of groud state (engrad.ground.dat)
-            open (901, file=chforce_ground, status='OLD', iostat=ios, action='read')
+            ! TODO: Reuse reading routines from force_abin.F90 interface
+            ! Read energy of groud state (engrad.ground.dat)
+            open (newunit=u, file=chforce_ground, status='OLD', iostat=ios, action='read')
             if (ios /= 0) then
                call fatal_error(__FILE__, __LINE__, 'Could not open file '//chforce_ground)
             end if
-            read (901, *) eclasground
+            read (u, *) eclasground
 
             ! Reading gradient of ground state
             do iat = 1, natom
-               read (901, *, IOSTAT=ios) fxgs(iat), fygs(iat), fzgs(iat)
+               read (u, *, IOSTAT=ios) fxgs(iat), fygs(iat), fzgs(iat)
                if (ios /= 0) then
                   call fatal_error(__FILE__, __LINE__, &
                      & 'Fatal problem with reading gradients from file engrad.ground.dat')
@@ -96,18 +98,18 @@ contains
                fygs(iat) = -fygs(iat)
                fzgs(iat) = -fzgs(iat)
             end do
-            close (901)
+            close (u)
 
             ! Reading energy of excited state (engrad.exc.dat)
-            open (901, file=chforce_exc, status='OLD', iostat=ios, action='read')
+            open (u, file=chforce_exc, status='OLD', iostat=ios, action='read')
             if (ios /= 0) then
                call fatal_error(__FILE__, __LINE__, 'Could not open file '//chforce_exc)
             end if
-            read (901, *) eclasexc
+            read (u, *) eclasexc
 
             ! Reading gradient of excited state
             do iat = 1, natom
-               read (901, *, IOSTAT=ios) fxes(iat), fyes(iat), fzes(iat)
+               read (u, *, IOSTAT=ios) fxes(iat), fyes(iat), fzes(iat)
                if (ios /= 0) then
                   call fatal_error(__FILE__, __LINE__, &
                                    'Could not read gradients from file '//chforce_exc)
@@ -117,7 +119,7 @@ contains
                fyes(iat) = -fyes(iat)
                fzes(iat) = -fzes(iat)
             end do
-            close (901)
+            close (u)
 
             ! restraint_pot endif
          end if
