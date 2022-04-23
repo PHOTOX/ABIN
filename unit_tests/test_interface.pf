@@ -82,7 +82,7 @@ contains
       write (u, *) 'exit 2'
       close (u)
       call execute_command_line('chmod 755 '//shellscript)
-      call call_shell(shellscript, it=10, iw=1, ipimd=1, abort)
+      call call_shell(shellscript, it=10, iw=1, ipimd=1, abort=abort)
       call del_file(shellscript)
 
       @assertTrue(abort)
@@ -117,7 +117,7 @@ contains
       u = 100
       open (unit=u, file=fname, status='new')
       write (u, *) '# Invalid line'
-      call read_forces(fx, fy, fz, num_atom=NATOM, iw=1, engrad_unit=u, abort)
+      call read_forces(fx, fy, fz, num_atom=NATOM, iw=1, engrad_unit=u, abort=abort)
 
       close (u, status='delete')
       @assertTrue(abort)
