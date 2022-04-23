@@ -184,7 +184,7 @@ contains
       if (iost /= 0) then
          write (stderr, *) trim(errmsg)
          inquire (unit=engrad_unit, opened=lopened, name=fname)
-         call fatal_error(__FILE__, __LINE__, 'Could not read energy from file '//trim(fname))
+         write (stderr, *) 'Could not read energy from file '//trim(fname)
          abort = .true.
          energy = 0.0D0
          !$OMP FLUSH(abort)
