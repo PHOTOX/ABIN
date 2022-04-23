@@ -445,6 +445,7 @@ contains
       en_array_lz(:, 2) = en_array_lz(:, 3)
    end subroutine lz_rewind
 
+#if 0
    subroutine lz_getgraddiff(grad_diff, ist, ist1, x, y, z, vx, vy, vz, fxc, fyc, fzc)
       !Computes gradient difference * velocity to predict dEgap/dt
       use mod_general, only: natom, pot
@@ -496,6 +497,7 @@ contains
       end do
 
    end subroutine lz_getgraddiff
+#endif
 
    subroutine lz_restout(fileunit)
       integer, intent(in) :: fileunit
