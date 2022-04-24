@@ -75,7 +75,7 @@ contains
 
       if (abort) then
          call fatal_error(__FILE__, __LINE__, &
-            & 'External forces error in force_tera')
+            & 'External forces error')
       end if
 
    end subroutine force_tera

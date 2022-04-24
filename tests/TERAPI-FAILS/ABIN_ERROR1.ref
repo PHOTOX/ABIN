@@ -1,2 +1,1 @@
- FATAL ERROR encountered in subroutine: force_tera
- Check standard output for further information.
+ERROR in force_tera.F90: External forces error
