@@ -10,7 +10,7 @@ contains
 
    @before
    subroutine setup()
-      use mod_general, only: natom, nwalk
+      use mod_general, only: nwalk, set_natom
       use mod_files, only: stdout_to_devnull, stderr_to_stdout
       use mod_random, only: gautrg
       real(DP) :: ran(1)
@@ -18,10 +18,10 @@ contains
 
       call stdout_to_devnull()
       call stderr_to_stdout()
+      call set_natom(NAT)
       tau0 = 0.001
       inose = 1
       temp = 100.0D0
-      natom = NAT
       nwalk = NBEADS
       nrespnose = 5
       nyosh = 3

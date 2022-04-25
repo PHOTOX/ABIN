@@ -94,6 +94,8 @@ contains
       character(len=2), intent(in) :: atnames(num_atom)
       integer, intent(in) :: num_atom
 
+      if (allocated(names)) deallocate(names)
+
       allocate(names(num_atom))
       names = atnames
    end subroutine

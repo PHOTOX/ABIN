@@ -16,7 +16,8 @@ contains
       use mod_files, only: stdout_to_devnull, stderr_to_stdout
       use mod_qmmm, only: natqm, natmm
       use mod_general, only: ipimd
-      use mod_system, only: names
+      use mod_system, only: set_atom_names
+      character(len=2) :: at_names(NATOM)
 
       ipimd = 1
       natqm = NATOM
@@ -29,7 +30,8 @@ contains
       fy = 0.0D0
       fz = 0.0D0
 
-      allocate (names(NATOM), source='C')
+      at_names = 'C'
+      call set_atom_names(at_names, NATOM)
 
       call stdout_to_devnull()
       call stderr_to_stdout()
@@ -38,11 +40,8 @@ contains
    @after
    subroutine teardown()
       use mod_files, only: reset_stdout, reset_stderr
-      use mod_system, only: names
-
       call reset_stdout()
       call reset_stderr()
-      deallocate (names)
    end subroutine teardown
 
    @test

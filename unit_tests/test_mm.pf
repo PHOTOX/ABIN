@@ -19,9 +19,9 @@ contains
 
    @before
    subroutine setup()
-      use mod_general, only: natom
+      use mod_general, only: set_natom
 
-      natom = 2
+      call set_natom(NATOM)
       eclas = 0.0D0
       fx = 0.0D0
       fy = 0.0D0

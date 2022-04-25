@@ -112,6 +112,7 @@ contains
          & 'Unexpected line in restart file when trying to read prng state.'//new_line('a')//&
          & 'Expected: PRNG STATE (OPTIONAL)'//new_line('a')//&
          & 'Got: Invalid state')
+      close (u, status='delete')
    end subroutine
 
    @test
