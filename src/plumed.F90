@@ -41,7 +41,6 @@ contains
       use mod_error, only: fatal_error
       use mod_files, only: stdout
       !use mod_nhc, only: temp
-      implicit none
       integer, intent(in) :: natom, irest, nrest
       real(DP), intent(in) :: dt0
       integer, parameter :: PLUMED_RESTART = 1
@@ -197,7 +196,9 @@ contains
    ! Stubbed subroutines for compilation without PLUMED
    ! We use this approach to avoid needing to have '#ifdef USE_PLUMED'
    ! elsewhere in the codebase
-   subroutine plumed_init()
+   subroutine plumed_init(natom, irest, dt0, nrest)
+      integer, intent(in) :: natom, irest, nrest
+      real(DP), intent(in) :: dt0
       call not_compiled_with('PLUMED')
    end subroutine plumed_init
 

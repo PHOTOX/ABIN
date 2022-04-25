@@ -1,2 +1,1 @@
- FATAL ERROR encountered in subroutine: check_inputsanity
- Check standard output for further information.
+ERROR in init.F90: Invalid input parameters

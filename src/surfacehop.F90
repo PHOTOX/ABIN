@@ -5,7 +5,6 @@ module mod_sh
    use mod_array_size, only: NSTMAX
    use mod_files, only: stdout, stderr
    use mod_error, only: fatal_error
-   use mod_utils, only: abinerror
    use mod_sh_integ
    implicit none
    private
@@ -282,9 +281,9 @@ contains
                                                         & nacy(iat, ist1, ist2), &
                                                         & nacz(iat, ist1, ist2)
                   if (iost /= 0) then
-                     write (*, *) 'Error reading NACME from restart file '//trim(restart_file)
                      write (*, *) chmsg
-                     call abinerror('read_nacmrest')
+                     call fatal_error(__FILE__, __LINE__, &
+                        & 'Could not read NACME from restart file '//trim(restart_file))
                   end if
                   nacx(iat, ist2, ist1) = -nacx(iat, ist1, ist2)
                   nacy(iat, ist2, ist1) = -nacy(iat, ist1, ist2)
@@ -899,12 +898,11 @@ contains
       entot_old = (ekin_old + en_array_old(istate)) * AUtoEV
 
       if (abs(entot - entot_old) > energydifthr) then
-         write (stderr, *) 'ERROR:Poor energy conservation. Exiting...'
          write (stderr, *) 'Total energy difference [eV] is:', entot - entot_old
          write (stderr, *) 'The threshold was:', energydifthr
          write (stderr, *) 'Ekin_old, Ekin, Epot_old, E_pot', &
             ekin_old, ekin, en_array_old(istate), en_array(istate)
-         call abinerror('check_energy')
+         call fatal_error(__FILE__, __LINE__, 'Poor energy conservation')
       end if
 
    end subroutine check_energy
@@ -920,10 +918,9 @@ contains
       entot = (ekin + en_array(istate)) * AUtoEV
 
       if (abs(entot - entot0) > energydriftthr) then
-         write (stderr, *) 'ERROR: Energy drift exceeded threshold value. Exiting...'
-         write (stderr, *) 'Total energy difference [eV] is:', entot - entot0
+         write (stderr, *) 'Total energy drift [eV] is:', entot - entot0
          write (stderr, *) 'The threshold was:', energydriftthr
-         call abinerror('check_energy')
+         call fatal_error(__FILE__, __LINE__, 'Energy drift exceeded threshold value')
       end if
 
    end subroutine check_energydrift

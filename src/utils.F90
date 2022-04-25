@@ -193,30 +193,6 @@ contains
       end do
    end function toupper
 
-   ! TODO: Remove this in favour of fatal_error
-   subroutine abinerror(chcaller)
-      use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
-      use mod_interfaces, only: finish
-      character(len=*), intent(in) :: chcaller
-      integer, dimension(8) :: time_end
-      integer :: u
-      ! When the file ERROR exists (perhaps as a remnant of a previous run),
-      ! we append it. This also helps us with testing multiple failure check within end-to-end tests.
-      open (newunit=u, file='ERROR', action='write', access='append')
-      write (u, *) 'FATAL ERROR encountered in subroutine: ', chcaller
-      write (u, *) 'Check standard output for further information.'
-      close (unit=u)
-      call date_and_time(VALUES=time_end)
-      write (stdout, *) ''
-      write (stdout, *) 'Ended with ERROR at:'
-      write (stdout, "(I2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)") time_end(5), ':', &
-         time_end(6), ':', time_end(7), '  ', time_end(3), '.', time_end(2), '.', &
-         time_end(1)
-      call flush (OUTPUT_UNIT)
-      call finish(1)
-      stop 1
-   end subroutine abinerror
-
    subroutine print_xyz_arrays(fx, fy, fz, natom, nwalk)
       use mod_files, only: stdout
       real(DP), dimension(:, :), intent(in) :: fx, fy, fz

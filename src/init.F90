@@ -50,7 +50,7 @@ contains
       use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
       use mod_prng_init, only: initialize_prng
       use mod_splined_grid, only: initialize_spline, potential_file
-      use mod_utils, only: abinerror, append_rank, file_exists_or_exit
+      use mod_utils, only: append_rank, file_exists_or_exit
       use mod_vinit
       use mod_analyze_geometry
       use mod_shake
@@ -808,8 +808,7 @@ contains
          call int_positive(ncalc, 'ncalc')
 
          if (error == 1) then
-            write (*, *) 'Input errors were found! Exiting now...'
-            call abinerror('check_inputsanity')
+            call fatal_error(__FILE__, __LINE__, 'Invalid input parameters')
          end if
       end subroutine check_inputsanity
 

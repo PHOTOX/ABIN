@@ -4,6 +4,7 @@
 ! This module is the parent of mod_sh which contains the driver SH routine.
 module mod_sh_integ
    use mod_const, only: DP
+   use mod_error, only: fatal_error
    ! TODO: Remove use of NSTMAX, allocate instead!
    use mod_array_size, only: NSTMAX
    implicit none
@@ -66,7 +67,6 @@ contains
 
    ! Calculates transitions matrix according to the Tully's fewest switches algorithm
    subroutine sh_TFS_transmat(dotproduct_int, dotproduct_newint, ist, pop0, t, dtp)
-      use mod_utils, only: abinerror
       real(DP), intent(in) :: dotproduct_int(NSTMAX, NSTMAX)
       real(DP), intent(in) :: dotproduct_newint(NSTMAX, NSTMAX)
       real(DP), intent(out) :: t(NSTMAX, NSTMAX) ! transition matrix
@@ -92,8 +92,8 @@ contains
 
       do ist2 = 1, nstate
          if (t(ist, ist2) > 1.0_DP) then
-            write (*, *) 'ERROR: Hopping probability greater than 1.'
-            call abinerror('surfacehop')
+            call fatal_error(__FILE__, __LINE__, &
+               & 'ERROR: Hopping probability greater than 1.')
          end if
          if (t(ist, ist2) < 0.0D0) t(ist, ist2) = 0.0D0
       end do
@@ -354,7 +354,6 @@ contains
    ! "Critical appraisal of the fewest switches algorithm for surface hopping"
    ! https://doi.org/10.1063/1.2715585
    subroutine sh_decoherence_correction(potential_energies, alpha, kinetic_energy, current_state, dtp)
-      use mod_utils, only: abinerror
       real(DP), intent(in) :: potential_energies(NSTMAX)
       real(DP), intent(in) :: alpha, kinetic_energy, dtp
       integer, intent(in) :: current_state
@@ -392,11 +391,10 @@ contains
 
       ! Following should never happen as we check for popsumthr later in this subroutine
       if (renormalization_factor < 0.0D0) then
-         write (*, *) 'Fatal error in surfacehop during decoherence renormalization.'
-         write (*, *) 'fact=', renormalization_factor, 'but should be > 0'
+         write (*, *) 'renormalization_factor=', renormalization_factor, ' but should be > 0'
          write (*, *) 'This usually means inaccurate integration of electronic SE.'
          write (*, *) 'Increase number of substeps or use more accurate integrator.'
-         call abinerror('surfacehop')
+         call fatal_error(__FILE__, __LINE__, 'Invalid decoherence renormalization.')
       end if
 
       renormalization_factor = dsqrt(renormalization_factor)
@@ -467,7 +465,6 @@ contains
    end subroutine sh_read_wf
 
    real(DP) function check_popsum()
-      use mod_utils, only: abinerror
       real(DP) :: popsum
       integer :: ist1
 
@@ -480,7 +477,7 @@ contains
          write (*, *) 'ERROR:Sum of electronic populations = ', popsum
          write (*, *) 'which differs from 1.0 by more than popsumthr = ', popsumthr
          write (*, *) 'Increase the number of substeps or use more accurate integrator.'
-         call abinerror('surfacehop')
+         call fatal_error(__FILE__, __LINE__, 'Invalid SH integration')
       end if
 
       check_popsum = popsum

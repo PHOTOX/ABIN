@@ -14,6 +14,7 @@ module mod_force_tera
 ! ----------------------------------------------------------------
    use mod_const, only: DP
    use mod_terampi
+   use mod_error, only: fatal_error
 #ifdef USE_MPI
    use mpi
    use mod_mpi, only: handle_mpi_error, check_recv_count
@@ -26,7 +27,6 @@ module mod_force_tera
 contains
 
    subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
-      use mod_utils, only: abinerror
       use mod_general, only: iqmmm
       use mod_shell_interface, only: oniom
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
@@ -41,8 +41,8 @@ contains
       ! This is a responsibility of the user
 
       if (modulo(walkmax, nteraservers) /= 0) then
-         write (*, *) 'ERROR: Parameter "nwalk" must be divisible by "nteraservers"!'
-         call abinerror("force_tera")
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Parameter "nwalk" must be divisible by "nteraservers"!')
       end if
 
       itc = 1
@@ -134,7 +134,6 @@ contains
       use mod_general, only: idebug, it, nwrite
       use mod_io, only: print_charges, print_dipoles
       use mod_qmmm, only: natqm
-      use mod_utils, only: abinerror
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
       integer, intent(in) :: iw, walkmax
@@ -161,7 +160,7 @@ contains
       ! Checking for TAG=1, which means that SCF did not converge
       if (status(MPI_TAG) == 1) then
          write (*, *) 'Got TAG 1 from TeraChem: SCF probably did not converge.'
-         call abinerror('force_tera')
+         call fatal_error(__FILE__, __LINE__, 'force_tera')
       end if
       if (idebug > 1) then
          print '(A,ES15.6)', 'Received SCF energy from server:', escf

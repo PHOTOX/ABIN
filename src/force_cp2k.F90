@@ -1,6 +1,7 @@
 module mod_cp2k
    use iso_c_binding
    use mod_const, only: DP
+   use mod_error, only: fatal_error
    implicit none
 
    ! We are actually connecting to C interface,
@@ -60,7 +61,6 @@ contains
 
    subroutine init_cp2k()
       use mod_general, only: natom, nwalk, mpi_world_size
-      use mod_utils, only: abinerror
       use iso_c_binding, only: C_CHAR, C_NULL_CHAR
 #ifdef USE_MPI
       use mpi
@@ -87,13 +87,13 @@ contains
          bead = modulo(my_rank, nwalk) + 1
 
          if (modulo(mpi_world_size, nwalk) /= 0 .and. mpi_world_size >= nwalk) then
-            write (*, *) 'ERROR:Number of MPI processes must be a multiple of nwalk!'
-            call abinerror('init_cp2k')
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Number of MPI processes must be a multiple of nwalk!')
          end if
 
          if (mpi_world_size < nwalk .and. modulo(nwalk, mpi_world_size) /= 0) then
-            write (*, *) 'ERROR:Number of MPI processes not compatible with number of beads!'
-            call abinerror('init_cp2k')
+            call fatal_error(__FILE__, __LINE__, &
+               & 'ERROR:Number of MPI processes not compatible with number of beads!')
          end if
 
          ! Create new communicators for different beads
@@ -163,9 +163,7 @@ contains
 
    subroutine force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
       use mod_general, only: natom, iqmmm, idebug, nwalk
-      use mod_utils, only: abinerror
       use mod_interfaces, only: oniom
-      use mod_utils, only: abinerror
 #ifdef USE_MPI
       use mpi
       integer :: status(MPI_STATUS_SIZE)
@@ -197,8 +195,8 @@ contains
       call MPI_Comm_size(cp2k_mastercomm, cp2k_mastersize, ierr)
 
       if (walkmax /= nwalk .and. cp2k_mpi_beads) then
-         write (*, *) 'This feature is not supported with CP2 MPI interface.'
-         call abinerror('force_cp2k')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'This feature is not supported with CP2 MPI interface.'
       end if
 #endif
 

@@ -1,2 +1,1 @@
- FATAL ERROR encountered in subroutine: surfacehop
- Check standard output for further information.
+ERROR in sh_integ.F90: Invalid SH integration

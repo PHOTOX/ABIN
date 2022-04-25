@@ -21,7 +21,6 @@ module mod_error
    implicit none
    private
 
-   ! This method replaces abinerror()
    public :: fatal_error, not_compiled_with
    ! This method is used by pFUnit to set it's own error handler,
    ! see unit_tests/throw_with_pfunit.F90

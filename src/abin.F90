@@ -27,7 +27,7 @@ program abin
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
-   use mod_utils, only: abinerror, archive_file
+   use mod_utils, only: archive_file
    use mod_transform
    use mod_mdstep, only: mdstep
    use mod_minimize, only: minimize
