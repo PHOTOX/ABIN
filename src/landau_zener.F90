@@ -387,7 +387,7 @@ contains
       write (chsystem, '(A,I4.3)') trim(chsystem)//" ", 1 !iw
       chsystem = trim(chsystem)//' < ./state.dat'
       call execute_command_line(trim(chsystem), exitstat=istatus, cmdstat=icmd)
-      if (icmd /= 0 .or. (istatus /= 0 .and. istatus /= 256)) then
+      if (icmd /= 0 .or. istatus /= 0) then
          write (stderr, *) 'ERROR: Something went wrong during the execution of the ab initio external program.'
          write (stderr, *) 'Inspect the output files in folder '//trim(toupper(chpot))//"/"
          write (stderr, *) 'CALL:', chsystem

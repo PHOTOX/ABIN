@@ -16,6 +16,6 @@ head -$lines engrad.dat.all.ref | tail -$natom1 > ../engrad.dat.$ibead
 # Simulate ab initio failure for the second bead
 echo "$ibead"
 if [[ $ibead = "001" ]];then
-  echo "Premature exit2"
-  exit 2
+  echo "Premature exit 001"
+  exit 1
 fi
