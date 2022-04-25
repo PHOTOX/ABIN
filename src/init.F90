@@ -17,12 +17,14 @@ module mod_init
    use mod_const, only: DP
    use mod_error, only: fatal_error
    use mod_files, only: stdout, stderr
-   use mod_utils, only: toupper, tolower, normalize_atom_name
+   use mod_utils, only: toupper, tolower, normalize_atom_name, &
+                      & open_file_for_reading
    implicit none
    private
    public :: init
    ! For unit test
    public :: initialize_masses
+   public :: read_xyz_file, read_atom_names
 contains
 
    subroutine init(dt)
@@ -31,7 +33,7 @@ contains
       use mod_interfaces, only: print_compile_info, omp_set_num_threads
       use mod_cmdline, only: get_cmdline
       use mod_mpi, only: initialize_mpi, get_mpi_size, get_mpi_rank, mpi_barrier_wrapper
-      use mod_files
+      use mod_files, only: files_init, stdout_to_devnull
       use mod_arrays
       use mod_array_size
       use mod_general
@@ -95,7 +97,6 @@ contains
 !$    integer, external :: omp_get_max_threads
       character(len=2), allocatable :: atnames(:)
       character(len=2), allocatable :: massnames(:)
-      character(len=2) :: atom
       character(len=200) :: chinput, chcoords, chveloc
       character(len=200) :: chiomsg, chout
       character(len=20) :: xyz_units
@@ -105,7 +106,7 @@ contains
       logical :: file_exists
       logical :: rem_comvel, rem_comrot
       integer :: my_rank, mpi_world_size
-      integer :: uinput
+      integer :: uinput, ucoord, uvel
 
       ! ABIN input parameters are read from the input file (default 'input.in')
       ! in the form of the standard Fortran namelist syntax.
@@ -304,12 +305,10 @@ contains
       ! Allocate all basic arrays and set them to 0.0d0
       call allocate_arrays(natom, nwalk)
 
-      if (iplumed == 1) then
-         call plumed_init()
-      end if
-
       ! Read initial geometry
-      call read_xyz_file(chcoords, atnames, natom_xyz, x, y, z)
+      ucoord = open_file_for_reading(chcoords)
+      call read_xyz_file(ucoord, chcoords, atnames, natom_xyz, 1, x, y, z)
+      close (ucoord)
 
       if (tolower(trim(xyz_units)) == "angstrom") then
          x(:, 1) = x(:, 1) * ANG
@@ -402,11 +401,14 @@ contains
 
       call initialize_integrator(dt, ipimd, inormalmodes, nshake, pot_ref, pot_ref)
 
-      if (temp0 > 0) then
-         write (stdout, *) 'Initial temperature [K] =', temp0
-      else
-         write (stdout, *) 'Initial temperature [K] =', temp
+      if (iplumed == 1) then
+         call plumed_init(natom, irest, dt0, nrest)
       end if
+
+      if (temp0 < 0) then
+         temp0 = temp
+      end if
+      write (stdout, *) 'Initial temperature [K] =', temp0
       if (inose /= 0) write (stdout, *) 'Target temperature [K] =', temp
 
       ! Convert temperature from Kelvins to atomic units
@@ -454,41 +456,16 @@ contains
 
       ! Set initial velocities according to the Maxwell-Boltzmann distribution
       if (irest == 0 .and. chveloc == '') then
-         if (temp0 >= 0) then
-            call vinit(temp0, am, vx, vy, vz)
-         else
-            call vinit(temp, am, vx, vy, vz)
-         end if
+         call vinit(temp0, am, vx, vy, vz)
       end if
 
       ! Read velocities from file (optional)
       if (chveloc /= '' .and. irest == 0) then
-         open (500, file=chveloc, status='old', action="read")
+         uvel = open_file_for_reading(chveloc)
          do iw = 1, nwalk
-            read (500, *, IOSTAT=iost) natom_xyz
-            if (iost /= 0) call print_read_error(chveloc, "Could not read velocities on line 1.", iost)
-            if (natom_xyz /= natom) then
-               write (*, '(A,A)') 'Nunmber of atoms in velocity input ', trim(chveloc)
-               write (*, '(A,A)') 'does not match with XYZ coordinates in ', trim(chcoords)
-               call abinerror('init')
-            end if
-            read (500, *, IOSTAT=iost)
-            if (iost /= 0) call print_read_error(chveloc, "Could not read velocities on line 2.", iost)
-
-            do iat = 1, natom
-               read (500, *, IOSTAT=iost) atom, vx(iat, iw), vy(iat, iw), vz(iat, iw)
-               if (iost /= 0) call print_read_error(chveloc, "Could not read velocities.", iost)
-               atom = normalize_atom_name(atom)
-               if (atom /= atnames(iat)) then
-                  write (*, *) 'Offending line:'
-                  write (*, *) atom, vx(iat, iw), vy(iat, iw), vz(iat, iw)
-                  call print_read_error(chveloc, "Inconsistent atom types in input velocities.", iost)
-               end if
-            end do
+            call read_xyz_file(uvel, chveloc, atnames, natom_xyz, iw, vx, vy, vz)
          end do
-
-         close (500)
-
+         close (uvel)
       end if
 
       ! Doing this here so that we can do it even when reading velocities from file
@@ -570,8 +547,8 @@ contains
 !$       nthreads = omp_get_max_threads()
 !$       if (nthreads > 1 .and. (ipimd /= 1 .and. pot /= '_cp2k_')) then
 !$          write (*, *) 'Number of threads is ', nthreads
-!$          write (*, *) 'ERROR: Parallel execution is currently only supported with ab initio PIMD (ipimd=1)'
-!$          call abinerror('init')
+!$          call fatal_error(__FILE__, __LINE__, &
+!$             & 'Parallel execution is currently only supported with ab initio PIMD (ipimd=1)')
 !$       end if
 
          if (nproc > 1) then
@@ -836,15 +813,6 @@ contains
          end if
       end subroutine check_inputsanity
 
-      subroutine print_read_error(chfile, chmsg, iost)
-         character(len=*), intent(in) :: chmsg, chfile
-         integer, intent(in) :: iost
-         write (*, *) trim(chmsg)
-         write (*, '(A,A)') 'Error when reading file ', trim(chfile)
-         write (*, *) 'Error code was', iost
-         call abinerror('init')
-      end subroutine print_read_error
-
       subroutine print_basic_info()
          write (stdout, *) 'Reading MD parameters from input file ', trim(chinput)
          write (stdout, *) 'Reading xyz coordinates from file ', trim(chcoords)
@@ -929,19 +897,21 @@ contains
       integer :: u, iost, iat
       real(DP) :: xtmp, ytmp, ztmp
 
-      open (newunit=u, file=coordfile, status="old", action="read", iostat=iost)
-      if (iost /= 0) then
-         call fatal_error(__FILE__, __LINE__, 'Could not open XYZ file '//trim(coordfile))
-      end if
+      u = open_file_for_reading(coordfile)
+
       read (u, '(I50)', iostat=iost) natom_xyz
       if (iost /= 0) then
+         close (u)
          call fatal_error(__FILE__, __LINE__, &
             &'Could not read number of atoms from the first line of file '//trim(coordfile))
+         return
       end if
 
       if (natom_xyz < 1) then
+         close (u)
          call fatal_error(__FILE__, __LINE__, &
             & 'Invalid number of atoms on the first line of the XYZ file '//trim(coordfile))
+         return
       end if
 
       allocate (atnames(natom_xyz))
@@ -954,33 +924,44 @@ contains
          ! Ignore the positions for now, only read atom names
          read (u, *, iostat=iost) atnames(iat), xtmp, ytmp, ztmp
          if (iost /= 0) then
+            close (u)
             call fatal_error(__FILE__, __LINE__, &
                & 'Invalid line in file '//trim(coordfile))
+            return
          end if
          atnames(iat) = normalize_atom_name(atnames(iat))
       end do
       close (u)
    end subroutine read_atom_names
 
-   subroutine read_xyz_file(fname, atnames, num_atom, x, y, z)
+   subroutine read_xyz_file(u, fname, atnames, num_atom, iw, x, y, z)
+      integer, intent(in) :: u
       character(len=*), intent(in) :: fname
-      character(len=2) :: atnames(:)
+      character(len=2), intent(in) :: atnames(:)
       integer, intent(in) :: num_atom
-      real(DP), dimension(:, :) :: x, y, z
+      ! Bead index
+      integer, intent(in) :: iw
+      real(DP), dimension(:, :), intent(inout) :: x, y, z
       character(len=2) :: atom
       integer :: natom_xyz
-      integer :: u, iat, iost, iw
+      integer :: iat, iost
 
-      ! Hack for now
-      iw = 1
-
-      open (newunit=u, file=fname, status='old', action="read")
+      ! Due to a bug in GFortran 7.0, we cannot use this
+      ! so we are passing fname explicitly
+      ! inquire (unit=u, name=fname)
 
       ! Verify that number of atoms matches what we expect
       read (u, *, IOSTAT=iost) natom_xyz
+      if (iost /= 0) then
+         close (u)
+         call fatal_error(__FILE__, __LINE__, &
+            &'Could not read number of atoms from the first line of file '//trim(fname))
+         return
+      end if
+
       if (natom_xyz /= num_atom) then
          call fatal_error(__FILE__, __LINE__, &
-            'Invalid Number of atoms on the first line of file '//trim(fname))
+            & 'Inconsistent number of atoms on the first line of file '//trim(fname))
       end if
 
       ! Skip comment line
@@ -997,8 +978,6 @@ contains
             call fatal_error(__FILE__, __LINE__, 'Inconsistent atom type in file '//trim(fname))
          end if
       end do
-
-      close (u)
    end subroutine read_xyz_file
 
    ! Subroutine initialize_masses() populates the global am() array,

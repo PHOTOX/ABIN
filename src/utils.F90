@@ -278,6 +278,18 @@ contains
       end if
    end subroutine file_exists_or_exit
 
+   integer function open_file_for_reading(fname) result(un)
+      character(len=*) :: fname
+      character(300) :: errmsg
+      integer :: iost
+
+      open (newunit=un, file=fname, action='read', iostat=iost, status='old', access='sequential', iomsg=errmsg)
+      if (iost /= 0) then
+         write (stderr, *) trim(errmsg)
+         call fatal_error(__FILE__, __LINE__, 'Could not open file '//trim(fname))
+      end if
+   end function open_file_for_reading
+
    real(DP) function ekin_p(px, py, pz, mass, natom, nwalk)
       implicit none
       real(DP), dimension(:, :), intent(in) :: px, py, pz

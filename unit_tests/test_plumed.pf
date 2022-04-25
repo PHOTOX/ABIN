@@ -44,7 +44,7 @@ contains
       ! NOTE: Some tests might need to call plumed_init() again,
       ! e.g. if they need to re-define the time step.
       ! In that case, call plumed_finalize() before calling plumed_init() again.
-      call plumed_init()
+      call plumed_init(natom=NATOMS, irest=0, dt0=dt0, nrest=1)
    end subroutine setup
 
    ! This routine is called automatically after each test.
@@ -97,7 +97,7 @@ contains
 
       ! Need to call plumed_init() again since we redefined dt
       call finalize_plumed()
-      call plumed_init()
+      call plumed_init(natom=NATOMS, irest=0, dt0=dt0, nrest=1)
       call plumed_f_gcmd('readInputLine'//char(0), DISTANCE_ACTION)
       call plumed_f_gcmd('readInputLine'//char(0), PRINT_ACTION)
 
@@ -342,7 +342,7 @@ contains
    @test(ifndef=USE_PLUMED)
    subroutine test_not_compiled_with_plumed()
       real(DP) :: eclas
-      call plumed_init()
+      call plumed_init(natom=NATOMS, irest=0, dt0=0.5D0, nrest=1)
       @assertExceptionRaised('ABIN was not compiled with PLUMED')
 
       call force_plumed(x, y, z, fx, fy, fz, eclas)

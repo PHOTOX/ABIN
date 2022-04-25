@@ -35,14 +35,15 @@ module mod_plumed
 contains
 
 #ifdef USE_PLUMED
-   subroutine plumed_init()
-      use mod_general, only: natom, irest, dt0, nrest
+   subroutine plumed_init(natom, irest, dt0, nrest)
       use mod_const, only: ANG, AUTOFS, AMU, AVOGADRO, AUTOJ
       use mod_utils, only: c_string
       use mod_error, only: fatal_error
       use mod_files, only: stdout
       !use mod_nhc, only: temp
       implicit none
+      integer, intent(in) :: natom, irest, nrest
+      real(DP), intent(in) :: dt0
       integer, parameter :: PLUMED_RESTART = 1
       ! Conversion from ABIN to PLUMED units
       real(DP), parameter :: PLUMED_ENERGY_UNIT = AUTOJ * AVOGADRO * 1.0D-3 ! Ha -> kJ/mol

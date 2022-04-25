@@ -1,0 +1,63 @@
+! Testing functions for reading coordinates and velocities
+module test_io
+   use funit
+   !use mod_utils, only: del_file
+   use mod_utils, only: open_file_for_reading
+   use mod_init
+   implicit none
+   integer, parameter :: NATOM = 3
+   integer :: natom_read
+   character(len=2) :: names(NATOM)
+   character(len=2), allocatable :: names_read(:)
+   character(len=*), parameter :: geomfile = 'geom.dat'
+
+contains
+
+   subroutine del_file(fname)
+      character(len=*), intent(in) :: fname
+      integer :: u, iost
+
+      open (newunit=u, file=fname, iostat=iost, status='old')
+      if (iost == 0) close (u, status='delete')
+   end subroutine del_file
+
+   @before
+   subroutine setup()
+      use mod_files, only: stdout_to_devnull, stderr_to_stdout
+
+      call stdout_to_devnull()
+      call stderr_to_stdout()
+   end subroutine setup
+
+   @after
+   subroutine teardown()
+      use mod_files, only: reset_stdout, reset_stderr
+
+      call reset_stdout()
+      call reset_stderr()
+   end subroutine teardown
+
+   @test
+   subroutine test_invalid_natom()
+      integer :: u
+      !names = (/'H', 'H', 'C'/)
+
+      u = open_file_for_reading(geomfile)
+      @assertExceptionRaised('Could not open file geom.dat')
+
+      open (newunit=u, action='write', file=geomfile)
+      write (u, *) 'invalid natom'
+      close (u)
+      call read_atom_names(geomfile, natom_read, names_read)
+      call del_file(geomfile)
+      @assertExceptionRaised('Could not read number of atoms from the first line of file geom.dat')
+
+      open (newunit=u, action='write', file=geomfile)
+      write (u, *) -1
+      close (u)
+      call read_atom_names(geomfile, natom_read, names_read)
+      call del_file(geomfile)
+      @assertExceptionRaised('Invalid number of atoms on the first line of the XYZ file geom.dat')
+   end subroutine
+
+end module test_io
