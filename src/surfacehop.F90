@@ -126,8 +126,8 @@ contains
 
    end subroutine sh_init
 
-   subroutine get_nacm()
-      use mod_general, only: pot
+   subroutine get_nacm(pot)
+      character(len=*), intent(in) :: pot
       integer :: iost, ipom, ist1, ist2
 
       ! In TeraChem SH interface, we already got NACME
@@ -144,13 +144,14 @@ contains
       if (inac == 0 .and. ipom > 0) then
          ! Calculate NACME using default accuracy
 
-         call calc_nacm(nac_accu1)
+         call calc_nacm(pot, nac_accu1)
 
          iost = read_nacm()
 
          if (iost /= 0 .and. nac_accu1 > nac_accu2) then
-!        if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY
-            call calc_nacm(nac_accu2)
+            write (stderr, '(A)') 'WARNING: Some NACME not computed. Trying with decreased accuracy'
+            write (stderr, '(A,I0)') 'Calling script r.'//trim(pot)//'.nacm with accuracy: 10^-', nac_accu2
+            call calc_nacm(pot, nac_accu2)
             iost = read_nacm()
          end if
 
@@ -344,11 +345,13 @@ contains
       read_nacm = iost
    end function read_nacm
 
-   subroutine calc_nacm(nac_accu)
+   subroutine calc_nacm(pot, nac_accu)
       use mod_utils, only: toupper
-      use mod_general, only: it, pot
+      use mod_general, only: it
+      character(len=*), intent(in) :: pot
       integer, intent(in) :: nac_accu
       integer :: ist1, ist2, u, itrj
+      integer :: icmd, istat
       character(len=100) :: chsystem
 
       open (newunit=u, file='state.dat')
@@ -364,17 +367,20 @@ contains
       close (u)
 
       chsystem = './'//trim(toupper(pot))//'/r.'//trim(pot)//'.nacm '
-      ! TODO: move the following line somwhere else
-      ! write(*,*)'WARNING: Some NACMs not computed. Trying with decreased accuracy...'
-      ! write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu
-      ! TODO: If we remove itrj here, it will be a breaking change
       itrj = 1
       write (chsystem, '(A,I13,I4.3,I3,A)') trim(chsystem), it, itrj, nac_accu, ' < state.dat'
 
-      call execute_command_line(chsystem)
+      call execute_command_line(trim(chsystem), exitstat=istat, cmdstat=icmd)
 
-      ! TODO: catch errors here
+      if (icmd /= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Could not execute command "'//trim(chsystem)//'"')
+      end if
 
+      ! We continue on, since we can retry calculation with decreased accuracy
+      if (istat /= 0) then
+         write (stderr, *) 'WARNING: Command '//trim(chsystem)//' exited with non-zero status'
+      end if
    end subroutine calc_nacm
 
    ! move arrays from new step to old step
@@ -409,7 +415,7 @@ contains
    !******************************
    subroutine surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
       use mod_const, only: ANG, AUTOFS
-      use mod_general, only: natom, nwrite, idebug, it, sim_time
+      use mod_general, only: natom, nwrite, idebug, it, sim_time, pot
       use mod_system, only: names
       use mod_files, only: UPOP, UPROB, UPES, UNACME, UDOTPROD
       use mod_qmmm, only: natqm
@@ -474,7 +480,7 @@ contains
          end do
 
          ! This computes and reads NACME
-         call get_nacm()
+         call get_nacm(pot)
 
          ! TODO: move this to a separate routine
          ! Calculating overlap between nacmes

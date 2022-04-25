@@ -369,7 +369,7 @@ contains
       real(DP), intent(inout) :: soc_matrix(:, :)
       character(len=*), intent(in) :: chpot
 
-      integer :: iost, istatus, row, col
+      integer :: iost, istatus, icmd, row, col
       integer :: soc_unit
       character(len=*), parameter :: chSOC = 'SOC.dat'
       character(len=100) :: chsystem
@@ -386,8 +386,8 @@ contains
 
       write (chsystem, '(A,I4.3)') trim(chsystem)//" ", 1 !iw
       chsystem = trim(chsystem)//' < ./state.dat'
-      call execute_command_line(trim(chsystem), exitstat=istatus)
-      if (istatus /= 0 .and. istatus /= 256) then
+      call execute_command_line(trim(chsystem), exitstat=istatus, cmdstat=icmd)
+      if (icmd /= 0 .or. (istatus /= 0 .and. istatus /= 256)) then
          write (stderr, *) 'ERROR: Something went wrong during the execution of the ab initio external program.'
          write (stderr, *) 'Inspect the output files in folder '//trim(toupper(chpot))//"/"
          write (stderr, *) 'CALL:', chsystem

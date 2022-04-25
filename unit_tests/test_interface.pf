@@ -65,7 +65,6 @@ contains
       ! NOTE: Deleting the file via a close statement results in
       ! runtime error for certain compiler versions/compiler flags.
       close (u) ! status='delete')
-      !@assertExceptionRaised('Could not open file engrad.dat')
       @assertTrue(abort)
       call del_file(engrad_fname)
    end subroutine
@@ -86,7 +85,6 @@ contains
       call del_file(shellscript)
 
       @assertTrue(abort)
-      !@assertExceptionRaised('External forces error')
    end subroutine
 
    @test
@@ -105,7 +103,6 @@ contains
 
       close (u, status='delete')
       @assertTrue(abort)
-      !@assertExceptionRaised('Could not read energy from file '//trim(fname))
    end subroutine
 
    @test
@@ -121,6 +118,5 @@ contains
 
       close (u, status='delete')
       @assertTrue(abort)
-      !@assertExceptionRaised('Could not read gradients from file '//trim(fname))
    end subroutine
 end module test_interface

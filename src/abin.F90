@@ -120,7 +120,7 @@ program abin
    ! Set initial values for surface hopping
    if (ipimd == 2) then
       if (irest /= 1) then
-         call get_nacm()
+         call get_nacm(pot)
       end if
       call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
       if (pot == '_tera_' .or. restrain_pot == '_tera_') then
