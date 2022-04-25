@@ -50,7 +50,7 @@ contains
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
       real(DP), dimension(natom) :: fxgs, fygs, fzgs, fxes, fyes, fzes
       real(DP) :: eclasexc, eclasground, excE, deltaE, lambda, lsum, deltaEnext, convercrit, deltaD
-      integer :: ios, iat, iat2, iw
+      integer :: ios, iat, iat2, iw, u
       character(len=30) :: formt, chforce_ground, chforce_exc
 
       do iw = 1, nwalk
@@ -75,15 +75,15 @@ contains
             write (chforce_exc, '(A,I3.3)') 'engrad.exc.dat.', iw
 
             !-----READING energy of groud state (engrad.ground.dat)
-            open (901, file=chforce_ground, status='OLD', iostat=ios, action='read')
+            open (newunit=u, file=chforce_ground, status='OLD', iostat=ios, action='read')
             if (ios /= 0) then
                call fatal_error(__FILE__, __LINE__, 'Could not open file '//chforce_ground)
             end if
-            read (901, *) eclasground
+            read (u, *) eclasground
 
             ! Reading gradient of ground state
             do iat = 1, natom
-               read (901, *, IOSTAT=ios) fxgs(iat), fygs(iat), fzgs(iat)
+               read (u, *, IOSTAT=ios) fxgs(iat), fygs(iat), fzgs(iat)
                if (ios /= 0) then
                   call fatal_error(__FILE__, __LINE__, &
                      & 'Fatal problem with reading gradients from file engrad.ground.dat')
@@ -93,18 +93,18 @@ contains
                fygs(iat) = -fygs(iat)
                fzgs(iat) = -fzgs(iat)
             end do
-            close (901)
+            close (u)
 
             ! Reading energy of excited state (engrad.exc.dat)
-            open (901, file=chforce_exc, status='OLD', iostat=ios, action='read')
+            open (newunit=u, file=chforce_exc, status='OLD', iostat=ios, action='read')
             if (ios /= 0) then
                call fatal_error(__FILE__, __LINE__, 'Could not open file '//chforce_exc)
             end if
-            read (901, *) eclasexc
+            read (u, *) eclasexc
 
             ! Reading gradient of excited state
             do iat = 1, natom
-               read (901, *, IOSTAT=ios) fxes(iat), fyes(iat), fzes(iat)
+               read (u, *, IOSTAT=ios) fxes(iat), fyes(iat), fzes(iat)
                if (ios /= 0) then
                   call fatal_error(__FILE__, __LINE__, &
                                    'Could not read gradients from file '//chforce_exc)
@@ -114,7 +114,7 @@ contains
                fyes(iat) = -fyes(iat)
                fzes(iat) = -fzes(iat)
             end do
-            close (901)
+            close (u)
 
             ! restraint_pot endif
          end if
