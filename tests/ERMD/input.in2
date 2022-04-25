@@ -20,4 +20,3 @@ en_diff=0.21,   ! targeted energy 7eV=0.26
 temp0=300,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
 inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2
 /
-

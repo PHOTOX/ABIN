@@ -1,3 +1,14 @@
+! Driver routines for Energy Restraint Molecular Dynamics (ERMD) 
+! J.Suchan, https://doi.org/10.1039/C8FD00088C 
+!
+! Fixing the excitation energy of a molecule during dynamics 
+! by adapting forces based on knowledge of ground and excited state gradients.
+! Originally developed to sample initial conditions excitable by CW laser. 
+
+! Usage:
+! A) Lagrange multipliers (default, en_restraint=1) - using energy gradient as approximation for next step energy change
+! B) Quadratic potential around target value (en_restraint=2, force constant en_kk must be set)
+
 module mod_en_restraint
    use mod_const, only: DP, AUTOEV
    use mod_files, only: stderr, stdout
@@ -13,16 +24,6 @@ module mod_en_restraint
    character(len=200) :: restrain_pot = 'none'
 
 contains
-
-! ENERGY RESTRAINT subroutine
-! Fixing the excitation energy of molecule - adapts forces based on knowledge
-! of ground and excited state gradients
-
-! Using:
-! A) Lagrange multipliers (default) - using energy gradient as approximation for next step energy change
-! Paper: On the Importance of Initial Conditions for Excited-State Dynamics, 10.1039/C8FD00088C
-
-! B) Quadratic potential around target value (en_kk must be set)
 
    subroutine en_rest_init(natom)
       integer, intent(in) :: natom
@@ -54,7 +55,7 @@ contains
       real(DP), dimension(natom) :: fxgs, fygs, fzgs, fxes, fyes, fzes
       real(DP) :: eclasexc, eclasground, excE, deltaE, lambda, lsum, deltaEnext, convercrit, deltaD
       integer :: ios, iat, iat2, iw, u
-      character(len=30) :: formt, chforce_ground, chforce_exc
+      character(len=30) :: chforce_ground, chforce_exc
 
       do iw = 1, nwalk
 
@@ -171,8 +172,7 @@ contains
             end do
 
             !Output to en_restraint.dat
-            write (formt, '(A30)') '(I8,F16.8,E20.10,E20.10,F16.8)' 
-            write (UERMD, fmt=formt) it, excE * AUTOEV, deltaE, deltaEnext, lambda
+            write (UERMD, '(I8,F16.8,E20.10,E20.10,F16.8)') it, excE * AUTOEV, deltaE, deltaEnext, lambda
 
          else if (en_restraint == 2) then
             !======= B) Quadratic restraint =============
@@ -189,8 +189,7 @@ contains
             eclas = eclas ! + quadratic_restraint_energy
 
             !Output to en_restraint.dat
-            write (formt, '(A30)') '(I8,F16.8,E20.10,E20.10,F16.8)'
-            write (UERMD, fmt=formt) it, excE * AUTOEV, deltaE, 0.0, 0.0
+            write (UERMD, '(I8,F16.8,E20.10,E20.10,F16.8)') it, excE * AUTOEV, deltaE, 0.0, 0.0
 
          end if
 
