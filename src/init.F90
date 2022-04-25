@@ -14,6 +14,10 @@
 ! that can be called from here.
 
 module mod_init
+   use mod_const, only: DP
+   use mod_error, only: fatal_error
+   use mod_files, only: stdout, stderr
+   use mod_utils, only: toupper, tolower, normalize_atom_name
    implicit none
    private
    public :: init
@@ -23,16 +27,15 @@ contains
 
    subroutine init(dt)
       use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
-      use mod_const
+      use mod_const, only: ANG, AUtoK
       use mod_interfaces, only: print_compile_info, omp_set_num_threads
       use mod_cmdline, only: get_cmdline
-      use mod_error, only: fatal_error
       use mod_mpi, only: initialize_mpi, get_mpi_size, get_mpi_rank, mpi_barrier_wrapper
       use mod_files
       use mod_arrays
       use mod_array_size
       use mod_general
-      use mod_system
+      use mod_system, only: set_atom_names, conatom, am, f, dime
       use mod_nhc
       use mod_estimators
       use mod_potentials
@@ -45,8 +48,7 @@ contains
       use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
       use mod_prng_init, only: initialize_prng
       use mod_splined_grid, only: initialize_spline, potential_file
-      use mod_utils, only: abinerror, toupper, tolower, normalize_atom_name, &
-                        &  append_rank, file_exists_or_exit
+      use mod_utils, only: abinerror, append_rank, file_exists_or_exit
       use mod_vinit
       use mod_analyze_geometry
       use mod_shake
@@ -91,6 +93,7 @@ contains
       integer :: nproc
       integer :: getPID
 !$    integer, external :: omp_get_max_threads
+      character(len=2), allocatable :: atnames(:)
       character(len=2), allocatable :: massnames(:)
       character(len=2) :: atom
       character(len=200) :: chinput, chcoords, chveloc
@@ -102,6 +105,7 @@ contains
       logical :: file_exists
       logical :: rem_comvel, rem_comrot
       integer :: my_rank, mpi_world_size
+      integer :: uinput
 
       ! ABIN input parameters are read from the input file (default 'input.in')
       ! in the form of the standard Fortran namelist syntax.
@@ -117,7 +121,7 @@ contains
       !
       ! All namelists need to be in a single input file, and the code
       ! in this subroutine must ensure that the namelists can be in any order.
-      namelist /general/ natom, pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
+      namelist /general/ pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
          nwrite, nwritex, nwritev, nwritef, dt, irandom, nabin, irest, nrest, anal_ext, &
          isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_sleep, narchive, xyz_units, &
          dime, ncalc, idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
@@ -158,9 +162,9 @@ contains
       call get_cmdline(chinput, chcoords, chveloc, tc_server_name)
 
       ! Reading main input parameters from namelist &general
-      open (150, file=chinput, status='OLD', delim='APOSTROPHE', action="READ")
-      read (150, general)
-      rewind (150)
+      open (newunit=uinput, file=chinput, status='OLD', delim='APOSTROPHE', action="READ")
+      read (uinput, general)
+      rewind (uinput)
 
       pot = tolower(pot)
       pot_ref = tolower(pot_ref)
@@ -240,31 +244,19 @@ contains
       ! Initialize pseudo-random number generator
       call initialize_prng(seed=irandom, mpi_rank=my_rank)
 
-      ! Get number of atoms from XYZ coordinates NOW so that we can allocate arrays
+      ! Get number of atoms and atom names from XYZ coordinates NOW
+      ! so that we can allocate arrays
+      call read_atom_names(chcoords, natom_xyz, atnames)
 
-      open (111, file=chcoords, status="old", action="read")
-      read (111, '(I50)', iostat=iost) natom_xyz
-      !TODO following line does not work
-      if (iost /= 0) call print_read_error(chcoords, "Expected number of atoms on the first line.", iost)
-      if (natom_xyz /= natom .and. natom > 0) then
-         write (*, '(A,A)') 'WARNING: Number of atoms specified in ', trim(chinput)
-         write (*, '(A,A)') 'does not match with the XYZ geometry in ', trim(chcoords)
-         write (*, *) 'Going forward anyway...'
-      end if
-
-      natom = natom_xyz
-
-      if (natom < 1) then
-         write (*, '(A,A)') 'ERROR: Wrong number of atoms on the first line of the XYZ &
-         & file ', trim(chcoords)
-         write (*, *) natom
-         call abinerror('init')
-      end if
+      ! Set global variable "natom"
+      call set_natom(natom_xyz)
+      ! Set global variable "names"
+      call set_atom_names(atnames, natom_xyz)
 
       ! This line is super important,
       ! cause we actually use natqm in many parts of the code
       if (iqmmm == 0 .and. pot /= '_mm_') then
-         natqm = natom
+         natqm = natom_xyz
       end if
 
       if (irest == 1) then
@@ -284,11 +276,9 @@ contains
 
       ! We have these allocate these arrays here
       ! because we read them from input file.
-      allocate (names(natom))
       allocate (massnames(natom))
       allocate (masses(natom), source=-1.0_DP)
 
-      names = ''
       massnames = ''
 
       ! Lennard-Jones / Coulomb parameters
@@ -319,45 +309,34 @@ contains
       end if
 
       ! Read initial geometry
-      ! TODO: Move to a separate function
-      read (111, *)
-      do iat = 1, natom
+      call read_xyz_file(chcoords, atnames, natom_xyz, x, y, z)
 
-         read (111, *, iostat=iost) names(iat), x(iat, 1), y(iat, 1), z(iat, 1)
-         if (iost /= 0) call print_read_error(chcoords, 'Could not read atom names and coordinates', iost)
-         names(iat) = normalize_atom_name(names(iat))
-         if (tolower(trim(xyz_units)) == "angstrom") then
-            x(iat, 1) = x(iat, 1) * ANG
-            y(iat, 1) = y(iat, 1) * ANG
-            z(iat, 1) = z(iat, 1) * ANG
-         else if (tolower(trim(xyz_units)) == "bohr") then
-            continue
-         else
-            write (*, *) 'ERROR: Wrong XYZ units: ', trim(xyz_units)
-         end if
-
-      end do
-      close (111)
+      if (tolower(trim(xyz_units)) == "angstrom") then
+         x(:, 1) = x(:, 1) * ANG
+         y(:, 1) = y(:, 1) * ANG
+         z(:, 1) = z(:, 1) * ANG
+      else if (tolower(trim(xyz_units)) == "bohr") then
+         continue
+      else
+         write (*, *) 'ERROR: Wrong XYZ units: ', trim(xyz_units)
+      end if
 
       ! Initialize all PIMD beads to the same initial geometry
       do iw = 1, nwalk
-         do iat = 1, natom
-            x(iat, iw) = x(iat, 1)
-            y(iat, iw) = y(iat, 1)
-            z(iat, iw) = z(iat, 1)
-         end do
+         x(:, iw) = x(:, 1)
+         y(:, iw) = y(:, 1)
+         z(:, iw) = z(:, 1)
       end do
 
       ! the namelist system does not need to be present
-      read (150, system, iostat=iost, iomsg=chiomsg)
-      rewind (150)
+      read (uinput, system, iostat=iost, iomsg=chiomsg)
+      rewind (uinput)
       !check, whether we hit End-Of-File or other error
       if (IS_IOSTAT_END(iost)) then !fortran intrinsic for EOF
          continue
       else if (iost /= 0) then
-         write (*, *) 'ERROR when reading namelist "system".'
-         write (*, *) chiomsg
-         call abinerror('init')
+         write (stderr, *) chiomsg
+         call fatal_error(__FILE__, __LINE__, 'Could not read namelist "system".')
       end if
 
       do iat = 1, size(massnames)
@@ -369,7 +348,7 @@ contains
       ! masses - user-defined atomic masses
       ! massnames - atomic symbols of user-defined masses
       ! am - the output array of atomic masses in atomic units
-      call initialize_masses(names, masses, massnames, natom, am)
+      call initialize_masses(atnames, masses, massnames, natom, am)
 
       ! Transform masses for PIMD
       ! Note that amt array is used throughout the code
@@ -382,33 +361,33 @@ contains
       natmolt(1) = natom ! default for global NHC thermostat
       nshakemol = 0
 
-      read (150, nhcopt)
-      rewind (150)
+      read (uinput, nhcopt)
+      rewind (uinput)
 
       if (ipimd == 2) then
-         read (150, sh)
-         rewind (150)
+         read (uinput, sh)
+         rewind (uinput)
          integ = tolower(integ)
       end if
 
       if (ipimd == 5) then
-         read (150, lz)
-         rewind (150)
+         read (uinput, lz)
+         rewind (uinput)
          call lz_init() !Init arrays for possible restart
       end if
 
       if (iremd == 1) then
-         read (150, remd)
-         rewind (150)
+         read (uinput, remd)
+         rewind (uinput)
          call remd_init(temp, temp0)
       end if
 
       if (iqmmm > 0 .or. pot == '_mm_') then
-         read (150, qmmm)
-         rewind (150)
+         read (uinput, qmmm)
+         rewind (uinput)
       end if
 
-      close (150)
+      close (uinput)
       ! END OF READING INPUT
 
       if (pot == '_tera_' .or. restrain_pot == '_tera_') then
@@ -445,7 +424,7 @@ contains
       end if
 
       if (pot == '_mmwater_' .or. pot_ref == '_mmwater_') then
-         call check_water(natom, names)
+         call check_water(natom_xyz, atnames)
       end if
 
       ! Initialize thermostat
@@ -482,10 +461,9 @@ contains
          end if
       end if
 
-!     Reading velocities from file
+      ! Read velocities from file (optional)
       if (chveloc /= '' .and. irest == 0) then
-         ! TODO: move the following to a separate function
-         open (500, file=chveloc, status='OLD', action="READ")
+         open (500, file=chveloc, status='old', action="read")
          do iw = 1, nwalk
             read (500, *, IOSTAT=iost) natom_xyz
             if (iost /= 0) call print_read_error(chveloc, "Could not read velocities on line 1.", iost)
@@ -501,7 +479,7 @@ contains
                read (500, *, IOSTAT=iost) atom, vx(iat, iw), vy(iat, iw), vz(iat, iw)
                if (iost /= 0) call print_read_error(chveloc, "Could not read velocities.", iost)
                atom = normalize_atom_name(atom)
-               if (atom /= names(iat)) then
+               if (atom /= atnames(iat)) then
                   write (*, *) 'Offending line:'
                   write (*, *) atom, vx(iat, iw), vy(iat, iw), vz(iat, iw)
                   call print_read_error(chveloc, "Inconsistent atom types in input velocities.", iost)
@@ -513,9 +491,7 @@ contains
 
       end if
 
-!     END OF READING VELOCITIES--------------------
-
-      ! doing this here so that we can do it even when reading velocities from file
+      ! Doing this here so that we can do it even when reading velocities from file
       if (rem_comvel) then
          call remove_comvel(vx, vy, vz, am, rem_comvel)
       end if
@@ -557,7 +533,7 @@ contains
          call initialize_spline(natom)
       end if
       if (pot == '_mm_' .or. pot_ref == '_mm_') then
-         call initialize_mm(natom, names, mm_types, q, LJ_rmin, LJ_eps)
+         call initialize_mm(natom, atnames, mm_types, q, LJ_rmin, LJ_eps)
       end if
 
       if (my_rank == 0) then
@@ -945,13 +921,92 @@ contains
 
    end subroutine init
 
+   ! Read atom names from XYZ file, return number of atoms
+   subroutine read_atom_names(coordfile, natom_xyz, atnames)
+      character(len=*), intent(in) :: coordfile
+      integer, intent(out) :: natom_xyz
+      character(len=2), allocatable, intent(out) :: atnames(:)
+      integer :: u, iost, iat
+      real(DP) :: xtmp, ytmp, ztmp
+
+      open (newunit=u, file=coordfile, status="old", action="read", iostat=iost)
+      if (iost /= 0) then
+         call fatal_error(__FILE__, __LINE__, 'Could not open XYZ file '//trim(coordfile))
+      end if
+      read (u, '(I50)', iostat=iost) natom_xyz
+      if (iost /= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            &'Could not read number of atoms from the first line of file '//trim(coordfile))
+      end if
+
+      if (natom_xyz < 1) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Invalid number of atoms on the first line of the XYZ file '//trim(coordfile))
+      end if
+
+      allocate (atnames(natom_xyz))
+      atnames = ''
+
+      ! Ignore comment line
+      read (u, *)
+
+      do iat = 1, natom_xyz
+         ! Ignore the positions for now, only read atom names
+         read (u, *, iostat=iost) atnames(iat), xtmp, ytmp, ztmp
+         if (iost /= 0) then
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Invalid line in file '//trim(coordfile))
+         end if
+         atnames(iat) = normalize_atom_name(atnames(iat))
+      end do
+      close (u)
+   end subroutine read_atom_names
+
+   subroutine read_xyz_file(fname, atnames, num_atom, x, y, z)
+      character(len=*), intent(in) :: fname
+      character(len=2) :: atnames(:)
+      integer, intent(in) :: num_atom
+      real(DP), dimension(:, :) :: x, y, z
+      character(len=2) :: atom
+      integer :: natom_xyz
+      integer :: u, iat, iost, iw
+
+      ! Hack for now
+      iw = 1
+
+      open (newunit=u, file=fname, status='old', action="read")
+
+      ! Verify that number of atoms matches what we expect
+      read (u, *, IOSTAT=iost) natom_xyz
+      if (natom_xyz /= num_atom) then
+         call fatal_error(__FILE__, __LINE__, &
+            'Invalid Number of atoms on the first line of file '//trim(fname))
+      end if
+
+      ! Skip comment line
+      read (u, *)
+
+      do iat = 1, num_atom
+         read (u, *, iostat=iost) atom, x(iat, iw), y(iat, iw), z(iat, iw)
+         if (iost /= 0) then
+            call fatal_error(__FILE__, __LINE__, 'Invalid line in file '//trim(fname))
+         end if
+         if (normalize_atom_name(atom) /= atnames(iat)) then
+            write (stderr, *) 'Offending line:'
+            write (stderr, *) atom, x(iat, iw), y(iat, iw), z(iat, iw)
+            call fatal_error(__FILE__, __LINE__, 'Inconsistent atom type in file '//trim(fname))
+         end if
+      end do
+
+      close (u)
+   end subroutine read_xyz_file
+
    ! Subroutine initialize_masses() populates the global am() array,
    ! based on the atom names from names() array.
    ! User can also specify non-standard isotopes/elements.
    subroutine initialize_masses(names, masses, massnames, natom, am)
       use mod_const, only: DP, AMU
       use mod_files, only: stdout
-      use mod_error, only: fatal_error
       ! Atomic names of simulated structure
       character(len=2), intent(in) :: names(natom)
       real(DP), intent(in) :: masses(:)

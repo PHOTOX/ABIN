@@ -15,7 +15,6 @@ nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?
 nrest=1,		! how often we print restart files?
 nwritev=0,		! how often we print velocities?
-natom=6,		!number of atoms
 xyz_units='bohr'
 /
 

@@ -1,7 +1,6 @@
 &general
 irandom=  1039269484,                 ! random seed
 pot='molpro-lz',		            ! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho 
-natom=9,		                !number of atoms
 irest=0,	    	            ! should we restart from restart.xyz? (ignoring mini.dat)
 
 ipimd=5,	                	! classical simulation 0, quantum simulation 1, surface-hopping 2, steepest descent 3 
@@ -28,6 +27,3 @@ nsinglet_lz=2,
 ntriplet_lz=3,
 deltaE_lz=1.5,
 /
-
-
-

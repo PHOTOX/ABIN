@@ -46,7 +46,7 @@ module mod_general
    integer :: icv = 0, anal_ext = 0, idebug = 0
    integer :: ihess
    ! Number of atoms, taken from XYZ geometry
-   integer :: natom = 0
+   integer, protected :: natom = 0
    ! Switch for internal QM/MM, experimental!!
    integer :: iqmmm = 0
    ! Switch for Replica Exchange MD
@@ -62,20 +62,26 @@ module mod_general
    integer :: en_restraint = 0
    save
 contains
+   subroutine set_natom(num_atom)
+      integer, intent(in) :: num_atom
+      natom = num_atom
+   end subroutine set_natom
+
    subroutine update_simtime(dt)
       use mod_const, only: DP
       real(DP) :: dt
       sim_time = sim_time + dt
-   end subroutine
+   end subroutine update_simtime
 end module
 
 ! TODO: Move this to a separate file, and think hard what should be inside this module.
 module mod_system
    use mod_const, only: DP
+   use mod_error, only: fatal_error
    implicit none
    public
    real(DP), allocatable :: am(:)
-   character(len=2), allocatable :: names(:)
+   character(len=2), allocatable, protected :: names(:)
    integer :: dime = 3 ! dimension of the system
    integer :: f = 3 ! number of constants of motion
    ! (for calculating kinetic temperature)
@@ -83,6 +89,14 @@ module mod_system
    ! currently prob. not implemented correctly
    integer :: conatom = 0 ! number of constrained atoms
    save
+contains
+   subroutine set_atom_names(atnames, num_atom)
+      character(len=2), intent(in) :: atnames(num_atom)
+      integer, intent(in) :: num_atom
+
+      allocate(names(num_atom))
+      names = atnames
+   end subroutine
 end module mod_system
 
 module mod_chars
