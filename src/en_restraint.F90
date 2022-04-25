@@ -39,7 +39,7 @@ contains
    end subroutine en_rest_init
 
    subroutine energy_restraint(x, y, z, px, py, pz, eclas)
-      use mod_general, only: natom, nwalk, dt0, it ! dt0 is the time step
+      use mod_general, only: natom, nwalk, dt0, it, idebug 
       use mod_system, only: am
       use mod_sh, only: en_array
       use mod_terampi_sh, only: force_terash
@@ -121,7 +121,6 @@ contains
 
          ! Energy difference
          excE = eclasexc - eclasground
-         !write (stdout, '(A,I0,A,F16.8,A)') 'Energy difference ES-GS (', iw, ') is', excE * AUTOEV, ' eV'
          deltaE = (excE - en_diff)
 
          if (en_restraint == 1) then
@@ -162,11 +161,11 @@ contains
                end do
 
                convercrit = deltaEnext
-               !write (*, *) 'deltaEnext', deltaEnext
+               if (idebug > 1) then
+                   write (*, *) 'deltaEnext', deltaEnext
+               end if
 
             end do
-            !write (*, *) 'deltaE', deltaE
-            !write (*, *) 'Lambda multiplier:', lambda
 
             !Output to en_restraint.dat
             write (formt, '(A30)') '(I8,F16.8,E20.10,E20.10,F16.8)' 
@@ -186,8 +185,6 @@ contains
             ! TODO:
             eclas = eclas ! + quadratic_restraint_energy
 
-            !write (*, *) 'deltaE', deltaE
-            !write (*, *) 'Force constant:', en_kk
             !Output to en_restraint.dat
             write (formt, '(A30)') '(I8,F16.8,E20.10,E20.10,F16.8)'
             write (UERMD, fmt=formt) it, excE * AUTOEV, deltaE, 0.0, 0.0
