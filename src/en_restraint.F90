@@ -48,79 +48,42 @@ contains
       use mod_sh, only: en_array
       use mod_terampi_sh, only: force_terash
       use mod_files, only: UERMD
+      use mod_shell_interface_private, only: read_energy, read_forces, open_engrad_file
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       ! TODO: Eclas is not modified in this routine, but probably should be
       real(DP), intent(inout) :: eclas
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
-      real(DP), dimension(natom) :: fxgs, fygs, fzgs, fxes, fyes, fzes
+      real(DP), dimension(natom, 1) :: fxgs, fygs, fzgs, fxes, fyes, fzes
       real(DP) :: eclasexc, eclasground, excE, deltaE, lambda, lsum, deltaEnext, convercrit, deltaD
-      integer :: ios, iat, iat2, iw, u
+      integer :: iat, iat2, iw, ugs, ues
       character(len=30) :: chforce_ground, chforce_exc
 
       do iw = 1, nwalk
-
          if (restrain_pot == '_tera_') then
             call force_terash(x, y, z, fxr, fyr, fzr, eclasground)
             do iat = 1, natom
-               fxgs(iat) = fxr(iat, 1)
-               fygs(iat) = fyr(iat, 1)
-               fzgs(iat) = fzr(iat, 1)
-               fxes(iat) = fxr(iat, 2)
-               fyes(iat) = fyr(iat, 2)
-               fzes(iat) = fzr(iat, 2)
+               fxgs(iat, 1) = fxr(iat, 1)
+               fygs(iat, 1) = fyr(iat, 1)
+               fzgs(iat, 1) = fzr(iat, 1)
+               fxes(iat, 1) = fxr(iat, 2)
+               fyes(iat, 1) = fyr(iat, 2)
+               fzes(iat, 1) = fzr(iat, 2)
             end do
             eclasground = en_array(1)
             eclasexc = en_array(2)
          else
-
-            ! Should be done as a separate call eventually..
-
             write (chforce_ground, '(A,I3.3)') 'engrad.ground.dat.', iw
             write (chforce_exc, '(A,I3.3)') 'engrad.exc.dat.', iw
+            ugs = open_engrad_file(chforce_ground)
+            ues = open_engrad_file(chforce_exc)
 
-            !-----READING energy of groud state (engrad.ground.dat)
-            open (newunit=u, file=chforce_ground, status='OLD', iostat=ios, action='read')
-            if (ios /= 0) then
-               call fatal_error(__FILE__, __LINE__, 'Could not open file '//chforce_ground)
-            end if
-            read (u, *) eclasground
+            eclasground = read_energy(ugs)
+            call read_forces(fxgs, fygs, fzgs, natom, 1, ugs)
+            eclasexc = read_energy(ues) 
+            call read_forces(fxes, fyes, fzes, natom, 1, ues)
 
-            ! Reading gradient of ground state
-            do iat = 1, natom
-               read (u, *, IOSTAT=ios) fxgs(iat), fygs(iat), fzgs(iat)
-               if (ios /= 0) then
-                  call fatal_error(__FILE__, __LINE__, &
-                     & 'Fatal problem with reading gradients from file engrad.ground.dat')
-               end if
-               ! Conversion to forces
-               fxgs(iat) = -fxgs(iat)
-               fygs(iat) = -fygs(iat)
-               fzgs(iat) = -fzgs(iat)
-            end do
-            close (u)
-
-            ! Reading energy of excited state (engrad.exc.dat)
-            open (newunit=u, file=chforce_exc, status='OLD', iostat=ios, action='read')
-            if (ios /= 0) then
-               call fatal_error(__FILE__, __LINE__, 'Could not open file '//chforce_exc)
-            end if
-            read (u, *) eclasexc
-
-            ! Reading gradient of excited state
-            do iat = 1, natom
-               read (u, *, IOSTAT=ios) fxes(iat), fyes(iat), fzes(iat)
-               if (ios /= 0) then
-                  call fatal_error(__FILE__, __LINE__, &
-                                   'Could not read gradients from file '//chforce_exc)
-               end if
-               ! Conversion to forces
-               fxes(iat) = -fxes(iat)
-               fyes(iat) = -fyes(iat)
-               fzes(iat) = -fzes(iat)
-            end do
-            close (u)
-
-            ! restraint_pot endif
+            close (ugs, status='delete')
+            close (ues, status='delete')
          end if
 
          ! Energy difference
@@ -137,18 +100,18 @@ contains
                deltaEnext = 0
                do iat = 1, natom
                   deltaD = px(iat, iw) * dt0 / am(iat)
-                  deltaEnext = deltaEnext - px(iat, iw) * dt0 / am(iat) * (fxes(iat) - fxgs(iat))
-                  deltaEnext = deltaEnext - py(iat, iw) * dt0 / am(iat) * (fyes(iat) - fygs(iat))
-                  deltaEnext = deltaEnext - pz(iat, iw) * dt0 / am(iat) * (fzes(iat) - fzgs(iat))
+                  deltaEnext = deltaEnext - px(iat, iw) * dt0 / am(iat) * (fxes(iat, 1) - fxgs(iat, 1))
+                  deltaEnext = deltaEnext - py(iat, iw) * dt0 / am(iat) * (fyes(iat, 1) - fygs(iat, 1))
+                  deltaEnext = deltaEnext - pz(iat, iw) * dt0 / am(iat) * (fzes(iat, 1) - fzgs(iat, 1))
                end do
 
                ! lambda computation
 
                lsum = 0
                do iat2 = 1, natom
-                  lsum = lsum + 1 / (am(iat2)) * (fxes(iat2) - fxgs(iat2))**2
-                  lsum = lsum + 1 / (am(iat2)) * (fyes(iat2) - fygs(iat2))**2
-                  lsum = lsum + 1 / (am(iat2)) * (fzes(iat2) - fzgs(iat2))**2
+                  lsum = lsum + 1 / (am(iat2)) * (fxes(iat2, 1) - fxgs(iat2, 1))**2
+                  lsum = lsum + 1 / (am(iat2)) * (fyes(iat2, 1) - fygs(iat2, 1))**2
+                  lsum = lsum + 1 / (am(iat2)) * (fzes(iat2, 1) - fzgs(iat2, 1))**2
                end do
 
                deltaEnext = deltaE + deltaEnext
@@ -159,9 +122,9 @@ contains
                ! p = p0 + f * dt
 
                do iat = 1, natom
-                  px(iat, iw) = px(iat, iw) + dt0 * lambda * (fxes(iat) - fxgs(iat))
-                  py(iat, iw) = py(iat, iw) + dt0 * lambda * (fyes(iat) - fygs(iat))
-                  pz(iat, iw) = pz(iat, iw) + dt0 * lambda * (fzes(iat) - fzgs(iat))
+                  px(iat, iw) = px(iat, iw) + dt0 * lambda * (fxes(iat, 1) - fxgs(iat, 1))
+                  py(iat, iw) = py(iat, iw) + dt0 * lambda * (fyes(iat, 1) - fygs(iat, 1))
+                  pz(iat, iw) = pz(iat, iw) + dt0 * lambda * (fzes(iat, 1) - fzgs(iat, 1))
                end do
 
                convercrit = deltaEnext
@@ -180,9 +143,9 @@ contains
             ! Applying new forces
 
             do iat = 1, natom
-               px(iat, iw) = px(iat, iw) + dt0 * en_kk * deltaE * (fxes(iat) - fxgs(iat))
-               py(iat, iw) = py(iat, iw) + dt0 * en_kk * deltaE * (fyes(iat) - fygs(iat))
-               pz(iat, iw) = pz(iat, iw) + dt0 * en_kk * deltaE * (fzes(iat) - fzgs(iat))
+               px(iat, iw) = px(iat, iw) + dt0 * en_kk * deltaE * (fxes(iat, 1) - fxgs(iat, 1))
+               py(iat, iw) = py(iat, iw) + dt0 * en_kk * deltaE * (fyes(iat, 1) - fygs(iat, 1))
+               pz(iat, iw) = pz(iat, iw) + dt0 * en_kk * deltaE * (fzes(iat, 1) - fzgs(iat, 1))
             end do
 
             ! TODO:
