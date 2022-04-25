@@ -4,6 +4,7 @@
 ! If open() or write fails, we crash ungracefully.
 module mod_files
    use, intrinsic :: iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
+   use mod_error, only: fatal_error
    implicit none
    public
    ! Defines maximum number of units available for permanently opened files
@@ -27,7 +28,7 @@ module mod_files
    integer, parameter :: UDIP = 33, UTDIP = 34
    ! Analysis output
    integer, parameter :: UDIST = 36, UANG = 37, UDIH = 38
-   ! Other 
+   ! Energy-restraint MD
    integer, parameter :: UERMD = 39
 
    ! Default standard output and standard error units
@@ -39,7 +40,6 @@ module mod_files
 contains
 
    subroutine stdout_to_devnull()
-      use mod_error, only: fatal_error
       integer :: u, iost
       open (newunit=u, iostat=iost, file='/dev/null', action='write')
       if (iost == 0) then
@@ -67,7 +67,6 @@ contains
    subroutine files_init(isbc, phase, ndist, nang, ndih)
       use mod_general, only: ipimd, irest, iremd, pot, &
                            & icv, ihess, idebug, nwritev, nwritef, en_restraint
-      use mod_error, only: fatal_error
       use mod_mpi, only: get_mpi_rank
       integer, intent(in) :: isbc, phase, ndist, nang, ndih
       character(len=10) :: chaccess

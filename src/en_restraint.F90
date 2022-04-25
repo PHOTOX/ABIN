@@ -1,9 +1,9 @@
-! Driver routines for Energy Restraint Molecular Dynamics (ERMD) 
-! J.Suchan, https://doi.org/10.1039/C8FD00088C 
+! Driver routines for Energy Restraint Molecular Dynamics (ERMD)
+! J.Suchan, https://doi.org/10.1039/C8FD00088C
 !
-! Fixing the excitation energy of a molecule during dynamics 
+! Fixing the excitation energy of a molecule during dynamics
 ! by adapting forces based on knowledge of ground and excited state gradients.
-! Originally developed to sample initial conditions excitable by CW laser. 
+! Originally developed to sample initial conditions excitable by CW laser.
 
 ! Usage:
 ! A) Lagrange multipliers (default, en_restraint=1) - using energy gradient as approximation for next step energy change
@@ -43,7 +43,7 @@ contains
    end subroutine en_rest_init
 
    subroutine energy_restraint(x, y, z, px, py, pz, eclas)
-      use mod_general, only: natom, nwalk, dt0, it, idebug 
+      use mod_general, only: natom, nwalk, dt0, it, idebug
       use mod_system, only: am
       use mod_sh, only: en_array
       use mod_terampi_sh, only: force_terash
@@ -79,7 +79,7 @@ contains
 
             eclasground = read_energy(ugs)
             call read_forces(fxgs, fygs, fzgs, natom, 1, ugs)
-            eclasexc = read_energy(ues) 
+            eclasexc = read_energy(ues)
             call read_forces(fxes, fyes, fzes, natom, 1, ues)
 
             close (ugs, status='delete')
@@ -129,7 +129,7 @@ contains
 
                convercrit = deltaEnext
                if (idebug > 1) then
-                   write (*, *) 'deltaEnext', deltaEnext
+                  write (*, *) 'deltaEnext', deltaEnext
                end if
 
             end do

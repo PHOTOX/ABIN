@@ -54,7 +54,7 @@ contains
       use mod_analysis, only: restin
       use mod_water, only: watpot, check_water
       use mod_plumed, only: iplumed, plumedfile, plumed_init
-      use mod_en_restraint, only: en_rest_init, en_diff, en_kk, restrain_pot 
+      use mod_en_restraint, only: en_rest_init, en_diff, en_kk, restrain_pot
       use mod_transform, only: initialize_pi_masses
       use mod_cp2k
       use mod_remd
@@ -1283,7 +1283,7 @@ subroutine finish(error_code)
    end if
 
    if (en_restraint >= 1) then
-      call en_rest_finalize() 
+      call en_rest_finalize()
    end if
 
    if (pot == '_splined_grid_') then
