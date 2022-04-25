@@ -82,8 +82,8 @@ contains
             eclasexc = read_energy(ues)
             call read_forces(fxes, fyes, fzes, natom, 1, ues)
 
-            close (ugs, status='delete')
-            close (ues, status='delete')
+            close (ugs)
+            close (ues)
          end if
 
          ! Energy difference
@@ -161,6 +161,20 @@ contains
    end subroutine energy_restraint
 
    subroutine en_rest_finalize()
+      use mod_general, only: nwalk
+      use mod_shell_interface_private, only: open_engrad_file
+      integer :: u, iw
+      character(len=30) :: chforce_ground, chforce_exc
+
+      do iw = 1, nwalk
+         write (chforce_ground, '(A,I3.3)') 'engrad.ground.dat.', iw
+         u = open_engrad_file(chforce_ground)
+         close (u, status='delete')
+         write (chforce_exc, '(A,I3.3)') 'engrad.exc.dat.', iw
+         u = open_engrad_file(chforce_exc)
+         close (u, status='delete')
+      end do 
+
       deallocate (fxr, fyr, fzr)
    end subroutine en_rest_finalize
 
