@@ -198,7 +198,6 @@ contains
    ! elsewhere in the codebase
    subroutine plumed_init(natom, irest, dt0, nrest)
       integer, intent(in) :: natom, irest, nrest
-      !integer, intent(inout) :: irest, nrest
       real(DP), intent(inout) :: dt0
       dt0 = natom
       dt0 = irest

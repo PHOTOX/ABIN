@@ -61,7 +61,7 @@ contains
       @assertExceptionRaised('Could not read number of atoms from the first line of file '//geomfile)
 
       open (newunit=u, action='write', file=geomfile)
-      write (u, *) -1
+      write (u, *) - 1
       close (u)
       call read_atom_names(geomfile, natom_read, names_read)
       @assertExceptionRaised('Invalid number of atoms on the first line of the XYZ file '//geomfile)

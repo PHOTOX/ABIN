@@ -56,7 +56,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3.0.0
+      uses: codecov/codecov-action@v3.1.0
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -66,7 +66,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.0.0
+      uses: codecov/codecov-action@v3.1.0
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -203,7 +203,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3.0.0
+      uses: codecov/codecov-action@v3.1.0
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -213,7 +213,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.0.0
+      uses: codecov/codecov-action@v3.1.0
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -272,7 +272,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.0.0
+      uses: codecov/codecov-action@v3.1.0
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -324,7 +324,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.0.0
+      uses: codecov/codecov-action@v3.1.0
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -386,7 +386,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3.0.0
+      uses: codecov/codecov-action@v3.1.0
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -396,7 +396,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.0.0
+      uses: codecov/codecov-action@v3.1.0
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
