@@ -4,6 +4,7 @@
 ! If open() or write fails, we crash ungracefully.
 module mod_files
    use, intrinsic :: iso_fortran_env, only: ERROR_UNIT, OUTPUT_UNIT
+   use mod_error, only: fatal_error
    implicit none
    public
    ! Defines maximum number of units available for permanently opened files
@@ -27,6 +28,8 @@ module mod_files
    integer, parameter :: UDIP = 33, UTDIP = 34
    ! Analysis output
    integer, parameter :: UDIST = 36, UANG = 37, UDIH = 38
+   ! Energy-restraint MD
+   integer, parameter :: UERMD = 39
 
    ! Default standard output and standard error units
    ! These are NOT parameters, we change them in REMD and in unit tests.
@@ -37,7 +40,6 @@ module mod_files
 contains
 
    subroutine stdout_to_devnull()
-      use mod_error, only: fatal_error
       integer :: u, iost
       open (newunit=u, iostat=iost, file='/dev/null', action='write')
       if (iost == 0) then
@@ -64,8 +66,7 @@ contains
 
    subroutine files_init(isbc, phase, ndist, nang, ndih)
       use mod_general, only: ipimd, irest, iremd, pot, &
-                           & icv, ihess, idebug, nwritev, nwritef
-      use mod_error, only: fatal_error
+                           & icv, ihess, idebug, nwritev, nwritef, en_restraint
       use mod_mpi, only: get_mpi_rank
       integer, intent(in) :: isbc, phase, ndist, nang, ndih
       character(len=10) :: chaccess
@@ -120,6 +121,9 @@ contains
       chfiles(UDIST) = 'distances.dat'
       chfiles(UANG) = 'angles.dat'
       chfiles(UDIH) = 'dihedrals.dat'
+
+      !Energy restratint
+      chfiles(UERMD) = 'en_restraint.dat'
 
       ! Here we ensure, that previous files are deleted
       if (irest == 0) then
@@ -210,6 +214,11 @@ contains
          open (UDIH, file=chfiles(UDIH), access=chaccess, action='write')
       end if
 
+      !Energy restraint
+      if (en_restraint > 0) then
+         open (UERMD, file=chfiles(UERMD), access=chaccess, action='write')
+      end if
+
       if (irest == 0) then
          call print_file_headers()
       end if
@@ -260,6 +269,8 @@ contains
       headers(UCHARGES) = '# Atomic charges from current electronic state'
       headers(UDOTPRODCI) = '# Time  cidotprod1  cidotprod2 ... '
       headers(UTDIP) = '# Time state tdip_tot.1..N tdip_x.1 tdip_y.1 tdip_z.1 ...'
+
+      headers(UERMD) = '# Step, energy diff (eV), deltaE (Ha), deltaE_next (Ha), lambda multiplier'
 
       do i = 2, MAXUNITS
          inquire (unit=i, opened=lopened)

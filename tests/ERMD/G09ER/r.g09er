@@ -1,0 +1,12 @@
+#!/bin/bash
+cd G09ER
+timestep=$1
+ibead=$2
+
+let fline=6*timestep+6
+
+head -n $fline engrad_gs | tail -n 6 > ../engrad.dat.$ibead
+head -n $fline engrad_gs | tail -n 6 > ../engrad.ground.dat.$ibead
+head -n $fline engrad_es | tail -n 6 > ../engrad.exc.dat.$ibead
+
+
