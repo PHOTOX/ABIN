@@ -1,11 +1,13 @@
 ! Testing functions for reading coordinates and velocities
 module test_io
    use funit
+   use mod_const, only: DP
    !use mod_utils, only: del_file
    use mod_utils, only: open_file_for_reading
    use mod_init
    implicit none
    integer, parameter :: NATOM = 3
+   integer, parameter :: NWALK = 2
    integer :: natom_read
    character(len=2) :: names(NATOM)
    character(len=2), allocatable :: names_read(:)
@@ -39,25 +41,35 @@ contains
 
    @test
    subroutine test_invalid_natom()
+      real(DP), dimension(NATOM, NWALK) :: x, y, z
       integer :: u
       !names = (/'H', 'H', 'C'/)
 
+      call del_file(geomfile)
       u = open_file_for_reading(geomfile)
-      @assertExceptionRaised('Could not open file geom.dat')
+      @assertExceptionRaised('Could not open file '//geomfile)
 
       open (newunit=u, action='write', file=geomfile)
       write (u, *) 'invalid natom'
       close (u)
       call read_atom_names(geomfile, natom_read, names_read)
-      call del_file(geomfile)
-      @assertExceptionRaised('Could not read number of atoms from the first line of file geom.dat')
+      @assertExceptionRaised('Could not read number of atoms from the first line of file '//geomfile)
+
+      u = open_file_for_reading(geomfile)
+      call read_xyz_file(u, geomfile, names_read, NATOM, 1, x, y, z)
+      close (u, status='delete')
+      @assertExceptionRaised('Could not read number of atoms from the first line of file '//geomfile)
 
       open (newunit=u, action='write', file=geomfile)
       write (u, *) -1
       close (u)
       call read_atom_names(geomfile, natom_read, names_read)
-      call del_file(geomfile)
-      @assertExceptionRaised('Invalid number of atoms on the first line of the XYZ file geom.dat')
+      @assertExceptionRaised('Invalid number of atoms on the first line of the XYZ file '//geomfile)
+
+      u = open_file_for_reading(geomfile)
+      call read_xyz_file(u, geomfile, names_read, NATOM, 1, x, y, z)
+      close (u, status='delete')
+      @assertExceptionRaised('Inconsistent number of atoms on the first line of file '//geomfile)
    end subroutine
 
 end module test_io

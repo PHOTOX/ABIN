@@ -902,6 +902,7 @@ contains
       if (natom_xyz /= num_atom) then
          call fatal_error(__FILE__, __LINE__, &
             & 'Inconsistent number of atoms on the first line of file '//trim(fname))
+         return
       end if
 
       ! Skip comment line
