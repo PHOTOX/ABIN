@@ -4,7 +4,10 @@ module mod_en_restraint
    use mod_error, only: fatal_error
    use mod_general, only: en_restraint
    implicit none
-   public
+   private
+   public :: en_rest_init, energy_restraint, en_rest_finalize
+   public :: en_diff, en_kk, restrain_pot
+
    real(DP) :: en_diff, en_kk
    real(DP), allocatable :: fxr(:, :), fyr(:, :), fzr(:, :)
    character(len=200) :: restrain_pot = 'none'
