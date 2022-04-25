@@ -198,7 +198,11 @@ contains
    ! elsewhere in the codebase
    subroutine plumed_init(natom, irest, dt0, nrest)
       integer, intent(in) :: natom, irest, nrest
-      real(DP), intent(in) :: dt0
+      !integer, intent(inout) :: irest, nrest
+      real(DP), intent(inout) :: dt0
+      dt0 = natom
+      dt0 = irest
+      dt0 = nrest
       call not_compiled_with('PLUMED')
    end subroutine plumed_init
 

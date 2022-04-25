@@ -341,8 +341,8 @@ contains
 
    @test(ifndef=USE_PLUMED)
    subroutine test_not_compiled_with_plumed()
-      real(DP) :: eclas
-      call plumed_init(natom=NATOMS, irest=0, dt0=0.5D0, nrest=1)
+      real(DP) :: eclas, dt0
+      call plumed_init(natom=NATOMS, irest=0, dt0=dt0, nrest=1)
       @assertExceptionRaised('ABIN was not compiled with PLUMED')
 
       call force_plumed(x, y, z, fx, fy, fz, eclas)

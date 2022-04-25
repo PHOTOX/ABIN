@@ -563,13 +563,6 @@ contains
             write (*, *) 'Velocities will be taken from restart file because irest=1.'
          end if
 
-         if (nstate > nstmax) then
-            write (*, *) 'Maximum number of states is:'
-            write (*, *) nstmax
-            write (*, *) 'Adjust variable nstmax in modules.f90'
-            error = 1
-         end if
-
          if (pot /= '_cp2k_') then
             if (nproc > nwalk) then
                write (*, *) 'ERROR: Nproc greater than nwalk. That does not make sense.'
@@ -600,31 +593,7 @@ contains
             write (*, *) 'Error: iqmmm must be 0 or 1 for ONIOM.'
             error = 1
          end if
-         if (integ /= 'euler' .and. integ /= 'rk4' .and. integ /= 'butcher') then
-            write (*, *) 'integ must be "euler", "rk4" or "butcher".'
-            error = 1
-         end if
-         if (integ /= 'butcher') then
-            write (*, *) 'WARNING: variable integ is not "butcher", which is the default and most accurate.'
-            write (*, *) chknow
-            if (iknow /= 1) error = 1
-         end if
-         if (deltae < 0) then
-            write (*, *) 'Parameter deltae must be non-negative number.'
-            error = 1
-         end if
-         if (popsumthr < 0) then
-            write (*, *) 'Parameter popsumthr must be positive number.'
-            error = 1
-         end if
-         if (energydifthr < 0) then
-            write (*, *) 'Parameter energydifthr must be positive number in eV units.'
-            error = 1
-         end if
-         if (energydriftthr < 0) then
-            write (*, *) 'Parameter energydriftthr must be positive number in eV units.'
-            error = 1
-         end if
+
          if (shiftdihed /= 0 .and. shiftdihed /= 1) then
             write (*, *) 'Shiftdihed must be either 0 (for dihedrals -180:180) or 1 (for dihedrals 0:360)'
             error = 1
@@ -667,19 +636,6 @@ contains
             write (*, *) 'ERROR: inormalmodes has to be 0, 1 or 2!'
             error = 1
          end if
-         if (inac > 2 .or. inac < 0) then
-            write (*, *) 'Parameter "inac" must be 0,1 or 2.' !be very carefull if you change this!
-            error = 1
-         end if
-         if (adjmom > 1 .or. adjmom < 0) then
-            write (*, *) 'Parameter "adjmom" must be 0 or 1.'
-            error = 1
-         end if
-         if (adjmom == 0 .and. inac == 1) then
-            write (*, *) 'Combination of adjmom=0 and inac=1 is not possible.'
-            write (*, *) 'We dont have NAC vector if inac=1.'
-            error = 1
-         end if
          if (irest == 1 .and. scaleveloc == 1) then
             write (*, *) 'irest=1 AND scaleveloc=1.'
             write (*, *) 'You are trying to scale the velocities read from restart.xyz.'
@@ -697,10 +653,8 @@ contains
             write (*, *) chknow
             if (iknow /= 1) error = 1
          end if
-         if (istate_init > nstate) then
-            write (*, *) 'Error:Initial state > number of computed states. Exiting...'
-            error = 1
-         end if
+
+         ! TODO: Move to LZ module
          if (ipimd == 5) then
             if (initstate_lz > nstate_lz) then
                write (*, *) initstate_lz, nstate_lz
@@ -719,19 +673,9 @@ contains
                error = 1
             end if
          end if
-         if (energydifthr_lz < 0) then
-            write (*, *) 'Parameter energydifthr_lz must be positive number in eV units.'
-            error = 1
-         end if
-         if (nac_accu1 <= 0 .or. nac_accu2 < 0) then
-            write (*, *) 'Input error:NACME precision must be a positive integer.'
-            write (*, *) 'The treshold is then 10^-(nac_accu).'
-            error = 1
-         end if
-         if (nac_accu1 <= nac_accu2) then
-            write (*, *) 'nac_accu1 < nac_accu2'
-            write (*, *) 'I will compute NACME only with default accuracy:', nac_accu1
-         end if
+
+         call real_nonnegative(energydifthr_lz, 'energydifthr_lz')
+
          if (istage == 1 .and. ipimd /= 1) then
             write (*, *) 'The staging transformation is only meaningful for PIMD'
             error = 1
@@ -767,25 +711,22 @@ contains
          inquire (file=chout, exist=file_exists)
          if (file_exists) then
             if (irest == 0) then
-               write (stdout, *) 'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
+               write (stderr, *) 'File '//trim(chout)//' exists. Please (re)move it or set irest=1.'
                error = 1
             else
-               write (stdout, *) 'File "movie.xyz" exists and irest=1. Trajectory will be appended.'
+               write (stdout, *) 'File '//trim(chout)//' exists and irest=1. Trajectory will be appended.'
             end if
          end if
 
          chout = append_rank('restart.xyz')
          inquire (file=chout, exist=file_exists)
-         if (file_exists) then
-            if (irest == 0) then
-               write (*, *) 'File ', trim(chout), ' exists. Please (re)move it or set irest=1.'
-               error = 1
-            end if
-         else
-            if (irest == 1) then
-               write (*, *) 'File ', trim(chout), ' not found.'
-               error = 1
-            end if
+         if (file_exists .and. irest == 0) then
+            write (stderr, *) 'File ', trim(chout), ' exists. Please (re)move it or set irest=1.'
+            error = 1
+         end if
+         if (irest == 1 .and. .not. file_exists) then
+            write (*, *) 'File ', trim(chout), ' not found.'
+            error = 1
          end if
 
          call real_nonnegative(temp, 'temp')

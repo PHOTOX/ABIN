@@ -78,6 +78,8 @@ contains
       real(DP) :: dum_fz(size(z, 1), size(z, 2))
       real(DP) :: dum_eclas
 
+      call check_sh_parameters()
+
       deltaE = deltaE / AUtoEV
 
       allocate (nacx(natom, nstate, nstate))
@@ -124,6 +126,70 @@ contains
       end if
 
    end subroutine sh_init
+
+   subroutine check_sh_parameters()
+      use mod_utils, only: int_positive, int_nonnegative, int_switch, real_nonnegative
+      use mod_general, only: iknow
+      use mod_chars, only: chknow
+      logical :: error
+
+      error = .false.
+
+      ! TODO: Lift this restriction
+      if (nstate > nstmax) then
+         write (stderr, *) 'Maximum number of states is:'
+         write (stderr, *) nstmax
+         write (stderr, *) 'Adjust variable nstmax in modules.f90'
+         error = .true.
+      end if
+
+      if (integ /= 'euler' .and. integ /= 'rk4' .and. integ /= 'butcher') then
+         write (stderr, *) 'variable integ must be "euler", "rk4" or "butcher".'
+         error = .true.
+      end if
+
+      if (integ /= 'butcher') then
+         write (stderr, *) 'WARNING: variable integ is not "butcher", which is the default and most accurate.'
+         write (stderr, *) chknow
+         if (iknow /= 1) error = .true.
+      end if
+
+      if (istate_init > nstate) then
+         write (stderr, *) 'ERROR: Initial state > number of computed states.'
+         error = .true.
+      end if
+
+      if (inac > 2 .or. inac < 0) then
+         write (stderr, *) 'Parameter "inac" must be 0, 1 or 2.'
+         error = .true.
+      end if
+      if (adjmom == 0 .and. inac == 1) then
+         write (stderr, *) 'Combination of adjmom=0 and inac=1 is not possible.'
+         write (stderr, *) 'NAC vectors are not computed if inac=1.'
+         error = .true.
+      end if
+
+      if (nac_accu1 <= nac_accu2) then
+         write (stderr, '(A)') 'WARNING: nac_accu1 < nac_accu2'
+         write (stderr, '(A,I0)') 'Computing NACME only with default accuracy 10^-', nac_accu1
+      end if
+
+      call int_switch(nohop, 'nohop')
+      call int_switch(adjmom, 'adjmom')
+
+      call int_positive(nac_accu1, 'nac_accu1')
+      call int_nonnegative(nac_accu2, 'nac_accu2')
+
+      call real_nonnegative(deltaE, 'deltaE')
+      call real_nonnegative(popsumthr, 'popsumthr')
+      call real_nonnegative(energydifthr, 'energydifthr')
+      call real_nonnegative(energydriftthr, 'energydriftthr')
+
+      if (error) then
+         call fatal_error(__FILE__, __LINE__, 'Invalid Surface Hopping parameter')
+      end if
+
+   end subroutine check_sh_parameters
 
    subroutine get_nacm()
       use mod_general, only: pot
