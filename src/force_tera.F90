@@ -54,20 +54,27 @@ contains
 !$OMP PARALLEL DO PRIVATE(iw, itc, tc_comm)
       do iw = 1, walkmax
 
-         ! map OMP thread to TC server
-         !$ itc = OMP_GET_THREAD_NUM() + 1
+         ! See comment in force_abin() to understand this
+         !$OMP FLUSH(abort)
+         if (.not. abort ) then
+            ! map OMP thread to TC server
+            !$ itc = OMP_GET_THREAD_NUM() + 1
 
 #ifdef USE_MPI
-         tc_comm = get_tc_communicator(itc)
+            tc_comm = get_tc_communicator(itc)
 
-         call send_tera(x, y, z, iw, tc_comm)
+            call send_tera(x, y, z, iw, tc_comm)
 
-         call receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm, abort)
+            call receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm, abort)
+            if (abort) cycle
 #endif
 
-         ! ONIOM was not yet tested!!
-         if (iqmmm == 1) then
-            call oniom(x, y, z, fx, fy, fz, eclas, iw, abort)
+            ! ONIOM was not yet tested!!
+            if (iqmmm == 1) then
+               call oniom(x, y, z, fx, fy, fz, eclas, iw, abort)
+               if (abort) cycle
+            end if
+
          end if
 
       end do

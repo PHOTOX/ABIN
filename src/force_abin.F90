@@ -271,12 +271,12 @@ contains
 
          ! Call the external program
          call call_shell(shellscript, it, iw, ipimd, abort)
-         if (abort) continue
+         if (abort) cycle
 
          write (chforce, '(A,I3.3)') 'engrad.dat.', iw
          chforce = append_rank(chforce)
          engrad_unit = open_engrad_file(chforce, abort)
-         if (abort) continue
+         if (abort) cycle
 
          ! Read electronic energies from engrad.dat
          if (ipimd == 2) then
@@ -284,7 +284,7 @@ contains
             do ist1 = 1, nstate
                en_array(ist1) = read_energy(engrad_unit, abort)
             end do
-            if (abort) continue
+            if (abort) cycle
             eclas = en_array(istate)
 
          else if (ipimd == 5) then
@@ -297,12 +297,12 @@ contains
             do ist1 = 1, nstate_lz
                en_array_lz(ist1, 1) = read_energy(engrad_unit, abort)
             end do
-            if (abort) continue
+            if (abort) cycle
             eclas = en_array_lz(istate_lz, 1)
 
          else
             energy = read_energy(engrad_unit, abort)
-            if (abort) continue
+            if (abort) cycle
 !$OMP ATOMIC
             eclas = eclas + energy
          end if
@@ -319,7 +319,7 @@ contains
 
          if (iqmmm == 1) then
             call oniom(x, y, z, fx, fy, fz, eclas, iw, abort)
-            if (abort) continue
+            if (abort) cycle
          end if
 
       end if
@@ -334,7 +334,7 @@ contains
 
    subroutine oniom(x, y, z, fx, fy, fz, eclas, iw, abort)
       use mod_general, only: natom, it, ipimd
-      use mod_utils, only: del_file, append_rank
+      use mod_utils, only: append_rank
       use mod_system, only: names
       use mod_qmmm, only: natqm
       use mod_sh_integ, only: nstate
@@ -366,29 +366,30 @@ contains
       call write_geom(chgeom, names, x, y, z, natom, iw)
 
       call call_shell(shellscript, it, iw, ipimd, abort)
-      if (abort) then
-         call del_file(chgeom)
-         return
-      end if
+      if (abort) return
 
       engrad_unit = open_engrad_file(chforce, abort)
+      if (abort) return
 
       if (ipimd == 2) then
          ! TODO: Surface Hopping with ONIOM not tested!
          do ist = 1, nstate
             en_array(ist) = en_array(ist) + read_energy(engrad_unit, abort)
+            if (abort) return
          end do
          eclas = en_array(istate)
       else if (ipimd == 5) then
          call fatal_error(__FILE__, __LINE__, 'Landau-Zener with ONIOM not implemented')
       else
          energy = read_energy(engrad_unit, abort)
+         if (abort) return
 !$OMP ATOMIC
          eclas = eclas + energy
       end if
 
       ! Read gradients from engrad_mm.dat
       call read_forces(fx_tmp, fy_tmp, fz_tmp, natom, 1, engrad_unit, abort)
+      if (abort) return
       do iat = 1, natom
          fx(iat, iw) = fx(iat, iw) + fx_tmp(iat, 1)
          fy(iat, iw) = fy(iat, iw) + fy_tmp(iat, 1)
@@ -401,30 +402,31 @@ contains
       call write_geom(chgeom, names, x, y, z, natqm, iw)
 
       call call_shell(shellscript, it, iw, ipimd, abort)
-      if (abort) then
-         call del_file(chgeom)
-         return
-      end if
+      if (abort) return
 
       engrad_unit = open_engrad_file(chforce, abort)
+      if (abort) return
 
       ! Here we use the substractive QM/MM scheme,
       ! so we are substracting results from the QM-only part
       if (ipimd == 2) then
          do ist = 1, nstate
             en_array(ist) = en_array(ist) - read_energy(engrad_unit, abort)
+            if (abort) return
          end do
          eclas = en_array(istate)
       else if (ipimd == 5) then
          call fatal_error(__FILE__, __LINE__, 'Landau-Zener with ONIOM not implemented')
       else
          energy = read_energy(engrad_unit, abort)
+         if (abort) return
 !$OMP ATOMIC
          eclas = eclas - energy
       end if
 
       ! Read gradients from engrad_mm.dat
       call read_forces(fx_tmp, fy_tmp, fz_tmp, natqm, 1, engrad_unit, abort)
+      if (abort) return
       do iat = 1, natqm
          ! NOTE: Substracting the MM forces for the QM part
          fx(iat, iw) = fx(iat, iw) - fx_tmp(iat, 1)
