@@ -179,7 +179,7 @@ contains
 
    subroutine restout(x, y, z, vx, vy, vz, time_step)
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
-                             iremd, pot, narchive, sim_time
+                             pot, narchive, sim_time
       use mod_mpi, only: get_mpi_rank
       use mod_utils, only: rename_file, archive_file, append_rank
       use mod_nhc, only: inose, nhc_restout
@@ -205,11 +205,7 @@ contains
       end if
 
       chout = append_rank('restart.xyz')
-      if (iremd == 1) then
-         call rename_file(chout, trim(chout)//'.old')
-      else if (my_rank == 0) then
-         call rename_file(chout, trim(chout)//'.old')
-      end if
+      call rename_file(chout, trim(chout)//'.old')
 
       open (newunit=urest, file=chout, action='write')
 
