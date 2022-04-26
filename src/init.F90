@@ -54,7 +54,7 @@ contains
       use mod_analysis, only: restin
       use mod_water, only: watpot, check_water
       use mod_plumed, only: iplumed, plumedfile, plumed_init
-      use mod_en_restraint
+      use mod_en_restraint, only: en_rest_init, en_diff, en_kk, restrain_pot
       use mod_transform, only: initialize_pi_masses
       use mod_cp2k
       use mod_remd
@@ -1231,11 +1231,12 @@ end module mod_init
 ! result in circular dependencies.
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
-   use mod_general, only: pot, pot_ref, ipimd, inormalmodes
+   use mod_general, only: pot, pot_ref, ipimd, inormalmodes, en_restraint
    use mod_files, only: close_files
    use mod_nhc, only: inose, finalize_nhc
    use mod_gle, only: finalize_gle, finalize_pile
    use mod_lz, only: lz_finalize
+   use mod_en_restraint, only: en_rest_finalize
    use mod_transform, only: finalize_normalmodes
    use mod_cp2k, only: finalize_cp2k
    use mod_plumed, only: iplumed, finalize_plumed
@@ -1276,6 +1277,10 @@ subroutine finish(error_code)
    ! Cleanup Landau-Zener
    if (ipimd == 5) then
       call lz_finalize()
+   end if
+
+   if (en_restraint >= 1) then
+      call en_rest_finalize()
    end if
 
    if (pot == '_splined_grid_') then

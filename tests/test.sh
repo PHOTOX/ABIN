@@ -122,7 +122,7 @@ if [[ $TESTS = "all" ]];then
             PIMD ABINITIO MTS \
             LANGEVIN QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
             HARMON MORSE DOUBLEWELL SPLINE MM MINI QMMM \
-            ANALYZE_EXT CMDLINE WATER_FAIL)
+            ANALYZE_EXT CMDLINE WATER_FAIL ERMD)
 
    if [[ $MPI = "TRUE" ]];then
       let index=${#folders[@]}+1
