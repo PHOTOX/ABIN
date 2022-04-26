@@ -559,8 +559,8 @@ contains
          end if
 
          if (irest == 1 .and. chveloc /= '') then
-            write (*, *) 'WARNING: Input velocities from file '//trim(chveloc)//' will be ignored!'
-            write (*, *) 'Velocities will be taken from restart file because irest=1.'
+            write (stderr, *) 'WARNING: Input velocities from file '//trim(chveloc)//' will be ignored!'
+            write (stderr, *) 'Velocities will be taken from restart file because irest=1.'
          end if
 
          if (pot /= '_cp2k_') then
@@ -703,7 +703,7 @@ contains
             error = 1
          end if
          if (irest == 1 .and. .not. file_exists) then
-            write (*, *) 'File ', trim(chout), ' not found.'
+            write (stderr, *) 'File ', trim(chout), ' not found.'
             error = 1
          end if
 

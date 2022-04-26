@@ -10,15 +10,25 @@ module mod_sh
    private
    ! TODO: We should make some of these private
    ! We would need to read sh namelist inside this module
-   ! and we should check input sanity here, not in input.F90
-   public :: istate_init, substep, deltaE, inac, nohop, decoh_alpha, popthr, nac_accu1, nac_accu2
+
+   ! INPUT PARAMETERS
+   public :: istate_init, substep, decoh_alpha
+   ! Parameters controling NACME computations
+   public :: deltaE, inac, nohop, popthr, nac_accu1, nac_accu2
+   ! Parameters controlling energy conservation checks
+   public :: energydifthr, energydriftthr, dE_S0S1_thr
+   public :: adjmom, revmom
+   public :: ignore_state
+   ! Main subroutines
    public :: surfacehop, sh_init
+   ! Helper subroutines
+   public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
+   public :: check_CIVector
+
+   ! Variables holding SH state
+   ! TODO: Make these protected and write Set methods
    public :: en_array, istate, tocalc
    public :: nacx, nacy, nacz
-   public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
-   public :: energydifthr, energydriftthr, dE_S0S1_thr, adjmom, revmom
-   public :: check_CIVector
-   public :: ignore_state
 
    ! Initial electronic state
    integer :: istate_init = 1
@@ -43,6 +53,7 @@ module mod_sh
    integer :: nac_accu1 = 7
    integer :: nac_accu2 = 5 !7 is MOLPRO default
    ! Decoherence correction parameter (a.u.)
+   ! To turn of decoherence correction, set decoh_alpha = 0.0D0
    real(DP) :: decoh_alpha = 0.1D0
    real(DP) :: deltae = 5.0D0, popthr = 0.001D0
    real(DP) :: energydifthr = 1.0D0, energydriftthr = 1.0D0 !eV
@@ -137,9 +148,8 @@ contains
 
       ! TODO: Lift this restriction
       if (nstate > nstmax) then
-         write (stderr, *) 'Maximum number of states is:'
-         write (stderr, *) nstmax
-         write (stderr, *) 'Adjust variable nstmax in modules.f90'
+         write (stderr, '(A,I0)') 'Maximum number of states is: ', nstmax
+         write (stderr, '(A)') 'Adjust variable nstmax in modules.f90'
          error = .true.
       end if
 
@@ -155,7 +165,7 @@ contains
       end if
 
       if (istate_init > nstate) then
-         write (stderr, *) 'ERROR: Initial state > number of computed states.'
+         write (stderr, *) 'Initial state > number of computed states.'
          error = .true.
       end if
 
@@ -174,16 +184,28 @@ contains
          write (stderr, '(A,I0)') 'Computing NACME only with default accuracy 10^-', nac_accu1
       end if
 
+      if (decoh_alpha == 0.0D0) then
+         write (stdout, *) "Turning OFF decoherence correction"
+      end if
+
       call int_switch(nohop, 'nohop')
       call int_switch(adjmom, 'adjmom')
+      call int_switch(adjmom, 'revmom')
 
+      call int_positive(istate_init, 'istate_init')
+      call int_positive(substep, 'substep')
       call int_positive(nac_accu1, 'nac_accu1')
-      call int_nonnegative(nac_accu2, 'nac_accu2')
 
+      call int_nonnegative(nac_accu2, 'nac_accu2')
+      call int_nonnegative(ignore_state, 'ignore_state')
+
+      call real_nonnegative(decoh_alpha, 'decoh_alpha')
       call real_nonnegative(deltaE, 'deltaE')
+      call real_nonnegative(popthr, 'popthr')
       call real_nonnegative(popsumthr, 'popsumthr')
       call real_nonnegative(energydifthr, 'energydifthr')
       call real_nonnegative(energydriftthr, 'energydriftthr')
+      call real_nonnegative(dE_S0S1_thr, 'dE_S0S1_thr')
 
       if (error) then
          call fatal_error(__FILE__, __LINE__, 'Invalid Surface Hopping parameter')
