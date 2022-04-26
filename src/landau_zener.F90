@@ -42,10 +42,38 @@ module mod_lz
 
 contains
 
+   subroutine check_lz_parameters()
+      use mod_utils, only: int_positive, int_nonnegative, real_nonnegative, real_positive
+
+      if (initstate_lz > nstate_lz) then
+         call fatal_error(__FILE__, __LINE__, &
+           & '(LZ): Initial state > number of computed states.')
+      end if
+
+      if (nsinglet_lz == 0 .and. ntriplet_lz == 0 .and. nstate_lz > 0) then
+         ! Assume singlet states by default
+         nsinglet_lz = nstate_lz
+      end if
+
+      if ((nsinglet_lz + ntriplet_lz) /= nstate_lz) then
+         call fatal_error(__FILE__, __LINE__, &
+           & '(LZ): Sum of singlet and triplet states must give total number of states.')
+      end if
+
+      call int_positive(initstate_lz, 'initstate_lz')
+      call int_positive(nstate_lz, 'nstate_lz')
+      call int_nonnegative(nsinglet_lz, 'nsinglet_lz')
+      call int_nonnegative(ntriplet_lz, 'ntriplet_lz')
+      call real_positive(deltaE_lz, 'deltaE_lz')
+      call real_nonnegative(energydifthr_lz, 'energydifthr_lz')
+   end subroutine check_lz_parameters
+
    !Initialization
    subroutine lz_init()
       use mod_general, only: natom
       integer :: ist1
+
+      call check_lz_parameters()
 
       !Initial state
       istate_lz = initstate_lz

@@ -654,28 +654,6 @@ contains
             if (iknow /= 1) error = 1
          end if
 
-         ! TODO: Move to LZ module
-         if (ipimd == 5) then
-            if (initstate_lz > nstate_lz) then
-               write (*, *) initstate_lz, nstate_lz
-               write (*, *) 'Error(LZ):Initial state > number of computed states. Exiting...'
-               error = 1
-            end if
-            if (nstate_lz <= 0) then
-               write (*, *) 'Error(LZ):No states to compute (nstate_lz<=0). Exiting...'
-               error = 1
-            end if
-            if (nsinglet_lz == 0 .and. ntriplet_lz == 0 .and. nstate_lz > 0) then
-               nsinglet_lz = nstate_lz !Assume singlet states
-            end if
-            if ((nsinglet_lz + ntriplet_lz) /= nstate_lz) then
-               write (*, *) 'Error(LZ): Sum of singlet and triplet states must give total number of states. Exiting...'
-               error = 1
-            end if
-         end if
-
-         call real_nonnegative(energydifthr_lz, 'energydifthr_lz')
-
          if (istage == 1 .and. ipimd /= 1) then
             write (*, *) 'The staging transformation is only meaningful for PIMD'
             error = 1
