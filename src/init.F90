@@ -1097,6 +1097,23 @@ contains
             am(i) = 88.90584D0
          case ('Zr')
             am(i) = 91.224D0
+         ! The following values were taken from QCelemental Python library
+         case ('Tc')
+            am(i) = 97.9072124D0
+         case ('Pm')
+            am(i) = 144.9127559D0
+         case ('Po')
+            am(i) = 208.9824308D0
+         case ('At')
+            am(i) = 209.9871479D0
+         case ('Rn')
+            am(i) = 222.0175782D0
+         case ('Fr')
+            am(i) = 223.019736D0
+         case ('Ra')
+            am(i) = 226.0254103D0
+         case ('Ac')
+            am(i) = 227.0277523D0
          case DEFAULT
             write (stdout, *) 'Atom name ', names(i), ' was not found in the library.'
             write (stdout, *) 'Using user-defined mass from input file'
