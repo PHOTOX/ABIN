@@ -55,10 +55,10 @@ contains
       do iw = 1, walkmax
 
          ! See comment in force_abin() to understand this
-         !$OMP FLUSH(abort)
-         if (.not. abort ) then
+!$OMP FLUSH(abort)
+         if (.not. abort) then
             ! map OMP thread to TC server
-            !$ itc = OMP_GET_THREAD_NUM() + 1
+!$          itc = OMP_GET_THREAD_NUM() + 1
 
 #ifdef USE_MPI
             tc_comm = get_tc_communicator(itc)
@@ -177,7 +177,7 @@ contains
       if (status(MPI_TAG) == 1) then
          write (stderr, *) 'Got TAG 1 from TeraChem: SCF probably did not converge.'
          abort = .true.
-         !$OMP FLUSH(abort)
+!$OMP FLUSH(abort)
          return
       end if
       if (idebug > 1) then
