@@ -912,11 +912,13 @@ contains
          read (u, *, iostat=iost) atom, x(iat, iw), y(iat, iw), z(iat, iw)
          if (iost /= 0) then
             call fatal_error(__FILE__, __LINE__, 'Invalid line in file '//trim(fname))
+            return
          end if
          if (normalize_atom_name(atom) /= atnames(iat)) then
             write (stderr, *) 'Offending line:'
             write (stderr, *) atom, x(iat, iw), y(iat, iw), z(iat, iw)
             call fatal_error(__FILE__, __LINE__, 'Inconsistent atom type in file '//trim(fname))
+            return
          end if
       end do
    end subroutine read_xyz_file

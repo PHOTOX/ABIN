@@ -43,7 +43,6 @@ contains
    subroutine test_invalid_natom()
       real(DP), dimension(NATOM, NWALK) :: x, y, z
       integer :: u
-      !names = (/'H', 'H', 'C'/)
 
       call del_file(geomfile)
       u = open_file_for_reading(geomfile)
@@ -71,5 +70,55 @@ contains
       close (u, status='delete')
       @assertExceptionRaised('Inconsistent number of atoms on the first line of file '//geomfile)
    end subroutine
+
+   @test
+   subroutine test_invalid_line()
+      real(DP), dimension(NATOM, NWALK) :: x, y, z
+      integer :: u
+
+      open (newunit=u, action='write', file=geomfile)
+      write (u, *) '3'
+      write (u, *) 'comment'
+      write (u, *) 'H 2.0 '
+      write (u, *) 'H 2.0 2.0 2.0'
+      write (u, *) 'H 2.0 2.0 2.0'
+      close (u)
+      call read_atom_names(geomfile, natom_read, names_read)
+      @assertExceptionRaised('Invalid line in file '//geomfile)
+
+      u = open_file_for_reading(geomfile)
+      call read_xyz_file(u, geomfile, names_read, NATOM, 1, x, y, z)
+      close (u, status='delete')
+      @assertExceptionRaised('Invalid line in file '//geomfile)
+   end subroutine test_invalid_line
+
+   @test
+   subroutine test_invalid_name()
+      real(DP), dimension(NATOM, NWALK) :: x, y, z
+      integer :: u
+      names = (/'H', 'H', 'C'/)
+
+      open (newunit=u, action='write', file=geomfile)
+      write (u, *) '3'
+      write (u, *) 'comment'
+      write (u, *) names(1)//' 2.0 2.0 2.0'
+      write (u, *) names(2)//' 2.0 2.0 2.0'
+      write (u, *) names(3)//' 2.0 2.0 2.0'
+      close (u)
+
+      call read_atom_names(geomfile, natom_read, names_read)
+
+      open (newunit=u, action='write', file=geomfile)
+      write (u, *) '3'
+      write (u, *) 'comment'
+      write (u, *) names(1)//' 2.0 2.0 2.0'
+      write (u, *) 'X 2.0 2.0 2.0'
+      close (u)
+
+      u = open_file_for_reading(geomfile)
+      call read_xyz_file(u, geomfile, names_read, NATOM, 1, x, y, z)
+      close (u, status='delete')
+      @assertExceptionRaised('Inconsistent atom type in file '//geomfile)
+   end subroutine test_invalid_name
 
 end module test_io
