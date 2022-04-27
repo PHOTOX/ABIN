@@ -35,14 +35,14 @@ module mod_plumed
 contains
 
 #ifdef USE_PLUMED
-   subroutine plumed_init()
-      use mod_general, only: natom, irest, dt0, nrest
+   subroutine plumed_init(natom, irest, dt0, nrest)
       use mod_const, only: ANG, AUTOFS, AMU, AVOGADRO, AUTOJ
       use mod_utils, only: c_string
       use mod_error, only: fatal_error
       use mod_files, only: stdout
       !use mod_nhc, only: temp
-      implicit none
+      integer, intent(in) :: natom, irest, nrest
+      real(DP), intent(in) :: dt0
       integer, parameter :: PLUMED_RESTART = 1
       ! Conversion from ABIN to PLUMED units
       real(DP), parameter :: PLUMED_ENERGY_UNIT = AUTOJ * AVOGADRO * 1.0D-3 ! Ha -> kJ/mol
@@ -196,7 +196,13 @@ contains
    ! Stubbed subroutines for compilation without PLUMED
    ! We use this approach to avoid needing to have '#ifdef USE_PLUMED'
    ! elsewhere in the codebase
-   subroutine plumed_init()
+   subroutine plumed_init(natom, irest, dt0, nrest)
+      integer, intent(in) :: natom, irest, nrest
+      real(DP), intent(inout) :: dt0
+      ! Just to get rid of compiler warnings :-(
+      dt0 = natom
+      dt0 = irest
+      dt0 = nrest
       call not_compiled_with('PLUMED')
    end subroutine plumed_init
 
@@ -212,10 +218,7 @@ contains
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
-
-      ! Just to get rid of compiler warnings :-(
       fx = x; fy = y; fz = z; eclas = 0.0D0
-
       call not_compiled_with('PLUMED')
    end subroutine force_plumed
 #endif

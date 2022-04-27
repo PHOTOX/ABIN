@@ -19,12 +19,12 @@ contains
    @before
    subroutine setup()
       use mod_files, only: stdout_to_devnull
-      use mod_general, only: natom, nwalk, dt0, it
+      use mod_general, only: set_natom, nwalk, dt0, it
       use mod_system, only: am
       use mod_nhc, only: temp
 
       it = 0
-      natom = NATOMS
+      call set_natom(NATOMS)
       nwalk = NBEADS
       dt0 = 1.0D0
       temp = 0.001D0
@@ -44,7 +44,7 @@ contains
       ! NOTE: Some tests might need to call plumed_init() again,
       ! e.g. if they need to re-define the time step.
       ! In that case, call plumed_finalize() before calling plumed_init() again.
-      call plumed_init()
+      call plumed_init(natom=NATOMS, irest=0, dt0=dt0, nrest=1)
    end subroutine setup
 
    ! This routine is called automatically after each test.
@@ -97,7 +97,7 @@ contains
 
       ! Need to call plumed_init() again since we redefined dt
       call finalize_plumed()
-      call plumed_init()
+      call plumed_init(natom=NATOMS, irest=0, dt0=dt0, nrest=1)
       call plumed_f_gcmd('readInputLine'//char(0), DISTANCE_ACTION)
       call plumed_f_gcmd('readInputLine'//char(0), PRINT_ACTION)
 
@@ -341,8 +341,8 @@ contains
 
    @test(ifndef=USE_PLUMED)
    subroutine test_not_compiled_with_plumed()
-      real(DP) :: eclas
-      call plumed_init()
+      real(DP) :: eclas, dt0
+      call plumed_init(natom=NATOMS, irest=0, dt0=dt0, nrest=1)
       @assertExceptionRaised('ABIN was not compiled with PLUMED')
 
       call force_plumed(x, y, z, fx, fy, fz, eclas)

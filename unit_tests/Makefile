@@ -95,6 +95,13 @@ mm_EXTRA_USE := throw_with_pfunit_mod
 mm_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,mm))
 
+io_TESTS := test_io.pf
+io_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+io_OTHER_SRCS := throw_with_pfunit.F90
+io_EXTRA_USE := throw_with_pfunit_mod
+io_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,io))
+
 spline_TESTS := test_spline.pf
 spline_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
 spline_OTHER_SRCS := throw_with_pfunit.F90
@@ -109,7 +116,7 @@ interface_EXTRA_USE := throw_with_pfunit_mod
 interface_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,interface))
 
-all : utils prng masses plumed fftw terapi gle nhc pot mm spline interface
+all : utils prng masses plumed fftw terapi gle nhc pot mm spline interface io
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
@@ -126,6 +133,7 @@ test : clean_plumed_output clean_terapi_output clean_gle_output
 	./pot
 	./mm
 	./spline
+	./io
 	./interface
 
 clean : clean_plumed_output clean_terapi_output clean_gle_output

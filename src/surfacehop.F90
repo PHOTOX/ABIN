@@ -5,21 +5,30 @@ module mod_sh
    use mod_array_size, only: NSTMAX
    use mod_files, only: stdout, stderr
    use mod_error, only: fatal_error
-   use mod_utils, only: abinerror
    use mod_sh_integ
    implicit none
    private
    ! TODO: We should make some of these private
    ! We would need to read sh namelist inside this module
-   ! and we should check input sanity here, not in input.F90
-   public :: istate_init, substep, deltaE, inac, nohop, decoh_alpha, popthr, nac_accu1, nac_accu2
+
+   ! INPUT PARAMETERS
+   public :: istate_init, substep, decoh_alpha
+   ! Parameters controling NACME computations
+   public :: deltaE, inac, nohop, popthr, nac_accu1, nac_accu2
+   ! Parameters controlling energy conservation checks
+   public :: energydifthr, energydriftthr, dE_S0S1_thr
+   public :: adjmom, revmom
+   public :: ignore_state
+   ! Main subroutines
    public :: surfacehop, sh_init
+   ! Helper subroutines
+   public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
+   public :: check_CIVector
+
+   ! Variables holding SH state
+   ! TODO: Make these protected and write Set methods
    public :: en_array, istate, tocalc
    public :: nacx, nacy, nacz
-   public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
-   public :: energydifthr, energydriftthr, dE_S0S1_thr, adjmom, revmom
-   public :: check_CIVector
-   public :: ignore_state
 
    ! Initial electronic state
    integer :: istate_init = 1
@@ -44,6 +53,7 @@ module mod_sh
    integer :: nac_accu1 = 7
    integer :: nac_accu2 = 5 !7 is MOLPRO default
    ! Decoherence correction parameter (a.u.)
+   ! To turn of decoherence correction, set decoh_alpha = 0.0D0
    real(DP) :: decoh_alpha = 0.1D0
    real(DP) :: deltae = 5.0D0, popthr = 0.001D0
    real(DP) :: energydifthr = 1.0D0, energydriftthr = 1.0D0 !eV
@@ -78,6 +88,8 @@ contains
       real(DP) :: dum_fy(size(y, 1), size(y, 2))
       real(DP) :: dum_fz(size(z, 1), size(z, 2))
       real(DP) :: dum_eclas
+
+      call check_sh_parameters()
 
       deltaE = deltaE / AUtoEV
 
@@ -125,6 +137,81 @@ contains
       end if
 
    end subroutine sh_init
+
+   subroutine check_sh_parameters()
+      use mod_utils, only: int_positive, int_nonnegative, int_switch, real_nonnegative
+      use mod_general, only: iknow
+      use mod_chars, only: chknow
+      logical :: error
+
+      error = .false.
+
+      ! TODO: Lift this restriction
+      if (nstate > nstmax) then
+         write (stderr, '(A,I0)') 'Maximum number of states is: ', nstmax
+         write (stderr, '(A)') 'Adjust variable nstmax in modules.f90'
+         error = .true.
+      end if
+
+      if (integ /= 'euler' .and. integ /= 'rk4' .and. integ /= 'butcher') then
+         write (stderr, '(A)') 'variable integ must be "euler", "rk4" or "butcher".'
+         error = .true.
+      end if
+
+      if (integ /= 'butcher') then
+         write (stderr, '(A)') 'WARNING: variable integ is not "butcher", which is the default and most accurate.'
+         write (stderr, '(A)') chknow
+         if (iknow /= 1) error = .true.
+      end if
+
+      if (istate_init > nstate) then
+         write (stderr, '(A)') 'Initial state > number of computed states.'
+         error = .true.
+      end if
+
+      if (inac > 2 .or. inac < 0) then
+         write (stderr, '(A)') 'Parameter "inac" must be 0, 1 or 2.'
+         error = .true.
+      end if
+      if (adjmom == 0 .and. inac == 1) then
+         write (stderr, '(A)') 'Combination of adjmom=0 and inac=1 is not possible.'
+         write (stderr, '(A)') 'NAC vectors are not computed if inac=1.'
+         error = .true.
+      end if
+
+      if (nac_accu1 <= nac_accu2) then
+         write (stderr, '(A)') 'WARNING: nac_accu1 < nac_accu2'
+         write (stderr, '(A,I0)') 'Computing NACME only with default accuracy 10^-', nac_accu1
+      end if
+
+      if (decoh_alpha == 0.0D0) then
+         write (stdout, '(A)') "Turning OFF decoherence correction"
+      end if
+
+      call int_switch(nohop, 'nohop')
+      call int_switch(adjmom, 'adjmom')
+      call int_switch(adjmom, 'revmom')
+
+      call int_positive(istate_init, 'istate_init')
+      call int_positive(substep, 'substep')
+      call int_positive(nac_accu1, 'nac_accu1')
+
+      call int_nonnegative(nac_accu2, 'nac_accu2')
+      call int_nonnegative(ignore_state, 'ignore_state')
+
+      call real_nonnegative(decoh_alpha, 'decoh_alpha')
+      call real_nonnegative(deltaE, 'deltaE')
+      call real_nonnegative(popthr, 'popthr')
+      call real_nonnegative(popsumthr, 'popsumthr')
+      call real_nonnegative(energydifthr, 'energydifthr')
+      call real_nonnegative(energydriftthr, 'energydriftthr')
+      call real_nonnegative(dE_S0S1_thr, 'dE_S0S1_thr')
+
+      if (error) then
+         call fatal_error(__FILE__, __LINE__, 'Invalid Surface Hopping parameter(s)')
+      end if
+
+   end subroutine check_sh_parameters
 
    subroutine get_nacm(pot)
       character(len=*), intent(in) :: pot
@@ -279,9 +366,9 @@ contains
                                                         & nacy(iat, ist1, ist2), &
                                                         & nacz(iat, ist1, ist2)
                   if (iost /= 0) then
-                     write (*, *) 'Error reading NACME from restart file '//trim(restart_file)
                      write (*, *) chmsg
-                     call abinerror('read_nacmrest')
+                     call fatal_error(__FILE__, __LINE__, &
+                        & 'Could not read NACME from restart file '//trim(restart_file))
                   end if
                   nacx(iat, ist2, ist1) = -nacx(iat, ist1, ist2)
                   nacy(iat, ist2, ist1) = -nacy(iat, ist1, ist2)
@@ -901,12 +988,11 @@ contains
       entot_old = (ekin_old + en_array_old(istate)) * AUtoEV
 
       if (abs(entot - entot_old) > energydifthr) then
-         write (stderr, *) 'ERROR:Poor energy conservation. Exiting...'
          write (stderr, *) 'Total energy difference [eV] is:', entot - entot_old
          write (stderr, *) 'The threshold was:', energydifthr
          write (stderr, *) 'Ekin_old, Ekin, Epot_old, E_pot', &
             ekin_old, ekin, en_array_old(istate), en_array(istate)
-         call abinerror('check_energy')
+         call fatal_error(__FILE__, __LINE__, 'Poor energy conservation')
       end if
 
    end subroutine check_energy
@@ -922,10 +1008,9 @@ contains
       entot = (ekin + en_array(istate)) * AUtoEV
 
       if (abs(entot - entot0) > energydriftthr) then
-         write (stderr, *) 'ERROR: Energy drift exceeded threshold value. Exiting...'
-         write (stderr, *) 'Total energy difference [eV] is:', entot - entot0
+         write (stderr, *) 'Total energy drift [eV] is:', entot - entot0
          write (stderr, *) 'The threshold was:', energydriftthr
-         call abinerror('check_energy')
+         call fatal_error(__FILE__, __LINE__, 'Energy drift exceeded threshold value')
       end if
 
    end subroutine check_energydrift

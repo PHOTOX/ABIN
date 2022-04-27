@@ -13,7 +13,6 @@ nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?
 nrest=1,		! how often we print restart files?
 irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
-natom=6
 /
 
 &nhcopt

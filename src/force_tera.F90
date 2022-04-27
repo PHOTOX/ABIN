@@ -16,6 +16,7 @@ module mod_force_tera
    use mod_error, only: fatal_error
    use mod_files, only: stderr
    use mod_terampi
+   use mod_error, only: fatal_error
 #ifdef USE_MPI
    use mpi
    use mod_mpi, only: handle_mpi_error, check_recv_count
@@ -44,7 +45,7 @@ contains
 
       if (modulo(walkmax, nteraservers) /= 0) then
          call fatal_error(__FILE__, __LINE__, &
-           & 'Parameter "nwalk" must be divisible by "nteraservers"!')
+            & 'Parameter "nwalk" must be divisible by "nteraservers"!')
       end if
 
       itc = 1
