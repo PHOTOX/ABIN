@@ -37,9 +37,7 @@ program abin
    use mod_en_restraint, only: restrain_pot
    use mod_terampi_sh, only: move_new2old_terash
    use mod_mpi, only: get_mpi_rank, mpi_barrier_wrapper
-#ifdef USE_MPI
    use mod_remd, only: remd_swap, nswap
-#endif
    implicit none
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
    logical :: file_exists
@@ -200,12 +198,10 @@ program abin
          end if
       end if
 
-#ifdef USE_MPI
       ! SWAP REMD REPLICAS
       if (iremd == 1 .and. modulo(it, nswap) == 0) then
          call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
       end if
-#endif
 
       ! --- Trajectory analysis ---
       ! In order to analyze the output, we have to perform the back transformation
