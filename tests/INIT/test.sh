@@ -21,3 +21,10 @@ rm movie.xyz
 touch restart.xyz
 $ABINEXE -x mini.xyz -i input.in > abin.out 2>&1 || true
 mv ERROR ABIN_ERROR2
+
+rm restart.xyz
+$ABINEXE -x mini.xyz -i input.in.sh > abin.out 2>&1 || true
+mv ERROR ABIN_ERROR3
+
+$ABINEXE -x mini.xyz -i input.in.nhc > abin.out 2>&1 || true
+mv ERROR ABIN_ERROR4

@@ -29,9 +29,8 @@ module mod_lz
    integer :: initstate_lz = 1
    integer :: tocalc_lz(NSTMAX)
    integer :: nstate_lz, nsinglet_lz = 0, ntriplet_lz = 0
-   !integer :: calcsoc_lz = 0
 
-   !Module variables
+   ! Module variables
    integer :: istate_lz
    real(DP), allocatable :: en_array_lz(:, :), en_array_lz_backup(:, :)
    real(DP), allocatable :: fx_old(:, :), fy_old(:, :), fz_old(:, :)
@@ -47,7 +46,7 @@ contains
 
       if (initstate_lz > nstate_lz) then
          call fatal_error(__FILE__, __LINE__, &
-           & '(LZ): Initial state > number of computed states.')
+            & '(LZ): Initial state > number of computed states.')
       end if
 
       if (nsinglet_lz == 0 .and. ntriplet_lz == 0 .and. nstate_lz > 0) then
@@ -57,7 +56,7 @@ contains
 
       if ((nsinglet_lz + ntriplet_lz) /= nstate_lz) then
          call fatal_error(__FILE__, __LINE__, &
-           & '(LZ): Sum of singlet and triplet states must give total number of states.')
+            & '(LZ): Sum of singlet and triplet states must give total number of states.')
       end if
 
       call int_positive(initstate_lz, 'initstate_lz')

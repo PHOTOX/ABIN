@@ -63,7 +63,7 @@ contains
 
       nmolt = NAT + 1
       call nhc_init()
-      @assertExceptionRaised("Invalid NHC thermostat parameter")
+      @assertExceptionRaised("Invalid NHC thermostat parameter(s)")
    end subroutine
 
    @test

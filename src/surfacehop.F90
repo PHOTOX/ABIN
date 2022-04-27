@@ -154,28 +154,28 @@ contains
       end if
 
       if (integ /= 'euler' .and. integ /= 'rk4' .and. integ /= 'butcher') then
-         write (stderr, *) 'variable integ must be "euler", "rk4" or "butcher".'
+         write (stderr, '(A)') 'variable integ must be "euler", "rk4" or "butcher".'
          error = .true.
       end if
 
       if (integ /= 'butcher') then
-         write (stderr, *) 'WARNING: variable integ is not "butcher", which is the default and most accurate.'
-         write (stderr, *) chknow
+         write (stderr, '(A)') 'WARNING: variable integ is not "butcher", which is the default and most accurate.'
+         write (stderr, '(A)') chknow
          if (iknow /= 1) error = .true.
       end if
 
       if (istate_init > nstate) then
-         write (stderr, *) 'Initial state > number of computed states.'
+         write (stderr, '(A)') 'Initial state > number of computed states.'
          error = .true.
       end if
 
       if (inac > 2 .or. inac < 0) then
-         write (stderr, *) 'Parameter "inac" must be 0, 1 or 2.'
+         write (stderr, '(A)') 'Parameter "inac" must be 0, 1 or 2.'
          error = .true.
       end if
       if (adjmom == 0 .and. inac == 1) then
-         write (stderr, *) 'Combination of adjmom=0 and inac=1 is not possible.'
-         write (stderr, *) 'NAC vectors are not computed if inac=1.'
+         write (stderr, '(A)') 'Combination of adjmom=0 and inac=1 is not possible.'
+         write (stderr, '(A)') 'NAC vectors are not computed if inac=1.'
          error = .true.
       end if
 
@@ -185,7 +185,7 @@ contains
       end if
 
       if (decoh_alpha == 0.0D0) then
-         write (stdout, *) "Turning OFF decoherence correction"
+         write (stdout, '(A)') "Turning OFF decoherence correction"
       end if
 
       call int_switch(nohop, 'nohop')
@@ -208,7 +208,7 @@ contains
       call real_nonnegative(dE_S0S1_thr, 'dE_S0S1_thr')
 
       if (error) then
-         call fatal_error(__FILE__, __LINE__, 'Invalid Surface Hopping parameter')
+         call fatal_error(__FILE__, __LINE__, 'Invalid Surface Hopping parameter(s)')
       end if
 
    end subroutine check_sh_parameters

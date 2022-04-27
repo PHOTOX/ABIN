@@ -106,6 +106,63 @@ contains
       integer :: imol, ipom, iat
       logical :: error
 
+      error = .false.
+
+      if (nchain > maxchain) then
+         write (stderr, '(A)') 'Maximum number of Nose-Hoover chains exceeded'
+         error = .true.
+      end if
+
+      if (nrespnose < 3) then
+         write (stderr, '(A)') 'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
+         write (stderr, '(A)') 'Such low value would probably not produce stable results.'
+         write (stderr, '(A)') chknow
+         if (iknow /= 1) error = .true.
+      end if
+
+      if (nyosh == 1) then
+         write (stderr, '(A)') 'Use Suzuki-Yoshida scheme for Nose-Hoover thermostat (nyosh=3 or 7).'
+         write (stderr, '(A)') chknow
+         if (iknow /= 1) error = .true.
+      end if
+
+      if (imasst == 0 .and. ipimd == 1) then
+         write (stderr, '(A)') 'PIMD simulations must use massive thermostat (imasst=1)!'
+         error = .true.
+      end if
+
+      if (nmolt > natom) then
+         write (stdout, '(A)') 'nmolt > natom, which is not possible. Consult the manual.'
+         error = .true.
+      end if
+
+      if (imasst == 0) then
+         do imol = 1, nmolt
+            if (natmolt(imol) <= 0) then
+               write (stderr, '(A)') 'Number of atoms in molecules not specified! Set array natmolt properly.'
+               error = .true.
+            end if
+         end do
+      end if
+
+      if (imasst == 0) then
+         ipom = 0
+         do iat = 1, nmolt
+            ipom = ipom + natmolt(iat)
+         end do
+         if (ipom /= natom) then
+            write (stderr, '(A)') 'Number of atoms in thermostated molecules (natmolt) does not match natom.'
+            write (stderr, '(A)') chknow
+            if (iknow /= 1) error = .true.
+         end if
+      end if
+
+      if (temp * AUTOK < 1 .and. inose > 0) then
+         write (stderr, '(A)') 'Temperature below 1 Kelvin. Are you sure?'
+         write (stderr, '(A)') chknow
+         if (iknow /= 1) error = .true.
+      end if
+
       call int_nonnegative(inose, 'inose')
       call int_positive(nchain, 'nchain')
       call int_positive(nrespnose, 'nrespnose')
@@ -113,63 +170,16 @@ contains
       call int_switch(imasst, 'imasst')
       call real_nonnegative(temp, 'temp')
 
-      error = .false.
-      if (nchain > maxchain) then
-         write (stderr, *) 'Maximum number of Nose-Hoover chains exceeded'
-         error = .true.
-      end if
-      if (nrespnose < 3) then
-         write (stderr, *) 'Variable nrespnose < 3! Assuming this is an error in input and exiting.'
-         write (stderr, *) 'Such low value would probably not produce stable results.'
-         write (stderr, *) chknow
-         if (iknow /= 1) error = .true.
-      end if
-      if (nyosh == 1) then
-         write (stderr, *) 'Use Suzuki-Yoshida scheme for Nose-Hoover thermostat (nyosh=3 or 7).'
-         write (stderr, *) chknow
-         if (iknow /= 1) error = .true.
-      end if
-      if (imasst == 0 .and. ipimd == 1) then
-         write (stderr, *) 'PIMD simulations must use massive thermostat (imasst=1)!'
-         error = .true.
-      end if
-      if (nmolt > natom) then
-         write (stdout, *) 'Input error: nmolt > natom, which is not possible. Consult the manual.'
-         error = .true.
-      end if
-      if (imasst == 0) then
-         do imol = 1, nmolt
-            if (natmolt(imol) <= 0) then
-               write (stderr, *) 'Number of atoms in molecules not specified! Set array natmolt properly.'
-               error = .true.
-            end if
-         end do
-      end if
-      if (imasst == 0) then
-         ipom = 0
-         do iat = 1, nmolt
-            ipom = ipom + natmolt(iat)
-         end do
-         if (ipom /= natom) then
-            write (stderr, *) 'Number of atoms in thermostated molecules (natmolt) does not match natom.'
-            write (stderr, *) chknow
-            if (iknow /= 1) error = .true.
-         end if
-      end if
-      if (temp * AUTOK < 1 .and. inose > 0) then
-         write (stderr, *) 'Temperature below 1 Kelvin. Are you sure?'
-         write (stderr, *) chknow
-         if (iknow /= 1) error = .true.
-      end if
-
       if (error) then
          call fatal_error(__FILE__, __LINE__, &
-            & 'Invalid NHC thermostat parameter')
+            & 'Invalid NHC thermostat parameter(s)')
       end if
    end subroutine check_nhc_parameters
 
    subroutine nhc_init()
       use mod_files, only: stdout
+
+      write (stdout, *) ''
       if (imasst == 1) then
          write (stdout, *) 'Initializing massive Nosé-Hoover Chain thermostat'
       else

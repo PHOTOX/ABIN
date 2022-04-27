@@ -1,0 +1,17 @@
+&general
+irest=0,
+nstep=1,
+pot='_mmwater_'
+mdtype='md',
+dt=20.,	
+/
+
+&nhcopt
+temp=0.1
+inose=1,
+nchain=150
+nrespnose=1
+nyosh=1
+nmolt=4
+imasst=0
+/

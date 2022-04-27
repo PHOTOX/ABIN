@@ -199,6 +199,7 @@ contains
    subroutine plumed_init(natom, irest, dt0, nrest)
       integer, intent(in) :: natom, irest, nrest
       real(DP), intent(inout) :: dt0
+      ! Just to get rid of compiler warnings :-(
       dt0 = natom
       dt0 = irest
       dt0 = nrest
@@ -217,10 +218,7 @@ contains
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
-
-      ! Just to get rid of compiler warnings :-(
       fx = x; fy = y; fz = z; eclas = 0.0D0
-
       call not_compiled_with('PLUMED')
    end subroutine force_plumed
 #endif
