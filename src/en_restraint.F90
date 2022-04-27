@@ -79,22 +79,22 @@ contains
             write (chforce_exc, '(A,I3.3)') 'engrad.exc.dat.', iw
 
             ugs = open_engrad_file(chforce_ground, abort)
-            if (abort) call fatal_error(__FILE__, __LINE__, 'Cound not open file '//trim(chforce_ground))
+            if (abort) call fatal_error(__FILE__, __LINE__, 'Could not open file '//trim(chforce_ground))
 
             ues = open_engrad_file(chforce_exc, abort)
-            if (abort) call fatal_error(__FILE__, __LINE__, 'Cound not open file '//trim(chforce_exc))
+            if (abort) call fatal_error(__FILE__, __LINE__, 'Could not open file '//trim(chforce_exc))
 
             eclasground = read_energy(ugs, abort)
-            if (abort) call fatal_error(__FILE__, __LINE__, 'Cound not read energy')
+            if (abort) call fatal_error(__FILE__, __LINE__, 'Could not read energy from file '//trim(chforce_ground))
 
             call read_forces(fxgs, fygs, fzgs, natom, 1, ugs, abort)
-            if (abort) call fatal_error(__FILE__, __LINE__, 'Cound not read forces')
+            if (abort) call fatal_error(__FILE__, __LINE__, 'Could not read gradients from file '//trim(chforce_ground))
 
             eclasexc = read_energy(ues, abort)
-            if (abort) call fatal_error(__FILE__, __LINE__, 'Cound not read energy')
+            if (abort) call fatal_error(__FILE__, __LINE__, 'Could not read energy from file '//trim(chforce_exc))
 
             call read_forces(fxes, fyes, fzes, natom, 1, ues, abort)
-            if (abort) call fatal_error(__FILE__, __LINE__, 'Cound not read forces')
+            if (abort) call fatal_error(__FILE__, __LINE__, 'Could not read gradients from file '//trim(chforce_exc))
 
             close (ugs, status='delete')
             close (ues, status='delete')
@@ -175,7 +175,7 @@ contains
    end subroutine energy_restraint
 
    subroutine en_rest_finalize()
-      deallocate (fxr, fyr, fzr)
+      if (allocated(fxr)) deallocate (fxr, fyr, fzr)
    end subroutine en_rest_finalize
 
 end module mod_en_restraint
