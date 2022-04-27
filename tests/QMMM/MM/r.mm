@@ -3,7 +3,6 @@ cd MM
 
 timestep=$1
 ibead=$2
-input=input$ibead
 geom=../geom_mm.dat.$ibead
 
 natom=`cat $geom | wc -l`

@@ -52,18 +52,22 @@ module mod_random
 !     parameter (np=2281,nq=715)
 !     parameter (np=4423,nq=1393)
       use mod_const, only: DP
-      use mod_utils, only: abinerror
+      use mod_error, only: fatal_error
+      use mod_files, only: stdout, stderr
       private
-      public    :: gautrg, vranf, rsavef
+      public :: gautrg, vranf
+      public :: write_prng_state, read_prng_state
       integer,parameter :: np=1279, nq=418
       real(DP)  :: x(np)
       integer   :: last, init
       ! gautrg variables determining its state
       real(DP)  :: gsave
       integer   :: isave = -1
-      integer   :: nroll = 1
+      ! For restart file
+      character(len=*), parameter :: chprng='PRNG STATE (OPTIONAL)'
       save
       contains
+
 
       subroutine gautrg(gran, nran, iseed)
 !     DH WARNING: initialiazation from gautrg and vranf are different
@@ -98,7 +102,6 @@ module mod_random
       implicit none
       integer, intent(in) :: nran
       integer, intent(in), optional :: iseed
-      ! TODO: Should probably be intent(out)
       real(DP), intent(inout) :: gran(nran)
 
       real(DP),parameter  :: two=2.d0,twom=-two,one=1.d0
@@ -108,14 +111,11 @@ module mod_random
       real(DP) :: fac, trig
       real(DP) :: tiny, twopi, pi4
       integer :: i, newran
-!     save isave,gsave,tiny,twopi,pi4,scf,ccf
       save tiny,twopi,pi4,scf,ccf
-!     data isave/-1/
 
 !      POLYNOMIAL FROM CHEBYSHEV APPROXIMATION ON [ 0.000, 0.790]
 !      FOR COS(X) WITH ABSOLUTE ERROR LESS THAN 0.2220E-14
 
-!      real(DP),parameter,dimension(npoly) ::  ccf = &
        DATA ccf/ 0.9999999999999986D+00, 0.6612476846390664D-13, &
                -0.4999999999989523D+00,-0.5434658088910759D-10, &
                 0.4166666737609693D-01,-0.4648977428396692D-08, &
@@ -140,10 +140,11 @@ module mod_random
         twopi=pi4*8
       end if
 
-      if(present(iseed))then
-         if(iseed.le.0)then
-            write(*,*)'ERROR: Random number seed must be a positive non-zero integer!'
-            call abinerror('gautrg')
+      if (present(iseed)) then
+         if (iseed < 0) then
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Random number seed must be a positive integer!')
+            return
          end if
          call vranf(gran, 0, iseed)
       end if
@@ -256,152 +257,75 @@ module mod_random
       real(DP), intent(out) :: ranv(nran)
       integer, intent(in) :: nran
       integer, intent(in), optional :: iseed
-      integer, parameter :: nratio=np/nq, nexec=4, mroll=4
+      integer, parameter :: nratio=np/nq, nexec=4
       real(DP), parameter :: zero = 0.0D0, one = 1.0D0
-      real(DP) :: x1, x2, x3, x4
+      real(DP) :: x1
       integer :: i, j, k, left, loop, limit
 
-
-      if(present(iseed))then
-         if(iseed.le.0)then
-            write(*,*)'ERROR: Random number seed must be a positive non-zero integer!'
-            call abinerror('vranf')
+      if (present(iseed)) then
+         if (iseed <= 0) then
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Random number seed must be a positive integer!')
+            return
          end if
          ! table initialization by xuinit
-         call xuinit(x,np,nq,0,nexec,iseed,init,last)
+         call xuinit(x, np, nq, 0, nexec, iseed, init, last)
       end if
 
-!      fibonacci generator updates elements of x in a cyclic fashion
-!      and copies them into ranv in blocks of max. length np.
-!      loop split into chunks of max. length nq to avoid recurrence.
-!      unrolling improves performance on superscalar machines.
-
-
-      if(nran.gt.0) then
-        if(init.ne.0) then
-          j=0
-          left=nran
-   10     continue
-          if(nroll.gt.1) then
-            loop=mod((min(nq,left+last)-last),mroll)
-          else
-            loop=min(nq,left+last)-last
-          end if
-
-          do 500 i=last+1,last+loop
-          x1=x(i)-x(i+np-nq)
-          if(x1.lt.zero) x1=x1+one
-          x(i)=x1
-          j=j+1
-          ranv(j)=x1
-  500     continue
-          if(nroll.gt.1) then
-            do 501 i=last+loop+1,min(nq,left+last),mroll
-            x1=x(i)-x(i+np-nq)
-            x2=x(i+1)-x(i+1+np-nq)
-            x3=x(i+2)-x(i+2+np-nq)
-            x4=x(i+3)-x(i+3+np-nq)
-            if(x1.lt.zero) x1=x1+one
-            if(x2.lt.zero) x2=x2+one
-            if(x3.lt.zero) x3=x3+one
-            if(x4.lt.zero) x4=x4+one
-            x(i)=x1
-            x(i+1)=x2
-            x(i+2)=x3
-            x(i+3)=x4
-            ranv(j+1)=x1
-            ranv(j+2)=x2
-            ranv(j+3)=x3
-            ranv(j+4)=x4
-            j=j+4
-  501       continue
-          end if
-
-          if(last.lt.nratio*nq) then
-            do 650 k=1,nratio-1
-            limit=min((k+1)*nq,left+last)
-            if(nroll.gt.1) then
-              loop=mod((limit-max(k*nq,last)),mroll)
-            else
-              loop=limit-max(k*nq,last)
-            end if
-
-            do 600 i=max(k*nq,last)+1,max(k*nq,last)+loop
-            x1=x(i)-x(i-nq)
-            if(x1.lt.zero) x1=x1+one
-            x(i)=x1
-            j=j+1
-            ranv(j)=x1
-  600       continue
-            if(nroll.gt.1) then
-              do 601 i=max(k*nq,last)+loop+1,limit,mroll
-              x1=x(i)-x(i-nq)
-              x2=x(i+1)-x(i+1-nq)
-              x3=x(i+2)-x(i+2-nq)
-              x4=x(i+3)-x(i+3-nq)
-              if(x1.lt.zero) x1=x1+one
-              if(x2.lt.zero) x2=x2+one
-              if(x3.lt.zero) x3=x3+one
-              if(x4.lt.zero) x4=x4+one
-              x(i)=x1
-              x(i+1)=x2
-              x(i+2)=x3
-              x(i+3)=x4
-              ranv(j+1)=x1
-              ranv(j+2)=x2
-              ranv(j+3)=x3
-              ranv(j+4)=x4
-              j=j+4
-  601         continue
-            end if
-  650       continue
-          end if
-
-          limit=min(np,left+last)
-          if(nroll.gt.1) then
-            loop=mod((limit-max(nratio*nq,last)),mroll)
-          else
-            loop=limit-max(nratio*nq,last)
-          end if
-
-          do 700 i=max(nratio*nq,last)+1,max(nratio*nq,last)+loop
-          x1=x(i)-x(i-nq)
-          if(x1.lt.zero) x1=x1+one
-          x(i)=x1
-          j=j+1
-          ranv(j)=x1
-  700     continue
-          if(nroll.gt.1) then
-            do 701 i=max(nratio*nq,last)+loop+1,limit,mroll
-            x1=x(i)-x(i-nq)
-            x2=x(i+1)-x(i+1-nq)
-            x3=x(i+2)-x(i+2-nq)
-            x4=x(i+3)-x(i+3-nq)
-            if(x1.lt.zero) x1=x1+one
-            if(x2.lt.zero) x2=x2+one
-            if(x3.lt.zero) x3=x3+one
-            if(x4.lt.zero) x4=x4+one
-            x(i)=x1
-            x(i+1)=x2
-            x(i+2)=x3
-            x(i+3)=x4
-            ranv(j+1)=x1
-            ranv(j+2)=x2
-            ranv(j+3)=x3
-            ranv(j+4)=x4
-            j=j+4
-  701       continue
-          end if
-
-          last=mod(limit,np)
-          left=nran-j
-          if(left.gt.0) goto 10
-        else
-          write(*,*)'ERROR: incorrect initialization in vranf'
-          call abinerror('vranf')
-        end if
+      if (nran > 0 .and. init == 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Incorrect initialization in vranf')
+         return
       end if
-      return
+
+      !  fibonacci generator updates elements of x in a cyclic fashion
+      !  and copies them into ranv in blocks of max. length np.
+      !  loop split into chunks of max. length nq to avoid recurrence.
+
+      if (nran > 0) then
+         j = 0
+         left = nran
+10       continue
+         loop = min(nq, left + last) - last
+
+         do 500 i = last + 1, last + loop
+            x1 = x(i) - x(i + np - nq)
+            if (x1 < zero) x1 = x1 + one
+            x(i) = x1
+            j = j + 1
+            ranv(j) = x1
+  500    continue
+
+         if (last < nratio * nq) then
+            do 650 k = 1, nratio - 1
+               limit = min((k + 1) * nq, left + last)
+               loop = limit - max(k * nq, last)
+
+               do 600 i = max(k * nq, last) + 1, max(k * nq, last) + loop
+                  x1 = x(i) - x(i - nq)
+                  if (x1 < zero) x1 = x1 + one
+                  x(i) = x1
+                  j = j + 1
+                  ranv(j) = x1
+  600      continue
+  650      continue
+         end if
+
+         limit = min(np, left + last)
+         loop = limit - max(nratio * nq, last)
+
+         do 700 i = max(nratio * nq, last) + 1, max(nratio * nq, last) + loop
+            x1 = x(i) - x(i - nq)
+            if (x1 < zero) x1 = x1 + one
+            x(i) = x1
+            j = j + 1
+            ranv(j) = x1
+  700    continue
+
+         last = mod(limit, np)
+         left = nran - j
+         if (left > 0) goto 10
+      end if
       end subroutine vranf
 
 !-----------------------------------------------------------------------
@@ -438,48 +362,50 @@ module mod_random
       integer :: ix, i, k1, j
       logical :: high
 
-      if(nq.ge.np.or.iseed.eq.0) then
-        write(*,*)'illegal seed parameter(s) in xuinit'
-        call abinerror('xuinit')
-      else
-
-!     set table to zero and exercise the bit generator a little
-
-      ix=iabs(iseed)
-      if(ix.ne.0) then
-        do i=1,np
-          x(i)=zero
-          k1=ix/ib
-          ix=ia*(ix-k1*ib)-k1*ic
-          if(ix.lt.0) ix=ix+ip
-        end do
-
-!       assemble np numbers with mantissa length nbit from random bits
-!      'high' toggle compensates for bias from odd ip
-
-        high=.true.
-        do i=1,np
-            add=half
-            do j=1,nbit
-              k1=ix/ib
-              ix=ia*(ix-k1*ib)-k1*ic
-              if(ix.lt.0) ix=ix+ip
-              if(high) then
-                if(ix.ge.iphalf) y(i)=y(i)+add
-                high=.false.
-              else
-                if(ix.gt.iphalf) y(i)=y(i)+add
-                high=.true.
-              end if
-              add=add*half
-            end do
-          end do
-          if(nexec.gt.0) call xuwarm(y, np, nq, mode, nbit*nexec)
-        end if
-        init=ix
-        last=0
+      if (nq >= np .or. iseed == 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Illegal seed parameter(s) in xuinit')
+         return
       end if
-      return
+
+      ! set table to zero and exercise the bit generator a little
+
+      ix = iabs(iseed)
+
+      do i = 1, np
+         x(i) = zero
+         k1 = ix / ib
+         ix = ia * (ix - k1 * ib) - k1 * ic
+         if (ix < 0) ix = ix + ip
+      end do
+
+      !  assemble np numbers with mantissa length nbit from random bits
+      ! 'high' toggle compensates for bias from odd ip
+
+      high = .true.
+      do i = 1, np
+         add = half
+         do j = 1, nbit
+            k1 = ix / ib
+            ix = ia * (ix - k1 * ib) - k1 * ic
+            if (ix < 0) ix = ix + ip
+            if (high) then
+               if (ix >= iphalf) y(i) = y(i) + add
+               high = .false.
+            else
+               if (ix > iphalf) y(i) = y(i) + add
+               high = .true.
+            end if
+            add = add * half
+         end do
+      end do
+
+      if (nexec > 0) then
+         call xuwarm(y, np, nq, mode, nbit * nexec)
+      end if
+
+      init = ix
+      last = 0
       end subroutine xuinit
 
 !-----------------------------------------------------------------------
@@ -505,9 +431,10 @@ module mod_random
       integer, intent(in) :: mode, nexec, np, nq
       integer :: i, k
 
-      if(nq.ge.np.or.np.eq.0.or.nq.eq.0) then
-        write(*,*)'ERROR: illegal table parameter(s)'
-        call abinerror('xuwarm')
+      if (nq.ge.np.or.np.eq.0.or.nq.eq.0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Illegal table parameter(s) in xuwarm')
+         return
       else
 
 !      exercise the generator for nexec rounds of np prn's
@@ -541,7 +468,7 @@ module mod_random
       end subroutine xuwarm
 
 
-      FUNCTION R1MACH()
+      function R1MACH()
       real(DP), parameter :: ONE=1.D0, TWO=2.D0, HALF=0.5D0
       real(DP) :: R1MACH
       real(DP) :: eps
@@ -566,52 +493,230 @@ module mod_random
       RETURN
       END FUNCTION R1MACH
 
+      ! Write PRNG state into opened restart file
+      subroutine write_prng_state(uout)
+         integer, intent(in) :: uout
+         integer :: i
 
-!     ROUTINE RSAVEF, reads or writes the state of the generator
-      subroutine rsavef(iout, lread)
-         use mod_utils, only: abinerror
-         integer,intent(in) :: iout  !where do we write the state
-!         integer,intent(in) :: isave !0=read,1=save
-         logical,intent(out),optional :: lread
-         character(len=*),parameter   :: chprng='PRNG STATE (OPTIONAL)'
-         character(len=50)  :: readstring
-         integer            :: iost,i
-         logical            :: lexist,lopened
+         write (uout,'(A)') chprng
+         write (uout, '(I0,X,I0)') init, last
+         write (uout, '(I0,X,ES24.16E3)') isave, gsave
+         do i = 1, np
+            write (uout, '(ES24.16E3)') x(i)
+         end do
+      end subroutine write_prng_state
 
-         if(present(lread)) lread=.false.
+      ! Read PRNG state from opened restart file
+      subroutine read_prng_state(uin)
+         integer, intent(in) :: uin
+         character(len=len(chprng) + 20) :: readstring
+         integer :: i, iost
 
-         inquire(unit=iout,exist=lexist,opened=lopened)
-         if(lexist.and..not.lopened)then
-            write(*,*)'Unit for PRNG state must be opened! Exiting...'
-            call abinerror('rsavef')
-         end if
-
-         if (present(lread))then
-            read(iout,'(A)',iostat=iost)readstring
-            if(iost /= 0)then
-               write(*,*)'PRNG state not present in restart.xyz. Ignoring...'
-               write(*,*)'Random seed from input parameter file will be used.'
-            else if (chprng.ne.trim(readstring)) then
-               write(*,*)'ERROR: PRNG STATE IN RESTART FILE SEEMS TO BE BROKEN.'
-               write(*,*)'Expected:',chprng
-               write(*,*)'Got',readstring
-               call abinerror('rsavef')
-            else
-               read(iout,*)init,last
-               read(iout,*)isave,gsave
-               do i=1,np
-                  read(iout,*)x(i)
-               end do
-               lread=.true.
-            end if
+         read (uin, '(A)', iostat=iost) readstring
+         ! The assumption here is that the PRNG state is at the
+         ! end of the restart file. It is okay if it is missing,
+         ! we simply use the seed from input file.
+         if (iost /= 0) then
+            write (stderr, *) 'WARNING: PRNG state not present in restart.xyz'
+            write (stderr, *) 'Random seed from input file will be used.'
+         else if (chprng /= trim(adjustl(readstring))) then
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Unexpected line in restart file when trying to read prng state.'//&
+               & new_line('a')//'Expected: '//chprng//&
+               & new_line('a')//'Got: '//trim(adjustl(readstring)))
          else
-            write(iout,'(A)')chprng
-            write(iout,*)init,last
-            write(iout,*)isave,gsave
-            do i=1,np
-               write(iout,*)x(i)
+            read (uin, *) init, last
+            read (uin, *) isave, gsave
+            do i = 1, np
+               read (uin, *) x(i)
             end do
          end if
-      end subroutine rsavef
-           
+      end subroutine read_prng_state
+
 end module mod_random
+
+module mod_prng_init
+   use, intrinsic :: iso_fortran_env, only: INT64
+   use mod_const, only: DP
+   use mod_files, only: stdout, stderr
+   ! We initialize our PRNG via call to gautrg
+   ! with optional seed parameter.
+   use mod_random, only: gautrg
+   implicit none
+   private
+   public :: initialize_prng
+   ! Used in utils/abin-randomint.f90
+   public :: get_random_seed, initialize_fortran_prng, random_ints
+
+contains
+
+   ! PRNG INITIALIZATION
+   ! We want the simulations to be repeatable so we ask the user
+   ! to provide a single random seed. Single random seed is all we need
+   ! to initialize our PRNG implemented in the vranf routine in mod_random.
+   !
+   ! We also allow the user to not provide a seed at all (or provide negative seed),
+   ! in which case we determine it from /dev/urandom.
+   ! We print it to the output so that the simulation can be exactly repeated if needed.
+   ! (in this case repeatability is not possible for REMD).
+   !
+   ! Things get complicated for REMD, where we need to initialize
+   ! nreplica independent prngs, but we still want only a single seed
+   ! from the user, and we want repeatability. We solve this by generating
+   ! additional seeds by a another much more simple PRNG in function lcg(),
+   ! taken from the Gfortran documentation.
+   !
+   ! We also implement additional high-quality integer PRNG, random_ints(),
+   ! which uses the random_number() subroutine, as defined in Fortran standard.
+   ! Unfortunately, we cannot use this routine for deterministic generation of REMD seeds,
+   ! because random_number() itself needs to be seeded by a call to random_seed().
+   ! Here's the kicker: random_seed() in general requires an array of seeds :-(
+   ! https://gcc.gnu.org/onlinedocs/gcc-4.9.4/gfortran/RANDOM_005fSEED.html#RANDOM_005fSEED
+   ! Also, random_number() implementation depends on the compiler,
+   ! so it is not a good fit for out test suite.
+   subroutine initialize_prng(seed, mpi_rank)
+      integer, intent(inout) :: seed
+      integer, intent(in) :: mpi_rank
+      integer(INT64) :: new_seed
+      integer :: i
+      real(DP) :: drans(1)
+
+      write (stdout, *) 'Initializing pseudo-random number generator'
+
+      ! If the user does not provide the seed, or provides negative one,
+      ! we will determine it automatically. Note that the seed is
+      ! passed back so that it can be printed in init.F90
+      if (seed <= 0) then
+         seed = get_random_seed()
+         if (mpi_rank > 0) then
+            write (*, '(A,I0,A,I0)') 'MPI rank = ', mpi_rank, ' Seed = ', seed
+         else
+            write (stdout, '(A,I0,A,I0)') 'MPI rank = ', mpi_rank, ' Seed = ', seed
+         end if
+      end if
+
+      ! Generate different random number seeds for different MPI processes.
+      if (mpi_rank > 0) then
+         new_seed = int(seed, kind(new_seed))
+         do i = 1, mpi_rank
+            new_seed = lcg(new_seed)
+         end do
+         seed = int(new_seed, kind(seed))
+      end if
+
+      ! Initializes PRNG for integers, random_ints(),
+      ! currently not in use in ABIN, but used in utils/abin-randomint.f90
+      call initialize_fortran_prng(seed)
+
+      ! Initialize our custom pseudo-random number generator.
+      ! This call has to happen before we read the restart file,
+      ! to allocate internal arrays.
+      ! If we are restarting, the PRNG state initialized here is overwritten.
+      call gautrg(drans, 0, seed)
+   end subroutine initialize_prng
+
+   ! If the user doesn't provide initial random seed via
+   ! 'irandom' variable in the input file, we will take it
+   ! from unix kernel via /dev/urandom.
+   ! https://linux.die.net/man/4/urandom
+   ! As fallback, we use current date/time and PID.
+   !
+   ! Code taken from:
+   ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
+   !
+   ! For REMD, this will make the seed unique for each replica.
+   ! Unfortunatelly, we don't currently provide a way for a user
+   ! to set custom seed for each replica separately so the approach
+   ! used here makes the REMD simulations non-repeatable.
+   ! To have repeatable REMD simulations, user should provide irandom
+   ! in the input file such that this function is not called.
+   integer function get_random_seed() result(seed)
+      integer :: un, istat
+      integer :: getpid, pid
+      integer, dimension(8) :: dt
+      integer(INT64) :: rate
+      integer(INT64) :: t
+
+      open (newunit=un, file="/dev/urandom", access="stream", &
+         & form="unformatted", action="read", status="old", iostat=istat)
+      if (istat == 0) then
+         write (stdout, *) 'Getting random seed from /dev/urandom'
+         read (un) seed
+         close (un)
+         seed = iabs(seed)
+      else
+         ! Fallback to XOR:ing the current time and pid. The PID is
+         ! useful in case one launches multiple instances of the same
+         ! program in parallel.
+         write (stdout, *) 'Could not open /dev/urandom'//new_line('A')//&
+            & 'Using date and time to get random seed'
+         ! https://gcc.gnu.org/onlinedocs/gfortran/SYSTEM_005fCLOCK.html
+         call system_clock(count=t, count_rate=rate)
+         if (rate == 0) then
+            call date_and_time(values=dt)
+            ! Seconds of Unix time
+            t = (dt(1) - 1970) * 365_INT64 * 24 * 60 * 60 * 1000 &
+                + dt(2) * 31_INT64 * 24 * 60 * 60 * 1000 &
+                + dt(3) * 24_INT64 * 60 * 60 * 1000 &
+                + dt(5) * 60 * 60 * 1000 &
+                + dt(6) * 60 * 1000 + dt(7) * 1000 &
+                + dt(8)
+         end if
+         pid = getpid()
+         seed = int(ieor(t, int(pid, kind(t))))
+         seed = abs(seed)
+      end if
+   end function get_random_seed
+
+   ! Initializing PRNG subroutine random_number() defined in Fortran standard
+   ! https://stackoverflow.com/questions/51893720/correctly-setting-random-seeds-for-repeatability
+   subroutine initialize_fortran_prng(user_seed)
+      integer, intent(in) :: user_seed
+      integer, allocatable :: seeds(:)
+      integer :: i, seed_size
+      integer(INT64) :: s
+      real(DP) :: drans(100)
+
+      call random_seed(size=seed_size)
+      allocate (seeds(seed_size))
+
+      ! We're use a simple PRNG defined below for the initial seed state
+      s = int(user_seed, kind(s))
+      do i = 1, seed_size
+         s = lcg(s)
+         seeds(i) = int(s)
+      end do
+
+      call random_seed(put=seeds)
+      ! Prime the prng by discarding first 100 values
+      call random_number(drans)
+   end subroutine initialize_fortran_prng
+
+   ! PRNG for integers, based on Fortran standard subroutine random_number()
+   ! https://stackoverflow.com/questions/23057213/how-to-generate-integer-random-number-in-fortran-90-in-the-range-0-5
+   subroutine random_ints(iran, n)
+      integer, intent(out) :: iran(:)
+      integer, intent(in) :: n
+      real(DP) :: dran(n)
+
+      call random_number(dran)
+      iran = floor(dran * huge(n))
+   end subroutine random_ints
+
+   ! This simple PRNG might not be good enough for real work, but is
+   ! sufficient for seeding a better PRNG.
+   ! Taken from:
+   ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
+   integer function lcg(s)
+      integer(INT64) :: s
+
+      if (s == 0) then
+         s = 104729
+      else
+         s = mod(s, 4294967296_INT64)
+      end if
+      s = mod(s * 279470273_INT64, 4294967291_INT64)
+      lcg = int(mod(s, int(huge(0), INT64)), kind(0))
+   end function lcg
+
+end module mod_prng_init

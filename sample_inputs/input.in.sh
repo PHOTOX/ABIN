@@ -7,7 +7,7 @@ irest=0,		! should we restart from restart.xyz? (ignoring mini.dat)
 mdtype='sh',		! sh = surface-hopping MD
 nstep=1000,		! number of steps
 dt=20.,			! timestep [au]
-irandom=85631316,  	! random seed
+
 
 nwrite=1,		! how often some output should be printed (estimators etc.)
 nwritex=1,		! how often should we print coordinates?

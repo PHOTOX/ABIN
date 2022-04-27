@@ -126,18 +126,19 @@ end subroutine force_clas
 
 subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_const, only: DP
-   use mod_interfaces, only: force_abin
    use mod_general, only: natom, ipimd
    use mod_water, only: watpot
-   use mod_force_mm, only: force_LJ_Coulomb
+   use mod_force_mm, only: force_mm
    use mod_sbc, only: force_sbc, isbc
    use mod_plumed, only: iplumed, force_plumed
    use mod_potentials, only: force_harmonic_rotor, force_harmonic_oscillator, force_morse, force_doublewell
    use mod_splined_grid, only: force_splined_grid
    use mod_cp2k, only: force_cp2k
+   use mod_shell_interface, only: force_abin
    use mod_force_tera, only: force_tera
    use mod_terampi_sh, only: force_terash
    implicit none
+   external :: force_water
    real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
    real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
    real(DP), intent(out) :: e_pot
@@ -149,9 +150,9 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    ! Here we decide which forces we want.
    ! By default we call an external program in force_abin routine
    select case (chpot)
-   case ("mm")
-      call force_LJ_Coulomb(x, y, z, fx, fy, fz, eclas)
-   case ("mmwater")
+   case ("_mm_")
+      call force_mm(x, y, z, fx, fy, fz, eclas, walkmax)
+   case ("_mmwater_")
       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
    case ("_splined_grid_")
       ! Only 1D spline grid supported at the moment
@@ -174,7 +175,6 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
       end if
    case DEFAULT
       call force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
-      eclas = eclas / walkmax
    end select
 
    ! Spherical harmonic potential
@@ -276,77 +276,3 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, quantum_energy)
    quantum_energy = equant
 end subroutine force_quantum
 
-! Based on:
-! Efficient stochastic thermostatting of path integral molecular dynamics
-! J. Chem. Phys. 133, 124104 ?2010?
-subroutine propagate_nm(x, y, z, px, py, pz, m, dt)
-   use mod_const, only: DP, PI
-   use mod_array_size
-   use mod_general, only: nwalk, natom
-   use mod_nhc, only: temp
-   implicit none
-   real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
-   real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
-   real(DP), intent(in) :: m(:, :), dt
-   real(DP) :: omega(size(x, 2)), omega_n, om, omt, c, s
-   real(DP) :: x_old(size(x, 1), size(x, 2))
-   real(DP) :: y_old(size(x, 1), size(x, 2))
-   real(DP) :: z_old(size(x, 1), size(x, 2))
-   real(DP) :: px_old(size(px, 1), size(px, 2))
-   real(DP) :: py_old(size(px, 1), size(px, 2))
-   real(DP) :: pz_old(size(px, 1), size(px, 2))
-   integer :: iat, iw, k
-
-   ! expecting m = am = physical masses
-
-   x_old = x
-   y_old = y
-   z_old = z
-   px_old = px
-   py_old = py
-   pz_old = pz
-
-   omega_n = TEMP * NWALK
-
-   do iw = 2, nwalk
-      k = iw - 1
-      omega(iw) = 2 * omega_n * sin(k * PI / nwalk)
-   end do
-
-   ! First, propagate centroid
-   iw = 1
-   do iat = 1, natom
-      X(iat, iw) = X(iat, iw) + dt * PX(iat, iw) / M(iat, iw)
-      Y(iat, iw) = Y(iat, iw) + dt * PY(iat, iw) / M(iat, iw)
-      Z(iat, iw) = Z(iat, iw) + dt * PZ(iat, iw) / M(iat, iw)
-   end do
-
-   ! eq 23 from J. Chem. Phys. 133, 124104 2010
-   ! exact propagation of a free ring polymer in normal mode coordinates
-   do iw = 2, nwalk
-      om = omega(iw)
-      omt = omega(iw) * dt
-      c = cos(omt)
-      s = sin(omt)
-      do iat = 1, natom
-         ! Propagate positions
-         x(iat, iw) = x_old(iat, iw) * c &
-                      + px_old(iat, iw) * s / m(iat, iw) / om
-         y(iat, iw) = y_old(iat, iw) * c &
-                      + py_old(iat, iw) * s / m(iat, iw) / om
-         z(iat, iw) = z_old(iat, iw) * c &
-                      + pz_old(iat, iw) * s / m(iat, iw) / om
-
-         ! propagate momenta
-         px(iat, iw) = px_old(iat, iw) * c &
-                       - x_old(iat, iw) * s * m(iat, iw) * om
-         py(iat, iw) = py_old(iat, iw) * c &
-                       - y_old(iat, iw) * s * m(iat, iw) * om
-         pz(iat, iw) = pz_old(iat, iw) * c &
-                       - z_old(iat, iw) * s * m(iat, iw) * om
-
-      end do
-
-   end do
-
-end subroutine propagate_nm

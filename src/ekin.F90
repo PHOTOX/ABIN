@@ -66,6 +66,7 @@ contains
       end if
    end subroutine temperature
 
+   ! WARNING: We assume physical masses here!
    real(DP) function ekin_v(vx, vy, vz)
       use mod_general, only: nwalk, natom
       use mod_system, only: am

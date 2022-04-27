@@ -2,7 +2,7 @@
 nstep=1,
 irest=0,
 
-pot='mmwater'
+pot='_mmwater_'
 mdtype='pimd'
 nwalk=2,
 

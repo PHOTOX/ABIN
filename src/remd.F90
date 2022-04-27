@@ -1,21 +1,26 @@
 ! Temperature Replica-Exchange MD (also known as parallel tempering)
 module mod_remd
+#ifdef USE_MPI
+   use mpi
+   use mod_mpi, only: handle_mpi_error, get_mpi_size, get_mpi_rank
+#endif
    use mod_const, only: DP
+   use mod_files, only: stdout, UREMD
+   use mod_error, only: fatal_error
    implicit none
    private
 
    integer, parameter :: MAX_REPLICA = 50
 
-   public :: remd_init
+   ! Public subroutines
+   public :: remd_init, remd_swap
+   ! Public input parameters, read from namelist 'remd'
    public :: nreplica, nswap, deltaT, Tmax, temp_list
 
 #ifdef USE_MPI
-   public :: remd_swap
-
+   ! Internal variables
    integer :: reps(MAX_REPLICA) = -1
    real(DP) :: ratios_cumul(MAX_REPLICA) = 0.0D0
-   ! Unit of the remd.out output file
-   integer :: UREMD
 #endif
 
    ! Number of replicas
@@ -30,13 +35,12 @@ module mod_remd
    real(DP) :: Tmax = -1
    ! Determine all temperatures manually.
    real(DP) :: temp_list(MAX_REPLICA) = -1
+   save
 
 contains
 
 #ifdef USE_MPI
    subroutine remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
-      use mpi
-      use mod_mpi, only: handle_mpi_error, get_mpi_rank
       use mod_general, only: it
       use mod_random, only: vranf
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
@@ -48,6 +52,7 @@ contains
       integer :: status(MPI_STATUS_SIZE), i
       integer :: my_rank
       logical :: lswap = .false., lswaps(MAX_REPLICA)
+      character(len=100) :: formt
 
       ! Broadcast array of random numbers from rank 0
       my_rank = get_mpi_rank()
@@ -119,18 +124,18 @@ contains
          do i = 1, nreplica - 1
             if (lswaps(i)) ratios_cumul(i) = ratios_cumul(i) + 1.0D0
          end do
-         write (UREMD, *) '==============================================='
-         write (UREMD, *) 'Swaping probabilities: ', (probs(i), i=2, nreplica)
+         write (formt, '("(A,",I0,"F7.4)")') nreplica - 1
+         write (UREMD, '(A)') '===================================='
+         write (UREMD, formt) 'Swaping probabilities: ', (probs(i), i=2, nreplica)
          write (UREMD, *) 'Exchanges: ', (lswaps(i), i=1, nreplica - 1)
-         write (UREMD, *) 'Acceptance ratios', (ratios_cumul(i) * nswap / it, i=1, nreplica - 1)
-         write (UREMD, *) 'ReplicaTravel:', (reps(i), i=1, nreplica)
+         write (UREMD, formt) 'Acceptance ratios', (ratios_cumul(i) * nswap / it, i=1, nreplica - 1)
+         write (formt, '("(A,",I0,"I4)")') nreplica
+         write (UREMD, formt) 'ReplicaTravel:', (reps(i), i=1, nreplica)
       end if
 
    end subroutine remd_swap
 
    subroutine swap_replicas(x, y, z, px, py, pz, fxc, fyc, fzc, rank1, rank2)
-      use mpi
-      use mod_mpi, only: get_mpi_rank
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
       real(DP), intent(inout) :: fxc(:, :), fyc(:, :), fzc(:, :)
@@ -172,7 +177,6 @@ contains
          scal = dsqrt(temp_list(my_rank + 1) / temp_list(my_rank))
       end if
 
-!   write(*,*)'pz ', pz, my_rank
       if (my_rank == rank1) then
          dest = rank2
          call MPI_Send(x, size1 * size2, MPI_DOUBLE_PRECISION, dest, tag_x, MPI_COMM_WORLD, ierr)
@@ -237,29 +241,11 @@ contains
 
    end subroutine swap_replicas
 
-   subroutine remd_init(temp, temp0)
-      use mpi
-      use mod_error, only: fatal_error
+   subroutine check_remd_params()
       use mod_utils, only: int_positive
-      use mod_mpi, only: handle_mpi_error, get_mpi_size, get_mpi_rank
-      use mod_files, only: stdout
-      use mod_const, only: AUTOK
-      use mod_general, only: pot, ipimd, irest
-      real(DP), intent(inout) :: temp, temp0
+      use mod_general, only: pot, ipimd
       character(len=300) :: errormsg
-      real(DP) :: koef
-      integer :: ierr, i
-      integer :: my_rank
 
-      my_rank = get_mpi_rank()
-
-      if (irest == 0) then
-         open (newunit=UREMD, file='remd.out', action='write', access='sequential')
-      else
-         open (newunit=UREMD, file='remd.out', action='write', access='append')
-      end if
-
-      ! Sanity checks
       call int_positive(nswap, 'nswap')
 
       if (nreplica > MAX_REPLICA) then
@@ -300,8 +286,22 @@ contains
          call fatal_error(__FILE__, __LINE__, &
             & 'Number of MPI processes does not match number of REMD replicas.')
       end if
+   end subroutine check_remd_params
 
-      write (stdout, *) 'Number of REMD replicas: ', nreplica
+   subroutine remd_init(temp, temp0)
+      use mod_const, only: AUTOK
+      real(DP), intent(inout) :: temp, temp0
+      character(len=300) :: errormsg
+      real(DP) :: koef
+      integer :: ierr, i
+      integer :: my_rank
+
+      my_rank = get_mpi_rank()
+
+      ! Sanity checks
+      call check_remd_params()
+
+      write (stdout, '(A,I0)') 'Number of REMD replicas: ', nreplica
 
       ! Set the temperatures
       if (deltaT > 0) then
@@ -309,7 +309,6 @@ contains
          if (temp0 > 0) temp0 = temp0 + my_rank * deltaT
       else if (Tmax > 0) then
          koef = (Tmax / temp)**(1.D0 / (nreplica - 1))
-         write (*, *) 'koeff', koef
          temp = temp * koef**my_rank
          if (temp0 > 0) temp0 = temp0 * koef**my_rank
       end if
@@ -325,20 +324,14 @@ contains
          call fatal_error(__FILE__, __LINE__, errormsg)
       end if
 
-      ! not sure about this
-      deltaT = deltaT / AUTOK
-
       call MPI_AllGather(temp, 1, MPI_DOUBLE_PRECISION, temp_list, 1, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, ierr)
       call handle_mpi_error(ierr)
-      if (my_rank == 0) then
-         do i = 1, nreplica
-            write (UREMD, '(A,I0,A,F8.2)') 'Temperature of replica ', i - 1, ' is ', temp_list(i)
-         end do
-      end if
+      do i = 1, nreplica
+         write (stdout, '("Temperature of replica ",I0," is ",F6.2," K")') i - 1, temp_list(i)
+      end do
       temp_list = temp_list / AUTOK
 
       reps(my_rank + 1) = my_rank
-
    end subroutine remd_init
 
 #else
@@ -349,6 +342,19 @@ contains
       temp = 0.0D0; temp0 = 0.0D0
       call not_compiled_with('MPI')
    end subroutine remd_init
+
+   subroutine remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
+      use mod_error, only: not_compiled_with
+      real(DP), dimension(:, :), intent(inout) :: x, y, z, px, py, pz, fxc, fyc, fzc
+      real(DP), intent(inout) :: eclas
+
+      ! Assignments to squash compiler warnings
+      x = 0.0D0; y = 0.0D0; z = 0.0D0
+      px = 0.0D0; py = 0.0D0; pz = 0.0D0
+      fxc = 0.0D0; fyc = 0.0D0; fzc = 0.0D0
+      eclas = 0.0D0
+      call not_compiled_with('MPI')
+   end subroutine remd_swap
 
 ! USE_MPI
 #endif

@@ -3,6 +3,7 @@ module test_gle
    use funit
    use mod_gle_private
    use mod_const, only: DP
+   use mod_utils, only: del_file
    implicit none
 
 contains
@@ -26,7 +27,7 @@ contains
             @assertEqual(S(i, j), Sread(i, j), 'S matrix elements')
          end do
       end do
-      call system('rm GLE-S.bin')
+      call del_file('GLE-S.bin')
    end subroutine test_write_read_propagator
 
    @test
@@ -47,7 +48,7 @@ contains
       call read_propagator(dt, ns + 1, 'GLE-S.bin', Sread)
       @assertExceptionRaised('ns read from file GLE-S.bin does not match')
 
-      call system('rm GLE-S.bin')
+      call del_file('GLE-S.bin')
    end subroutine test_read_propagator_errors
 
    @test
@@ -68,7 +69,7 @@ contains
       ns_read = read_ns('GLE-TEST')
       @assertExceptionRaised('Could not read ns from the first line of file GLE-TEST')
 
-      call system('rm GLE-TEST')
+      call del_file('GLE-TEST')
    end subroutine test_read_ns
 
    @test

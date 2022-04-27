@@ -276,9 +276,8 @@ contains
       call MPI_SSend(bufints, nstate * (nstate - 1) / 2 + nstate, MPI_INTEGER, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
-      ! temporary hack
-      bufdoubles(1) = sim_time ! * AUtoFS !* dt
       ! Send Time
+      bufdoubles(1) = sim_time
       call MPI_Send(bufdoubles, 1, MPI_DOUBLE_PRECISION, 0, TC_TAG, tc_comm, ierr)
       call handle_mpi_error(ierr)
 
@@ -431,15 +430,11 @@ contains
    subroutine write_wfn()
       use mod_general, only: it, sim_time, narchive
       use mod_sh_integ, only: nstate
-      use mod_utils, only: archive_file
+      use mod_utils, only: rename_file, archive_file
       character(len=*), parameter :: fname = 'wfn.bin'
-      logical :: file_exists
       integer :: uwfn
 
-      inquire (FILE=fname, EXIST=file_exists)
-      if (file_exists) then
-         call system('mv '//fname//' '//fname//'.old')
-      end if
+      call rename_file(fname, fname//'.old')
 
       open (newunit=uwfn, file=fname, action='write', status="new", access="sequential", form="unformatted")
 

@@ -3,7 +3,8 @@
 ! TODO: Separate restart to its own module
 module mod_analysis
    use mod_const, only: DP
-   use mod_files
+   use mod_files, only: stderr, stdout, UMOVIE, UFORCE
+   use mod_utils, only: append_rank
    implicit none
    private
    public :: trajout, restout, analysis, restin
@@ -19,7 +20,7 @@ module mod_analysis
 contains
 
    ! Contains all analysis stuff
-   subroutine analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas, equant)
+   subroutine analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas)
       use mod_analyze_ext, only: analyze_ext
       use mod_estimators, only: estimators
       use mod_general, only: it, ipimd, icv, nwrite, nwritef, nwritev, &
@@ -33,13 +34,7 @@ contains
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: fxc(:, :), fyc(:, :), fzc(:, :)
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
-      real(DP), intent(in) :: eclas, equant
-      real(DP) :: energy
-
-      ! eclas is the ab initio energy averaged per bead,
-      ! equant is additional harmonic energy between PI beads (from force_quantum)
-      ! TODO: Print equant or energy somewhere
-      energy = eclas + equant
+      real(DP), intent(in) :: eclas
 
       if (modulo(it, nwrite) == 0 .and. idebug > 0) then
          call remove_rotations(x, y, z, vx, vy, vz, am, .false.)
@@ -55,7 +50,7 @@ contains
 
       if (nwritev > 0) then
          if (modulo(it, nwritev) == 0) then
-            call velout(vx, vy, vz)
+            call velout(vx, vy, vz, it)
          end if
       end if
 
@@ -83,53 +78,43 @@ contains
 
       if (anal_ext == 1) then
          ! Custom analysis function, see analyze_ext_template.F90
-         call analyze_ext()
+         call analyze_ext(it)
       end if
 
    end subroutine analysis
 
-   ! TODO: move these subroutines to io.F90
    subroutine trajout(x, y, z, time_step)
       use mod_const, only: ANG
       use mod_files, only: UMOVIE
-      use mod_general, only: nwalk, natom, iremd, sim_time
+      use mod_general, only: nwalk, natom, sim_time
       use mod_mpi, only: get_mpi_rank
       use mod_system, only: names
       implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: time_step
       integer :: iat, iw
-      integer :: my_rank
       character(len=20) :: chout
       logical :: lopened
 
-      my_rank = get_mpi_rank()
-
       inquire (UMOVIE, opened=lopened)
-
       if (.not. lopened) then
-         chout = 'movie.xyz'
-         if (iremd == 1) write (chout, '(A,I2.2)') trim(chout)//'.', my_rank
+         chout = append_rank('movie.xyz')
          open (UMOVIE, file=chout, access='append', action="write")
       end if
-
-      ! printing with slightly lower precision for saving space
-      ! could be probably much lower
-10    format(A2, 3E18.8E2)
 
       do iw = 1, nwalk
          write (UMOVIE, *) natom
          ! In the future, we should get rid of the time step?
          write (UMOVIE, '(A10,I20,A15,F15.2)') 'Time step:', time_step, ' Sim. Time [au]', sim_time
          do iat = 1, natom
-            write (UMOVIE, 10) names(iat), x(iat, iw) / ANG, y(iat, iw) / ANG, z(iat, iw) / ANG
+            ! printing with slightly lower precision for saving space
+            write (UMOVIE, '(A2,3E18.8E2)') names(iat), x(iat, iw) / ANG, y(iat, iw) / ANG, z(iat, iw) / ANG
          end do
       end do
-
    end subroutine trajout
 
    subroutine forceout(x, y, z, fx, fy, fz, fUNIT)
-      use mod_general, only: nwalk, natom !, it
+      use mod_general, only: nwalk, natom
       use mod_system, only: names
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: fx(:, :), fy(:, :), fz(:, :)
@@ -137,7 +122,6 @@ contains
       real(DP) :: fx_tot, fy_tot, fz_tot
       real(DP) :: fx_rot, fy_rot, fz_rot
       integer :: iat, iw
-      character(len=40) :: fgeom, fkom
 
       ! Calculate net translational and rotational gradient (should be close to zero)
       fx_tot = 0.0D0; fy_tot = 0.0D0; fz_tot = 0.0D0
@@ -154,10 +138,7 @@ contains
          end do
       end do
 
-      fgeom = '(A2,3E18.10E2)'
-      fkom = '(A10,3E13.5E2,A14,3E13.5E2)'
-
-      ! TODO: Include somehow the timestep in the output
+      ! TODO: Include the timestep in the output
       ! Either here:
       ! write(funit, *)natom, it
       ! or maybe better here
@@ -165,43 +146,42 @@ contains
       !                & 'net force:',fx_tot,fy_tot,fz_tot, &
       !                & 'torque force:',fx_rot,fy_rot,fz_rot
       write (funit, *) natom
-      write (funit, fkom) 'net force:', fx_tot, fy_tot, fz_tot, &
-                        & ' torque force:', fx_rot, fy_rot, fz_rot
+      write (funit, '(A10,3E13.5E2,A14,3E13.5E2)') &
+         & 'net force:', fx_tot, fy_tot, fz_tot, &
+         & ' torque force:', fx_rot, fy_rot, fz_rot
+
       do iw = 1, nwalk
          do iat = 1, natom
             ! Printing in atomic units
-            write (funit, fgeom) names(iat), fx(iat, iw), fy(iat, iw), fz(iat, iw)
+            write (funit, '(A2,3E18.10E2)') names(iat), fx(iat, iw), fy(iat, iw), fz(iat, iw)
          end do
       end do
-
    end subroutine forceout
 
-   subroutine velout(vx, vy, vz)
-      use mod_general, only: nwalk, natom, it
+   subroutine velout(vx, vy, vz, time_step)
+      use mod_general, only: nwalk, natom
       use mod_system, only: names
       use mod_files, only: UVELOC
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
+      integer, intent(in) :: time_step
       integer :: iat, iw
-      character(len=20) :: fgeom
 
-      fgeom = '(A2,3E18.10E2)'
-      write (UVELOC, *) natom
-      write (UVELOC, *) 'Time step:', it
+      write (UVELOC, '(I0)') natom
+      write (UVELOC, '(A,I0)') 'Time step: ', time_step
 
       do iw = 1, nwalk
          do iat = 1, natom
             ! Printing in atomic units
-            write (UVELOC, fgeom) names(iat), vx(iat, iw), vy(iat, iw), vz(iat, iw)
+            write (UVELOC, '(A2,3E18.10E2)') names(iat), vx(iat, iw), vy(iat, iw), vz(iat, iw)
          end do
       end do
-
    end subroutine velout
 
    subroutine restout(x, y, z, vx, vy, vz, time_step)
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
-                             iremd, pot, narchive, sim_time
+                             pot, narchive, sim_time
       use mod_mpi, only: get_mpi_rank
-      use mod_utils, only: archive_file
+      use mod_utils, only: rename_file, archive_file, append_rank
       use mod_nhc, only: inose, nhc_restout
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
@@ -209,112 +189,99 @@ contains
       use mod_sh, only: write_nacmrest, istate
       use mod_lz, only: lz_restout
       use mod_gle, only: gle_restout, pile_restout
-      use mod_random
+      use mod_random, only: write_prng_state
       use mod_terampi_sh, only: write_wfn
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(in) :: time_step
-      integer :: iat, iw
-      integer :: my_rank
-      logical :: file_exists
-      character(len=200) :: chout, chsystem
+      integer :: iw, my_rank, urest
+      character(len=200) :: chout
 
       my_rank = get_mpi_rank()
 
-      if (pot == '_tera_' .and. ipimd == 2) then
+      if (pot == '_tera_' .and. &
+         & (ipimd == 2 .or. ipimd == 5)) then
          call write_wfn()
       end if
-      if (pot == '_tera_' .and. ipimd == 5) then
-         call write_wfn()
-      end if
 
-      if (iremd == 1) then
-         write (chout, '(A,I2.2)') 'restart.xyz.', my_rank
-      else
-         chout = 'restart.xyz'
-      end if
+      chout = append_rank('restart.xyz')
+      call rename_file(chout, trim(chout)//'.old')
 
-      inquire (FILE=chout, EXIST=file_exists)
-      if (file_exists) then
-         chsystem = 'cp '//trim(chout)//'  '//trim(chout)//'.old'
-         if (iremd == 1) then
-            call system(chsystem)
-         else if (my_rank == 0) then
-            call system(chsystem)
-         end if
-      end if
+      open (newunit=urest, file=chout, action='write')
 
-      ! open(102, file=chout, action='WRITE',recl=250)
-      ! intel compilers don't write too many columns on single line
-      open (102, file=chout, action='WRITE')
+      write (urest, '(I0,X,ES24.16E3)') time_step, sim_time
 
-      write (102, *) time_step, sim_time
+      write (urest, *) chcoords
+      call write_xyz(x, y, z, natom, nwalk, urest)
 
-      write (102, *) chcoords
-      do iw = 1, nwalk
-         do iat = 1, natom
-            write (102, *) x(iat, iw), y(iat, iw), z(iat, iw)
-         end do
-      end do
-
-      write (102, *) chvel
-
-      do iw = 1, nwalk
-         do iat = 1, natom
-            write (102, *) vx(iat, iw), vy(iat, iw), vz(iat, iw)
-         end do
-      end do
+      write (urest, *) chvel
+      call write_xyz(vx, vy, vz, natom, nwalk, urest)
 
       if (ipimd == 2) then
          call write_nacmrest()
-         write (102, *) chSH
-         write (102, *) istate
-         call sh_write_wf(102)
+         write (urest, *) chSH
+         write (urest, *) istate
+         call sh_write_wf(urest)
       end if
 
       if (ipimd == 5) then
-         write (102, *) chLZ
-         call lz_restout(102)
+         write (urest, *) chLZ
+         call lz_restout(urest)
       end if
 
       if (inose == 1) then
-         write (102, *) chnose
-         call nhc_restout(102)
+         write (urest, *) chnose
+         call nhc_restout(urest)
       end if
 
       if (inose == 2 .or. inose == 4) then
-         write (102, *) chQT
-         call gle_restout(102)
+         write (urest, *) chQT
+         call gle_restout(urest)
       end if
       if (inose == 3) then
-         write (102, *) chLT
-         call pile_restout(102)
+         write (urest, *) chLT
+         call pile_restout(urest)
       end if
 
-      write (102, *) chAVG
-      write (102, *) est_temp_cumul
-      write (102, *) est_prim_cumul, est_vir_cumul
-      write (102, *) entot_cumul
+      write (urest, *) chAVG
+      write (urest, '(ES24.16E3)') est_temp_cumul
+      write (urest, '(2ES25.16E3)') est_prim_cumul, est_vir_cumul
+      write (urest, '(ES24.16E3)') entot_cumul
 
       if (icv == 1) then
-         write (102, '(3E25.16)') est_prim2_cumul, est_prim_vir, est_vir2_cumul
-         write (102, '(2E25.16)') cv_prim_cumul, cv_vir_cumul
+         write (urest, '(3ES25.16E3)') est_prim2_cumul, est_prim_vir, est_vir2_cumul
+         write (urest, '(2ES25.16E3)') cv_prim_cumul, cv_vir_cumul
          if (ihess == 1) then
-            write (102, *) cv_dcv_cumul
+            write (urest, '(ES24.16E3)') cv_dcv_cumul
             do iw = 1, nwalk
-               write (102, *) cvhess_cumul(iw)
+               write (urest, '(ES24.16E3)') cvhess_cumul(iw)
             end do
          end if
       end if
 
       ! write current state of PRNG
-      call rsavef(102)
+      call write_prng_state(urest)
 
-      close (102)
+      close (urest)
 
       if (modulo(time_step, narchive) == 0) then
          call archive_file('restart.xyz', time_step)
       end if
+
+   contains
+
+      subroutine write_xyz(x, y, z, natom, nwalk, urest)
+         real(DP), dimension(:, :), intent(in) :: x, y, z
+         integer, intent(in) :: natom, nwalk
+         integer, intent(in) :: urest
+         integer :: iat, iw
+
+         do iw = 1, nwalk
+            do iat = 1, natom
+               write (urest, '(3ES25.16E3)') x(iat, iw), y(iat, iw), z(iat, iw)
+            end do
+         end do
+      end subroutine write_xyz
 
    end subroutine restout
 
@@ -322,7 +289,7 @@ contains
    ! It is called from subroutine init.
    subroutine restin(x, y, z, vx, vy, vz, it)
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
-                             iremd, pot, sim_time
+                             pot, update_simtime
       use mod_nhc, only: readNHC, inose, nhc_restin
       use mod_mpi, only: get_mpi_rank
       use mod_estimators
@@ -331,104 +298,87 @@ contains
       use mod_sh, only: write_nacmrest, istate
       use mod_lz, only: lz_restin
       use mod_gle, only: gle_restin, pile_restin
-      use mod_random
+      use mod_random, only: read_prng_state
       use mod_terampi_sh, only: read_wfn
       real(DP), intent(out) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(out) :: it
-      integer :: iat, iw
-      integer :: my_rank
+      real(DP) :: sim_time
+      integer :: iw, urest
       character(len=100) :: chtemp
-      logical :: prngread
-      character(len=20) :: chin
+      character(len=50) :: chin
 
-      my_rank = get_mpi_rank()
-      prngread = .false.
+      chin = append_rank('restart.xyz')
 
-      if (iremd == 1) then
-         write (chin, '(A,I2.2)') 'restart.xyz.', my_rank
-      else
-         chin = 'restart.xyz'
-      end if
+      write (stdout, *) 'irest=1: Reading geometry, velocities and other information from '//chin
 
-      if (my_rank == 0) then
-         write (*, *) 'irest=1, Reading geometry, velocities and other information from restart.xyz'
-      end if
+      open (newunit=urest, file=chin, status="old", action="read")
+      read (urest, *) it, sim_time
+      call update_simtime(sim_time)
 
-      open (111, file=chin, status="OLD", action="READ")
-      read (111, *) it, sim_time
-      read (111, '(A)') chtemp
+      read (urest, '(A)') chtemp
       call checkchar(chtemp, chcoords)
-      do iw = 1, nwalk
-         do iat = 1, natom
-            read (111, *) x(iat, iw), y(iat, iw), z(iat, iw)
-         end do
-      end do
+      call read_xyz(x, y, z, natom, nwalk, urest)
 
-      read (111, '(A)') chtemp
+      read (urest, '(A)') chtemp
       call checkchar(chtemp, chvel)
-      do iw = 1, nwalk
-         do iat = 1, natom
-            read (111, *) vx(iat, iw), vy(iat, iw), vz(iat, iw)
-         end do
-      end do
+      call read_xyz(vx, vy, vz, natom, nwalk, urest)
 
       if (ipimd == 2) then
-         read (111, '(A)') chtemp
+         read (urest, '(A)') chtemp
          call checkchar(chtemp, chsh)
-         read (111, *) istate
-         call sh_read_wf(111)
+         read (urest, *) istate
+         call sh_read_wf(urest)
       end if
 
       if (ipimd == 5) then
-         read (111, '(A)') chtemp
+         read (urest, '(A)') chtemp
          call checkchar(chtemp, chlz)
-         call lz_restin(111, x, y, z, vx, vy, vz)
+         call lz_restin(urest, x, y, z, vx, vy, vz)
       end if
 
       if (inose == 1 .and. readNHC) then
-         read (111, '(A)') chtemp
+         read (urest, '(A)') chtemp
          call checkchar(chtemp, chnose)
-         call nhc_restin(111)
+         call nhc_restin(urest)
       end if
 
       if (inose == 2 .or. inose == 4) then
-         read (111, '(A)') chtemp
+         read (urest, '(A)') chtemp
          call checkchar(chtemp, chqt)
-         call gle_restin(111)
+         call gle_restin(urest)
       end if
 
       if (inose == 3) then
-         read (111, '(A)') chtemp
+         read (urest, '(A)') chtemp
          call checkchar(chtemp, chLT)
-         call pile_restin(111)
+         call pile_restin(urest)
       end if
 
       ! reading cumulative averages of various estimators
-      read (111, '(A)') chtemp
+      read (urest, '(A)') chtemp
       call checkchar(chtemp, chavg)
-      read (111, *) est_temp_cumul
-      read (111, *) est_prim_cumul, est_vir_cumul
-      read (111, *) entot_cumul
+      read (urest, *) est_temp_cumul
+      read (urest, *) est_prim_cumul, est_vir_cumul
+      read (urest, *) entot_cumul
 
       if (icv == 1) then
-         read (111, *) est_prim2_cumul, est_prim_vir, est_vir2_cumul
-         read (111, *) cv_prim_cumul, cv_vir_cumul
+         read (urest, *) est_prim2_cumul, est_prim_vir, est_vir2_cumul
+         read (urest, *) cv_prim_cumul, cv_vir_cumul
          if (ihess == 1) then
-            read (111, *) cv_dcv_cumul
+            read (urest, *) cv_dcv_cumul
             do iw = 1, nwalk
-               read (111, *) cvhess_cumul(iw)
+               read (urest, *) cvhess_cumul(iw)
             end do
          end if
       end if
 
-      ! Trying to restart PRNG
-      ! prngread is optional argument determining, whether we write or read
-      ! currently,prngread is not used, since vranf is initialize BEFORE restart
-      ! and is possibly rewritten here
-      call rsavef(111, prngread)
+      ! Read PRNG state (optional)
+      ! By now, PRNG is already initialized, so if the state
+      ! is not found in the restart file, we simply march on.
+      call read_prng_state(urest)
 
-      close (111)
+      close (urest)
 
       if (pot == '_tera_' .and. ipimd == 2) then
          call read_wfn()
@@ -440,16 +390,28 @@ contains
    contains
 
       subroutine checkchar(chin, chref)
-         use mod_utils, only: abinerror
-         character(len=*) :: chin, chref
+         use mod_error, only: fatal_error
+         character(len=*), intent(in) :: chin, chref
 
          if (trim(adjustl(chin)) /= trim(chref)) then
-            write (*, *) 'ERROR while reading from restart.xyz.'
-            write (*, *) 'I read: ', chin
-            write (*, *) 'but expected: ', chref
-            call abinerror('restin')
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Invalid restart file restart.xyz'//new_line('a')//&
+               & 'I read "'//trim(adjustl(chin))//'" but expected "'//trim(chref)//'"')
          end if
       end subroutine checkchar
+
+      subroutine read_xyz(x, y, z, natom, nwalk, urest)
+         real(DP), dimension(:, :), intent(out) :: x, y, z
+         integer, intent(in) :: natom, nwalk
+         integer, intent(in) :: urest
+         integer :: iat, iw
+
+         do iw = 1, nwalk
+            do iat = 1, natom
+               read (urest, '(3ES25.16E3)') x(iat, iw), y(iat, iw), z(iat, iw)
+            end do
+         end do
+      end subroutine read_xyz
 
    end subroutine restin
 

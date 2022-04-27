@@ -110,7 +110,7 @@ function clean {
 # List of all possible ABIN output files.
 # Used by `make testclean` to cleanup test directories.
 output_files=( *.dat *.out ERROR movie.xyz forces.xyz velocities.xyz
-geom.dat.??? geom_mm.dat.??? geom.mini.xyz nacmrest.dat.?? geom.?.?.? bck.* DYN/OUT* MM/OUT*
+geom.dat.??? geom_mm.dat.??? geom.mini.xyz nacmrest.dat.?? geom.?.?.? bck.*
 restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz )
 
 # Run all tests
@@ -119,10 +119,10 @@ if [[ $TESTS = "all" ]];then
             SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
             SH_BUTCHER_PHASE SH_SIMPLE_RESCALE SH_FRUSTRATED \
             LZ_SS LZ_ST LZ_ENE \
-            PIMD ABINITIO MTS \
+            PIMD ABINITIO ABINITIO-FAIL MTS \
             LANGEVIN QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
-            HARMON MORSE DOUBLEWELL SPLINE MINI QMMM \
-            ANALYZE_EXT CMDLINE WATER_FAIL)
+            HARMON MORSE DOUBLEWELL SPLINE MM MINI QMMM \
+            ANALYZE_EXT CMDLINE WATER_FAIL ERMD)
 
    if [[ $MPI = "TRUE" ]];then
       let index=${#folders[@]}+1

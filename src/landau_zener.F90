@@ -10,13 +10,14 @@
 
 module mod_lz
    use mod_const, only: DP
-   use mod_utils, only: abinerror
+   use mod_error, only: fatal_error
+   use mod_files, only: stdout, stderr
    use mod_general, only: nwalk, pot, irest
    use mod_array_size, only: NSTMAX
    use mod_sh, only: istate_init, istate, inac !TERA-MPI interface
    use mod_sh_integ, only: nstate
    implicit none
-   !private
+   private
    public :: lz_init, lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize !Routines
    public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz !User defined variables
    public :: en_array_lz, tocalc_lz, istate_lz !Routine variables
@@ -28,7 +29,7 @@ module mod_lz
    integer :: initstate_lz = 1
    integer :: tocalc_lz(NSTMAX)
    integer :: nstate_lz, nsinglet_lz = 0, ntriplet_lz = 0
-   integer :: calcsoc_lz = 0
+   !integer :: calcsoc_lz = 0
 
    !Module variables
    integer :: istate_lz
@@ -83,8 +84,6 @@ contains
       use mod_random, only: vranf
       use mod_kinetic, only: ekin_v
       use mod_interfaces, only: force_clas
-      use mod_utils, only: abinerror
-      !use mod_files,    ONLY: MAXUNITS
       use mod_system, only: am
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
@@ -102,7 +101,7 @@ contains
       integer :: ist ! =istate_lz
       real(DP) :: Ekin, Epot, Epot2, dE, hop_rdnum, hop_rdnum2, vel_rescale, stepfs, molveloc, grad_diff
       real(DP) :: one = 1.0D0
-      character(len=100) :: formt, fmt_in, fmt_out !, chSOC='SOC.dat'
+      character(len=100) :: formt, fmt_in, fmt_out
 
       !TODO: energy drift
       call check_energy_lz(en_array_lz, istate_lz, energydifthr_lz)
@@ -138,15 +137,16 @@ contains
             prob(ist1) = exp(-PI / 2 * (dsqrt(en_diff(2)**3 / second_der)))
             write (fmt_in, '(I2.2)') ist
             write (fmt_out, '(I2.2)') ist1
-            write (*, *) "Three-point minimum (", trim(fmt_in), "->", trim(fmt_out), &
+            write (stdout, *) "Three-point minimum (", trim(fmt_in), "->", trim(fmt_out), &
                ") dE/a.u.", en_diff(2), "Probability:", prob(ist1)
             if (prob(ist1) > 1) then
-               call abinerror('landau_zener_prob')
+               write (stderr, *) prob
+               call fatal_error(__FILE__, __LINE__, 'LZ probability > 1')
             end if
 
          end if
       end do
-      !write(*,*) "diff1",en_diff(1),"diff2",en_diff(2),"diff3",en_diff(3)
+      !write(stdout,*) "diff1",en_diff(1),"diff2",en_diff(2),"diff3",en_diff(3)
 
       !Hop?
       ihop = 0
@@ -160,7 +160,7 @@ contains
             prob2(ist1) = prob(ist1) !All probable hops
          else if (prob(ist1) > 0) then
             write (fmt_in, '(I2.2)') ist1
-            write (*, *) "NO hop on state ", trim(fmt_in), ", Random n:", hop_rdnum
+            write (stdout, *) "NO hop on state ", trim(fmt_in), ", Random n:", hop_rdnum
          end if
       end do
 
@@ -175,7 +175,7 @@ contains
                ihop = ist1
             else if (prob2(ist1) > 0) then
                write (fmt_in, '(I2.2)') ist1
-               write (*, *) "NO hop on state ", trim(fmt_in), ", Random n2:", hop_rdnum2
+               write (stdout, *) "NO hop on state ", trim(fmt_in), ", Random n2:", hop_rdnum2
             end if
          end do
       end if
@@ -190,7 +190,7 @@ contains
          ! Energy conservation criteria
          if ((dE < Ekin) .and. (abs(Epot2 * AUTOEV) < deltaE_lz)) then
             !HOP
-            write (*, *) "Adiabatic HOP! (", trim(fmt_in), "->", trim(fmt_out), ") dE/a.u.", Epot2, &
+            write (stdout, *) "Adiabatic HOP! (", trim(fmt_in), "->", trim(fmt_out), ") dE/a.u.", Epot2, &
                "Random n:", hop_rdnum
             !We need to get to previous geometry, adjust its velocity according to
             !target state and do 1 step forward on the new state
@@ -236,7 +236,7 @@ contains
             en_array_lz(:, 3) = en_array_lz_backup(:, 3)
 
          else
-            write (*, *) "NO adiabatic HOP (", trim(fmt_in), "->", trim(fmt_out), ")dE/a.u.", Epot2, &
+            write (stdout, *) "NO adiabatic HOP (", trim(fmt_in), "->", trim(fmt_out), ")dE/a.u.", Epot2, &
                "Probability:", prob(ihop), "Random n:", hop_rdnum
          end if
 
@@ -281,13 +281,15 @@ contains
                write (fmt_in, '(I2.2)') ist
                write (fmt_out, '(I2.2)') ist1
                if (S_to_T == 1) then
-                  write (*, *) "S/T CROSS (", trim(fmt_in), "->", trim(fmt_out), ") SOC^2: ", soc_matrix(ist, ist1 - nsinglet_lz)
+                  write (stdout, *) "S/T CROSS (", trim(fmt_in), "->", trim(fmt_out), &
+                    &  ") SOC^2: ", soc_matrix(ist, ist1 - nsinglet_lz)
                   prob(ist1) = 1 - exp(-2 * PI * ((soc_matrix(ist, ist1 - nsinglet_lz) / (AUTOCM**2)) / grad_diff))
-                  write (*, *) "Hop probability: ", prob(ist1)
+                  write (stdout, *) "Hop probability: ", prob(ist1)
                else if (S_to_T == 0) then
-                  write (*, *) "T/S CROSS (", trim(fmt_in), "->", trim(fmt_out), ") SOC^2: ", soc_matrix(ist1, ist - nsinglet_lz)
+                  write (stdout, *) "T/S CROSS (", trim(fmt_in), "->", trim(fmt_out), &
+                     & ") SOC^2: ", soc_matrix(ist1, ist - nsinglet_lz)
                   prob(ist1) = 1 - exp(-2 * PI * ((soc_matrix(ist1, ist - nsinglet_lz) / (AUTOCM**2)) / grad_diff))
-                  write (*, *) "Hop probability: ", prob(ist1)
+                  write (stdout, *) "Hop probability: ", prob(ist1)
                end if
             end if
          end do
@@ -307,7 +309,7 @@ contains
             Epot2 = abs(en_array_lz(istate_lz, 2) - en_array_lz(icross, 2))
             write (fmt_in, '(I2.2)') istate_lz
             write (fmt_out, '(I2.2)') icross
-            write (*, *) "Nonadiabatic (S/T) HOP! (", trim(fmt_in), "->", trim(fmt_out), ")dGrad/a.u.", grad_diff, &
+            write (stdout, *) "Nonadiabatic (S/T) HOP! (", trim(fmt_in), "->", trim(fmt_out), ")dGrad/a.u.", grad_diff, &
                "MolVeloc", molveloc, "Probability:", prob(icross), "Random n:", hop_rdnum
             istate_lz = icross
             !Get new forces
@@ -362,14 +364,14 @@ contains
    end subroutine lz_hop
 
    subroutine lz_getsoc(soc_matrix, chpot)
-      use mod_utils, only: abinerror, toupper
-      use mod_files, only: MAXUNITS
+      use mod_utils, only: toupper
 
       real(DP), intent(inout) :: soc_matrix(:, :)
       character(len=*), intent(in) :: chpot
 
-      integer :: itest, iost, ISTATUS, system, row, col
-      character(len=20) :: chSOC = 'SOC.dat'
+      integer :: iost, istatus, icmd, row, col
+      integer :: soc_unit
+      character(len=*), parameter :: chSOC = 'SOC.dat'
       character(len=100) :: chsystem
       logical :: file_exists
 
@@ -378,51 +380,45 @@ contains
 
       inquire (FILE=chsystem, EXIST=file_exists)
       if (.not. file_exists) then
-         write (*, *) 'File ', chsystem
-         write (*, *) 'does not exist! Exiting...'
-         call abinerror('force_abin')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'File '//trim(chsystem)//' does not exist!')
       end if
 
-      write (chsystem, '(A30,I4.3)') chsystem, 1 !iw
-      write (chsystem, '(A40,A14)') chsystem, ' < ./state.dat'
-      !CALL TO SYSTEM
-      ISTATUS = system(chsystem)
-      if (ISTATUS /= 0 .and. ISTATUS /= 256) then
-         write (*, *) 'ERROR: Something went wrong during the execution of the ab initio external program.'
-         write (*, *) 'See the approprite output files in&
-         & folder '//trim(toupper(chpot))//"/"
-         write (*, *) 'CALL:', chsystem
-         call abinerror('force_abin')
+      write (chsystem, '(A,I4.3)') trim(chsystem)//" ", 1 !iw
+      chsystem = trim(chsystem)//' < ./state.dat'
+      call execute_command_line(trim(chsystem), exitstat=istatus, cmdstat=icmd)
+      if (icmd /= 0 .or. istatus /= 0) then
+         write (stderr, *) 'ERROR: Something went wrong during the execution of the ab initio external program.'
+         write (stderr, *) 'Inspect the output files in folder '//trim(toupper(chpot))//"/"
+         write (stderr, *) 'CALL:', chsystem
+         call fatal_error(__FILE__, __LINE__, 'Could not compute SOC matrix')
       end if
 
-      !make sure that the file exist and flush the disc buffer
-      itest = 0
+      ! make sure that the file exist and flush the disc buffer
       inquire (FILE=chSOC, EXIST=file_exists)
-      do while (.not. file_exists .and. itest < 10)
-         write (*, *) 'WARNING:File ', chSOC, ' does not exist. Waiting..'
-         ISTATUS = system('sync') !mel by zajistit flush diskoveho bufferu
-         !call system('sync')
-         inquire (FILE=chSOC, EXIST=file_exists)
-         itest = itest + 1
-      end do
+      if (.not. file_exists) then
+         write (stderr, *) 'WARNING:File ', chSOC, ' does not exist. Waiting..'
+         call execute_command_line('sync')
+         call execute_command_line('sleep 0.5')
+      end if
 
-      open (unit=MAXUNITS + 100, file=chSOC, status='old', ACTION='READ', IOSTAT=iost)
+      open (newunit=soc_unit, file=chSOC, status='old', ACTION='READ', IOSTAT=iost)
       if (iost /= 0) then
-         write (*, *) 'Fatal problem when trying to open the file ', chSOC
-         call abinerror('force_abin')
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Could not open file '//trim(chSOC))
       end if
       !Read the SOC values H^2 [cm^-1]
       !     t1   t2
       ! s1  ..   ..
       ! s2  ..   ..
       do row = 1, nsinglet_lz
-         read (MAXUNITS + 100, *) (soc_matrix(row, col), col=1, ntriplet_lz)
+         read (soc_unit, *) (soc_matrix(row, col), col=1, ntriplet_lz)
       end do
-      close (unit=MAXUNITS + 100)
+      ! TODO: Should this file be deleted here?
+      close (soc_unit)
    end subroutine lz_getsoc
 
    subroutine check_energy_lz(en_array_lz, istate_lz, energydifthr_lz)
-      use mod_utils, only: abinerror
       use mod_const, only: AUTOEV
       use mod_general, only: it
 
@@ -432,11 +428,11 @@ contains
 
       ! Did the PES changed abruptly? LZ might induce unphysical hops.
       if ((abs(en_array_lz(istate_lz, 1) - en_array_lz(istate_lz, 2)) * AUTOEV) >= energydifthr_lz .and. it > 1) then
-         write (*, *) "!!!QM energy of current state changed more than", energydifthr_lz, "eV."
-         write (*, *) "State ", istate_lz, ", change: ", &
+         write (stderr, *) "!!!QM energy of current state changed more than", energydifthr_lz, "eV."
+         write (stderr, *) "State ", istate_lz, ", change: ", &
                     & (abs(en_array_lz(istate_lz, 1) - en_array_lz(istate_lz, 2))) * AUTOEV, " eV"
-         write (*, *) "LZ unstable. Terminating."
-         call abinerror('check_energy_lz')
+         write (stderr, *) "LZ unstable. Terminating."
+         call fatal_error(__FILE__, __LINE__, 'Insufficient energy conservation in LZ')
       end if
 
    end subroutine check_energy_lz
@@ -449,6 +445,7 @@ contains
       en_array_lz(:, 2) = en_array_lz(:, 3)
    end subroutine lz_rewind
 
+#if 0
    subroutine lz_getgraddiff(grad_diff, ist, ist1, x, y, z, vx, vy, vz, fxc, fyc, fzc)
       !Computes gradient difference * velocity to predict dEgap/dt
       use mod_general, only: natom, pot
@@ -500,6 +497,7 @@ contains
       end do
 
    end subroutine lz_getgraddiff
+#endif
 
    subroutine lz_restout(fileunit)
       integer, intent(in) :: fileunit
@@ -507,15 +505,15 @@ contains
 
       write (fileunit, *) istate_lz
       do ist = 1, nstate_lz
-         write (fileunit, *) en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3)
+         write (fileunit, '(3ES25.16E3)') en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3)
       end do
 
    end subroutine lz_restout
 
    subroutine lz_restin(fileunit, x, y, z, vx, vy, vz)
       integer, intent(in) :: fileunit
-      real(DP), intent(out) :: x(:, :), y(:, :), z(:, :)
-      real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer :: ist
 
       read (fileunit, *) istate_lz

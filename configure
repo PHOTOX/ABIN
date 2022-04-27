@@ -133,7 +133,9 @@ if [[ ! -f $FC && ! `which $FC` ]];then
    exit 1
 fi
 
-CXX="c++"
+if [[ -z ${CXX-} ]];then
+  CXX="c++"
+fi
 CXXFLAGS="-O2 -Wall -std=c++11"
 
 if [[ $PLUMED = "TRUE" ]];then

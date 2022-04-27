@@ -35,6 +35,13 @@ masses_EXTRA_USE := throw_with_pfunit_mod
 masses_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,masses))
 
+prng_TESTS := test_prng.pf
+prng_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+prng_OTHER_SRCS := throw_with_pfunit.F90
+prng_EXTRA_USE := throw_with_pfunit_mod
+prng_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,prng))
+
 # This is needed for compatibility with new Plumed 2.8
 # See: https://github.com/plumed/plumed2/pull/757
 export PLUMED_DP2CUTOFF_NOSTRETCH = 1
@@ -81,6 +88,13 @@ pot_EXTRA_USE := throw_with_pfunit_mod
 pot_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,pot))
 
+mm_TESTS := test_mm.pf
+mm_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+mm_OTHER_SRCS := throw_with_pfunit.F90
+mm_EXTRA_USE := throw_with_pfunit_mod
+mm_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,mm))
+
 spline_TESTS := test_spline.pf
 spline_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
 spline_OTHER_SRCS := throw_with_pfunit.F90
@@ -88,13 +102,21 @@ spline_EXTRA_USE := throw_with_pfunit_mod
 spline_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,spline))
 
-all : utils masses plumed fftw terapi gle nhc pot spline
+interface_TESTS := test_interface.pf
+interface_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+interface_OTHER_SRCS := throw_with_pfunit.F90
+interface_EXTRA_USE := throw_with_pfunit_mod
+interface_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,interface))
+
+all : utils prng masses plumed fftw terapi gle nhc pot mm spline interface
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
 
 test : clean_plumed_output clean_terapi_output clean_gle_output
 	./utils
+	./prng
 	./masses
 	./plumed
 	./fftw
@@ -102,11 +124,13 @@ test : clean_plumed_output clean_terapi_output clean_gle_output
 	./gle
 	./nhc
 	./pot
+	./mm
 	./spline
+	./interface
 
 clean : clean_plumed_output clean_terapi_output clean_gle_output
 	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 ERROR
-	/bin/rm -f masses utils plumed fftw terapi gle pot spline
+	/bin/rm -f masses utils plumed fftw terapi gle pot mm spline interface
 
 clean_plumed_output :
 	/bin/rm -f bck.* plumed_*.dat

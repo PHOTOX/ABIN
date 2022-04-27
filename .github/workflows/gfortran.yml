@@ -6,14 +6,6 @@ on:
   pull_request:
 
 env:
-  # Options for upload to Codecov
-  # -Z : Fail CI if Codecov upload fails
-  # -v : verbose output
-  # -X : disable unneeded functionality
-  # CURL_OPTS : Extra curl params to avoid timeout issues / for debugging
-  CURL_OPTS:  -S --no-silent
-  CODECOV_OPTIONS: -Z -X coveragepy -X xcode
-
   # FFLAGS for building ABIN, applicable for most jobs
   ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
@@ -51,8 +43,6 @@ jobs:
         # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
         key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
 
-    # TODO: We should specify a specific commit in install_pfunit.sh
-    # so that we're not dependent on changes in pFUnit
     - name: Download and build pFUnit
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_pfunit.sh ${HOME}/pfunit
@@ -65,14 +55,64 @@ jobs:
     - name: Run Unit tests
       run: make unittest
 
+    - name: Codecov upload unit tests
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        flags: unittests
+        gcov: true
+
     - name: Run End-to-End tests
       run: make e2etest
 
-    # TODO: Separate unit test coverage
-    - name: Upload code coverage to Codecov
-      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
-      # For debugging purposes, use the locally modified BASH uploader
-      #run:  gcov --version && cd src &&  bash ../.github/codecov_bash_uploader.sh $CODECOV_OPTIONS -U "$CURL_OPTS"
+    - name: Codecov upload
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        fail_ci_if_error: true
+        gcov: true
+
+  intel_build:
+    name: Intel OneAPI build
+    runs-on: ubuntu-20.04
+    env:
+      FC: mpiifort
+      # Use GCC for C++ code to speed up the build
+      #CC: icc
+      #CXX: icpc
+      APT_PACKAGES: >-
+        intel-oneapi-compiler-fortran
+        intel-oneapi-mpi
+        intel-oneapi-mpi-devel
+
+      # intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
+
+    - name: Add Intel repository
+      run: |
+        wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        rm GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+        sudo apt-get update
+
+    - name: Install Intel oneAPI compiler
+      run: |
+        sudo apt-get install ${{ env.APT_PACKAGES }}
+        source /opt/intel/oneapi/setvars.sh
+        printenv >> $GITHUB_ENV
+
+    - name: Build ABIN
+      run: ./configure --mpi "" && make
+      env:
+        FFLAGS: -O0 -fopenmp -warn all,noextern
+
+    - name: Run End-to-End tests
+      run: make e2etest
 
 
   optimized_build:
@@ -117,19 +157,14 @@ jobs:
     - name: Run End-to-End tests
       run: make e2etest
 
-  # Consider whether this needs to be a separate job
-  # or whether it should be default for all builds
   # Here we just take the defaults everywhere, except turning on FFTW
-  # TODO: We actually need to build our own FFTW for different
-  # GFortran versions
+  # To use FFTW with other Gfortran versions, we would need to build it.
   fftw_build:
-    # NOTE: I tried using `ubuntu-20.04` instead of `ubuntu-latest` which still points to Ubuntu 18.
+    # NOTE: I tried using `ubuntu-20.04` instead of `ubuntu-18.04`.
     # https://github.com/actions/virtual-environments#available-environments
     # However, some tests started to fail, with small numerical differences ~1E-15.
     # Not sure why, since default gfortran on 20.04 is 9.3.0, i.e. the same as we already
     # test above. I tested this with both -O0 and -O2. 
-    # When Github upgrades it's ubuntu-latest image we might run into problems.
-    # We should regenerate our all our tests with GFortran 7 on Neon before that happens.
     runs-on: ubuntu-18.04
     name: FFTW build
     needs: basic_build
@@ -167,11 +202,22 @@ jobs:
     - name: Run Unit tests
       run: make unittest
 
+    - name: Codecov upload unit tests
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        flags: unittests
+        gcov: true
+
     - name: Run End-to-End tests
       run: make e2etest
 
     - name: Codecov upload
-      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        fail_ci_if_error: true
+        gcov: true
 
   mpich_build:
     name: MPICH build
@@ -226,7 +272,11 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        fail_ci_if_error: true
+        gcov: true
 
   openmpi_build:
     name: OpenMPI build
@@ -274,8 +324,11 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
-
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        fail_ci_if_error: true
+        gcov: true
 
   plumed_build:
     name: PLUMED build
@@ -332,8 +385,19 @@ jobs:
     - name: Run Unit tests
       run: make unittest
 
+    - name: Codecov upload unit tests
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        flags: unittests
+        gcov: true
+
     - name: Run End-to-End tests
       run: make e2etest
 
     - name: Codecov upload
-      run:  cd src && bash <(curl -s https://codecov.io/bash) $CODECOV_OPTIONS -U "$CURL_OPTS"
+      uses: codecov/codecov-action@v3.0.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        fail_ci_if_error: true
+        gcov: true

@@ -1,5 +1,5 @@
 NOTE: The reference files were actually created with
-pot='mmwater'
+pot='_mmwater_'
 TCServerMock uses the same qTIP4P potential,
 so now we are sure that all data are passed correctly.
 (Except for charges and dipoles, which are currently randomly

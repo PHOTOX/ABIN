@@ -31,7 +31,8 @@ for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
    $MPIRUN ./$TCEXE > $TCOUT.$itera 2>&1 &
    job_pids[$itera]=$!
 }
-sleep 1
+sleep 2
+sync
 
 # Grep port names from TC outputs, pass to ABIN via a file.
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {

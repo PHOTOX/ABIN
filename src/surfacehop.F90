@@ -113,7 +113,6 @@ contains
 
       call force_clas(dum_fx, dum_fy, dum_fz, x, y, z, dum_eclas, pot)
 
-
       call sh_set_initialwf(istate, en_array(1))
 
       entot0 = en_array(istate) + ekin_v(vx, vy, vz)
@@ -127,8 +126,8 @@ contains
 
    end subroutine sh_init
 
-   subroutine get_nacm()
-      use mod_general, only: pot
+   subroutine get_nacm(pot)
+      character(len=*), intent(in) :: pot
       integer :: iost, ipom, ist1, ist2
 
       ! In TeraChem SH interface, we already got NACME
@@ -145,13 +144,14 @@ contains
       if (inac == 0 .and. ipom > 0) then
          ! Calculate NACME using default accuracy
 
-         call calc_nacm(nac_accu1)
+         call calc_nacm(pot, nac_accu1)
 
          iost = read_nacm()
 
          if (iost /= 0 .and. nac_accu1 > nac_accu2) then
-!        if NACME NOT COMPUTED: TRY TO DECREASE ACCURACY
-            call calc_nacm(nac_accu2)
+            write (stderr, '(A)') 'WARNING: Some NACME not computed. Trying with decreased accuracy'
+            write (stderr, '(A,I0)') 'Calling script r.'//trim(pot)//'.nacm with accuracy: 10^-', nac_accu2
+            call calc_nacm(pot, nac_accu2)
             iost = read_nacm()
          end if
 
@@ -205,45 +205,41 @@ contains
    subroutine write_nacmrest()
       use mod_general, only: narchive, it
       use mod_qmmm, only: natqm
-      use mod_utils, only: archive_file
+      use mod_utils, only: rename_file, archive_file
       integer :: ist1, ist2, iat
       integer :: iunit1
-      logical :: file_exists
       character(len=*), parameter :: restart_file = 'restart_sh.bin'
-      character(len=200) :: chsystem
 
-      inquire (FILE=restart_file, EXIST=file_exists)
-      chsystem = 'mv '//trim(restart_file)//'  '//trim(restart_file)//'.old'
-      if (file_exists) call system(chsystem)
+      call rename_file(restart_file, trim(restart_file)//'.old')
 
       open (newunit=iunit1, file=restart_file, action='write', status="new", access="sequential", form="unformatted")
 
-         do ist1 = 1, nstate - 1
+      do ist1 = 1, nstate - 1
 
-            do ist2 = ist1 + 1, nstate
+         do ist2 = ist1 + 1, nstate
 
-               if (inac == 0) then
+            if (inac == 0) then
 
-                  do iat = 1, natqm
-                     write (iunit1) nacx(iat, ist1, ist2), &
-                                  & nacy(iat, ist1, ist2), &
-                                  & nacz(iat, ist1, ist2)
-                  end do
+               do iat = 1, natqm
+                  write (iunit1) nacx(iat, ist1, ist2), &
+                               & nacy(iat, ist1, ist2), &
+                               & nacz(iat, ist1, ist2)
+               end do
 
-               end if
-
-            end do
+            end if
 
          end do
 
-         ! Printing total energy at t=0, so that we can safely restart
-         ! and we do not break checking for energy drift
-         ! For now, energy jump check is not handled well.
-         write (iunit1) entot0
+      end do
 
-         if (phase == 1) then
-            call sh_write_phase_bin(iunit1)
-         end if
+      ! Printing total energy at t=0, so that we can safely restart
+      ! and we do not break checking for energy drift
+      ! For now, energy jump check is not handled well.
+      write (iunit1) entot0
+
+      if (phase == 1) then
+         call sh_write_phase_bin(iunit1)
+      end if
 
       close (iunit1)
 
@@ -272,39 +268,39 @@ contains
 
       open (newunit=iunit1, file=restart_file, action="read", status="old", access="sequential", form="unformatted")
 
-         do ist1 = 1, nstate - 1
+      do ist1 = 1, nstate - 1
 
-            do ist2 = ist1 + 1, nstate
+         do ist2 = ist1 + 1, nstate
 
-               if (inac == 0) then
+            if (inac == 0) then
 
-                  do iat = 1, natqm
-                     read (iunit1, iomsg=chmsg, IOSTAT=iost) nacx(iat, ist1, ist2), &
-                                                           & nacy(iat, ist1, ist2), &
-                                                           & nacz(iat, ist1, ist2)
-                     if (iost /= 0) then
-                        write (*, *) 'Error reading NACME from restart file '//trim(restart_file)
-                        write (*, *) chmsg
-                        call abinerror('read_nacmrest')
-                     end if
-                     nacx(iat, ist2, ist1) = -nacx(iat, ist1, ist2)
-                     nacy(iat, ist2, ist1) = -nacy(iat, ist1, ist2)
-                     nacz(iat, ist2, ist1) = -nacz(iat, ist1, ist2)
-                  end do
+               do iat = 1, natqm
+                  read (iunit1, iomsg=chmsg, IOSTAT=iost) nacx(iat, ist1, ist2), &
+                                                        & nacy(iat, ist1, ist2), &
+                                                        & nacz(iat, ist1, ist2)
+                  if (iost /= 0) then
+                     write (*, *) 'Error reading NACME from restart file '//trim(restart_file)
+                     write (*, *) chmsg
+                     call abinerror('read_nacmrest')
+                  end if
+                  nacx(iat, ist2, ist1) = -nacx(iat, ist1, ist2)
+                  nacy(iat, ist2, ist1) = -nacy(iat, ist1, ist2)
+                  nacz(iat, ist2, ist1) = -nacz(iat, ist1, ist2)
+               end do
 
-               end if
+            end if
 
-            end do
          end do
+      end do
 
-         ! Reading total energy at t=0, so that we can safely restart
-         ! and we do not break checking for energy drift
-         ! For now, energy jump check is not handled well.
-         read (iunit1) entot0
+      ! Reading total energy at t=0, so that we can safely restart
+      ! and we do not break checking for energy drift
+      ! For now, energy jump check is not handled well.
+      read (iunit1) entot0
 
-         if (phase == 1) then
-            call sh_read_phase_bin(iunit1)
-         end if
+      if (phase == 1) then
+         call sh_read_phase_bin(iunit1)
+      end if
 
       close (iunit1)
       call archive_file(restart_file, it)
@@ -349,12 +345,15 @@ contains
       read_nacm = iost
    end function read_nacm
 
-   subroutine calc_nacm(nac_accu)
+   subroutine calc_nacm(pot, nac_accu)
       use mod_utils, only: toupper
-      use mod_general, only: it, pot
+      use mod_general, only: it
+      character(len=*), intent(in) :: pot
       integer, intent(in) :: nac_accu
       integer :: ist1, ist2, u, itrj
+      integer :: icmd, istat
       character(len=100) :: chsystem
+
       open (newunit=u, file='state.dat')
       write (u, '(I2)') nstate
       ! we print upper triangular part of tocalc matrix to file state.dat
@@ -368,17 +367,20 @@ contains
       close (u)
 
       chsystem = './'//trim(toupper(pot))//'/r.'//trim(pot)//'.nacm '
-      ! TODO: move the following line somwhere else
-      ! write(*,*)'WARNING: Some NACMs not computed. Trying with decreased accuracy...'
-      ! write(*,*)'Calling script r.'//pot//'with accuracy:',nac_accu
-      ! TODO: If we remove itrj here, it will be a breaking change
       itrj = 1
-      write (chsystem, '(A30,I13,I4.3,I3,A12)') chsystem, it, itrj, nac_accu, ' < state.dat'
+      write (chsystem, '(A,I13,I4.3,I3,A)') trim(chsystem), it, itrj, nac_accu, ' < state.dat'
 
-      call system(chsystem)
+      call execute_command_line(trim(chsystem), exitstat=istat, cmdstat=icmd)
 
-      ! TODO: catch errors here
+      if (icmd /= 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Could not execute command "'//trim(chsystem)//'"')
+      end if
 
+      ! We continue on, since we can retry calculation with decreased accuracy
+      if (istat /= 0) then
+         write (stderr, *) 'WARNING: Command '//trim(chsystem)//' exited with non-zero status'
+      end if
    end subroutine calc_nacm
 
    ! move arrays from new step to old step
@@ -413,7 +415,7 @@ contains
    !******************************
    subroutine surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
       use mod_const, only: ANG, AUTOFS
-      use mod_general, only: natom, nwrite, idebug, it, sim_time
+      use mod_general, only: natom, nwrite, idebug, it, sim_time, pot
       use mod_system, only: names
       use mod_files, only: UPOP, UPROB, UPES, UNACME, UDOTPROD
       use mod_qmmm, only: natqm
@@ -451,248 +453,248 @@ contains
       character(len=500) :: formt
       character(len=20) :: chist, chihop, chit
 
-         call check_energy(vx_old, vy_old, vz_old, vx, vy, vz)
-         call check_energydrift(vx, vy, vz)
+      call check_energy(vx_old, vy_old, vz_old, vx, vy, vz)
+      call check_energydrift(vx, vy, vz)
 
-         t_tot = 1.0D0
+      t_tot = 1.0D0
 
-         ! FIRST, CALCULATE NACME
-         if (inac == 0) then
+      ! FIRST, CALCULATE NACME
+      if (inac == 0) then
 
-            do ist1 = 1, nstate - 1
-               do ist2 = ist1 + 1, nstate
-                  if (tocalc(ist1, ist2) == 0) then
-                     write (*, *) 'Not computing NACME between states', ist1, ist2
-                     ! We need to flush these to zero
-                     ! Need to do this here, since tocalc is changed in GET_NACME routine
-                     do iat = 1, natqm
-                        nacx(iat, ist1, ist2) = 0.0D0
-                        nacy(iat, ist1, ist2) = 0.0D0
-                        nacz(iat, ist1, ist2) = 0.0D0
-                        nacx(iat, ist2, ist1) = 0.0D0
-                        nacy(iat, ist2, ist1) = 0.0D0
-                        nacz(iat, ist2, ist1) = 0.0D0
-                     end do
-                  end if
-               end do
-            end do
-
-            ! This computes and reads NACME
-            call get_nacm()
-
-            ! TODO: move this to a separate routine
-            ! Calculating overlap between nacmes
-            ! This is crucial, since NACME vectors can change orientation 180 degrees between time steps
-            ! and we need to correct that
-            do ist1 = 1, nstate
-               do ist2 = 1, nstate
-                  vect_olap = 0.0D0
-                  do iat = 1, natom
-                     vect_olap = vect_olap + &
-                        & nacx_old(iat, ist1, ist2) * nacx(iat, ist1, ist2)
-                     vect_olap = vect_olap + &
-                        & nacy_old(iat, ist1, ist2) * nacy(iat, ist1, ist2)
-                     vect_olap = vect_olap + &
-                        & nacz_old(iat, ist1, ist2) * nacz(iat, ist1, ist2)
+         do ist1 = 1, nstate - 1
+            do ist2 = ist1 + 1, nstate
+               if (tocalc(ist1, ist2) == 0) then
+                  write (*, *) 'Not computing NACME between states', ist1, ist2
+                  ! We need to flush these to zero
+                  ! Need to do this here, since tocalc is changed in GET_NACME routine
+                  do iat = 1, natqm
+                     nacx(iat, ist1, ist2) = 0.0D0
+                     nacy(iat, ist1, ist2) = 0.0D0
+                     nacz(iat, ist1, ist2) = 0.0D0
+                     nacx(iat, ist2, ist1) = 0.0D0
+                     nacy(iat, ist2, ist1) = 0.0D0
+                     nacz(iat, ist2, ist1) = 0.0D0
                   end do
-
-                  if (vect_olap < 0) then
-                     do iat = 1, natom
-                        nacx(iat, ist1, ist2) = -nacx(iat, ist1, ist2)
-                        nacy(iat, ist1, ist2) = -nacy(iat, ist1, ist2)
-                        nacz(iat, ist1, ist2) = -nacz(iat, ist1, ist2)
-                     end do
-                  end if
-
-               end do
+               end if
             end do
-
-            ! INAC=0  endif
-         end if
-
-         ! smaller time step
-         dtp = dt / substep
-
-         ! MAIN LOOP
-         ! Smaller time step for electronic population transfer
-         do itp = 1, substep
-
-            ist = istate
-
-            ! pop0 is later used for Tully's fewest switches
-            pop0 = el_pop(ist)
-
-            ! INTERPOLATION
-            fr = real(itp, DP) / real(substep, DP)
-            frd = 1.0D0 - fr
-
-            call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
-                             nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
-                             dotproduct_newint, fr, frd)
-
-            fr = real(itp - 1, DP) / real(substep, DP)
-            frd = 1.0D0 - fr
-
-            call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
-                             nacx_int, nacy_int, nacz_int, en_array_int, &
-                             dotproduct_int, fr, frd)
-
-            ! Integrate electronic wavefunction for one dtp time step
-            call sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
-
-            ! Check whether total population is 1.0
-            popsum = check_popsum()
-
-            ! Calculate switching probabilities according to Tully's fewest switches
-            ! Probabilities are stored in matrix t
-            ! (although at this point we calculate only the relevant part of the matrix)
-            call sh_TFS_transmat(dotproduct_int, dotproduct_newint, istate, pop0, t, dtp)
-
-            if (idebug > 1) then
-               ! WARNING: this will not work for adaptive time step
-               ! stepfs = (it*substep+itp-substep) * dt * AUtoFS / substep
-               stepfs = (sim_time + dtp * itp - substep * dtp) * AUtoFS
-               call sh_debug_wf(ist, stepfs, t)
-            end if
-
-            do ist1 = 1, nstate
-               ! Cumulative probability over whole big step
-               ! This is only auxiliary variable used for output
-               t_tot(ist, ist1) = t_tot(ist, ist1) * (1 - t(ist, ist1))
-            end do
-
-            ! Should we hop before decoherence?
-            ! Every article says something different.
-            ! Newton-X hops before decoherence.
-
-            ! HOPPING SECTION
-            ! TODO: Refactor this to a separate functions in sh_util
-            ! and reuse for Landau-Zener.
-            if (nohop /= 1) then
-
-               ! Auxiliary calculations of probabilities on a number line
-               prob = 0.0D0
-               if (ist == 1) then
-                  ! If we are in the ground state, we cannot jump into the ground state :-)
-                  prob(1) = 0.0D0
-               else
-                  ! Probability of jumping from the current state to the ground state
-                  prob(1) = t(ist, 1)
-               end if
-
-               do ist1 = 2, nstate
-                  if (ist1 /= ist) then
-                     prob(ist1) = prob(ist1 - 1) + t(ist, ist1)
-                  end if
-                  if (ist1 == ist) then
-                     prob(ist1) = prob(ist1 - 1)
-                  end if
-               end do
-
-               ihop = 0
-               ! Get one random number between 0 and 1
-               call vranf(ran, 1)
-               hop_rdnum = ran(1)
-
-               ! determine, whether we hopped or not
-               do ist1 = 1, nstate
-                  if (ist1 == ist) cycle
-                  if (hop_rdnum < prob(ist1)) then
-                     ihop = ist1
-                     exit
-                  end if
-               end do
-
-               ! Did HOP occur?
-               if (ihop /= 0) then
-                  if (adjmom == 0) then
-                     call hop(vx, vy, vz, ist, ihop, eclas)
-                  else if (adjmom == 1) then
-                     call try_hop_simple_rescale(vx, vy, vz, ist, ihop, eclas)
-                  end if
-
-                  if (idebug > 0) then
-                     write (formt, '(A8,I3,A7)') '(A1,I10,', nstate + 1, 'E20.10)'
-                     write (*, *) '# Substep RandomNum   Probabilities'
-                     write (*, fmt=formt) '#', itp, hop_rdnum, (t(ist, ist1), ist1=1, nstate)
-                  end if
-
-                  ! TODO: It seems that we're writing this geometry even for frustrated hop?
-                  ! Is that desired?
-                  ! write current geometry
-                  write (chist, *) ist
-                  write (chihop, *) ihop
-                  write (chit, *) it
-                  ! TODO: Rename this file to something more specific,
-                  ! e.g. geom_hop.from.to.timestep.xyz
-                  formt = 'geom.'//trim(adjustl(chist))//'.'//trim(adjustl(chihop))//'.'//adjustl(chit)
-                  open (500, file=trim(formt))
-                  write (500, *) natom
-                  write (500, *) ''
-                  do iat = 1, natom
-                     write (500, *) names(iat), x(iat, 1) / ANG, y(iat, 1) / ANG, z(iat, 1) / ANG
-                  end do
-                  close (500)
-               end if
-
-               !nohop endif
-            end if
-
-            ! Apply decoherence correction from Persico et al
-            if (decoh_alpha > 0) then
-
-               Ekin = ekin_v(vx_int, vy_int, vz_int)
-               if (Ekin > 1.0D-4) then ! Decoherence diverges for zero velocities
-                  call sh_decoherence_correction(en_array_int, decoh_alpha, Ekin, istate, dtp)
-               end if
-
-            end if
-
-            !itp loop
          end do
 
-         ! set tocalc array for the next step
-         call set_tocalc()
+         ! This computes and reads NACME
+         call get_nacm(pot)
 
+         ! TODO: move this to a separate routine
+         ! Calculating overlap between nacmes
+         ! This is crucial, since NACME vectors can change orientation 180 degrees between time steps
+         ! and we need to correct that
+         do ist1 = 1, nstate
+            do ist2 = 1, nstate
+               vect_olap = 0.0D0
+               do iat = 1, natom
+                  vect_olap = vect_olap + &
+                     & nacx_old(iat, ist1, ist2) * nacx(iat, ist1, ist2)
+                  vect_olap = vect_olap + &
+                     & nacy_old(iat, ist1, ist2) * nacy(iat, ist1, ist2)
+                  vect_olap = vect_olap + &
+                     & nacz_old(iat, ist1, ist2) * nacz(iat, ist1, ist2)
+               end do
+
+               if (vect_olap < 0) then
+                  do iat = 1, natom
+                     nacx(iat, ist1, ist2) = -nacx(iat, ist1, ist2)
+                     nacy(iat, ist1, ist2) = -nacy(iat, ist1, ist2)
+                     nacz(iat, ist1, ist2) = -nacz(iat, ist1, ist2)
+                  end do
+               end if
+
+            end do
+         end do
+
+         ! INAC=0  endif
+      end if
+
+      ! smaller time step
+      dtp = dt / substep
+
+      ! MAIN LOOP
+      ! Smaller time step for electronic population transfer
+      do itp = 1, substep
+
+         ist = istate
+
+         ! pop0 is later used for Tully's fewest switches
+         pop0 = el_pop(ist)
+
+         ! INTERPOLATION
+         fr = real(itp, DP) / real(substep, DP)
+         frd = 1.0D0 - fr
+
+         call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
+                          nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
+                          dotproduct_newint, fr, frd)
+
+         fr = real(itp - 1, DP) / real(substep, DP)
+         frd = 1.0D0 - fr
+
+         call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
+                          nacx_int, nacy_int, nacz_int, en_array_int, &
+                          dotproduct_int, fr, frd)
+
+         ! Integrate electronic wavefunction for one dtp time step
+         call sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
+
+         ! Check whether total population is 1.0
          popsum = check_popsum()
 
-         call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
+         ! Calculate switching probabilities according to Tully's fewest switches
+         ! Probabilities are stored in matrix t
+         ! (although at this point we calculate only the relevant part of the matrix)
+         call sh_TFS_transmat(dotproduct_int, dotproduct_newint, istate, pop0, t, dtp)
 
-         ! TODO: Move this to a separate function write_sh_output()
-         if (modulo(it, nwrite) == 0) then
-            stepfs = sim_time * AUtoFS
-            write (formt, '(A10,I3,A13)') '(F15.2,I3,', nstate, 'F10.5,1F10.7)'
-            write (UPOP, fmt=formt) stepfs, istate, (el_pop(ist1), ist1=1, nstate), popsum
+         if (idebug > 1) then
+            ! WARNING: this will not work for adaptive time step
+            ! stepfs = (it*substep+itp-substep) * dt * AUtoFS / substep
+            stepfs = (sim_time + dtp * itp - substep * dtp) * AUtoFS
+            call sh_debug_wf(ist, stepfs, t)
+         end if
 
-            t_tot = 1 - t_tot ! up to know, t_tot was the probability of not hopping
-            write (formt, '(A10,I3,A6)') '(F15.2,I3,', nstate, 'F10.5)'
-            write (UPROB, fmt=formt) stepfs, istate, (t_tot(ist, ist1), ist1=1, nstate)
-            write (formt, '(A7,I3,A7)') '(F15.2,', nstate, 'E20.10)'
-            write (UPES, fmt=formt) stepfs, (en_array(ist1), ist1=1, nstate)
-            if (inac == 0) write (UNACME, *) 'Time step:', it
-            do ist1 = 1, nstate - 1
-               do ist2 = ist1 + 1, nstate
+         do ist1 = 1, nstate
+            ! Cumulative probability over whole big step
+            ! This is only auxiliary variable used for output
+            t_tot(ist, ist1) = t_tot(ist, ist1) * (1 - t(ist, ist1))
+         end do
 
-                  if (ist1 == 1 .and. ist2 == 2) then
-                     write (UDOTPROD, '(F15.2,E20.10)', advance='no') stepfs, dotproduct_int(ist1, ist2)
-                  else
-                     write (UDOTPROD, '(E20.10)', advance='no') dotproduct_int(ist1, ist2)
-                  end if
+         ! Should we hop before decoherence?
+         ! Every article says something different.
+         ! Newton-X hops before decoherence.
 
-                  if (inac == 0) then
-                     write (UNACME, *) 'NACME between states:', ist1, ist2
-                     do iat = 1, natom
-                        write (UNACME, '(3E20.10)') nacx(iat, ist1, ist2), &
-                                                  & nacy(iat, ist1, ist2), &
-                                                  & nacz(iat, ist1, ist2)
-                     end do
-                  end if
+         ! HOPPING SECTION
+         ! TODO: Refactor this to a separate functions in sh_util
+         ! and reuse for Landau-Zener.
+         if (nohop /= 1) then
 
-               end do
+            ! Auxiliary calculations of probabilities on a number line
+            prob = 0.0D0
+            if (ist == 1) then
+               ! If we are in the ground state, we cannot jump into the ground state :-)
+               prob(1) = 0.0D0
+            else
+               ! Probability of jumping from the current state to the ground state
+               prob(1) = t(ist, 1)
+            end if
+
+            do ist1 = 2, nstate
+               if (ist1 /= ist) then
+                  prob(ist1) = prob(ist1 - 1) + t(ist, ist1)
+               end if
+               if (ist1 == ist) then
+                  prob(ist1) = prob(ist1 - 1)
+               end if
             end do
-            write (UDOTPROD, *) ''
+
+            ihop = 0
+            ! Get one random number between 0 and 1
+            call vranf(ran, 1)
+            hop_rdnum = ran(1)
+
+            ! determine, whether we hopped or not
+            do ist1 = 1, nstate
+               if (ist1 == ist) cycle
+               if (hop_rdnum < prob(ist1)) then
+                  ihop = ist1
+                  exit
+               end if
+            end do
+
+            ! Did HOP occur?
+            if (ihop /= 0) then
+               if (adjmom == 0) then
+                  call hop(vx, vy, vz, ist, ihop, eclas)
+               else if (adjmom == 1) then
+                  call try_hop_simple_rescale(vx, vy, vz, ist, ihop, eclas)
+               end if
+
+               if (idebug > 0) then
+                  write (formt, '(A8,I3,A7)') '(A1,I10,', nstate + 1, 'E20.10)'
+                  write (*, *) '# Substep RandomNum   Probabilities'
+                  write (*, fmt=formt) '#', itp, hop_rdnum, (t(ist, ist1), ist1=1, nstate)
+               end if
+
+               ! TODO: It seems that we're writing this geometry even for frustrated hop?
+               ! Is that desired?
+               ! write current geometry
+               write (chist, *) ist
+               write (chihop, *) ihop
+               write (chit, *) it
+               ! TODO: Rename this file to something more specific,
+               ! e.g. geom_hop.from.to.timestep.xyz
+               formt = 'geom.'//trim(adjustl(chist))//'.'//trim(adjustl(chihop))//'.'//adjustl(chit)
+               open (500, file=trim(formt))
+               write (500, *) natom
+               write (500, *) ''
+               do iat = 1, natom
+                  write (500, '(A,3ES25.16E3)') names(iat), x(iat, 1) / ANG, y(iat, 1) / ANG, z(iat, 1) / ANG
+               end do
+               close (500)
+            end if
+
+            !nohop endif
+         end if
+
+         ! Apply decoherence correction from Persico et al
+         if (decoh_alpha > 0) then
+
+            Ekin = ekin_v(vx_int, vy_int, vz_int)
+            if (Ekin > 1.0D-4) then ! Decoherence diverges for zero velocities
+               call sh_decoherence_correction(en_array_int, decoh_alpha, Ekin, istate, dtp)
+            end if
 
          end if
+
+         !itp loop
+      end do
+
+      ! set tocalc array for the next step
+      call set_tocalc()
+
+      popsum = check_popsum()
+
+      call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
+
+      ! TODO: Move this to a separate function write_sh_output()
+      if (modulo(it, nwrite) == 0) then
+         stepfs = sim_time * AUtoFS
+         write (formt, '(A10,I3,A13)') '(F15.2,I3,', nstate, 'F10.5,1F10.7)'
+         write (UPOP, fmt=formt) stepfs, istate, (el_pop(ist1), ist1=1, nstate), popsum
+
+         t_tot = 1 - t_tot ! up to know, t_tot was the probability of not hopping
+         write (formt, '(A10,I3,A6)') '(F15.2,I3,', nstate, 'F10.5)'
+         write (UPROB, fmt=formt) stepfs, istate, (t_tot(ist, ist1), ist1=1, nstate)
+         write (formt, '(A7,I3,A7)') '(F15.2,', nstate, 'E20.10)'
+         write (UPES, fmt=formt) stepfs, (en_array(ist1), ist1=1, nstate)
+         if (inac == 0) write (UNACME, *) 'Time step:', it
+         do ist1 = 1, nstate - 1
+            do ist2 = ist1 + 1, nstate
+
+               if (ist1 == 1 .and. ist2 == 2) then
+                  write (UDOTPROD, '(F15.2,E20.10)', advance='no') stepfs, dotproduct_int(ist1, ist2)
+               else
+                  write (UDOTPROD, '(E20.10)', advance='no') dotproduct_int(ist1, ist2)
+               end if
+
+               if (inac == 0) then
+                  write (UNACME, *) 'NACME between states:', ist1, ist2
+                  do iat = 1, natom
+                     write (UNACME, '(3E20.10)') nacx(iat, ist1, ist2), &
+                                               & nacy(iat, ist1, ist2), &
+                                               & nacz(iat, ist1, ist2)
+                  end do
+               end if
+
+            end do
+         end do
+         write (UDOTPROD, *) ''
+
+      end if
 
    end subroutine surfacehop
 

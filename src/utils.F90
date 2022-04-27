@@ -3,6 +3,7 @@ module mod_utils
    use mod_const, only: DP
    use mod_interfaces
    use mod_error, only: fatal_error
+   use mod_files, only: stdout, stderr
    implicit none
    public
 contains
@@ -10,11 +11,11 @@ contains
    real(DP) function get_distance(x, y, z, at1, at2, iw) result(r)
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: at1, at2, iw
-      character(len=*), parameter :: error_msg = 'Atom indices in get_distance() must be unique'
 
       if (at1 == at2) then
          r = 0
-         call fatal_error(__FILE__, __LINE__, error_msg)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Atom indices in get_distance() must be unique')
          return
       end if
 
@@ -31,11 +32,11 @@ contains
       real(DP) :: vec1x, vec1y, vec1z
       real(DP) :: vec2x, vec2y, vec2z
       integer :: at1, at2, at3
-      character(len=*), parameter :: error_msg = 'Atom indices in get_angle() must be unique'
 
       if (at1 == at2 .or. at1 == at3 .or. at2 == at3) then
          angle = 0
-         call fatal_error(__FILE__, __LINE__, error_msg)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Atom indices in get_angle() must be unique')
          return
       end if
 
@@ -86,14 +87,11 @@ contains
              & )
 
       if (sign > 0) get_dihedral = shiftdih - get_dihedral
-
-      return
    end function get_dihedral
 
    function sanitize_string(string) result(return_string)
       character(len=*), intent(in) :: string
       character(len=len(string)) :: return_string
-      character(len=len(string) + 200) :: error_msg
       character(len=1) :: ch
       integer :: c, i
 
@@ -104,8 +102,8 @@ contains
          ! check for almost all nonalphabetical chars from ASCII table
          ! allow dash, slash and dot -/.
          if (c < 44 .or. (c > 57 .and. c < 65) .or. c > 172) then
-            error_msg = 'Suspicious character "'//ch//'" in input string "'//string//'"'
-            call fatal_error(__FILE__, __LINE__, error_msg)
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Suspicious character "'//ch//'" in input string "'//string//'"')
          end if
       end do
 
@@ -195,17 +193,10 @@ contains
       end do
    end function toupper
 
-   ! TODO: Maybe move this into a separate error handling module,
-   ! together with finish(), and move it to a separate file
-   ! Though need to figure out how to do it without having circular dependencies :-(
-   ! abinerror is needed everywhere, so shouldn't depend on much,
-   ! but finish() is basically dependent on everything. :-(
-   !
-   ! In any case, mod_utils should not depend on anything outside of mod_const and mod_general!
+   ! TODO: Remove this in favour of fatal_error
    subroutine abinerror(chcaller)
       use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
       use mod_interfaces, only: finish
-      use mod_files, only: stdout
       character(len=*), intent(in) :: chcaller
       integer, dimension(8) :: time_end
       integer :: u
@@ -226,42 +217,73 @@ contains
       stop 1
    end subroutine abinerror
 
-   subroutine print_xyz_arrays(fx, fy, fz)
-      use mod_general, only: nwalk, natom
-      use mod_const, only: DP
-      implicit none
-      real(KIND=DP), intent(in) :: fx(:, :), fy(:, :), fz(:, :)
+   subroutine print_xyz_arrays(fx, fy, fz, natom, nwalk)
+      use mod_files, only: stdout
+      real(DP), dimension(:, :), intent(in) :: fx, fy, fz
+      integer, intent(in) :: natom, nwalk
       integer :: iat, iw
 
       do iw = 1, nwalk
          do iat = 1, natom
-            write (*, *) fx(iat, iw), fy(iat, iw), fz(iat, iw)
+            write (stdout, *) fx(iat, iw), fy(iat, iw), fz(iat, iw)
          end do
       end do
-
    end subroutine print_xyz_arrays
 
+   function append_rank(string) result(output)
+      use mod_general, only: iremd
+      use mod_mpi, only: get_mpi_rank
+      character(len=*), intent(in) :: string
+      character(len=len_trim(string) + 3) :: output
+      integer :: my_rank
+
+      if (iremd == 1) then
+         my_rank = get_mpi_rank()
+         output = ''
+         write (output, '(A,I2.2)') trim(string)//".", my_rank
+      else
+         output = ''
+         output = string
+      end if
+   end function append_rank
+
+   subroutine del_file(fname)
+      character(len=*), intent(in) :: fname
+      integer :: u, iost
+
+      open (newunit=u, file=fname, iostat=iost, status='old')
+      if (iost == 0) close (u, status='delete')
+   end subroutine del_file
+
+   subroutine rename_file(fname, fname_new)
+      character(len=*), intent(in) :: fname, fname_new
+      logical :: file_exists
+
+      inquire (file=fname, exist=file_exists)
+      if (file_exists) then
+         call rename(fname, fname_new)
+      end if
+   end subroutine rename_file
+
    subroutine archive_file(chfile, time_step)
+      use mod_files, only: stderr
       use mod_general, only: iremd
       use mod_mpi, only: get_mpi_rank
       integer, intent(in) :: time_step
       character(len=*), intent(in) :: chfile
       character(len=200) :: chsystem
       character(len=50) :: chit, charch
-      integer :: my_rank
+      integer :: my_rank, istat
 
       my_rank = get_mpi_rank()
       if (my_rank == 0 .or. iremd == 1) then
          write (chit, *) time_step
-         if (iremd == 1) then
-            write (charch, '(A,I2.2)') trim(chfile)//".", my_rank
-         else
-            charch = trim(chfile)
-         end if
+         charch = append_rank(chfile)
          chsystem = 'cp '//trim(charch)//'  '//trim(charch)//'.'//adjustl(chit)
-         write (*, *) 'Archiving file ', trim(charch)
-         write (*, *) trim(chsystem)
-         call system(chsystem)
+         write (stdout, *) 'Archiving file ', trim(charch)
+         write (stdout, *) trim(chsystem)
+         call execute_command_line(chsystem, exitstat=istat)
+         if (istat /= 0) write (stderr, *) 'WARNING: File archiving failed!'
       end if
    end subroutine archive_file
 
@@ -276,24 +298,11 @@ contains
       end if
    end subroutine file_exists_or_exit
 
-   function get_formatted_date_and_time(time_data) result(formatted_string)
-      character(len=25) :: formatted_string
-      integer, dimension(8), intent(in) :: time_data
-      formatted_string = ''
-      ! time_data must be get from date_and_time() intrinsic
-      ! e.g. 1:48:39   3.11.2020
-      write (formatted_string, "(I2.2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)") time_data(5), ':', &
-         time_data(6), ':', time_data(7), '  ', time_data(3), '.', time_data(2), '.', &
-         time_data(1)
-   end function get_formatted_date_and_time
-
-   ! TODO: Pass masses as a parameter,
-   ! handle also non-canonical masses for PIMD
-   real(DP) function ekin_p(px, py, pz)
-      use mod_general, only: nwalk, natom
-      use mod_system, only: am
+   real(DP) function ekin_p(px, py, pz, mass, natom, nwalk)
       implicit none
-      real(DP), intent(in) :: px(:, :), py(:, :), pz(:, :)
+      real(DP), dimension(:, :), intent(in) :: px, py, pz
+      real(DP), dimension(:, :), intent(in) :: mass
+      integer, intent(in) :: natom, nwalk
       real(DP) :: tmp
       integer :: iw, iat
 
@@ -302,7 +311,7 @@ contains
       do iw = 1, nwalk
          do iat = 1, natom
             tmp = px(iat, iw)**2 + py(iat, iw)**2 + pz(iat, iw)**2
-            ekin_p = ekin_p + 0.5D0 * tmp / am(iat)
+            ekin_p = ekin_p + 0.5D0 * tmp / mass(iat, iw)
          end do
       end do
    end function ekin_p

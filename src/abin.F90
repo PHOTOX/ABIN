@@ -2,7 +2,7 @@
 !  ABIN: Multipurpose ab initio MD program.
 !  The potential is calculated on-the-fly by an external program.
 !------------------------------------------------------------------
-!  Copyright (C) 2014             D.Hollas, M.Oncak, O.Svoboda and P.Slavicek
+!  Copyright (C) 2014    D.Hollas, J.Suchan, M.Oncak, O.Svoboda and P.Slavicek
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -22,31 +22,29 @@ program abin
    use mod_arrays
    use mod_files, only: stdout
    use mod_general, only: sim_time, pot, pot_ref, iremd, ipimd, &
-      & md, nwrite, nstep, ncalc, it, inormalmodes, istage, irest
+      & nwrite, nstep, ncalc, it, inormalmodes, istage, irest
    use mod_init, only: init
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
-   use mod_utils, only: abinerror, archive_file, get_formatted_date_and_time
-   use mod_transform
-   use mod_mdstep
+   use mod_utils, only: del_file, archive_file
+   use mod_transform, only: initialize_pi_transforms, &
+                           & qtox, utox, fqtofx
+   use mod_mdstep, only: mdstep
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
    use mod_interfaces
-   use mod_en_restraint
-   use mod_plumed
+   use mod_en_restraint, only: restrain_pot
    use mod_terampi_sh, only: move_new2old_terash
    use mod_mpi, only: get_mpi_rank, mpi_barrier_wrapper
-   use mod_remd
+   use mod_remd, only: remd_swap, nswap
    implicit none
-   ! TODO: These should probably be defined and stored in some module, not here
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
    logical :: file_exists
-   integer, dimension(8) :: time_start, time_end
+   integer, dimension(8) :: time_start
    integer :: my_rank
-   real(DP) :: total_cpu_time
 
-   call date_and_time(VALUES=time_start)
+   call date_and_time(values=time_start)
 
    ! INPUT AND INITIALIZATION SECTION
    call init(dt)
@@ -73,233 +71,226 @@ program abin
    write (stdout, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
    write (stdout, *) ''
 
-   ! Transform coordinates and velocities Path Integral MD
+   ! Transform coordinates and velocities for Path Integral MD
    ! (staging or normal modes)
    if (istage == 1 .or. inormalmodes > 0) then
       call initialize_pi_transforms(x, y, z, vx, vy, vz)
    end if
 
-   ! Note that 'amt' equals 'am' for non-PI simulations
+   ! Note that 'amt' equals physical atomic masses in non-PI simulations
    px = amt * vx
    py = amt * vy
    pz = amt * vz
 
    if (ipimd == 3) then
-
       call minimize(x, y, z, fxc, fyc, fzc, eclas)
-
-   else
-
-      write (stdout, *)
-      write (stdout, *) '#      Step     Time [fs]'
-
-      ! ---------------- PROPAGATION-------------
-
-      ! Without this Barrier, ranks > 0 do not write geom.dat in force_clas
-      ! I don't know why the hell not.
-      call mpi_barrier_wrapper()
-
-      ! getting initial forces and energies
-      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
-      if (ipimd == 1) then
-         call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
-      end if
-
-      ! Correct energy history for LZ
-      if (ipimd == 5) then
-         call lz_rewind(en_array_lz)
-      end if
-
-      ! if we use reference potential with RESPA
-      if (pot_ref /= '_none_') then
-         call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
-         call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
-      end if
-
-      ! setting initial values for surface hopping
-      if (ipimd == 2) then
-         if (irest /= 1) then
-            call get_nacm()
-         end if
-         call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
-         if (pot == '_tera_' .or. restrain_pot == '_tera_') then
-            call move_new2old_terash()
-         end if
-      else if (ipimd == 5 .and. pot == '_tera_') then
-         call move_new2old_terash()
-      end if
-
-      ! LOOP OVER TIME STEPS
-      ! "it" variable is set to 0 or read from restart.xyz in subroutine init
-      it = it + 1
-      do it = (it), nstep
-
-         ! This barrier is needed so that all MPI processes see the file 'EXIT'
-         ! if it is present (we delete it below before we stop the program).
-         call mpi_barrier_wrapper()
-
-         inquire (FILE="EXIT", EXIST=file_exists)
-         if (file_exists) then
-            write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
-            if (istage == 1) then
-               call QtoX(vx, vy, vz, transxv, transyv, transzv)
-               call QtoX(x, y, z, transx, transy, transz)
-               call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
-            else if (inormalmodes > 0) then
-               call UtoX(x, y, z, transx, transy, transz)
-               call UtoX(vx, vy, vz, transxv, transyv, transzv)
-               call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
-            else
-               call restout(x, y, z, vx, vy, vz, it - 1)
-            end if
-
-            call mpi_barrier_wrapper()
-
-            if (my_rank == 0) then
-               call system('rm EXIT')
-            end if
-
-            exit ! break from time loop
-
-         end if
-
-         ! CALL the integrator, propagate through one time step
-         select case (md)
-         case (1)
-            call respastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
-         case (2)
-            call verletstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
-            ! include entire Ehrenfest step, in first step, we start from pure initial state so at first step we dont
-            ! need NAMCE and take forces just as a grad E
-         case (3)
-            call respashake(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
-         case (4)
-            call doublerespastep(x, y, z, px, py, pz, amt, amg, dt, equant, eclas, fxc, fyc, fzc, fxq, fyq, fzq)
-         end select
-
-         sim_time = sim_time + dt
-
-         vx = px / amt
-         vy = py / amt
-         vz = pz / amt
-
-         ! SURFACE HOPPING SECTION
-         ! SH is called here, Ehrenfest inside the Verlet MD step
-         if (ipimd == 2) then
-
-            call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
-
-            px = amt * vx
-            py = amt * vy
-            pz = amt * vz
-
-            ! TODO: this should be in the surfacehop routine
-            if (pot == '_tera_') then
-               call move_new2old_terash()
-            end if
-
-         end if
-
-         ! LANDAU ZENER HOPPING
-         if (ipimd == 5) then
-            call lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, pot)
-            px = amt * vx
-            py = amt * vy
-            pz = amt * vz
-
-            if (pot == '_tera_') then
-               call move_new2old_terash()
-            end if
-         end if
-
-#ifdef USE_MPI
-         ! SWAP REMD REPLICAS
-         if (iremd == 1 .and. modulo(it, nswap) == 0) then
-            call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
-         end if
-#endif
-
-         ! --- Ttrajectory analysis ---
-         ! In order to analyze the output, we have to perform the back transformation
-         ! Transformed (cartesian) coordinates are stored in trans matrices.
-
-         ! Enter this section only every ncalc step
-         if (modulo(it, ncalc) /= 0) then
-            cycle
-         end if
-
-         call temperature(px, py, pz, amt, eclas)
-
-         if (istage == 1) then
-
-            call QtoX(vx, vy, vz, transxv, transyv, transzv)
-            call QtoX(x, y, z, transx, transy, transz)
-            call FQtoFX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
-            call analysis(transx, transy, transz, transxv, transyv, transzv,  &
-                 &       transfxc, transfyc, transfzc, eclas, equant)
-
-         else if (inormalmodes > 0) then
-
-            call UtoX(x, y, z, transx, transy, transz)
-            call UtoX(vx, vy, vz, transxv, transyv, transzv)
-            call UtoX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
-            call analysis(transx, transy, transz, transxv, transyv, transzv,  &
-                 &        transfxc, transfyc, transfzc, eclas, equant)
-         else
-
-            call analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas, equant)
-
-         end if
-
-         if (modulo(it, nwrite) == 0) then
-            write (stdout, '(I20,F15.2)') it, sim_time * AUtoFS
-            call flush (OUTPUT_UNIT)
-         end if
-
-         ! Time step loop
-      end do
-
-      ! DUMP restart file at the end of a run
-      ! Because NCALC might be >1, we have to perform transformation to get the most
-      ! recent coordinates and velocities
-      it = it - 1
-
-      if (istage == 1) then
-         call QtoX(vx, vy, vz, transxv, transyv, transzv)
-         call QtoX(x, y, z, transx, transy, transz)
-         call restout(transx, transy, transz, transxv, transyv, transzv, it)
-      else if (inormalmodes > 0) then
-         call UtoX(x, y, z, transx, transy, transz)
-         call UtoX(vx, vy, vz, transxv, transyv, transzv)
-         call restout(transx, transy, transz, transxv, transyv, transzv, it)
-      else
-         call restout(x, y, z, vx, vy, vz, it)
-      end if
-
-      ! minimization endif
+      call print_footer(time_start)
+      call finish(0)
+      stop 0
    end if
 
-   write (stdout, *) ''
-   write (stdout, '(A)') 'Job finished successfully!'
+   write (stdout, *)
+   write (stdout, '("#",10X,A,11X,A)') 'Step', 'Time [fs]'
 
+   ! ---------------- PROPAGATION-------------
+
+   ! Without this Barrier, ranks > 0 do not write geom.dat in force_clas
+   ! I don't know why the hell not.
+   call mpi_barrier_wrapper()
+
+   ! Get initial forces and energies
+   call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+   if (ipimd == 1) then
+      call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
+   end if
+
+   ! Correct energy history for LZ
+   if (ipimd == 5) then
+      call lz_rewind(en_array_lz)
+   end if
+
+   ! Get reference forces and energies for ab initio  MTS RESPA
+   if (pot_ref /= '_none_') then
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot_ref)
+      call force_clas(fxc_diff, fyc_diff, fzc_diff, x, y, z, eclas, pot)
+   end if
+
+   ! Set initial values for surface hopping
+   if (ipimd == 2) then
+      if (irest /= 1) then
+         call get_nacm(pot)
+      end if
+      call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
+      if (pot == '_tera_' .or. restrain_pot == '_tera_') then
+         call move_new2old_terash()
+      end if
+   else if (ipimd == 5 .and. pot == '_tera_') then
+      call move_new2old_terash()
+   end if
+
+   ! LOOP OVER TIME STEPS
+   ! "it" variable is set to 0 or read from restart.xyz in subroutine init
+   it = it + 1
+   do it = (it), nstep
+
+      ! This barrier is needed so that all MPI processes see the file 'EXIT'
+      ! if it is present (we delete it below before we stop the program).
+      call mpi_barrier_wrapper()
+
+      inquire (file="EXIT", exist=file_exists)
+      if (file_exists) then
+         write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
+         if (istage == 1) then
+            call QtoX(vx, vy, vz, transxv, transyv, transzv)
+            call QtoX(x, y, z, transx, transy, transz)
+            call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
+         else if (inormalmodes > 0) then
+            call UtoX(x, y, z, transx, transy, transz)
+            call UtoX(vx, vy, vz, transxv, transyv, transzv)
+            call restout(transx, transy, transz, transxv, transyv, transzv, it - 1)
+         else
+            call restout(x, y, z, vx, vy, vz, it - 1)
+         end if
+
+         call mpi_barrier_wrapper()
+
+         if (my_rank == 0) then
+            call del_file('EXIT')
+         end if
+
+         exit ! break from time loop
+
+      end if
+
+      ! PROPAGATE through one time step
+      call mdstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
+
+      vx = px / amt
+      vy = py / amt
+      vz = pz / amt
+
+      ! SURFACE HOPPING SECTION
+      ! SH is called here, Ehrenfest inside the Verlet MD step
+      if (ipimd == 2) then
+
+         call surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
+
+         px = amt * vx
+         py = amt * vy
+         pz = amt * vz
+
+         ! TODO: this should be in the surfacehop routine
+         if (pot == '_tera_') then
+            call move_new2old_terash()
+         end if
+
+      end if
+
+      ! LANDAU ZENER HOPPING
+      if (ipimd == 5) then
+         call lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, pot)
+         px = amt * vx
+         py = amt * vy
+         pz = amt * vz
+
+         if (pot == '_tera_') then
+            call move_new2old_terash()
+         end if
+      end if
+
+      ! SWAP REMD REPLICAS
+      if (iremd == 1 .and. modulo(it, nswap) == 0) then
+         call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
+      end if
+
+      ! --- Trajectory analysis ---
+      ! In order to analyze the output, we have to perform the back transformation
+      ! Transformed (cartesian) coordinates are stored in trans matrices.
+
+      ! Enter this section only every ncalc step
+      if (modulo(it, ncalc) /= 0) then
+         cycle
+      end if
+
+      call temperature(px, py, pz, amt, eclas)
+
+      if (istage == 1) then
+
+         call QtoX(vx, vy, vz, transxv, transyv, transzv)
+         call QtoX(x, y, z, transx, transy, transz)
+         call FQtoFX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
+         call analysis(transx, transy, transz, transxv, transyv, transzv,  &
+              &       transfxc, transfyc, transfzc, eclas)
+
+      else if (inormalmodes > 0) then
+
+         call UtoX(x, y, z, transx, transy, transz)
+         call UtoX(vx, vy, vz, transxv, transyv, transzv)
+         call UtoX(fxc, fyc, fzc, transfxc, transfyc, transfzc)
+         call analysis(transx, transy, transz, transxv, transyv, transzv,  &
+              &        transfxc, transfyc, transfzc, eclas)
+      else
+
+         call analysis(x, y, z, vx, vy, vz, fxc, fyc, fzc, eclas)
+
+      end if
+
+      if (modulo(it, nwrite) == 0) then
+         write (stdout, '(I15,F15.2)') it, sim_time * AUtoFS
+         call flush (OUTPUT_UNIT)
+      end if
+
+      ! Time step loop
+   end do
+
+   ! Write restart file at the end of a run
+   ! Because NCALC might be >1, we have to perform transformation to get the most
+   ! recent coordinates and velocities
+   it = it - 1
+
+   if (istage == 1) then
+      call QtoX(vx, vy, vz, transxv, transyv, transzv)
+      call QtoX(x, y, z, transx, transy, transz)
+      call restout(transx, transy, transz, transxv, transyv, transzv, it)
+   else if (inormalmodes > 0) then
+      call UtoX(x, y, z, transx, transy, transz)
+      call UtoX(vx, vy, vz, transxv, transyv, transzv)
+      call restout(transx, transy, transz, transxv, transyv, transzv, it)
+   else
+      call restout(x, y, z, vx, vy, vz, it)
+   end if
+
+   call print_footer(time_start)
    call finish(0)
-
-   call cpu_time(total_cpu_time)
-   write (stdout, '(A)') 'Total cpu time [s] (does not include ab initio calculations)'
-   write (stdout, *) total_cpu_time
-   write (stdout, '(A)') 'Total cpu time [hours] (does not include ab initio calculations)'
-   write (stdout, *) total_cpu_time / 3600.
-
-   write (stdout, '(A)') 'Job started at:  '//trim(get_formatted_date_and_time(time_start))
-   call date_and_time(VALUES=time_end)
-   write (stdout, '(A)') 'Job finished at: '//trim(get_formatted_date_and_time(time_end))
 
 contains
 
    subroutine clean_temp_files()
       ! TODO: Implement "clean" bash function in abin interfaces
       ! that should be called here (and only if irest=0)
-      call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+      call execute_command_line('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
    end subroutine clean_temp_files
+
+   function get_formatted_date_and_time(time_data) result(formatted_string)
+      character(len=25) :: formatted_string
+      integer, dimension(8), intent(in) :: time_data
+      formatted_string = ''
+      ! time_data must be get from date_and_time() intrinsic
+      ! e.g. 1:48:39   3.11.2020
+      write (formatted_string, "(I2.2,A1,I2.2,A1,I2.2,A2,I2,A1,I2,A1,I4)") time_data(5), ':', &
+         time_data(6), ':', time_data(7), '  ', time_data(3), '.', time_data(2), '.', &
+         time_data(1)
+   end function get_formatted_date_and_time
+
+   subroutine print_footer(time_start)
+      integer, dimension(8), intent(in) :: time_start
+      integer, dimension(8) :: time_end
+
+      call date_and_time(values=time_end)
+      write (stdout, *) ''
+      write (stdout, '(A)') 'Job finished successfully!'
+      write (stdout, '(A)') 'Job started at:  '//trim(get_formatted_date_and_time(time_start))
+      write (stdout, '(A)') 'Job finished at: '//trim(get_formatted_date_and_time(time_end))
+   end subroutine print_footer
 
 end program abin

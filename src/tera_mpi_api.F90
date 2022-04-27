@@ -66,13 +66,6 @@ contains
       ! Setting MPI_ERRORS_RETURN error handler allows us to retry
       ! failed MPI_LOOKUP_NAME() call. It also allows us
       ! to send the exit signal to TeraChem upon encountering an error.
-
-      ! It might also be a good idea to write our own error handler by MPI_Errorhandler_Create()
-      ! https://www.open-mpi.org/doc/current/man3/MPI_Comm_create_errhandler.3.php
-      ! so that we don't have to call handle_mpi_error() after each MPI call.
-      ! This error handler should call abinerror() and if possible should try send
-      ! the error shutdown MPI_Send to TC (though we'd need to make sure we don't
-      ! enter some weird endless loop!).
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
       call handle_mpi_error(ierr)
 
@@ -175,8 +168,7 @@ contains
          if (idebug > 1) then
             write (stdout, '(A)') 'Waiting for TC port'
          end if
-         ! TODO: Try out how long should we sleep here.
-         call system('sleep 0.5')
+         call execute_command_line('sleep 0.5')
 
       end do
 
@@ -209,7 +201,7 @@ contains
          end if
 
          write (stdout, '(A)') 'WARNING: Cannot open file '//portfile
-         call system('sleep 0.5')
+         call execute_command_line('sleep 0.5')
 
       end do
 
@@ -295,7 +287,7 @@ contains
       do while (.not. ready)
          call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, ready, status, ierr)
          call handle_mpi_error(ierr)
-         call system(trim(chsys_sleep))
+         call execute_command_line(trim(chsys_sleep))
       end do
    end subroutine wait_for_terachem
 

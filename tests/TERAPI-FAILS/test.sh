@@ -26,6 +26,10 @@ fi
 
 # Exit early for OpenMPI build.
 check_for_openmpi
+# Exit early for IntelMPI.
+# IntelMPI does seem to have hydra_nameserver,
+# but for some reason it cannot bind to port on GHA.
+#check_for_intelmpi
 
 # We relaunch the nameserver in each subtest
 # due to the bug in hydra_nameserver
@@ -42,7 +46,7 @@ echo "########### SUBTEST 3 ###################"
 ./test3.sh
 echo "########### SUBTEST 4 ###################"
 ./test4.sh
-# Getting rid of varible MPI trace
+# Getting rid of variable MPI trace
 head -1 ABIN_ERROR4 > tmp
 mv tmp ABIN_ERROR4
 echo "########### SUBTEST 5 ###################"

@@ -3,12 +3,13 @@
 ! which are taken from preprocessor constants,
 ! and the current Git commit, which is passed in from Makefile.
 subroutine print_compile_info()
-   use iso_fortran_env, only: compiler_version
    use iso_fortran_env, only: compiler_version, compiler_options
    use mod_files, only: stdout
-   ! TODO: Decide how we should do versioning
    character(len=*), parameter :: ABIN_VERSION = '1.1'
 
+   write (stdout, *) ''
+   write (stdout, *) '          COMPILATION INFO'
+   write (stdout, *) ''
    write (stdout, *) 'ABIN version '//ABIN_VERSION
    write (stdout, '(a, a, 1x, a)') 'Compiled at ', __TIME__, __DATE__
    write (stdout, *) 'Git commit '//GIT_COMMIT
@@ -29,6 +30,6 @@ subroutine print_compile_info()
    write (stdout, *)
 
    write (stdout, *) 'This program was compiled by '//compiler_version()
-   write (stdout, *) 'using the compiler options:'
+   write (stdout, *) 'using the following compiler options:'
    write (stdout, *) compiler_options()
 end subroutine print_compile_info

@@ -155,7 +155,7 @@ contains
       dx = (x_grid(grid_size) - x_grid(1)) / grid_size / 5
       open (newunit=u, file=fname, action="write")
       do i = 1, grid_size * 5
-         write (u, *) x, potential_cubic_spline(x)
+         write (u, '(G0,X,G0)') x, potential_cubic_spline(x)
          x = x + dx
       end do
       close (u)

@@ -107,7 +107,7 @@ contains
       real(DP) :: ran(natom * 3 * nwalk)
       integer :: iat, iw, pom
 
-      langham = langham + ekin_p(px, py, pz)
+      langham = langham + ekin_p(px, py, pz, m, natom, nwalk)
 
       pom = 1
       call gautrg(ran, natom * 3 * nwalk)
@@ -123,7 +123,7 @@ contains
          end do
       end do
 
-      langham = langham - ekin_p(px, py, pz)
+      langham = langham - ekin_p(px, py, pz, m, natom, nwalk)
    end subroutine
 
    subroutine finalize_pile()
@@ -217,34 +217,25 @@ contains
 
    subroutine gle_init(dt)
       use mod_const, only: AUtoEV
+      use mod_utils, only: append_rank
       use mod_error, only: fatal_error
       use mod_mpi, only: get_mpi_rank
-      use mod_general, only: natom, nwalk, ipimd, inormalmodes, iremd
+      use mod_general, only: natom, nwalk, ipimd, inormalmodes
       use mod_nhc, only: temp, inose
       implicit none
       real(DP), intent(in) :: dt
       real(DP), allocatable :: gA(:, :), gC(:, :)
-      character(len=50) :: glea, glec
-      character(len=*), parameter :: glea_centroid = 'GLE-A.centroid'
-      character(len=*), parameter :: glec_centroid = 'GLE-C.centroid'
-      character(len=2) :: char_my_rank
-      integer :: my_rank
+      character(len=100) :: glea, glec, glea_centroid, glec_centroid
       integer :: i, iw
 
       call print_gle_header(inose, ipimd, inormalmodes)
 
       langham = 0.D0 ! sets to zero accumulator for langevin 'conserved' quantity
 
-      glea = 'GLE-A'
-      glec = 'GLE-C'
-      if (iremd == 1) then
-         my_rank = get_mpi_rank()
-         write (stdout, *) "REMD with GLE: Expecting matrices in form:"//&
-                        &" GLE-A.id_of_replica, GLE-C.id_of_replica (e.g. GLE-A.00)"
-         write (char_my_rank, '(I0.2)') my_rank
-         glea = 'GLE-A.'//char_my_rank
-         glec = 'GLE-C.'//char_my_rank
-      end if
+      glea = append_rank('GLE-A')
+      glec = append_rank('GLE-C')
+      glea_centroid = append_rank('GLE-A.centroid')
+      glec_centroid = append_rank('GLE-C.centroid')
 
       ns = read_ns(glea)
 
@@ -364,23 +355,21 @@ contains
 
    subroutine pile_restout(u)
       integer, intent(in) :: u
-      write (u, *) langham
+      write (u, '(ES24.16E3)') langham
    end subroutine
 
    subroutine gle_restin(u)
       use mod_general, only: natom, nwalk
       ! Restart file unit
       integer, intent(in) :: u
-      character(len=50) :: chformat
       integer :: iat, iw, is
 
-      write (chformat, '(A1,I1,A7)') '(', ns, 'E25.16)'
       do iw = 1, nwalk
          do iat = 1, natom * 3
             do is = 1, ns - 1
-               read (u, '(1E25.16)', advance="no") ps(iat, is, iw)
+               read (u, '(ES25.16E3)', advance="no") ps(iat, is, iw)
             end do
-            read (u, '(1E25.16)') ps(iat, ns, iw)
+            read (u, '(ES25.16E3)') ps(iat, ns, iw)
          end do
       end do
       read (u, *) langham
@@ -393,7 +382,7 @@ contains
       character(len=50) :: chformat
       integer :: iat, iw, is
 
-      write (chformat, '(A1,I0,A7)') '(', ns, 'E25.16)'
+      write (chformat, '(A1,I0,A)') '(', ns, 'ES25.16E3)'
       do iw = 1, nwalk
          do iat = 1, natom * 3
             write (u, fmt=trim(chformat)) (ps(iat, is, iw), is=1, ns)
@@ -482,7 +471,7 @@ contains
       real(DP), intent(in) :: m(:, :)
       integer :: i, iat, iw
 
-      langham = langham + ekin_p(px, py, pz)
+      langham = langham + ekin_p(px, py, pz, m, natom, nwalk)
 
       do iw = 1, nwalk
 
@@ -520,7 +509,7 @@ contains
 
       end do
 
-      langham = langham - ekin_p(px, py, pz)
+      langham = langham - ekin_p(px, py, pz, m, natom, nwalk)
    end subroutine gle_step
 
    subroutine gle_propagate(p, T, S, mass, iw)

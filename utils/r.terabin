@@ -211,7 +211,7 @@ ABIN_CMD="$ABINEXE -i $ABIN_IN -x $GEOM_IN"
 if [[ $USE_HYDRA_NAMESERVER = "true" ]];then
   ABIN_CMD="$ABIN_CMD -M $TC_PORT"
 fi
-if [[ -z $VELOC_IN ]];then
+if [[ -n $VELOC_IN ]];then
    ABIN_CMD=$ABIN_CMD" -v $VELOC_IN"
 fi
 $MPIRUN_ABIN $ABIN_CMD > $ABIN_OUT 2>&1 &

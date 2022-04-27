@@ -16,7 +16,7 @@ launch_hydra_nameserver() {
   # to workaround the existing bug in it.
   # https://github.com/pmodels/mpich/issues/5058
   CMD=$1
-  hydra=$(ps -C hydra_nameserver -o pid= || true)
+  hydra=$(ps -C hydra_nameserve -o pid= || true)
   if [[ -n ${hydra} ]];then
     kill_processes $hydra
   fi
@@ -40,6 +40,16 @@ check_for_openmpi() {
     # https://www.open-mpi.org/doc/v4.1/man1/ompi-server.1.php
     # https://www.open-mpi.org/doc/v4.1/man1/mpirun.1.php#sect6 (search for ompi-server)
     echo "Skipping this test with OpenMPI build"
+    for f in `ls *ref`;do
+      cp $f `basename $f .ref`
+    done
+    exit 1
+  fi
+}
+
+check_for_intelmpi() {
+  if which mpiifort > /dev/null;then
+    echo "Skipping this test for IntelMPI build"
     for f in `ls *ref`;do
       cp $f `basename $f .ref`
     done

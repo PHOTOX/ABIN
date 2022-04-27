@@ -1,14 +1,15 @@
 &general
 iremd=1
-pot='mmwater'
+pot='_mmwater_'
 watpot=1
 mdtype='md'
-nstep=5,
+nstep=3,
 dt=40.,
 irandom=131313,
 
 nwrite=1,
 nwritex=1,
+nwritev=1
 nrest=1,
 irest=0,
 /

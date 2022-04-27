@@ -7,20 +7,26 @@ module mod_water
 contains
    subroutine check_water(natom, names)
       use mod_files, only: stdout
-      use mod_utils, only: abinerror, count_atoms_by_name
+      use mod_error, only: fatal_error
+      use mod_utils, only: count_atoms_by_name
       integer, intent(in) :: natom
       character(len=2) :: names(:)
       integer :: nH, nO
       integer :: error, iat
 
-      if (watpot < 1 .or. watpot > 4) then
-         write (*, *) 'ERROR: parameter "watpot" must be 1, 2, 3 or 4.'
-         write (*, *) '1 - q-TIP4P/F : https://dx.doi.org/10.1063/1.3167790'
-         write (*, *) '2 - TTM2.1-F  : https://dx.doi.org/10.1021/jp056477k'
-         write (*, *) '3 - TTM3-F    : https://dx.doi.org/10.1063/1.2837299'
-         write (*, *) '4 - TTM4-F    : https://dx.doi.org/10.1063/1.2895750'
-         call abinerror('check_water')
-      end if
+      write (stdout, *) ''
+      select case (watpot)
+      case (1)
+         write (stdout, *) 'Using water force field q-TIP4P/F : https://dx.doi.org/10.1063/1.3167790'
+      case (2)
+         write (stdout, *) 'Using water force field TTM2.1-F  : https://dx.doi.org/10.1021/jp056477k'
+      case (3)
+         write (stdout, *) 'Using water force field TTM3-F : https://dx.doi.org/10.1063/1.2837299'
+      case (4)
+         write (stdout, *) 'Using water force field TTM4-F : https://dx.doi.org/10.1063/1.2895750'
+      case default
+         call fatal_error(__FILE__, __LINE__, 'Parameter "watpot" must be 1, 2, 3 or 4')
+      end select
 
       error = 0
 
@@ -46,12 +52,12 @@ contains
             error = 1
             write (stdout, *) 'ERROR: Bad element type.'
             write (stdout, *) 'Water atoms must be ordered as "O H H" '
+            exit
          end if
       end do
 
       if (error == 1) then
-         write (stdout, *) 'This is not pure water.'
-         call abinerror('check_water')
+         call fatal_error(__FILE__, __LINE__, 'This is not pure water.')
       end if
 
       write (stdout, '(A,I0,A)') 'Detected ', nO, ' water molecules'

@@ -2,7 +2,7 @@
 &general
 anal_ext=1,
 nstep=5,
-pot='mmwater',
+pot='_mmwater_',
 mdtype='MD',
 dt=20.,
 irandom=3467323,

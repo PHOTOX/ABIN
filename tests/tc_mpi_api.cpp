@@ -31,6 +31,8 @@ TCServerMock::TCServerMock(char *serverName) {
   tcServerName = NULL;
   gradients = coordinates = NULL;
   atomTypes = NULL;
+  mpiPortName[0] = '\0';
+
   if (serverName) {
     tcServerName = new char[strlen(serverName)+1];
     strcpy(tcServerName, serverName);
@@ -58,7 +60,7 @@ TCServerMock::TCServerMock(char *serverName) {
 TCServerMock::~TCServerMock(void) {
   printf("Freeing and finalizing MPI.\n");
   MPI_Comm_free(&abin_client);
-  if (mpiPortName) {
+  if (strlen(mpiPortName) != 0) {
     MPI_Close_port(mpiPortName);
   }
   MPI_Finalize();
