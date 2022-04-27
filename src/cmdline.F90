@@ -48,23 +48,36 @@ contains
          case ('-i')
             i = i + 1
             call get_command_argument(i, arg)
-            !-format specifier is needed here in case of slashes
+            ! Format specifier is needed here in case of filenames with slashes/dashes
             read (arg, '(A)') chinput
-            chinput = trim(chinput)
+            if (trim(chinput) == '') then
+               call fatal_error(__FILE__, __LINE__, &
+                  & 'Empty -i argument. Provide filename with input parameters')
+            end if
          case ('-x')
             i = i + 1
             call get_command_argument(i, arg)
             read (arg, '(A)') chcoords
-            chcoords = trim(chcoords)
+            if (trim(chcoords) == '') then
+               call fatal_error(__FILE__, __LINE__, &
+                  & 'Empty -x argument. Provide filename with coordinates')
+            end if
          case ('-v')
             i = i + 1
             call get_command_argument(i, arg)
             read (arg, '(A)') chveloc
-            chveloc = trim(chveloc)
+            if (trim(chveloc) == '') then
+               call fatal_error(__FILE__, __LINE__, &
+                  & 'Empty -v argument. Provide filename with velocities')
+            end if
          case ('-M')
             i = i + 1
             call get_command_argument(i, arg)
             read (arg, '(A)') tc_server_name
+            if (trim(tc_server_name) == '') then
+               call fatal_error(__FILE__, __LINE__, &
+                  & 'Empty -M argument. Provide name of the TeraChem server')
+            end if
          case default
             call print_help()
             call fatal_error(__FILE__, __LINE__, &

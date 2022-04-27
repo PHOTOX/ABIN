@@ -223,14 +223,33 @@ contains
       end if
    end function append_rank
 
+   subroutine del_file(fname)
+      character(len=*), intent(in) :: fname
+      integer :: u, iost
+
+      open (newunit=u, file=fname, iostat=iost, status='old')
+      if (iost == 0) close (u, status='delete')
+   end subroutine del_file
+
+   subroutine rename_file(fname, fname_new)
+      character(len=*), intent(in) :: fname, fname_new
+      logical :: file_exists
+
+      inquire (file=fname, exist=file_exists)
+      if (file_exists) then
+         call rename(fname, fname_new)
+      end if
+   end subroutine rename_file
+
    subroutine archive_file(chfile, time_step)
+      use mod_files, only: stderr
       use mod_general, only: iremd
       use mod_mpi, only: get_mpi_rank
       integer, intent(in) :: time_step
       character(len=*), intent(in) :: chfile
       character(len=200) :: chsystem
       character(len=50) :: chit, charch
-      integer :: my_rank
+      integer :: my_rank, istat
 
       my_rank = get_mpi_rank()
       if (my_rank == 0 .or. iremd == 1) then
@@ -239,7 +258,8 @@ contains
          chsystem = 'cp '//trim(charch)//'  '//trim(charch)//'.'//adjustl(chit)
          write (stdout, *) 'Archiving file ', trim(charch)
          write (stdout, *) trim(chsystem)
-         call system(chsystem)
+         call execute_command_line(chsystem, exitstat=istat)
+         if (istat /= 0) write (stderr, *) 'WARNING: File archiving failed!'
       end if
    end subroutine archive_file
 

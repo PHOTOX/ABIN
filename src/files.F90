@@ -30,6 +30,8 @@ module mod_files
    integer, parameter :: UDIST = 36, UANG = 37, UDIH = 38
    ! Energy-restraint MD
    integer, parameter :: UERMD = 39
+   ! Replica exchange MD remd.out
+   integer :: UREMD = 40
 
    ! Default standard output and standard error units
    ! These are NOT parameters, we change them in REMD and in unit tests.
@@ -122,8 +124,10 @@ contains
       chfiles(UANG) = 'angles.dat'
       chfiles(UDIH) = 'dihedrals.dat'
 
-      !Energy restratint
+      ! Energy restraint
       chfiles(UERMD) = 'en_restraint.dat'
+      ! Replica exchange MD
+      chfiles(UREMD) = 'remd.out'
 
       ! Here we ensure, that previous files are deleted
       if (irest == 0) then
@@ -135,6 +139,7 @@ contains
       chfiles(UMOVIE) = 'movie.xyz'
 
       if (iremd == 1) then
+         open (UREMD, file=chfiles(UREMD), access=chaccess, action='write')
          do i = 1, MAXUNITS
             write (chfiles(i), '(A,I2.2)') trim(chfiles(i))//'.', get_mpi_rank()
          end do

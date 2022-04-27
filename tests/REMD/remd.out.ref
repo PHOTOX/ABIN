@@ -1,14 +1,8 @@
-Temperature of replica 0 is 100.00 K
-Temperature of replica 1 is 200.00 K
-Temperature of replica 2 is 300.00 K
 ====================================
 Swaping probabilities:  0.2494 1.0000
  Exchanges:  F T
 Acceptance ratios 0.0000 1.0000
 ReplicaTravel:   0   2   1
-Temperature of replica 0 is 100.00 K
-Temperature of replica 1 is 200.00 K
-Temperature of replica 2 is 300.00 K
 ====================================
 Swaping probabilities:  1.0000 0.7615
  Exchanges:  T T
@@ -19,6 +13,3 @@ Swaping probabilities:  0.9090 1.0000
  Exchanges:  T T
 Acceptance ratios 0.6667 0.6667
 ReplicaTravel:   2   0   1
-Temperature of replica 0 is 100.00 K
-Temperature of replica 1 is 200.00 K
-Temperature of replica 2 is 300.00 K

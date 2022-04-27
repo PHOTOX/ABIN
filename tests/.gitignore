@@ -22,6 +22,7 @@ REMD/restart.xyz.??.*
 */ERROR
 SH_*/geom.?.?.?
 CP2K*/WATER*
+engrad.dat.???
 
 # PLUMED backup files
 bck.*

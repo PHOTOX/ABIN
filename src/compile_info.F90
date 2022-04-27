@@ -7,6 +7,9 @@ subroutine print_compile_info()
    use mod_files, only: stdout
    character(len=*), parameter :: ABIN_VERSION = '1.1'
 
+   write (stdout, *) ''
+   write (stdout, *) '          COMPILATION INFO'
+   write (stdout, *) ''
    write (stdout, *) 'ABIN version '//ABIN_VERSION
    write (stdout, '(a, a, 1x, a)') 'Compiled at ', __TIME__, __DATE__
    write (stdout, *) 'Git commit '//GIT_COMMIT

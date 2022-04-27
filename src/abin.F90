@@ -2,7 +2,7 @@
 !  ABIN: Multipurpose ab initio MD program.
 !  The potential is calculated on-the-fly by an external program.
 !------------------------------------------------------------------
-!  Copyright (C) 2014             D.Hollas, M.Oncak, O.Svoboda and P.Slavicek
+!  Copyright (C) 2014    D.Hollas, J.Suchan, M.Oncak, O.Svoboda and P.Slavicek
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -27,18 +27,17 @@ program abin
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
-   use mod_utils, only: archive_file
-   use mod_transform
+   use mod_utils, only: del_file, archive_file
+   use mod_transform, only: initialize_pi_transforms, &
+                           & qtox, utox, fqtofx
    use mod_mdstep, only: mdstep
    use mod_minimize, only: minimize
    use mod_analysis, only: analysis, restout
    use mod_interfaces
-   use mod_en_restraint
+   use mod_en_restraint, only: restrain_pot
    use mod_terampi_sh, only: move_new2old_terash
    use mod_mpi, only: get_mpi_rank, mpi_barrier_wrapper
-#ifdef USE_MPI
    use mod_remd, only: remd_swap, nswap
-#endif
    implicit none
    real(DP) :: dt = 20.0D0, eclas = 0.0D0, equant = 0.0D0
    logical :: file_exists
@@ -119,7 +118,7 @@ program abin
    ! Set initial values for surface hopping
    if (ipimd == 2) then
       if (irest /= 1) then
-         call get_nacm()
+         call get_nacm(pot)
       end if
       call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
       if (pot == '_tera_' .or. restrain_pot == '_tera_') then
@@ -138,7 +137,7 @@ program abin
       ! if it is present (we delete it below before we stop the program).
       call mpi_barrier_wrapper()
 
-      inquire (FILE="EXIT", EXIST=file_exists)
+      inquire (file="EXIT", exist=file_exists)
       if (file_exists) then
          write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
          if (istage == 1) then
@@ -156,7 +155,7 @@ program abin
          call mpi_barrier_wrapper()
 
          if (my_rank == 0) then
-            call system('rm EXIT')
+            call del_file('EXIT')
          end if
 
          exit ! break from time loop
@@ -199,12 +198,10 @@ program abin
          end if
       end if
 
-#ifdef USE_MPI
       ! SWAP REMD REPLICAS
       if (iremd == 1 .and. modulo(it, nswap) == 0) then
          call remd_swap(x, y, z, px, py, pz, fxc, fyc, fzc, eclas)
       end if
-#endif
 
       ! --- Trajectory analysis ---
       ! In order to analyze the output, we have to perform the back transformation
@@ -271,7 +268,7 @@ contains
    subroutine clean_temp_files()
       ! TODO: Implement "clean" bash function in abin interfaces
       ! that should be called here (and only if irest=0)
-      call system('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
+      call execute_command_line('rm -f ERROR engrad*.dat.* nacm.dat hessian.dat.* geom.dat.*')
    end subroutine clean_temp_files
 
    function get_formatted_date_and_time(time_data) result(formatted_string)

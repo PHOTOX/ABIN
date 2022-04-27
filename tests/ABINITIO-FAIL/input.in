@@ -1,0 +1,25 @@
+&general
+pot='Dyn'
+mdtype='PIMD'
+iknow=1
+
+nwalk=10,
+istage=1,
+nstep=2,
+dt=40.,	
+irandom=131313,
+nabin=50,
+
+! Run beads in parallel
+nproc=2
+
+nwrite=1,
+nwritex=1,
+nrest=1,
+irest=0,
+/
+
+&nhcopt
+inose=0,
+temp=0.0,
+/

@@ -27,9 +27,9 @@ module mod_sh_integ
    integer :: nstate = 1
    ! Numerical integrator (defualt is Butcher 5-th order)
    character(len=10) :: integ = 'butcher'
-   ! TODO: Switch this on by default, and provide the opposite keyword
-   ! to replicate older data
-   logical :: correct_decoherence = .false.
+   ! NOTE: To exactly replicate older data, switch this to .false.
+   ! See the comment in subroutine sh_decoherence_correction() for explanation.
+   logical :: correct_decoherence = .true.
 
 contains
 
@@ -367,10 +367,10 @@ contains
          tau = (1.0D0 + alpha / kinetic_energy) / delta_e
          scaling_factor = dexp(-dtp / tau)
 
-         ! Testing the correct approach, the scaling factor is damping populations,
-         ! not the coefficients! The Eq. 17 in the Persico paper is wrong
-         ! TODO: We should of course switch to the correct formula by default,
-         ! but we need to support the incorrect version if we ever want to replicate old data
+         ! WARNING: The Eq. 17 in the Persico paper is wrong,
+         ! the scaling factor should be damping populations, NOT the WF coefficients.
+         ! In previous ABIN versions (and in some other SH packages), this was incorrect.
+         ! To reproduce older data, the user can set correct_decoherence=.false. in namelist sh.
          if (correct_decoherence) then
             scaling_factor = dsqrt(scaling_factor)
          end if

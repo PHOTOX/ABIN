@@ -35,4 +35,5 @@ decoh_alpha=0.1		! parameter for decoherence correction
 popthr=0.01
 energydifthr=0.80
 energydriftthr=0.80
+correct_decoherence=.false.
 /

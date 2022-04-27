@@ -113,8 +113,8 @@ contains
          ! Hence, we are using sed
          chsed = trim(chsed)//'>'//trim(cp2k_input_file)
 
-         call system(chsed)
-         call system('sync')
+         call execute_command_line(chsed)
+         call execute_command_line('sync')
 
          ! Create a new communicator based on cp2k_rank
          ! This is used for gathering forces and energies between different beads
