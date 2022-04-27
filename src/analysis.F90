@@ -50,7 +50,7 @@ contains
 
       if (nwritev > 0) then
          if (modulo(it, nwritev) == 0) then
-            call velout(vx, vy, vz)
+            call velout(vx, vy, vz, it)
          end if
       end if
 
@@ -78,12 +78,11 @@ contains
 
       if (anal_ext == 1) then
          ! Custom analysis function, see analyze_ext_template.F90
-         call analyze_ext()
+         call analyze_ext(it)
       end if
 
    end subroutine analysis
 
-   ! TODO: move these subroutines to io.F90
    subroutine trajout(x, y, z, time_step)
       use mod_const, only: ANG
       use mod_files, only: UMOVIE
@@ -115,7 +114,7 @@ contains
    end subroutine trajout
 
    subroutine forceout(x, y, z, fx, fy, fz, fUNIT)
-      use mod_general, only: nwalk, natom !, it
+      use mod_general, only: nwalk, natom
       use mod_system, only: names
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: fx(:, :), fy(:, :), fz(:, :)
@@ -159,15 +158,16 @@ contains
       end do
    end subroutine forceout
 
-   subroutine velout(vx, vy, vz)
-      use mod_general, only: nwalk, natom, it
+   subroutine velout(vx, vy, vz, time_step)
+      use mod_general, only: nwalk, natom
       use mod_system, only: names
       use mod_files, only: UVELOC
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
+      integer, intent(in) :: time_step
       integer :: iat, iw
 
       write (UVELOC, '(I0)') natom
-      write (UVELOC, '(A,I0)') 'Time step: ', it
+      write (UVELOC, '(A,I0)') 'Time step: ', time_step
 
       do iw = 1, nwalk
          do iat = 1, natom
@@ -179,9 +179,9 @@ contains
 
    subroutine restout(x, y, z, vx, vy, vz, time_step)
       use mod_general, only: icv, ihess, nwalk, ipimd, natom, &
-                             iremd, pot, narchive, sim_time
+                             pot, narchive, sim_time
       use mod_mpi, only: get_mpi_rank
-      use mod_utils, only: archive_file, append_rank
+      use mod_utils, only: rename_file, archive_file, append_rank
       use mod_nhc, only: inose, nhc_restout
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
@@ -195,8 +195,7 @@ contains
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(in) :: time_step
       integer :: iw, my_rank, urest
-      logical :: file_exists
-      character(len=200) :: chout, chsystem
+      character(len=200) :: chout
 
       my_rank = get_mpi_rank()
 
@@ -206,16 +205,7 @@ contains
       end if
 
       chout = append_rank('restart.xyz')
-
-      inquire (file=chout, exist=file_exists)
-      if (file_exists) then
-         chsystem = 'cp '//trim(chout)//'  '//trim(chout)//'.old'
-         if (iremd == 1) then
-            call system(chsystem)
-         else if (my_rank == 0) then
-            call system(chsystem)
-         end if
-      end if
+      call rename_file(chout, trim(chout)//'.old')
 
       open (newunit=urest, file=chout, action='write')
 

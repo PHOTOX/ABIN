@@ -168,8 +168,7 @@ contains
          if (idebug > 1) then
             write (stdout, '(A)') 'Waiting for TC port'
          end if
-         ! TODO: Try out how long should we sleep here.
-         call system('sleep 0.5')
+         call execute_command_line('sleep 0.5')
 
       end do
 
@@ -202,7 +201,7 @@ contains
          end if
 
          write (stdout, '(A)') 'WARNING: Cannot open file '//portfile
-         call system('sleep 0.5')
+         call execute_command_line('sleep 0.5')
 
       end do
 
@@ -288,7 +287,7 @@ contains
       do while (.not. ready)
          call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, ready, status, ierr)
          call handle_mpi_error(ierr)
-         call system(trim(chsys_sleep))
+         call execute_command_line(trim(chsys_sleep))
       end do
    end subroutine wait_for_terachem
 

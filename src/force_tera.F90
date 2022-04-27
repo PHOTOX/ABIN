@@ -13,6 +13,8 @@ module mod_force_tera
 ! Modified by Daniel Hollas hollas@vscht.cz
 ! ----------------------------------------------------------------
    use mod_const, only: DP
+   use mod_error, only: fatal_error
+   use mod_files, only: stderr
    use mod_terampi
 #ifdef USE_MPI
    use mpi
@@ -26,7 +28,6 @@ module mod_force_tera
 contains
 
    subroutine force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
-      use mod_utils, only: abinerror
       use mod_general, only: iqmmm
       use mod_shell_interface, only: oniom
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
@@ -36,39 +37,53 @@ contains
       integer :: iw, itc
       integer :: tc_comm
       integer :: OMP_GET_THREAD_NUM
+      logical :: abort
 
       ! DHnote: we cannot use Niklasson's propagator in TC if nwalk > 1
       ! This is a responsibility of the user
 
       if (modulo(walkmax, nteraservers) /= 0) then
-         write (*, *) 'ERROR: Parameter "nwalk" must be divisible by "nteraservers"!'
-         call abinerror("force_tera")
+         call fatal_error(__FILE__, __LINE__, &
+           & 'Parameter "nwalk" must be divisible by "nteraservers"!')
       end if
 
       itc = 1
+      abort = .false.
 
       ! Parallelization accross TeraChem servers
 !$OMP PARALLEL DO PRIVATE(iw, itc, tc_comm)
       do iw = 1, walkmax
 
-         ! map OMP thread to TC server
-!$       itc = OMP_GET_THREAD_NUM() + 1
+         ! See comment in force_abin() to understand this
+!$OMP FLUSH(abort)
+         if (.not. abort) then
+            ! map OMP thread to TC server
+!$          itc = OMP_GET_THREAD_NUM() + 1
 
 #ifdef USE_MPI
-         tc_comm = get_tc_communicator(itc)
+            tc_comm = get_tc_communicator(itc)
 
-         call send_tera(x, y, z, iw, tc_comm)
+            call send_tera(x, y, z, iw, tc_comm)
 
-         call receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm)
+            call receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm, abort)
+            if (abort) cycle
 #endif
 
-         ! ONIOM was not yet tested!!
-         if (iqmmm == 1) then
-            call oniom(x, y, z, fx, fy, fz, eclas, iw)
+            ! ONIOM was not yet tested!!
+            if (iqmmm == 1) then
+               call oniom(x, y, z, fx, fy, fz, eclas, iw, abort)
+               if (abort) cycle
+            end if
+
          end if
 
       end do
 !$OMP END PARALLEL DO
+
+      if (abort) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'External forces error')
+      end if
 
    end subroutine force_tera
 
@@ -128,17 +143,17 @@ contains
    end subroutine send_mm_data
 #endif
 
-   subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm)
+   subroutine receive_tera(fx, fy, fz, eclas, iw, walkmax, tc_comm, abort)
       use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
       use mod_const, only: ANG
       use mod_general, only: idebug, it, nwrite
       use mod_io, only: print_charges, print_dipoles
       use mod_qmmm, only: natqm
-      use mod_utils, only: abinerror
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
       integer, intent(in) :: iw, walkmax
       integer, intent(in) :: tc_comm
+      logical, intent(inout) :: abort
       real(DP) :: qmcharges(size(fx, 1))
       real(DP) :: dxyz_all(3, size(fx, 1))
       real(DP) :: escf ! SCF energy
@@ -160,8 +175,10 @@ contains
       call check_recv_count(status, 1, MPI_DOUBLE_PRECISION)
       ! Checking for TAG=1, which means that SCF did not converge
       if (status(MPI_TAG) == 1) then
-         write (*, *) 'Got TAG 1 from TeraChem: SCF probably did not converge.'
-         call abinerror('force_tera')
+         write (stderr, *) 'Got TAG 1 from TeraChem: SCF probably did not converge.'
+         abort = .true.
+!$OMP FLUSH(abort)
+         return
       end if
       if (idebug > 1) then
          print '(A,ES15.6)', 'Received SCF energy from server:', escf
@@ -224,7 +241,6 @@ contains
          fz(iat, iw) = -dxyz_all(3, iat)
       end do
 
-      ! TODO: Divide by walkmax in forces.xyz
 !$OMP ATOMIC
       eclas = eclas + escf / walkmax
 

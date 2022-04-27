@@ -41,6 +41,7 @@ for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
    job_pids[$itera]=$!
 }
 sleep 2
+sync
 # Grep port names from TC output, pass to ABIN via a file.
 for ((itera=1;itera<=N_TERA_SERVERS;itera++)) {
   grep 'port name' $TCOUT.$itera | awk -F"port name: " '{print $2;exit}' > $TC_PORT_FILE.$itera
