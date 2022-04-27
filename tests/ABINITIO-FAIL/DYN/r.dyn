@@ -14,7 +14,7 @@ let lines=timestep*natom1+natom1
 head -$lines engrad.dat.all.ref | tail -$natom1 > ../engrad.dat.$ibead
 
 # Simulate ab initio failure for the second bead
-echo "$ibead"
+echo "Calculating bead $ibead"
 if [[ $ibead = "001" ]];then
   echo "Premature exit 001"
   exit 1
