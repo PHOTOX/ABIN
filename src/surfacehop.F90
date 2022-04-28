@@ -544,13 +544,14 @@ contains
       real(DP) :: ran(1)
       real(DP) :: popsum !populations
       integer :: iat, ist1, ist2, itp
+      integer :: ihop
       ! Shortened variable for current state (istate)
       ! TODO: Remove this!
       integer :: ist ! =istate
-      real(DP) :: vect_olap, fr, frd
+      real(DP) :: fr
       real(DP) :: Ekin, dtp
-      integer :: ihop
-      real(DP) :: pop0, prob(nstate), hop_rdnum, stepfs
+      real(DP) :: pop0, prob(nstate), hop_rdnum
+      real(DP) :: stepfs
       character(len=500) :: formt
 
       call check_energy(vx_old, vy_old, vz_old, vx, vy, vz)
@@ -558,7 +559,7 @@ contains
 
       t_tot = 1.0D0
 
-      ! FIRST, CALCULAte nACME
+      ! First, calculate NACME
       if (inac == 0) then
 
          do ist1 = 1, nstate - 1
@@ -583,34 +584,7 @@ contains
          ! This computes and reads NACME
          call get_nacm(pot)
 
-         ! TODO: move this to a separate routine
-         ! Calculating overlap between nacmes
-         ! This is crucial, since NACME vectors can change orientation 180 degrees between time steps
-         ! and we need to correct that
-         do ist1 = 1, nstate
-            do ist2 = 1, nstate
-               vect_olap = 0.0D0
-               do iat = 1, natom
-                  vect_olap = vect_olap + &
-                     & nacx_old(iat, ist1, ist2) * nacx(iat, ist1, ist2)
-                  vect_olap = vect_olap + &
-                     & nacy_old(iat, ist1, ist2) * nacy(iat, ist1, ist2)
-                  vect_olap = vect_olap + &
-                     & nacz_old(iat, ist1, ist2) * nacz(iat, ist1, ist2)
-               end do
-
-               if (vect_olap < 0) then
-                  do iat = 1, natom
-                     nacx(iat, ist1, ist2) = -nacx(iat, ist1, ist2)
-                     nacy(iat, ist1, ist2) = -nacy(iat, ist1, ist2)
-                     nacz(iat, ist1, ist2) = -nacz(iat, ist1, ist2)
-                  end do
-               end if
-
-            end do
-         end do
-
-         ! INAC=0  endif
+         call phase_nacme(nacx_old, nacy_old, nacz_old, nacx, nacy, nacz)
       end if
 
       ! smaller time step
@@ -627,18 +601,14 @@ contains
 
          ! INTERPOLATION
          fr = real(itp, DP) / real(substep, DP)
-         frd = 1.0D0 - fr
-
          call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
                           nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
-                          dotproduct_newint, fr, frd)
+                          dotproduct_newint, fr)
 
          fr = real(itp - 1, DP) / real(substep, DP)
-         frd = 1.0D0 - fr
-
          call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
                           nacx_int, nacy_int, nacz_int, en_array_int, &
-                          dotproduct_int, fr, frd)
+                          dotproduct_int, fr)
 
          ! Integrate electronic wavefunction for one dtp time step
          call sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
@@ -667,8 +637,6 @@ contains
          ! Newton-X hops before decoherence.
 
          ! HOPPING SECTION
-         ! TODO: Refactor this to a separate functions in sh_util
-         ! and reuse for Landau-Zener.
          if (nohop /= 1) then
 
             ! Auxiliary calculations of probabilities on a number line
@@ -799,6 +767,42 @@ contains
 
    end subroutine surfacehop
 
+   subroutine phase_nacme(nacx_old, nacy_old, nacz_old, nacx, nacy, nacz)
+      real(DP), intent(in), dimension(:, :, :) :: nacx_old, nacy_old, nacz_old
+      real(DP), intent(inout), dimension(:, :, :) :: nacx, nacy, nacz
+      integer :: ist1, ist2, iat
+      integer :: natom
+      real(DP) :: vect_olap
+
+      natom = size(nacx, 1)
+      ! Calculating overlap between nacmes
+      ! This is crucial, since NACME vectors can change
+      ! orientation 180 degrees between time steps and we need to correct that
+      do ist1 = 1, nstate
+         do ist2 = 1, nstate
+
+            vect_olap = 0.0D0
+            do iat = 1, natom
+               vect_olap = vect_olap + &
+                  & nacx_old(iat, ist1, ist2) * nacx(iat, ist1, ist2)
+               vect_olap = vect_olap + &
+                  & nacy_old(iat, ist1, ist2) * nacy(iat, ist1, ist2)
+               vect_olap = vect_olap + &
+                  & nacz_old(iat, ist1, ist2) * nacz(iat, ist1, ist2)
+            end do
+
+            if (vect_olap < 0) then
+               do iat = 1, natom
+                  nacx(iat, ist1, ist2) = -nacx(iat, ist1, ist2)
+                  nacy(iat, ist1, ist2) = -nacy(iat, ist1, ist2)
+                  nacz(iat, ist1, ist2) = -nacz(iat, ist1, ist2)
+               end do
+            end if
+
+         end do
+      end do
+   end subroutine phase_nacme
+
    subroutine write_hopgeom(x, y, z, old_state, new_state, timestep)
       use mod_system, only: names
       use mod_const, only: ANG
@@ -893,7 +897,7 @@ contains
 
    subroutine interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
                           nacx_int, nacy_int, nacz_int, en_array_int, &
-                          dotproduct_int, fr, frd)
+                          dotproduct_int, fr)
       use mod_general, only: natom
       real(DP), intent(out) :: dotproduct_int(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
@@ -903,10 +907,13 @@ contains
       real(DP), intent(out) :: nacy_int(:, :, :)
       real(DP), intent(out) :: nacz_int(:, :, :)
       real(DP), intent(out) :: en_array_int(:)
-      real(DP) :: fr, frd
+      ! How far are we interpolating?
+      real(DP), intent(in) :: fr
+      real(DP) :: frd
       integer :: iat, iw, ist1, ist2 !iteration counters
 
       iw = 1
+      frd = 1.0D0 - fr
 
       do ist1 = 1, nstate
 
