@@ -519,10 +519,8 @@ contains
    ! This is the main SH routine !
    !******************************
    subroutine surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
-      use mod_const, only: ANG, AUTOFS
       use mod_general, only: natom, nwrite, idebug, it, sim_time, pot
-      use mod_system, only: names
-      use mod_files, only: UPOP, UPROB, UPES, UNACME, UDOTPROD
+      use mod_const, only: AUTOFS
       use mod_qmmm, only: natqm
       use mod_random, only: vranf
       use mod_kinetic, only: ekin_v
@@ -542,7 +540,8 @@ contains
       real(DP) :: t(nstate, nstate)
       ! Cumulative switching probabilities
       real(DP) :: t_tot(nstate, nstate)
-      real(DP) :: ran(10)
+      ! Random number to determine hopping
+      real(DP) :: ran(1)
       real(DP) :: popsum !populations
       integer :: iat, ist1, ist2, itp
       ! Shortened variable for current state (istate)
@@ -553,7 +552,6 @@ contains
       integer :: ihop
       real(DP) :: pop0, prob(nstate), hop_rdnum, stepfs
       character(len=500) :: formt
-      character(len=20) :: chist, chihop, chit
 
       call check_energy(vx_old, vy_old, vz_old, vx, vy, vz)
       call check_energydrift(vx, vy, vz)
@@ -720,22 +718,9 @@ contains
                   write (stdout, fmt=formt) '#', itp, hop_rdnum, (t(ist, ist1), ist1=1, nstate)
                end if
 
-               ! TODO: It seems that we're writing this geometry even for frustrated hop?
-               ! Is that desired?
-               ! write current geometry
-               write (chist, *) ist
-               write (chihop, *) ihop
-               write (chit, *) it
-               ! TODO: Rename this file to something more specific,
-               ! e.g. geom_hop.from.to.timestep.xyz
-               formt = 'geom.'//trim(adjustl(chist))//'.'//trim(adjustl(chihop))//'.'//adjustl(chit)
-               open (500, file=trim(formt))
-               write (500, *) natom
-               write (500, *) ''
-               do iat = 1, natom
-                  write (500, '(A,3ES25.16E3)') names(iat), x(iat, 1) / ANG, y(iat, 1) / ANG, z(iat, 1) / ANG
-               end do
-               close (500)
+               ! NOTE: We're writing this geometry even for frustrated hop!
+               ! Not sure if that is desired?
+               call write_hopgeom(x, y, z, old_state=ist, new_state=ihop, timestep=it)
             end if
 
             !nohop endif
@@ -761,17 +746,33 @@ contains
 
       call move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
 
-      ! TODO: Move this to a separate function write_sh_output()
       if (modulo(it, nwrite) == 0) then
+         call write_sh_output()
+      end if
+
+   contains
+
+      subroutine write_sh_output()
+         use mod_general, only: sim_time
+         use mod_const, only: ANG, AUTOFS
+         use mod_files, only: UPOP, UPROB, UPES, UNACME, UDOTPROD
+         integer :: ist1, ist2, iat
+         real(DP) :: stepfs
+
+         ! Write electronic populations
          stepfs = sim_time * AUtoFS
-         write (formt, '(A10,I3,A13)') '(F15.2,I3,', nstate, 'F10.5,1F10.7)'
+         write (formt, '(A10,I0,A13)') '(F15.2,I3,', nstate, 'F10.5,1F10.7)'
          write (UPOP, fmt=formt) stepfs, istate, (el_pop(ist1), ist1=1, nstate), popsum
 
+         ! Write hopping probabilities
          t_tot = 1 - t_tot ! up to know, t_tot was the probability of not hopping
-         write (formt, '(A10,I3,A6)') '(F15.2,I3,', nstate, 'F10.5)'
+         write (formt, '(A10,I0,A6)') '(F15.2,I3,', nstate, 'F10.5)'
          write (UPROB, fmt=formt) stepfs, istate, (t_tot(ist, ist1), ist1=1, nstate)
-         write (formt, '(A7,I3,A7)') '(F15.2,', nstate, 'E20.10)'
+
+         ! Write potential energies to PES.dat
+         write (formt, '(A7,I0,A7)') '(F15.2,', nstate, 'E20.10)'
          write (UPES, fmt=formt) stepfs, (en_array(ist1), ist1=1, nstate)
+
          if (inac == 0) write (UNACME, *) 'Time step:', it
          do ist1 = 1, nstate - 1
             do ist2 = ist1 + 1, nstate
@@ -794,10 +795,30 @@ contains
             end do
          end do
          write (UDOTPROD, *) ''
-
-      end if
+      end subroutine write_sh_output
 
    end subroutine surfacehop
+
+   subroutine write_hopgeom(x, y, z, old_state, new_state, timestep)
+      use mod_system, only: names
+      use mod_const, only: ANG
+      real(DP), intent(in), dimension(:, :) :: x, y, z
+      integer, intent(in) :: old_state, new_state, timestep
+      character(len=100) :: formt
+      integer :: natom
+      integer :: iat, u
+
+      natom = size(names)
+
+      write (formt, '("hopgeom.",I0,".",I0,".",I0,".xyz")') old_state, new_state, timestep
+      open (newunit=u, file=trim(formt), action='write')
+      write (u, *) natom
+      write (u, *) ''
+      do iat = 1, natom
+         write (u, '(A,3ES25.16E3)') names(iat), x(iat, 1) / ANG, y(iat, 1) / ANG, z(iat, 1) / ANG
+      end do
+      close (u)
+   end subroutine write_hopgeom
 
    subroutine hop(vx, vy, vz, instate, outstate, eclas)
       use mod_general, only: natom, pot
