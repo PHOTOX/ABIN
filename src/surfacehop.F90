@@ -114,6 +114,15 @@ contains
 
       call check_sh_parameters()
 
+      ! Determining the initial state
+      if (irest /= 1) then
+         istate = istate_init
+      end if
+
+      if (nohop == 1) then
+         write (stdout, '(A,I0)') 'WARNING: nohop=1, Running adiabatic dynamics on state ', istate
+      end if
+
       deltaE = deltaE / AUtoEV
 
       allocate (nacx(natom, nstate, nstate))
@@ -134,17 +143,14 @@ contains
       en_array = 0.0D0
       en_array_old = en_array
 
-      ! Determining the initial state
-      if (irest /= 1) then
-         istate = istate_init
-      end if
-
       allocate (tocalc(nstate, nstate))
       tocalc = 0
       tocalc(istate, istate) = 1
 
-      ! Compute initial wavefunction and energies
+      ! Compute initial wavefunction and energies,
       ! used for subsequent determination of TOCALC according to deltaE threshold
+      ! NOTE: We're computing forces as well, since the force_abin() interface
+      ! currently does not allow for computing only energies.
       dum_eclas = 0.0D0
       dum_fx = 0.0D0; dum_fy = 0.0D0; dum_fz = 0.0D0
       call force_clas(dum_fx, dum_fy, dum_fz, x, y, z, dum_eclas, pot)
@@ -196,6 +202,11 @@ contains
          error = .true.
       end if
 
+      if (inac == 2 .and. nohop == 0) then
+         write (stdout, '(A)') 'WARNING: For simulations without couplings, inac=2, hopping probability cannot be determined.'
+         nohop = 1
+      end if
+      
       if (nac_accu1 <= nac_accu2) then
          write (stderr, '(A)') 'WARNING: nac_accu1 < nac_accu2'
          write (stderr, '(A,I0)') 'Computing NACME only with default accuracy 10^-', nac_accu1
@@ -522,7 +533,6 @@ contains
       use mod_general, only: natom, nwrite, idebug, it, sim_time, pot
       use mod_const, only: AUTOFS
       use mod_qmmm, only: natqm
-      use mod_random, only: vranf
       use mod_kinetic, only: ekin_v
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
@@ -540,17 +550,16 @@ contains
       real(DP) :: t(nstate, nstate)
       ! Cumulative switching probabilities
       real(DP) :: t_tot(nstate, nstate)
-      ! Random number to determine hopping
-      real(DP) :: ran(1)
       real(DP) :: popsum !populations
       integer :: iat, ist1, ist2, itp
       integer :: ihop
       ! Shortened variable for current state (istate)
-      ! TODO: Remove this!
+      ! TODO: Rename this!
       integer :: ist ! =istate
       real(DP) :: fr
       real(DP) :: Ekin, dtp
-      real(DP) :: pop0, prob(nstate), hop_rdnum
+      real(DP) :: pop0
+      ! Simulation time in femtoseconds
       real(DP) :: stepfs
       character(len=500) :: formt
 
@@ -637,61 +646,27 @@ contains
          ! Newton-X hops before decoherence.
 
          ! HOPPING SECTION
-         if (nohop /= 1) then
+         call random_hop(transmat=t, old_state=ist, new_state=ihop)
 
-            ! Auxiliary calculations of probabilities on a number line
-            prob = 0.0D0
-            if (ist == 1) then
-               ! If we are in the ground state, we cannot jump into the ground state :-)
-               prob(1) = 0.0D0
+         if (nohop == 1 .and. ihop /= 0) then
+            write (stdout, '(A,I0)') 'WARNING: Ignoring hop to state ', ihop
+         end if
+
+         ! Did HOP occur?
+         if (nohop /= 1 .and. ihop /= 0) then
+            ! NOTE: Hop can still fail due to insufficient kinetic energy
+            ! ("frustrated hop")
+            if (adjmom == 0) then
+               call try_hop_nacme_rescale(vx, vy, vz, ist, ihop, eclas)
+            else if (adjmom == 1) then
+               call try_hop_simple_rescale(vx, vy, vz, ist, ihop, eclas)
             else
-               ! Probability of jumping from the current state to the ground state
-               prob(1) = t(ist, 1)
+               call fatal_error(__FILE__, __LINE__, 'Invalid adjmom value')
             end if
 
-            do ist1 = 2, nstate
-               if (ist1 /= ist) then
-                  prob(ist1) = prob(ist1 - 1) + t(ist, ist1)
-               end if
-               if (ist1 == ist) then
-                  prob(ist1) = prob(ist1 - 1)
-               end if
-            end do
-
-            ihop = 0
-            ! Get one random number between 0 and 1
-            call vranf(ran, 1)
-            hop_rdnum = ran(1)
-
-            ! determine, whether we hopped or not
-            do ist1 = 1, nstate
-               if (ist1 == ist) cycle
-               if (hop_rdnum < prob(ist1)) then
-                  ihop = ist1
-                  exit
-               end if
-            end do
-
-            ! Did HOP occur?
-            if (ihop /= 0) then
-               if (adjmom == 0) then
-                  call hop(vx, vy, vz, ist, ihop, eclas)
-               else if (adjmom == 1) then
-                  call try_hop_simple_rescale(vx, vy, vz, ist, ihop, eclas)
-               end if
-
-               if (idebug > 0) then
-                  write (formt, '(A8,I3,A7)') '(A1,I10,', nstate + 1, 'E20.10)'
-                  write (stdout, *) '# Substep RandomNum   Probabilities'
-                  write (stdout, fmt=formt) '#', itp, hop_rdnum, (t(ist, ist1), ist1=1, nstate)
-               end if
-
-               ! NOTE: We're writing this geometry even for frustrated hop!
-               ! Not sure if that is desired?
-               call write_hopgeom(x, y, z, old_state=ist, new_state=ihop, timestep=it)
-            end if
-
-            !nohop endif
+            ! NOTE: We're writing this geometry even for frustrated hops!
+            ! Not sure if that is desired?
+            call write_hopgeom(x, y, z, old_state=ist, new_state=ihop, timestep=it)
          end if
 
          ! Apply decoherence correction from Persico et al
@@ -727,8 +702,10 @@ contains
          integer :: ist1, ist2, iat
          real(DP) :: stepfs
 
-         ! Write electronic populations
+         ! Simulation time in femtoseconds
          stepfs = sim_time * AUtoFS
+
+         ! Write electronic populations
          write (formt, '(A10,I0,A13)') '(F15.2,I3,', nstate, 'F10.5,1F10.7)'
          write (UPOP, fmt=formt) stepfs, istate, (el_pop(ist1), ist1=1, nstate), popsum
 
@@ -824,7 +801,55 @@ contains
       close (u)
    end subroutine write_hopgeom
 
-   subroutine hop(vx, vy, vz, instate, outstate, eclas)
+   subroutine random_hop(transmat, old_state, new_state)
+      use mod_random, only: vranf
+      ! Transition matrix
+      real(DP), intent(in), dimension(:, :) :: transmat
+      ! Current state index
+      integer, intent(in) :: old_state
+      ! New state index (0 if no hop occurs)
+      integer, intent(out) :: new_state
+      real(DP) :: prob(nstate)
+      ! Pseudorandom number
+      real(DP) :: rdnum(1)
+      integer :: ist1
+
+      ! We return 0 if there's no hop
+      new_state = 0
+
+      ! Auxiliary calculations of probabilities on a number line
+      prob = 0.0D0
+      if (old_state == 1) then
+         ! If we are in the ground state, we cannot jump into the ground state :-)
+         prob(1) = 0.0D0
+      else
+         ! Probability of jumping from the current state to the ground state
+         prob(1) = transmat(old_state, 1)
+      end if
+
+      do ist1 = 2, nstate
+         if (ist1 /= old_state) then
+            prob(ist1) = prob(ist1 - 1) + transmat(old_state, ist1)
+         end if
+         if (ist1 == old_state) then
+            prob(ist1) = prob(ist1 - 1)
+         end if
+      end do
+
+      ! Get one random number between 0 and 1
+      call vranf(rdnum, 1)
+
+      ! Determine, whether we hopped or not
+      do ist1 = 1, nstate
+         if (ist1 == old_state) cycle
+         if (rdnum(1) < prob(ist1)) then
+            new_state = ist1
+            exit
+         end if
+      end do
+   end subroutine random_hop
+
+   subroutine try_hop_nacme_rescale(vx, vy, vz, instate, outstate, eclas)
       use mod_general, only: natom, pot
       use mod_system, only: am
       use mod_files, only: UPOP
@@ -893,7 +918,7 @@ contains
       write (*, *) '# Calculating forces for the new state.'
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
-   end subroutine hop
+   end subroutine try_hop_nacme_rescale
 
    subroutine interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
                           nacx_int, nacy_int, nacz_int, en_array_int, &
