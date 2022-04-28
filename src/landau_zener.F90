@@ -13,7 +13,9 @@ module mod_lz
    use mod_error, only: fatal_error
    use mod_files, only: stdout, stderr
    use mod_general, only: nwalk, pot, irest
-   use mod_sh, only: istate_init, istate, inac !TERA-MPI interface
+   ! TODO: Break coupling between LZ and SH modules
+   ! The following are needed for TERA-MPI interface
+   use mod_sh, only: istate_init, istate, inac
    use mod_sh_integ, only: nstate
    implicit none
    private
@@ -30,7 +32,6 @@ module mod_lz
 
    ! Module variables
    integer :: istate_lz
-   ! TODO: Is this array needed? Are we not computing gradients for only one state?
    integer, allocatable, dimension(:) :: tocalc_lz
    real(DP), allocatable, dimension(:, :) :: en_array_lz, en_array_lz_backup
    real(DP), allocatable, dimension(:, :) :: fx_old, fy_old, fz_old
@@ -97,7 +98,6 @@ contains
       en_array_lz = 0.0D0
 
       !TERA-MPI parameters
-      ! TODO: Break coupling between LZ and SH modules
       if (pot == '_tera_') then
          nstate = nstate_lz
          istate_init = initstate_lz

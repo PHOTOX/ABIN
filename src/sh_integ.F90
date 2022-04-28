@@ -5,6 +5,7 @@
 module mod_sh_integ
    use mod_const, only: DP
    use mod_error, only: fatal_error
+   implicit none
    private
    public :: sh_integrate_wf, sh_set_initialwf, sh_write_phase_bin, sh_read_phase_bin
    public :: sh_decoherence_correction, check_popsum, sh_TFS_transmat
@@ -66,8 +67,7 @@ contains
    ! Calculates transitions matrix according to the Tully's fewest switches algorithm
    subroutine sh_TFS_transmat(dotproduct_int, dotproduct_newint, ist, pop0, t, dtp)
       ! Interpolated dotproducts between velocities and NA couplings
-      real(DP), intent(in) :: dotproduct_int(:, :)
-      real(DP), intent(in) :: dotproduct_newint(:, :)
+      real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
       ! Index of current state
       integer, intent(in) :: ist
       ! Population of the current state
@@ -105,9 +105,10 @@ contains
    end subroutine sh_TFS_transmat
 
    subroutine integstep(k_re, k_im, en, y_re, y_im, dotprod, gam, dtp)
-      real(DP), intent(out) :: k_re(:), k_im(:)
-      real(DP), intent(in) :: dotprod(:, :), gam(:, :)
-      real(DP), intent(in) :: en(:), y_im(:), y_re(:), dtp
+      real(DP), intent(out), dimension(:) :: k_re, k_im
+      real(DP), intent(in), dimension(:, :) :: dotprod, gam
+      real(DP), intent(in), dimension(:) :: en, y_im, y_re
+      real(DP), intent(in) :: dtp
       real(DP) :: g
       integer :: ist1, ist2
 
@@ -165,10 +166,9 @@ contains
       real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
       real(DP), intent(in), dimension(:, :) :: dotproduct_int
       real(DP) :: dtp
-      real(DP) :: dotprod0(nstate, nstate), gam0(nstate, nstate)
-      real(DP) :: k1_re(nstate), k1_im(nstate)
-      real(DP) :: y_im(nstate), y_re(nstate)
-      real(DP) :: en0(nstate)
+      real(DP), dimension(nstate, nstate) :: dotprod0, gam0
+      real(DP), dimension(nstate) :: k1_re, k1_im
+      real(DP), dimension(nstate) :: y_im, y_re, en0
       integer :: ist1, ist2
 
       do ist1 = 1, nstate
@@ -192,19 +192,15 @@ contains
    end subroutine eulerstep
 
    subroutine rk4step(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
-      real(DP), intent(in) :: en_array_int(:)
-      real(DP), intent(in) :: en_array_newint(:)
-      real(DP), intent(in) :: dotproduct_int(:, :)
-      real(DP), intent(in) :: dotproduct_newint(:, :), dtp
-      real(DP) :: dotprod2(nstate, nstate)
-      real(DP) :: dotprod0(nstate, nstate), dotprod1(nstate, nstate)
-      real(DP) :: k1_re(nstate), k1_im(nstate)
-      real(DP) :: k2_re(nstate), k2_im(nstate)
-      real(DP) :: k3_re(nstate), k3_im(nstate)
-      real(DP) :: k4_re(nstate), k4_im(nstate)
-      real(DP) :: y_im(nstate), y_re(nstate)
-      real(DP) :: en0(nstate), en1(nstate), en2(nstate)
-      real(DP) :: gam0(nstate, nstate), gam1(nstate, nstate), gam2(nstate, nstate)
+      real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
+      real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
+      real(DP), intent(in) :: dtp
+      real(DP), dimension(nstate, nstate) :: dotprod0, dotprod1, dotprod2
+      real(DP), dimension(nstate) :: k1_re, k1_im, k2_re, k2_im
+      real(DP), dimension(nstate) :: k3_re, k3_im, k4_re, k4_im
+      real(DP), dimension(nstate) :: y_im, y_re
+      real(DP), dimension(nstate) :: en0, en1, en2
+      real(DP), dimension(nstate, nstate) :: gam0, gam1, gam2
       integer :: ist1, ist2
 
 !     initial interpolations
@@ -263,21 +259,16 @@ contains
       real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
       real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
       real(DP), intent(in) :: dtp
-      real(DP) :: dotprod2(nstate, nstate), dotprod4(nstate, nstate), dotprod34(nstate, nstate)
-      real(DP) :: dotprod0(nstate, nstate), dotprod1(nstate, nstate)
-      real(DP) :: k1_re(nstate), k1_im(nstate)
-      real(DP) :: k2_re(nstate), k2_im(nstate)
-      real(DP) :: k3_re(nstate), k3_im(nstate)
-      real(DP) :: k4_re(nstate), k4_im(nstate)
-      real(DP) :: k5_re(nstate), k5_im(nstate)
-      real(DP) :: k6_re(nstate), k6_im(nstate)
-      real(DP) :: y_im(nstate), y_re(nstate)
-      real(DP) :: en0(nstate), en1(nstate), en2(nstate), en4(nstate), en34(nstate)
-      real(DP) :: gam0(nstate, nstate), gam1(nstate, nstate), gam2(nstate, nstate)
-      real(DP) :: gam4(nstate, nstate), gam34(nstate, nstate)
+      real(DP), dimension(nstate, nstate) :: dotprod0, dotprod1, dotprod2, dotprod4, dotprod34
+      real(DP), dimension(nstate) :: k1_re, k1_im, k2_re, k2_im
+      real(DP), dimension(nstate) :: k3_re, k3_im, k4_re, k4_im
+      real(DP), dimension(nstate) :: k5_re, k5_im, k6_re, k6_im
+      real(DP), dimension(nstate) :: y_im, y_re
+      real(DP), dimension(nstate) :: en0, en1, en2, en4, en34
+      real(DP), dimension(nstate, nstate) :: gam0, gam1, gam2, gam4, gam34
       integer :: ist1, ist2
 
-!     initial interpolations
+      ! initial interpolations
       do ist1 = 1, nstate
          en0(ist1) = en_array_int(ist1) + eshift
          en1(ist1) = en_array_newint(ist1) + eshift

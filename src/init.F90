@@ -1096,7 +1096,7 @@ contains
             am(i) = 88.90584D0
          case ('Zr')
             am(i) = 91.224D0
-         ! The following values were taken from QCelemental Python library
+            ! The following values were taken from QCelemental Python library
          case ('Tc')
             am(i) = 97.9072124D0
          case ('Pm')
