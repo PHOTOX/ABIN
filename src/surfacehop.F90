@@ -274,7 +274,7 @@ contains
          if (iost /= 0) then
             call fatal_error(__FILE__, __LINE__, 'Some NACMEs could not be read')
          end if
-         ! we always have to set tocalc because we change it in readnacm
+         ! we always have to set tocalc because we change it in read_nacm()
          call set_tocalc()
       end if
    end subroutine get_nacm
@@ -532,7 +532,6 @@ contains
    subroutine surfacehop(x, y, z, vx, vy, vz, vx_old, vy_old, vz_old, dt, eclas)
       use mod_general, only: natom, nwrite, idebug, it, sim_time, pot
       use mod_const, only: AUTOFS
-      use mod_qmmm, only: natqm
       use mod_kinetic, only: ekin_v
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
@@ -551,7 +550,7 @@ contains
       ! Cumulative switching probabilities
       real(DP) :: t_tot(nstate, nstate)
       real(DP) :: popsum !populations
-      integer :: iat, ist1, ist2, itp
+      integer :: ist1, itp
       integer :: ihop
       ! Shortened variable for current state (istate)
       ! TODO: Rename this!
@@ -571,28 +570,17 @@ contains
       ! First, calculate NACME
       if (inac == 0) then
 
-         do ist1 = 1, nstate - 1
-            do ist2 = ist1 + 1, nstate
-               if (tocalc(ist1, ist2) == 0) then
-                  write (*, *) 'Not computing NACME between states', ist1, ist2
-                  ! We need to flush these to zero
-                  ! Need to do this here, since tocalc is changed in GET_NACME routine
-                  ! TODO: Why don't we simply zero-out the whole array?
-                  do iat = 1, natqm
-                     nacx(iat, ist1, ist2) = 0.0D0
-                     nacy(iat, ist1, ist2) = 0.0D0
-                     nacz(iat, ist1, ist2) = 0.0D0
-                     nacx(iat, ist2, ist1) = 0.0D0
-                     nacy(iat, ist2, ist1) = 0.0D0
-                     nacz(iat, ist2, ist1) = 0.0D0
-                  end do
-               end if
-            end do
-         end do
+         ! For TeraChem MPI / FMS interface, NAC are already computed!
+         if (pot /= '_tera_') then
+            nacx = 0.0D0
+            nacy = 0.0D0
+            nacz = 0.0D0
+            ! Compute and read NACME (MOLPRO-SH interface)
+            call get_nacm(pot)
+         end if
 
-         ! This computes and reads NACME
-         call get_nacm(pot)
-
+         ! TODO: Should we call this with TeraChem?
+         ! I think TC already phases the couplings internally.
          call phase_nacme(nacx_old, nacy_old, nacz_old, nacx, nacy, nacz)
       end if
 
