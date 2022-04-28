@@ -2,7 +2,6 @@
 ! D. Hollas, O. Svoboda, P. Slavicek, M. Oncak
 module mod_sh
    use mod_const, only: DP
-   use mod_array_size, only: NSTMAX
    use mod_files, only: stdout, stderr
    use mod_error, only: fatal_error
    use mod_sh_integ
@@ -31,16 +30,20 @@ module mod_sh
    public :: nacx, nacy, nacz
 
    ! Initial electronic state
-   integer :: istate_init = 1
+   integer :: istate_init = -1
+
    ! Number of substeps for integrating electronic Schrodinger eq.
    integer :: substep = 100
+
    ! Controls calculations of Non-adiabatic Couplings (NAC)
    ! 0 - Analytical NAC
    ! 1 - Numerical Hammers-Schffer-Tully model (currently not implemented)
    ! 2 - Do not compute couplings
    integer :: inac = 0
+
    ! 1 - Turn OFF hopping
    integer :: nohop = 0
+
    ! How to adjust velocity after hop:
    ! 0 - Adjust velocity along the NAC vector (default)
    ! 1 - Simple velocity rescale
@@ -49,14 +52,31 @@ module mod_sh
    integer :: adjmom = 0
    ! 1 - Reverse momentum direction after frustrated hop
    integer :: revmom = 0
-   ! Numerical accuracy of MOLPRO NAC
+
+   ! Numerical accuracy of MOLPRO NACME, 10^-nac_accu
+   ! Default accuracy (equals MOLPRO defaults)
    integer :: nac_accu1 = 7
-   integer :: nac_accu2 = 5 !7 is MOLPRO default
+   ! If calculation fails with default, we retry with nac_accu2
+   integer :: nac_accu2 = 5
+
    ! Decoherence correction parameter (a.u.)
-   ! To turn of decoherence correction, set decoh_alpha = 0.0D0
+   ! To turn off decoherence correction, set decoh_alpha = 0.0D0
    real(DP) :: decoh_alpha = 0.1D0
-   real(DP) :: deltae = 5.0D0, popthr = 0.001D0
-   real(DP) :: energydifthr = 1.0D0, energydriftthr = 1.0D0 !eV
+
+   ! Compute NACME only if states are less then deltaE apart (eV)
+   ! The default value (5 eV) is very conservative.
+   real(DP) :: deltaE = 5.0D0
+   ! Compute NACME only if at least one of the two states has population > popthr
+   real(DP) :: popthr = 0.001D0
+
+   ! Thresholds for energy conservations (in eV)
+   ! The default values are too permisive
+   ! you should definitely tighten them in production simulations!
+   ! Stop simulation if total energy difference in successive steps is > energydifthr
+   real(DP) :: energydifthr = 1.0D0
+   ! Stop simulation if total energy drift since the beginning exceeds energydriftthr
+   real(DP) :: energydriftthr = 1.0D0
+
    ! Special case for adiabatic TDDFT, terminate when close to S1-S0 crossing
    real(DP) :: dE_S0S1_thr = 0.0D0 !eV
    ! NA Couplings
@@ -66,9 +86,12 @@ module mod_sh
    real(DP), allocatable :: en_array(:), en_array_old(:)
    ! Initial absolute electronic energy, needed for monitoring energy drift
    real(DP) :: entot0
-   ! nstatexnstate matrix, off-diagonal elements determine NAC, diagonal elements = electronic gradients
+   ! nstate x nstate matrix to determine which derivatives to compute
+   ! off-diagonal elements correspond to NAC
+   ! diagonal elements correspond to electronic gradients
    integer, allocatable :: tocalc(:, :)
    ! Current electronic state
+   ! TODO: This one should definitely be private!
    integer :: istate
    ! for ethylene 2-state SA3 dynamics
    integer :: ignore_state = 0
@@ -125,7 +148,7 @@ contains
 
       call force_clas(dum_fx, dum_fy, dum_fz, x, y, z, dum_eclas, pot)
 
-      call sh_set_initialwf(istate, en_array(1))
+      call sh_set_initialwf(istate, en_array(1), irest)
 
       entot0 = en_array(istate) + ekin_v(vx, vy, vz)
       entot0 = entot0 * AUtoEV
@@ -145,13 +168,6 @@ contains
       logical :: error
 
       error = .false.
-
-      ! TODO: Lift this restriction
-      if (nstate > nstmax) then
-         write (stderr, '(A,I0)') 'Maximum number of states is: ', nstmax
-         write (stderr, '(A)') 'Adjust variable nstmax in modules.f90'
-         error = .true.
-      end if
 
       if (integ /= 'euler' .and. integ /= 'rk4' .and. integ /= 'butcher') then
          write (stderr, '(A)') 'variable integ must be "euler", "rk4" or "butcher".'
@@ -193,6 +209,7 @@ contains
       call int_switch(adjmom, 'revmom')
 
       call int_positive(istate_init, 'istate_init')
+      call int_positive(nstate, 'nstate')
       call int_positive(substep, 'substep')
       call int_positive(nac_accu1, 'nac_accu1')
 
@@ -513,30 +530,27 @@ contains
       real(DP), intent(inout) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
       real(DP), intent(inout) :: eclas
       real(DP), intent(in) :: dt
-      real(DP) :: vx_int(size(vx, 1), size(vx, 2))
-      real(DP) :: vy_int(size(vy, 1), size(vy, 2))
-      real(DP) :: vz_int(size(vz, 1), size(vz, 2))
-      real(DP) :: vx_newint(size(vx, 1), size(vx, 2))
-      real(DP) :: vy_newint(size(vy, 1), size(vy, 2))
-      real(DP) :: vz_newint(size(vz, 1), size(vz, 2))
-      real(DP) :: en_array_int(NSTMAX), en_array_newint(NSTMAX)
-      real(DP) :: nacx_int(size(vx, 1), NSTMAX, NSTMAX)
-      real(DP) :: nacy_int(size(vx, 1), NSTMAX, NSTMAX)
-      real(DP) :: nacz_int(size(vx, 1), NSTMAX, NSTMAX)
-      real(DP) :: nacx_newint(size(vx, 1), NSTMAX, NSTMAX)
-      real(DP) :: nacy_newint(size(vx, 1), NSTMAX, NSTMAX)
-      real(DP) :: nacz_newint(size(vx, 1), NSTMAX, NSTMAX)
-      real(DP) :: dotproduct_int(NSTMAX, NSTMAX), dotproduct_newint(NSTMAX, NSTMAX) !rename dotproduct_int
-      real(DP) :: t(NSTMAX, NSTMAX) ! switching probabilities
-      real(DP) :: t_tot(NSTMAX, NSTMAX) ! cumulative switching probabilities
+      ! Interpolated quantities
+      real(DP), dimension(natom, 1) :: vx_int, vy_int, vz_int
+      real(DP), dimension(natom, 1) :: vx_newint, vy_newint, vz_newint
+      real(DP), dimension(nstate) :: en_array_int, en_array_newint
+      real(DP), dimension(natom, nstate, nstate) :: nacx_int, nacy_int, nacz_int
+      real(DP), dimension(natom, nstate, nstate) :: nacx_newint, nacy_newint, nacz_newint
+      real(DP), dimension(nstate, nstate) :: dotproduct_int, dotproduct_newint
+      ! Switching probabilities
+      real(DP) :: t(nstate, nstate)
+      ! Cumulative switching probabilities
+      real(DP) :: t_tot(nstate, nstate)
       real(DP) :: ran(10)
       real(DP) :: popsum !populations
-      integer :: iat, ist1, ist2, itp ! iteration counters
+      integer :: iat, ist1, ist2, itp
+      ! Shortened variable for current state (istate)
+      ! TODO: Remove this!
       integer :: ist ! =istate
       real(DP) :: vect_olap, fr, frd
       real(DP) :: Ekin, dtp
       integer :: ihop
-      real(DP) :: pop0, prob(NSTMAX), hop_rdnum, stepfs
+      real(DP) :: pop0, prob(nstate), hop_rdnum, stepfs
       character(len=500) :: formt
       character(len=20) :: chist, chihop, chit
 
@@ -545,7 +559,7 @@ contains
 
       t_tot = 1.0D0
 
-      ! FIRST, CALCULATE NACME
+      ! FIRST, CALCULAte nACME
       if (inac == 0) then
 
          do ist1 = 1, nstate - 1
@@ -554,6 +568,7 @@ contains
                   write (*, *) 'Not computing NACME between states', ist1, ist2
                   ! We need to flush these to zero
                   ! Need to do this here, since tocalc is changed in GET_NACME routine
+                  ! TODO: Why don't we simply zero-out the whole array?
                   do iat = 1, natqm
                      nacx(iat, ist1, ist2) = 0.0D0
                      nacy(iat, ist1, ist2) = 0.0D0
@@ -638,8 +653,6 @@ contains
          call sh_TFS_transmat(dotproduct_int, dotproduct_newint, istate, pop0, t, dtp)
 
          if (idebug > 1) then
-            ! WARNING: this will not work for adaptive time step
-            ! stepfs = (it*substep+itp-substep) * dt * AUtoFS / substep
             stepfs = (sim_time + dtp * itp - substep * dtp) * AUtoFS
             call sh_debug_wf(ist, stepfs, t)
          end if
@@ -702,8 +715,8 @@ contains
 
                if (idebug > 0) then
                   write (formt, '(A8,I3,A7)') '(A1,I10,', nstate + 1, 'E20.10)'
-                  write (*, *) '# Substep RandomNum   Probabilities'
-                  write (*, fmt=formt) '#', itp, hop_rdnum, (t(ist, ist1), ist1=1, nstate)
+                  write (stdout, *) '# Substep RandomNum   Probabilities'
+                  write (stdout, fmt=formt) '#', itp, hop_rdnum, (t(ist, ist1), ist1=1, nstate)
                end if
 
                ! TODO: It seems that we're writing this geometry even for frustrated hop?
@@ -1019,9 +1032,9 @@ contains
       use mod_const, only: AUtoFS
       use mod_files, only: UDOTPRODCI
       use mod_general, only: sim_time
-      real(DP), allocatable, intent(in) :: CIvecs(:, :), CIvecs_old(:, :)
+      real(DP), intent(in) :: CIvecs(:, :), CIvecs_old(:, :)
       integer, intent(in) :: ci_len, nstates
-      real(DP) :: cidotprod(NSTMAX)
+      real(DP) :: cidotprod(nstates)
       integer :: ist1, i
       character(len=20) :: formt
 

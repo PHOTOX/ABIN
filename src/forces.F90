@@ -192,7 +192,6 @@ end subroutine force_wrapper
 
 subroutine force_quantum(fx, fy, fz, x, y, z, amg, quantum_energy)
    use mod_const, only: DP
-   use mod_array_size
    use mod_general, only: nwalk, inormalmodes, istage, natom
    use mod_nhc, only: temp, inose
    implicit none
