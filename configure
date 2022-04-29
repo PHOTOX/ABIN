@@ -169,6 +169,8 @@ CXX = $CXX
 # Compiler flags
 FFLAGS = $FFLAGS
 CXXFLAGS = $CXXFLAGS
+LDFLAGS = ${LDFLAGS-}
+LDLIBS = ${LDLIBS-}
 
 # MPI library
 MPI = $MPI

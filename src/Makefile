@@ -8,7 +8,7 @@ C_OBJS := water_interface.o
 
 # This is the default target
 ${BIN} : libabin.a
-	${FC} ${FFLAGS} abin.o -L. -labin -L../water_potentials/ -lwater ${LIBS} -o $@
+	${FC} ${LDFLAGS} abin.o ${LDLIBS} -o $@
 	cp $(BIN) ../bin/
 
 # Used for building Unit Tests

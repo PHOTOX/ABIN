@@ -17,10 +17,8 @@ ifneq ($(strip $(PFUNIT_PATH)),)
   FFLAGS += $(DFLAGS)
 endif
 
-# NOTE: $(LIBS) are defined in the root Makefile
-
 utils_TESTS := test_utils.pf
-utils_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+utils_OTHER_LIBRARIES := ${LDLIBS}
 utils_OTHER_SRCS := throw_with_pfunit.F90
 utils_EXTRA_USE := throw_with_pfunit_mod
 utils_EXTRA_INITIALIZE := initialize_throw
@@ -29,14 +27,14 @@ $(eval $(call make_pfunit_test,utils))
 utils_driver.o: throw_with_pfunit.o
 
 masses_TESTS := test_masses.pf
-masses_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+masses_OTHER_LIBRARIES := ${LDLIBS}
 masses_OTHER_SRCS := throw_with_pfunit.F90
 masses_EXTRA_USE := throw_with_pfunit_mod
 masses_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,masses))
 
 prng_TESTS := test_prng.pf
-prng_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+prng_OTHER_LIBRARIES := ${LDLIBS}
 prng_OTHER_SRCS := throw_with_pfunit.F90
 prng_EXTRA_USE := throw_with_pfunit_mod
 prng_EXTRA_INITIALIZE := initialize_throw
@@ -47,70 +45,70 @@ $(eval $(call make_pfunit_test,prng))
 export PLUMED_DP2CUTOFF_NOSTRETCH = 1
 
 plumed_TESTS := test_plumed.pf
-plumed_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+plumed_OTHER_LIBRARIES := ${LDLIBS}
 plumed_OTHER_SRCS := throw_with_pfunit.F90
 plumed_EXTRA_USE := throw_with_pfunit_mod
 plumed_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,plumed))
 
 terapi_TESTS := test_terapi.pf
-terapi_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+terapi_OTHER_LIBRARIES := ${LDLIBS}
 terapi_OTHER_SRCS := throw_with_pfunit.F90
 terapi_EXTRA_USE := throw_with_pfunit_mod
 terapi_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,terapi))
 
 fftw_TESTS := test_fftw.pf
-fftw_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+fftw_OTHER_LIBRARIES := ${LDLIBS}
 fftw_OTHER_SRCS := throw_with_pfunit.F90
 fftw_EXTRA_USE := throw_with_pfunit_mod
 fftw_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,fftw))
 
 gle_TESTS := test_gle.pf
-gle_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+gle_OTHER_LIBRARIES := ${LDLIBS}
 gle_OTHER_SRCS := throw_with_pfunit.F90
 gle_EXTRA_USE := throw_with_pfunit_mod
 gle_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,gle))
 
 nhc_TESTS := test_nhc.pf
-nhc_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+nhc_OTHER_LIBRARIES := ${LDLIBS}
 nhc_OTHER_SRCS := throw_with_pfunit.F90
 nhc_EXTRA_USE := throw_with_pfunit_mod
 nhc_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,nhc))
 
 pot_TESTS := test_potentials.pf
-pot_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+pot_OTHER_LIBRARIES := ${LDLIBS}
 pot_OTHER_SRCS := throw_with_pfunit.F90
 pot_EXTRA_USE := throw_with_pfunit_mod
 pot_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,pot))
 
 mm_TESTS := test_mm.pf
-mm_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+mm_OTHER_LIBRARIES := ${LDLIBS}
 mm_OTHER_SRCS := throw_with_pfunit.F90
 mm_EXTRA_USE := throw_with_pfunit_mod
 mm_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,mm))
 
 io_TESTS := test_io.pf
-io_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+io_OTHER_LIBRARIES := ${LDLIBS}
 io_OTHER_SRCS := throw_with_pfunit.F90
 io_EXTRA_USE := throw_with_pfunit_mod
 io_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,io))
 
 spline_TESTS := test_spline.pf
-spline_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+spline_OTHER_LIBRARIES := ${LDLIBS}
 spline_OTHER_SRCS := throw_with_pfunit.F90
 spline_EXTRA_USE := throw_with_pfunit_mod
 spline_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,spline))
 
 interface_TESTS := test_interface.pf
-interface_OTHER_LIBRARIES := -lgcov -fprofile-arcs -L"../src/" -labin -L"../water_potentials/" -lwater ${LIBS}
+interface_OTHER_LIBRARIES := ${LDLIBS}
 interface_OTHER_SRCS := throw_with_pfunit.F90
 interface_EXTRA_USE := throw_with_pfunit_mod
 interface_EXTRA_INITIALIZE := initialize_throw

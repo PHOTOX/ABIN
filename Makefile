@@ -21,7 +21,15 @@ MPI=FALSE
 FFTW=FALSE
 CP2K=FALSE
 PLUMED=FALSE
+# TODO: Split LIBS into LDLIBS and LDFLAGS
+# Change configure to output LDLIBS and LDFLAGS to make.vars if present in the env
+# this is so that we don't pass FFLAGS to the linking step
+# and for code coverage we need to add -lgcov to the linking step,
+# instead of relying on -coverage passed via FFLAGS.
+# https://www.gnu.org/software/make/manual/html_node/Implicit-Variables.html
 LIBS=
+LDLIBS=
+LDFLAGS=
 
 # Export all vars into submake commands
 export
@@ -45,7 +53,7 @@ ifeq ($(strip $(FFTW)),TRUE)
     $(info "!!!!!-------------WARNING---------------!!!!!!!")
     $(info "")
   else
-    LIBS += -lfftw3
+    LDLIBS += -lfftw3
   endif
 endif
 
@@ -55,20 +63,22 @@ ifeq ($(strip $(CP2K)),TRUE)
   FFLAGS += -fno-underscoring -fno-openmp
   # The following variables should be the same that were used to compile CP2K.
   # Also, be carefull with FFTW clashes
-  LIBS += -L${CP2K_PATH} -lcp2k ${CP2K_LIBS} 
+  LDLIBS += -lcp2k ${CP2K_LIBS}
+  LDFLAGS += -L${CP2K_PATH}
 endif
 
 ifeq ($(strip $(PLUMED)),TRUE)
  include ${PLUMED_INC}
  DFLAGS += -DUSE_PLUMED
- LIBS += ${PLUMED_STATIC_LOAD}
+ LDLIBS += ${PLUMED_STATIC_LOAD}
 endif
 
 ifeq  ($(strip $(MPI)),TRUE) 
   DFLAGS += -DUSE_MPI
 endif
 
-LIBS += -lm -lstdc++
+LDLIBS += -labin -lwater -lm -lstdc++
+LDFLAGS += -fopenmp -L../src/ -L../water_potentials/
 
 # This is the default target
 ${BIN} :

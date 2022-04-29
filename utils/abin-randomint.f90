@@ -6,8 +6,7 @@
 ! Can be used to deterministically generate
 ! random seeds for a set of trajectories.
 !
-! Compile as:
-! $ gfortran -O2 -fopenmp -I"src/" utils/abin-randomint.f90 -Lsrc/ -labin -Lwater_potentials/ -lwater -lstdc++
+! Compile from root dir by `make utils`
 !
 ! See subroutine print_help() for more information.
 ! -------------------------------------
