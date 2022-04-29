@@ -72,13 +72,19 @@ LIBS += -lm -lstdc++
 
 # This is the default target
 ${BIN} :
+	mkdir -p bin/
 	$(MAKE) -C water_potentials all
 	$(MAKE) -C src $(BIN)
+	$(MAKE) -C utils all
+
+utils: ${BIN}
+	$(MAKE) -C utils all
 
 clean:
-	/bin/rm -f *.gcov
+	/bin/rm -f *.gcov bin/*
 	$(MAKE) -C water_potentials clean
 	$(MAKE) -C src clean
+	$(MAKE) -C utils clean
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests clean
 endif

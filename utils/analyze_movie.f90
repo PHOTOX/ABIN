@@ -156,9 +156,6 @@ call Get_cmdline(chmovie, nbin_dist, nbin_ang, nbin_dih, distmin, distmax, shift
 
 ! the following formats were not a good idea and are now obsolete
 10 format(I3)
-20 format(2I3)
-30 format(3I3)
-40 format(4I3)
 
 ! Now read from stdin, what to analyze
 select case (imod)
