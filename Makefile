@@ -21,13 +21,7 @@ MPI=FALSE
 FFTW=FALSE
 CP2K=FALSE
 PLUMED=FALSE
-# TODO: Split LIBS into LDLIBS and LDFLAGS
-# Change configure to output LDLIBS and LDFLAGS to make.vars if present in the env
-# this is so that we don't pass FFLAGS to the linking step
-# and for code coverage we need to add -lgcov to the linking step,
-# instead of relying on -coverage passed via FFLAGS.
 # https://www.gnu.org/software/make/manual/html_node/Implicit-Variables.html
-LIBS=
 LDLIBS=
 LDFLAGS=
 
