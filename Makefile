@@ -71,7 +71,7 @@ ifeq  ($(strip $(MPI)),TRUE)
   DFLAGS += -DUSE_MPI
 endif
 
-LDLIBS += -labin -lwater -lm -lstdc++
+LDLIBS = -labin -lwater $(LDLIBS) -lm -lstdc++
 LDFLAGS += -fopenmp -L../src/ -L../water_potentials/
 
 # This is the default target
