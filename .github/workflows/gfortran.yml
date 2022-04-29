@@ -8,7 +8,7 @@ on:
 env:
   # FFLAGS for building ABIN, applicable for most jobs
   ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
-  ABIN_LDLIBS: -lgcov
+  ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
 
 jobs:

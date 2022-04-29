@@ -26,56 +26,37 @@ submit="qsub -q nq -cwd  " # comment this line if you don't want to submit to qu
 rewrite=0            # if =1 -> rewrite trajectories that already exist
 jobs=20              # number of batch jobs to submit. Trajectories will be distributed accordingly.
 
-# Number of atoms is determined automatically from input.in
-# TODO: Determine number of atoms from the first line of the coordinate file
-natom=$(awk -F"[! ,=]+" '{if($1=="natom")print $2}' $abin_input)
 molname=$folder      # Name of the job in the queue
 ########## END OF SETUP ##########
 
 
-function Folder_not_found {
-   echo "Error: Folder $1 does not exists!"
-   exit 1
+function files_exist {
+echo $*
+  for f in $*;do
+    echo $f
+    if [[ ! -f $f ]];then
+      echo "ERROR: File '$f' does not exist!"
+      exit 1
+    fi
+  done
 }
 
-function File_not_found {
-   echo "Error: File $1 does not exists!"
-   exit 1
+function folders_exist {
+  for d in $*;do
+    if [[ ! -d $d ]];then
+      echo "ERROR: Directory '$d' does not exist!"
+      exit 1
+    fi
+  done
 }
 
-function Error {
-   echo "Error from command $1. Exiting!"
-   exit 1
-}
-
-if [[ ! -d "$inputdir" ]];then
-   Folder_not_found "$inputdir"
-fi
-
-if [[ ! -f "$movie" ]];then
-   File_not_found "$movie"
-fi
-
+folders_exist "$inputdir"
+files_exist "$movie" "$abin_input" "$launch_script"
 if [[ ! -z "$veloc" ]] && [[ ! -f "$veloc" ]];then
-   File_not_found "$veloc"
+  files_exist "$veloc"
 fi
 
-if [[ ! -e $abin_input ]];then
-   File_not_found "$abin_input"
-fi
-
-if [[ ! -e "$launch_script" ]];then
-   File_not_found "$launch_script"
-fi
-
-if [[ -e "mini.dat" ]] || [[ -e "restart.xyz" ]];then
-   echo "Error: Files mini.dat and/or restart.xyz were found here."
-   echo "Please remove them."
-   exit 1
-fi
-
-#   -------------------------------------------------------------------------------------
-
+natom=$(head -1 $movie)
 echo "Number of atoms = $natom"
 
 let natom2=natom+2
@@ -86,13 +67,6 @@ if [[ $nsample -gt $geoms ]];then
    echo "Change parameter \"nsample\"."
    exit 1
 fi
-
-# I don't think this is needed, we make sure not to overwrite any trajectory anyway
-#if [[ -e $folder/$molname.$isample.*.sh ]];then
-#   echo  "Error: File $folder/$molname.$isample.*.sh already exists!"
-#   echo "Please, make sure that it is not currently running and delete it."
-#   exit 1
-#fi
 
 # determine number of ABIN simulations per job
 let nsimul=nsample-isample+1
@@ -112,13 +86,13 @@ i=$isample
 w=0 #current number of simulations in current j-th job
 
 #--------------------generation of random numbers--------------------------------
-echo "Generating $nsample random integers."
+echo "Generating $nsample random integers for random seeds"
+echo "abin-randomint $irandom0 $nsample > iran.dat"
 abin-randomint $irandom0 $nsample > iran.dat
 if [[ $? -ne "0" ]];then
-   Error "abin-randomint"
+  echo "ERROR: Could not generate random numbers"
+  exit 1
 fi
-
-#--------------------------------------------------------------------------------
 
 mkdir -p $folder
 cp iseed0 "$abin_input" $folder
@@ -226,4 +200,3 @@ if [[ ! -z "$submit" ]];then
       let k++
    done
 fi
-
