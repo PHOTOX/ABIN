@@ -31,9 +31,7 @@ molname=$folder      # Name of the job in the queue
 
 
 function files_exist {
-echo $*
   for f in $*;do
-    echo $f
     if [[ ! -f $f ]];then
       echo "ERROR: File '$f' does not exist!"
       exit 1
@@ -52,13 +50,18 @@ function folders_exist {
 
 folders_exist "$inputdir"
 files_exist "$movie" "$abin_input" "$launch_script"
-if [[ ! -z "$veloc" ]] && [[ ! -f "$veloc" ]];then
+if [[ -n "$veloc" ]];then
   files_exist "$veloc"
 fi
 
 natom=$(head -1 $movie)
+if [[ $natom -lt 1 ]];then
+  echo "ERROR: Invalid number of atoms on the first line of file $movie"
+  exit 1
+fi
 echo "Number of atoms = $natom"
 
+# TODO: Verify number of atoms and lines in the velocity file
 let natom2=natom+2
 lines=$(cat $movie | wc -l)
 geoms=$(expr $lines / $natom2)
@@ -87,8 +90,8 @@ w=0 #current number of simulations in current j-th job
 
 #--------------------generation of random numbers--------------------------------
 echo "Generating $nsample random integers for random seeds"
-echo "abin-randomint $irandom0 $nsample > iran.dat"
-abin-randomint $irandom0 $nsample > iran.dat
+echo "abin-randomint --seed $irandom0 --num $nsample > iran.dat"
+abin-randomint --seed $irandom0 --num $nsample > iran.dat
 if [[ $? -ne "0" ]];then
   echo "ERROR: Could not generate random numbers"
   exit 1
@@ -130,7 +133,7 @@ while [[ $i -le "$nsample" ]];do
    cp -r $inputdir/* $folder/TRAJ.$i
 
 
-#--Now prepare mini.dat (and possibly veloc.in)
+   # Prepare input geometry and velocities
 
    head -$offset $movie | tail -$natom2 > geom
    if [[ ! -z "$veloc" ]];then
@@ -147,6 +150,7 @@ while [[ $i -le "$nsample" ]];do
 ## Now prepare input.in and r.abin
    irandom=`head -$i iran.dat |tail -1`
 
+   # TODO: Validate this step
    sed -r "s/irandom *= *[0-9]+/irandom=$irandom/" $abin_input > $folder/TRAJ.$i/input.in 
 
    cat > $folder/TRAJ.$i/r.$molname.$i << EOF
