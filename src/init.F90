@@ -35,7 +35,6 @@ contains
       use mod_mpi, only: initialize_mpi, get_mpi_size, get_mpi_rank, mpi_barrier_wrapper
       use mod_files, only: files_init, stdout_to_devnull
       use mod_arrays
-      use mod_array_size
       use mod_general
       use mod_system, only: set_atom_names, conatom, am, f, dime
       use mod_nhc
@@ -1097,7 +1096,7 @@ contains
             am(i) = 88.90584D0
          case ('Zr')
             am(i) = 91.224D0
-         ! The following values were taken from QCelemental Python library
+            ! The following values were taken from QCelemental Python library
          case ('Tc')
             am(i) = 97.9072124D0
          case ('Pm')

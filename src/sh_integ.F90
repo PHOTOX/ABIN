@@ -5,8 +5,6 @@
 module mod_sh_integ
    use mod_const, only: DP
    use mod_error, only: fatal_error
-   ! TODO: Remove use of NSTMAX, allocate instead!
-   use mod_array_size, only: NSTMAX
    implicit none
    private
    public :: sh_integrate_wf, sh_set_initialwf, sh_write_phase_bin, sh_read_phase_bin
@@ -17,16 +15,19 @@ module mod_sh_integ
    public :: correct_decoherence
 
    ! Electronic State coefficients
-   real(DP) :: cel_re(NSTMAX), cel_im(NSTMAX)
-   real(DP) :: el_pop(NSTMAX)
-   real(DP) :: gama(NSTMAX, NSTMAX)
+   ! TODO: Would be nice if we used the complex type
+   real(DP), allocatable, dimension(:) :: cel_re, cel_im
+   real(DP), allocatable, dimension(:, :) :: gama
+   ! TODO: Get rid of this global, calculate elpop on the fly
+   real(DP), allocatable, dimension(:) :: el_pop
+
    real(DP) :: eshift, popsumthr = 0.001D0
    ! TODO: phase variable should be named differently
    integer :: phase = 0
    ! Number of electronic states
    integer :: nstate = 1
-   ! Numerical integrator (defualt is Butcher 5-th order)
-   character(len=10) :: integ = 'butcher'
+   ! Numerical integrator (default is Butcher 5-th order)
+   character(len=50) :: integ = 'butcher'
    ! NOTE: To exactly replicate older data, switch this to .false.
    ! See the comment in subroutine sh_decoherence_correction() for explanation.
    logical :: correct_decoherence = .true.
@@ -34,10 +35,8 @@ module mod_sh_integ
 contains
 
    subroutine sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
-      real(DP), intent(in) :: en_array_int(NSTMAX)
-      real(DP), intent(in) :: en_array_newint(NSTMAX)
-      real(DP), intent(in) :: dotproduct_int(NSTMAX, NSTMAX)
-      real(DP), intent(in) :: dotproduct_newint(NSTMAX, NSTMAX)
+      real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
+      real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
       real(DP), intent(in) :: dtp ! Time step
 
       if (integ == 'butcher') then
@@ -67,11 +66,16 @@ contains
 
    ! Calculates transitions matrix according to the Tully's fewest switches algorithm
    subroutine sh_TFS_transmat(dotproduct_int, dotproduct_newint, ist, pop0, t, dtp)
-      real(DP), intent(in) :: dotproduct_int(NSTMAX, NSTMAX)
-      real(DP), intent(in) :: dotproduct_newint(NSTMAX, NSTMAX)
-      real(DP), intent(out) :: t(NSTMAX, NSTMAX) ! transition matrix
-      integer, intent(in) :: ist ! current state
-      real(DP), intent(in) :: pop0, dtp ! population of the current state
+      ! Interpolated dotproducts between velocities and NA couplings
+      real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
+      ! Index of current state
+      integer, intent(in) :: ist
+      ! Population of the current state
+      real(DP), intent(in) :: pop0
+      ! Electronic time step
+      real(DP), intent(in) :: dtp
+      ! OUTPUT: Transition probability matrix
+      real(DP), intent(out) :: t(:, :)
       real(DP) :: a_re, a_im
       integer :: ist2
 
@@ -84,7 +88,7 @@ contains
             t(ist, ist2) = a_re * cos(gama(ist, ist2)) - sin(gama(ist, ist2)) * a_im
             t(ist, ist2) = t(ist, ist2) * (dotproduct_int(ist, ist2) + dotproduct_newint(ist, ist2))
          else
-!            t(ist,ist2)=2*a_re*dotproduct_int(ist,ist2)
+            ! t(ist,ist2)=2*a_re*dotproduct_int(ist,ist2)
             t(ist, ist2) = a_re * (dotproduct_int(ist, ist2) + dotproduct_newint(ist, ist2))
          end if
          t(ist, ist2) = t(ist, ist2) * dtp / (pop0 + 1D-20)
@@ -101,9 +105,10 @@ contains
    end subroutine sh_TFS_transmat
 
    subroutine integstep(k_re, k_im, en, y_re, y_im, dotprod, gam, dtp)
-      real(DP), intent(out) :: k_re(NSTMAX), k_im(NSTMAX)
-      real(DP), intent(in) :: dotprod(NSTMAX, NSTMAX), gam(NSTMAX, NSTMAX)
-      real(DP), intent(in) :: en(NSTMAX), y_im(NSTMAX), y_re(NSTMAX), dtp
+      real(DP), intent(out), dimension(:) :: k_re, k_im
+      real(DP), intent(in), dimension(:, :) :: dotprod, gam
+      real(DP), intent(in), dimension(:) :: en, y_im, y_re
+      real(DP), intent(in) :: dtp
       real(DP) :: g
       integer :: ist1, ist2
 
@@ -158,13 +163,12 @@ contains
    end subroutine integ_gama
 
    subroutine eulerstep(en_array_int, en_array_newint, dotproduct_int, dtp)
-      real(DP), intent(in) :: en_array_int(:)
-      real(DP), intent(in) :: en_array_newint(:)
-      real(DP), intent(in) :: dotproduct_int(:, :), dtp
-      real(DP) :: dotprod0(NSTMAX, NSTMAX), gam0(NSTMAX, NSTMAX)
-      real(DP) :: k1_re(NSTMAX), k1_im(NSTMAX)
-      real(DP) :: y_im(NSTMAX), y_re(NSTMAX)
-      real(DP) :: en0(NSTMAX)
+      real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
+      real(DP), intent(in), dimension(:, :) :: dotproduct_int
+      real(DP) :: dtp
+      real(DP), dimension(nstate, nstate) :: dotprod0, gam0
+      real(DP), dimension(nstate) :: k1_re, k1_im
+      real(DP), dimension(nstate) :: y_im, y_re, en0
       integer :: ist1, ist2
 
       do ist1 = 1, nstate
@@ -188,19 +192,15 @@ contains
    end subroutine eulerstep
 
    subroutine rk4step(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
-      real(DP), intent(in) :: en_array_int(NSTMAX)
-      real(DP), intent(in) :: en_array_newint(NSTMAX)
-      real(DP), intent(in) :: dotproduct_int(NSTMAX, NSTMAX)
-      real(DP), intent(in) :: dotproduct_newint(NSTMAX, NSTMAX), dtp
-      real(DP) :: dotprod2(NSTMAX, NSTMAX)
-      real(DP) :: dotprod0(NSTMAX, NSTMAX), dotprod1(NSTMAX, NSTMAX)
-      real(DP) :: k1_re(NSTMAX), k1_im(NSTMAX)
-      real(DP) :: k2_re(NSTMAX), k2_im(NSTMAX)
-      real(DP) :: k3_re(NSTMAX), k3_im(NSTMAX)
-      real(DP) :: k4_re(NSTMAX), k4_im(NSTMAX)
-      real(DP) :: y_im(NSTMAX), y_re(NSTMAX)
-      real(DP) :: en0(NSTMAX), en1(NSTMAX), en2(NSTMAX)
-      real(DP) :: gam0(NSTMAX, NSTMAX), gam1(NSTMAX, NSTMAX), gam2(NSTMAX, NSTMAX)
+      real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
+      real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
+      real(DP), intent(in) :: dtp
+      real(DP), dimension(nstate, nstate) :: dotprod0, dotprod1, dotprod2
+      real(DP), dimension(nstate) :: k1_re, k1_im, k2_re, k2_im
+      real(DP), dimension(nstate) :: k3_re, k3_im, k4_re, k4_im
+      real(DP), dimension(nstate) :: y_im, y_re
+      real(DP), dimension(nstate) :: en0, en1, en2
+      real(DP), dimension(nstate, nstate) :: gam0, gam1, gam2
       integer :: ist1, ist2
 
 !     initial interpolations
@@ -256,25 +256,19 @@ contains
    end subroutine rk4step
 
    subroutine butcherstep(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
-      real(DP), intent(in) :: en_array_int(NSTMAX)
-      real(DP), intent(in) :: en_array_newint(NSTMAX)
-      real(DP), intent(in) :: dotproduct_int(NSTMAX, NSTMAX)
-      real(DP), intent(in) :: dotproduct_newint(NSTMAX, NSTMAX), dtp
-      real(DP) :: dotprod2(NSTMAX, NSTMAX), dotprod4(NSTMAX, NSTMAX), dotprod34(NSTMAX, NSTMAX)
-      real(DP) :: dotprod0(NSTMAX, NSTMAX), dotprod1(NSTMAX, NSTMAX)
-      real(DP) :: k1_re(NSTMAX), k1_im(NSTMAX)
-      real(DP) :: k2_re(NSTMAX), k2_im(NSTMAX)
-      real(DP) :: k3_re(NSTMAX), k3_im(NSTMAX)
-      real(DP) :: k4_re(NSTMAX), k4_im(NSTMAX)
-      real(DP) :: k5_re(NSTMAX), k5_im(NSTMAX)
-      real(DP) :: k6_re(NSTMAX), k6_im(NSTMAX)
-      real(DP) :: y_im(NSTMAX), y_re(NSTMAX)
-      real(DP) :: en0(NSTMAX), en1(NSTMAX), en2(NSTMAX), en4(NSTMAX), en34(NSTMAX)
-      real(DP) :: gam0(NSTMAX, NSTMAX), gam1(NSTMAX, NSTMAX), gam2(NSTMAX, NSTMAX)
-      real(DP) :: gam4(NSTMAX, NSTMAX), gam34(NSTMAX, NSTMAX)
-      integer :: ist1, ist2 !iteration counters
+      real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
+      real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
+      real(DP), intent(in) :: dtp
+      real(DP), dimension(nstate, nstate) :: dotprod0, dotprod1, dotprod2, dotprod4, dotprod34
+      real(DP), dimension(nstate) :: k1_re, k1_im, k2_re, k2_im
+      real(DP), dimension(nstate) :: k3_re, k3_im, k4_re, k4_im
+      real(DP), dimension(nstate) :: k5_re, k5_im, k6_re, k6_im
+      real(DP), dimension(nstate) :: y_im, y_re
+      real(DP), dimension(nstate) :: en0, en1, en2, en4, en34
+      real(DP), dimension(nstate, nstate) :: gam0, gam1, gam2, gam4, gam34
+      integer :: ist1, ist2
 
-!     initial interpolations
+      ! initial interpolations
       do ist1 = 1, nstate
          en0(ist1) = en_array_int(ist1) + eshift
          en1(ist1) = en_array_newint(ist1) + eshift
@@ -354,7 +348,7 @@ contains
    ! "Critical appraisal of the fewest switches algorithm for surface hopping"
    ! https://doi.org/10.1063/1.2715585
    subroutine sh_decoherence_correction(potential_energies, alpha, kinetic_energy, current_state, dtp)
-      real(DP), intent(in) :: potential_energies(NSTMAX)
+      real(DP), intent(in) :: potential_energies(:)
       real(DP), intent(in) :: alpha, kinetic_energy, dtp
       integer, intent(in) :: current_state
       integer :: ist1
@@ -422,16 +416,20 @@ contains
       end do
    end subroutine sh_read_phase_bin
 
-   subroutine sh_set_initialwf(initial_state, initial_poten)
-      use mod_general, only: irest
+   subroutine sh_set_initialwf(initial_state, initial_poten, irest)
       real(DP), intent(in) :: initial_poten
       integer, intent(in) :: initial_state
+      ! Did we restart or not?
+      integer, intent(in) :: irest
       integer :: ist1
+
+      allocate (gama(nstate, nstate))
+      allocate (el_pop(nstate))
 
       gama = 0.0D0
 
-      ! TODO: Do an allocation here, instead of use NSTMAX
       if (irest == 0) then
+         allocate (cel_re(nstate), cel_im(nstate))
          do ist1 = 1, nstate
             cel_re(ist1) = 0.0D0
             cel_im(ist1) = 0.0D0
@@ -459,6 +457,11 @@ contains
    subroutine sh_read_wf(inunit)
       integer, intent(in) :: inunit
       integer :: ist1
+
+      if (.not. allocated(cel_re)) then
+         allocate (cel_re(nstate), cel_im(nstate))
+      end if
+
       do ist1 = 1, nstate
          read (inunit, *) cel_re(ist1), cel_im(ist1)
       end do
@@ -488,7 +491,7 @@ contains
       use mod_files, only: UBKL, UWFCOEF, UPHASE
       integer, intent(in) :: ist ! current electronic state
       real(DP), intent(in) :: stepfs
-      real(DP), intent(in) :: t(NSTMAX, NSTMAX)
+      real(DP), intent(in) :: t(:, :)
       integer :: ist1, ist2
       character(len=500) :: formt
 

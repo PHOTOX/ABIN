@@ -43,7 +43,6 @@ contains
       use mod_terampi, only: wait_for_terachem
       use mod_const, only: DP, ANG
       use mod_error, only: fatal_error
-      use mod_array_size, only: NSTMAX
       use mod_general, only: idebug, natom, en_restraint, ipimd
       use mod_mpi, only: handle_mpi_error, check_recv_count
       use mod_qmmm, only: natqm
@@ -55,7 +54,7 @@ contains
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
       integer, intent(in) :: tc_comm
-      real(DP) :: dip(NSTMAX * 3), tdip((NSTMAX - 1) * 3) ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
+      real(DP) :: dip(nstate * 3), tdip((nstate - 1) * 3) ! Dipole moment {x, y, z, |D|}, {QM, MM, TOT}
       real(DP) :: qmcharges(size(fx, 1))
       integer :: status(MPI_STATUS_SIZE)
       integer :: ierr, iat, iw, ist1, ist2, ipom, i
@@ -205,7 +204,6 @@ contains
 
    subroutine send_terash(x, y, z, tc_comm)
       use mod_terampi, only: send_coordinates
-      use mod_array_size, only: NSTMAX
       use mod_const, only: DP, ANG, AUTOFS
       use mod_mpi, only: handle_mpi_error
       use mod_general, only: natom, idebug, sim_time, en_restraint
@@ -218,7 +216,7 @@ contains
       real(DP) :: bufdoubles(100)
       real(DP) :: vels(3, size(x, 1))
       integer :: ierr, iw, i, ist1, ist2
-      integer :: bufints(NSTMAX * (NSTMAX - 1) / 2 + NSTMAX)
+      integer :: bufints(nstate * (nstate - 1) / 2 + nstate + 12)
       integer, parameter :: FMSInit = 0
 
       iw = 1
@@ -244,6 +242,7 @@ contains
       ! The following bit is not in FMS code
       ! let ABIN decide which derivatives should TC compute
       i = 1
+      ! TODO: Why isn't this in set_tocalc()?
       if (ignore_state > 0) then
          do ist1 = 1, nstate
             tocalc(ist1, ignore_state) = 0

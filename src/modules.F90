@@ -3,17 +3,6 @@
 ! We are using modules to initialize some variables and
 ! for passing global variables to different subroutines.
 
-! mod_array_size contains various array limits.
-! Modify here if you need larger arrays.
-! Most of the other arrays are allocated dynamically.
-module mod_array_size
-   use mod_const, only: DP
-   implicit none
-   public
-   integer, parameter :: NSTMAX = 50
-   save
-end module mod_array_size
-
 ! General simulation parameters
 module mod_general
    use mod_const, only: DP

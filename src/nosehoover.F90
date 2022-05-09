@@ -442,8 +442,6 @@ contains
 
    ! Suzuki-Yoshida split-operator integrator for global NHC
    subroutine shiftNHC_yosh(px, py, pz, amt, dt)
-      use mod_array_size
-      use mod_general
       use mod_system, only: dime
       real(DP) :: px(:, :), py(:, :), pz(:, :)
       real(DP) :: amt(:, :), G(MAXCHAIN)

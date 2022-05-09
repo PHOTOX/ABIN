@@ -13,30 +13,31 @@ module mod_lz
    use mod_error, only: fatal_error
    use mod_files, only: stdout, stderr
    use mod_general, only: nwalk, pot, irest
-   use mod_array_size, only: NSTMAX
-   use mod_sh, only: istate_init, istate, inac !TERA-MPI interface
+   ! TODO: Break coupling between LZ and SH modules
+   ! The following are needed for TERA-MPI interface
+   use mod_sh, only: istate_init, istate, inac
    use mod_sh_integ, only: nstate
    implicit none
    private
    public :: lz_init, lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize !Routines
    public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz !User defined variables
    public :: en_array_lz, tocalc_lz, istate_lz !Routine variables
-   !Caveat: Every time we call force_class en_array_lz is updated
+   !Caveat: Every time we call force_clas en_array_lz is updated
 
    real(DP) :: deltaE_lz = 1.0D0 !Energy difference, up to which we consider possibility of LZ hops
    real(DP) :: energydifthr_lz = 0.5D0 !Maximum energy difference (eV) between two consecutive steps, used in check_energy_lz()
    ! Initial electronic state
    integer :: initstate_lz = 1
-   integer :: tocalc_lz(NSTMAX)
    integer :: nstate_lz, nsinglet_lz = 0, ntriplet_lz = 0
 
    ! Module variables
    integer :: istate_lz
-   real(DP), allocatable :: en_array_lz(:, :), en_array_lz_backup(:, :)
-   real(DP), allocatable :: fx_old(:, :), fy_old(:, :), fz_old(:, :)
-   real(DP), allocatable :: px_temp(:, :), py_temp(:, :), pz_temp(:, :)
-   real(DP), allocatable :: x_prev(:, :), y_prev(:, :), z_prev(:, :), &
-                            vx_prev(:, :), vy_prev(:, :), vz_prev(:, :)
+   integer, allocatable, dimension(:) :: tocalc_lz
+   real(DP), allocatable, dimension(:, :) :: en_array_lz, en_array_lz_backup
+   real(DP), allocatable, dimension(:, :) :: fx_old, fy_old, fz_old
+   real(DP), allocatable, dimension(:, :) :: px_temp, py_temp, pz_temp
+   real(DP), allocatable, dimension(:, :) :: x_prev, y_prev, z_prev
+   real(DP), allocatable, dimension(:, :) :: vx_prev, vy_prev, vz_prev
    save
 
 contains
@@ -76,6 +77,8 @@ contains
 
       !Initial state
       istate_lz = initstate_lz
+
+      allocate (tocalc_lz(nstate_lz))
 
       !Which gradients to compute
       do ist1 = 1, nstate_lz
@@ -120,7 +123,7 @@ contains
       real(DP), intent(in) :: dt
       character(len=*), intent(in) :: chpot
 
-      real(DP) :: prob(NSTMAX), prob2(NSTMAX), probc
+      real(DP) :: prob(nstate_lz), prob2(nstate_lz), probc
       real(DP) :: ran(10)
       real(DP) :: en_diff(3), second_der, soc_matrix(nsinglet_lz, ntriplet_lz)
       integer :: ihop, icross, ihist, ist1, iat, ibeg, iend !, istatus
@@ -569,8 +572,10 @@ contains
 
    subroutine lz_finalize()
       ! Deallocate arrays
-      deallocate (en_array_lz, en_array_lz_backup, fx_old, fy_old, fz_old)
-      deallocate (px_temp, py_temp, pz_temp, x_prev, y_prev, z_prev, vx_prev, vy_prev, vz_prev)
+      if (allocated(tocalc_lz)) then
+          deallocate (tocalc_lz, en_array_lz, en_array_lz_backup, fx_old, fy_old, fz_old)
+          deallocate (px_temp, py_temp, pz_temp, x_prev, y_prev, z_prev, vx_prev, vy_prev, vz_prev)
+      end if
    end subroutine lz_finalize
 
 end module mod_lz
