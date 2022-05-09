@@ -112,7 +112,14 @@ contains
       real(DP) :: dum_fz(size(z, 1), size(z, 2))
       real(DP) :: dum_eclas
 
+      write (stdout, *) ''
+      write (stdout, '(A)') 'Initializing Surface Hopping'
       call check_sh_parameters()
+      ! TODO: Write a print_sh_header()
+      ! with all major parameters included and explained
+      if (ignore_state /= 0) then
+         write (stdout, '(A,I0)') 'Ignoring state ', ignore_state
+      end if
 
       ! Determining the initial state
       if (irest /= 1) then
@@ -288,17 +295,23 @@ contains
 
       tocalc = 0
 
-      if (inac /= 2) then ! for ADIABATIC dynamics, do not calculate NACME
+      ! The diagonal holds information about gradients that we need
+      ! for SH, we just need the gradient of the current state
+      tocalc(istate, istate) = 1
 
-         do ist1 = 1, nstate - 1
-            do ist2 = ist1 + 1, nstate
-               if (abs(en_array(ist1) - en_array(ist2)) < deltaE) then
-                  tocalc(ist1, ist2) = 1
-               end if
-            end do
-         end do
-
+      ! Do not calculate NACME for ADIABATIC dynamics
+      if (inac == 2) then
+         return
       end if
+
+      do ist1 = 1, nstate - 1
+         do ist2 = ist1 + 1, nstate
+            if (abs(en_array(ist1) - en_array(ist2)) < deltaE) then
+               tocalc(ist1, ist2) = 1
+               tocalc(ist2, ist1) = 1
+            end if
+         end do
+      end do
 
       if (popthr > 0) then
          ! COMPUTE NACME only if population of the states is gt.popthr
@@ -313,9 +326,12 @@ contains
          end do
       end if
 
-      ! The diagonal holds information about gradients that we need
-      ! for SH, we just need the gradient of the current state
-      tocalc(istate, istate) = 1
+      if (ignore_state > 0) then
+         do ist1 = 1, nstate
+            tocalc(ist1, ignore_state) = 0
+            tocalc(ignore_state, ist1) = 0
+         end do
+      end if
    end subroutine set_tocalc
 
    subroutine write_nacmrest()
