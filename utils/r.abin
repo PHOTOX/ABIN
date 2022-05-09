@@ -140,7 +140,7 @@ trap copy_from_scrdir EXIT SIGUSR2
 
 cd $SCRDIR
 
-if [[ -z $VELOC_IN ]];then
+if [[ -z ${VELOC_IN-} ]];then
    $ABINEXE -i $ABIN_IN -x $GEOM_IN >> $ABIN_OUT
 else
    $ABINEXE -v $VELOC_IN -i $ABIN_IN -x $GEOM_IN >> $ABIN_OUT

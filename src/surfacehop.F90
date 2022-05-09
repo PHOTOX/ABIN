@@ -139,13 +139,14 @@ contains
          istate = istate_init
       end if
 
-      ! computing only energies, used for subsequent
-      ! determination of TOCALC according to deltaE threshold
       allocate (tocalc(nstate, nstate))
       tocalc = 0
+      tocalc(istate, istate) = 1
+
+      ! Compute initial wavefunction and energies
+      ! used for subsequent determination of TOCALC according to deltaE threshold
       dum_eclas = 0.0D0
       dum_fx = 0.0D0; dum_fy = 0.0D0; dum_fz = 0.0D0
-
       call force_clas(dum_fx, dum_fy, dum_fz, x, y, z, dum_eclas, pot)
 
       call sh_set_initialwf(istate, en_array(1), irest)
