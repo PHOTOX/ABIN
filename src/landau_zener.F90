@@ -572,7 +572,7 @@ contains
 
    subroutine lz_finalize()
       ! Deallocate arrays
-      deallocate (en_array_lz, en_array_lz_backup, fx_old, fy_old, fz_old)
+      deallocate (tocalc_lz, en_array_lz, en_array_lz_backup, fx_old, fy_old, fz_old)
       deallocate (px_temp, py_temp, pz_temp, x_prev, y_prev, z_prev, vx_prev, vy_prev, vz_prev)
    end subroutine lz_finalize
 
