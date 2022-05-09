@@ -26,58 +26,42 @@ submit="qsub -q nq -cwd  " # comment this line if you don't want to submit to qu
 rewrite=0            # if =1 -> rewrite trajectories that already exist
 jobs=20              # number of batch jobs to submit. Trajectories will be distributed accordingly.
 
-# Number of atoms is determined automatically from input.in
-# TODO: Determine number of atoms from the first line of the coordinate file
-natom=$(awk -F"[! ,=]+" '{if($1=="natom")print $2}' $abin_input)
 molname=$folder      # Name of the job in the queue
 ########## END OF SETUP ##########
 
 
-function Folder_not_found {
-   echo "Error: Folder $1 does not exists!"
-   exit 1
+function files_exist {
+  for f in $*;do
+    if [[ ! -f $f ]];then
+      echo "ERROR: File '$f' does not exist!"
+      exit 1
+    fi
+  done
 }
 
-function File_not_found {
-   echo "Error: File $1 does not exists!"
-   exit 1
+function folders_exist {
+  for d in $*;do
+    if [[ ! -d $d ]];then
+      echo "ERROR: Directory '$d' does not exist!"
+      exit 1
+    fi
+  done
 }
 
-function Error {
-   echo "Error from command $1. Exiting!"
-   exit 1
-}
-
-if [[ ! -d "$inputdir" ]];then
-   Folder_not_found "$inputdir"
+folders_exist "$inputdir"
+files_exist "$movie" "$abin_input" "$launch_script"
+if [[ -n "$veloc" ]];then
+  files_exist "$veloc"
 fi
 
-if [[ ! -f "$movie" ]];then
-   File_not_found "$movie"
+natom=$(head -1 $movie)
+if [[ $natom -lt 1 ]];then
+  echo "ERROR: Invalid number of atoms on the first line of file $movie"
+  exit 1
 fi
-
-if [[ ! -z "$veloc" ]] && [[ ! -f "$veloc" ]];then
-   File_not_found "$veloc"
-fi
-
-if [[ ! -e $abin_input ]];then
-   File_not_found "$abin_input"
-fi
-
-if [[ ! -e "$launch_script" ]];then
-   File_not_found "$launch_script"
-fi
-
-if [[ -e "mini.dat" ]] || [[ -e "restart.xyz" ]];then
-   echo "Error: Files mini.dat and/or restart.xyz were found here."
-   echo "Please remove them."
-   exit 1
-fi
-
-#   -------------------------------------------------------------------------------------
-
 echo "Number of atoms = $natom"
 
+# TODO: Verify number of atoms and lines in the velocity file
 let natom2=natom+2
 lines=$(cat $movie | wc -l)
 geoms=$(expr $lines / $natom2)
@@ -86,13 +70,6 @@ if [[ $nsample -gt $geoms ]];then
    echo "Change parameter \"nsample\"."
    exit 1
 fi
-
-# I don't think this is needed, we make sure not to overwrite any trajectory anyway
-#if [[ -e $folder/$molname.$isample.*.sh ]];then
-#   echo  "Error: File $folder/$molname.$isample.*.sh already exists!"
-#   echo "Please, make sure that it is not currently running and delete it."
-#   exit 1
-#fi
 
 # determine number of ABIN simulations per job
 let nsimul=nsample-isample+1
@@ -112,13 +89,13 @@ i=$isample
 w=0 #current number of simulations in current j-th job
 
 #--------------------generation of random numbers--------------------------------
-echo "Generating $nsample random integers."
-abin-randomint $irandom0 $nsample > iran.dat
+echo "Generating $nsample random integers for random seeds"
+echo "abin-randomint --seed $irandom0 --num $nsample > iran.dat"
+abin-randomint --seed $irandom0 --num $nsample > iran.dat
 if [[ $? -ne "0" ]];then
-   Error "abin-randomint"
+  echo "ERROR: Could not generate random numbers"
+  exit 1
 fi
-
-#--------------------------------------------------------------------------------
 
 mkdir -p $folder
 cp iseed0 "$abin_input" $folder
@@ -156,7 +133,7 @@ while [[ $i -le "$nsample" ]];do
    cp -r $inputdir/* $folder/TRAJ.$i
 
 
-#--Now prepare mini.dat (and possibly veloc.in)
+   # Prepare input geometry and velocities
 
    head -$offset $movie | tail -$natom2 > geom
    if [[ ! -z "$veloc" ]];then
@@ -173,6 +150,7 @@ while [[ $i -le "$nsample" ]];do
 ## Now prepare input.in and r.abin
    irandom=`head -$i iran.dat |tail -1`
 
+   # TODO: Validate this step
    sed -r "s/irandom *= *[0-9]+/irandom=$irandom/" $abin_input > $folder/TRAJ.$i/input.in 
 
    cat > $folder/TRAJ.$i/r.$molname.$i << EOF
@@ -226,4 +204,3 @@ if [[ ! -z "$submit" ]];then
       let k++
    done
 fi
-
