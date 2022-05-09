@@ -1,9 +1,10 @@
+## ABIN utilities
+
 This file contains a brief description of what utilities and scripts that you can find here.
 More complete description is usually given in each script/source code.
 
-1.  create_trajectories.sh, make_restart, analyzeSH.sh
+1.  create_trajectories.sh, analyzeSH.sh
 Scripts capable of launching and analyzing multiple ABIN trajectories.
-The scripts are designed to work with Wigner sampling (see PHOTX repository).
 
 2. abin-randomint
 Fortran code for creating random integers. This one should be in your $PATH.

@@ -8,7 +8,8 @@ C_OBJS := water_interface.o
 
 # This is the default target
 ${BIN} : libabin.a
-	${FC} ${FFLAGS} abin.o -L. -labin -L../water_potentials/ -lwater ${LIBS} -o $@
+	${FC} ${LDFLAGS} abin.o ${LDLIBS} -o $@
+	cp $(BIN) ../bin/
 
 # Used for building Unit Tests
 libabin.a: compile_info.o
@@ -16,7 +17,7 @@ libabin.a: compile_info.o
 
 # compile_info.F90 must be always recompiled to get the current date/time and git commit
 compile_info.o: compile_info.F90 ${C_OBJS} ${F_OBJS} abin.o
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -DGIT_COMMIT="'${COMMIT}'" -c $<
+	$(FC) $(FFLAGS) $(DFLAGS) -DGIT_COMMIT="'${COMMIT}'" -c $<
 
 clean:
 	/bin/rm -f *.o *.mod *.gcno *.gcda *.gcov libabin.a $(BIN)
@@ -24,7 +25,7 @@ clean:
 .PHONY: clean
 
 %.o: %.F90
-	$(FC) $(FFLAGS) $(DFLAGS) $(INC) -c $<
+	$(FC) $(FFLAGS) $(DFLAGS) -c $<
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(DFLAGS) -c $<
