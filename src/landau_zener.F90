@@ -572,8 +572,10 @@ contains
 
    subroutine lz_finalize()
       ! Deallocate arrays
-      deallocate (tocalc_lz, en_array_lz, en_array_lz_backup, fx_old, fy_old, fz_old)
-      deallocate (px_temp, py_temp, pz_temp, x_prev, y_prev, z_prev, vx_prev, vy_prev, vz_prev)
+      if (allocated(tocalc_lz)) then
+          deallocate (tocalc_lz, en_array_lz, en_array_lz_backup, fx_old, fy_old, fz_old)
+          deallocate (px_temp, py_temp, pz_temp, x_prev, y_prev, z_prev, vx_prev, vy_prev, vz_prev)
+      end if
    end subroutine lz_finalize
 
 end module mod_lz
