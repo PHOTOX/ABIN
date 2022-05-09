@@ -807,20 +807,18 @@ contains
 
       ! Auxiliary calculations of probabilities on a number line
       prob = 0.0D0
-      if (old_state == 1) then
-         ! If we are in the ground state, we cannot jump into the ground state :-)
-         prob(1) = 0.0D0
-      else
+
+      ! If we are in the ground state, we cannot jump into the ground state :-)
+      if (old_state /= 1) then
          ! Probability of jumping from the current state to the ground state
          prob(1) = transmat(old_state, 1)
       end if
 
       do ist1 = 2, nstate
-         if (ist1 /= old_state) then
-            prob(ist1) = prob(ist1 - 1) + transmat(old_state, ist1)
-         end if
          if (ist1 == old_state) then
             prob(ist1) = prob(ist1 - 1)
+         else
+            prob(ist1) = prob(ist1 - 1) + transmat(old_state, ist1)
          end if
       end do
 
