@@ -1,0 +1,23 @@
+#!/bin/bash
+cd MOLPRO
+timestep=$1
+ibead=$2
+natom=$(wc -l < ../geom.dat.$ibead)
+
+read -t 2 -a nstate
+read -t 2 -a tocalc
+
+head -$nstate engrad.dat.$timestep > ../engrad.dat.$ibead
+
+NUM_GRAD=0
+for ((ist=0;ist<nstate;ist++)) {
+   let NUM_GRAD+=${tocalc[$ist]}
+}
+
+# In the very first computation, we used to not calculate forces
+if [[ $NUM_GRAD -gt 0 ]];then
+  tail -$natom engrad.dat.$timestep >> ../engrad.dat.$ibead
+fi
+
+echo "Timestep: $timestep" >> ../stateall_grad.dat
+cat ../state.dat >> ../stateall_grad.dat

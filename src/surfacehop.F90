@@ -213,7 +213,7 @@ contains
          write (stdout, '(A)') 'WARNING: For simulations without couplings, inac=2, hopping probability cannot be determined.'
          nohop = 1
       end if
-      
+
       if (nac_accu1 <= nac_accu2) then
          write (stderr, '(A)') 'WARNING: nac_accu1 < nac_accu2'
          write (stderr, '(A,I0)') 'Computing NACME only with default accuracy 10^-', nac_accu1
@@ -221,6 +221,12 @@ contains
 
       if (decoh_alpha == 0.0D0) then
          write (stdout, '(A)') "Turning OFF decoherence correction"
+      end if
+
+      if (ignore_state == istate_init) then
+         write (stderr, '(A)') 'ERROR: ignore_state == istate_init'
+         write (stderr, '(A)') 'I cannot start on an ignored state'
+         error = .true.
       end if
 
       call int_switch(nohop, 'nohop')
@@ -251,39 +257,40 @@ contains
 
    subroutine get_nacm(pot)
       character(len=*), intent(in) :: pot
-      integer :: iost, ipom, ist1, ist2
+      integer :: iost, ist1, ist2
+      integer :: num_nacme
 
       ! In TeraChem SH interface, we already got NACME
       if (pot == '_tera_') return
 
-      ! Check whether we even want any NACME
-      ipom = 0
+      ! Check whether we need to compute any NACME
+      num_nacme = 0
       do ist1 = 1, nstate - 1
          do ist2 = ist1 + 1, nstate
-            ipom = ipom + tocalc(ist1, ist2)
+            num_nacme = num_nacme + tocalc(ist1, ist2)
          end do
       end do
 
-      if (inac == 0 .and. ipom > 0) then
-         ! Calculate NACME using default accuracy
+      if (inac > 0 .or. num_nacme == 0) return
 
-         call calc_nacm(pot, nac_accu1)
+      ! Calculate NACME using default accuracy
+      call calc_nacm(pot, nac_accu1)
 
+      iost = read_nacm()
+
+      if (iost /= 0 .and. nac_accu1 > nac_accu2) then
+         write (stderr, '(A)') 'WARNING: Some NACME not computed. Trying with decreased accuracy'
+         write (stderr, '(A,I0)') 'Calling script r.'//trim(pot)//'.nacm with accuracy: 10^-', nac_accu2
+         call calc_nacm(pot, nac_accu2)
          iost = read_nacm()
-
-         if (iost /= 0 .and. nac_accu1 > nac_accu2) then
-            write (stderr, '(A)') 'WARNING: Some NACME not computed. Trying with decreased accuracy'
-            write (stderr, '(A,I0)') 'Calling script r.'//trim(pot)//'.nacm with accuracy: 10^-', nac_accu2
-            call calc_nacm(pot, nac_accu2)
-            iost = read_nacm()
-         end if
-
-         if (iost /= 0) then
-            call fatal_error(__FILE__, __LINE__, 'Some NACMEs could not be read')
-         end if
-         ! we always have to set tocalc because we change it in read_nacm()
-         call set_tocalc()
       end if
+
+      if (iost /= 0) then
+         call fatal_error(__FILE__, __LINE__, 'Some NACMEs could not be read')
+      end if
+
+      ! we always have to set tocalc because we change it in read_nacm()
+      call set_tocalc()
    end subroutine get_nacm
 
    ! In this routine, we decide which gradients and which NACME we need to compute
@@ -448,6 +455,8 @@ contains
       do ist1 = 1, nstate - 1
          do ist2 = ist1 + 1, nstate
 
+            ! TODO: We should have some validation here
+            ! that we're indeed reading NACME between correct states.
             if (tocalc(ist1, ist2) == 1) then
 
                do iat = 1, natqm ! reading only for QM atoms
