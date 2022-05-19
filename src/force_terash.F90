@@ -209,7 +209,7 @@ contains
       use mod_general, only: natom, idebug, sim_time, en_restraint
       use mod_qmmm, only: natqm
       use mod_sh_integ, only: nstate
-      use mod_sh, only: istate, tocalc, ignore_state
+      use mod_sh, only: istate, tocalc
       use mpi
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: tc_comm
@@ -242,13 +242,6 @@ contains
       ! The following bit is not in FMS code
       ! let ABIN decide which derivatives should TC compute
       i = 1
-      ! TODO: Why isn't this in set_tocalc()?
-      if (ignore_state > 0) then
-         do ist1 = 1, nstate
-            tocalc(ist1, ignore_state) = 0
-            tocalc(ignore_state, ist1) = 0
-         end do
-      end if
       do ist1 = 1, nstate
          do ist2 = ist1, nstate
             if (ist1 == ist2 .and. ist1 == istate) then
