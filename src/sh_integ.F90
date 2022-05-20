@@ -7,10 +7,17 @@ module mod_sh_integ
    use mod_error, only: fatal_error
    implicit none
    private
-   public :: sh_integrate_wf, sh_set_initialwf, sh_write_phase_bin, sh_read_phase_bin
+   public :: sh_set_initialwf, sh_set_energy_shift
+   public :: sh_integrate_wf
    public :: sh_decoherence_correction, check_popsum, sh_TFS_transmat
+
+   ! Restart functionality
+   public :: sh_write_phase_bin, sh_read_phase_bin
    public :: sh_write_wf, sh_read_wf, sh_debug_wf
-   public :: integ, phase, el_pop
+   public :: get_elpop
+
+   ! Input parameters
+   public :: integ, phase
    public :: nstate, popsumthr
    public :: correct_decoherence
 
@@ -18,10 +25,8 @@ module mod_sh_integ
    ! TODO: Would be nice if we used the complex type
    real(DP), allocatable, dimension(:) :: cel_re, cel_im
    real(DP), allocatable, dimension(:, :) :: gama
-   ! TODO: Get rid of this global, calculate elpop on the fly
-   real(DP), allocatable, dimension(:) :: el_pop
 
-   real(DP) :: eshift, popsumthr = 0.001D0
+   real(DP) :: Eshift, popsumthr = 0.001D0
    ! TODO: phase variable should be named differently
    integer :: phase = 0
    ! Number of electronic states
@@ -53,16 +58,14 @@ contains
 
       end if
 
-      call sh_calc_elpop()
-
    end subroutine sh_integrate_wf
 
-   subroutine sh_calc_elpop()
-      integer :: ist1
-      do ist1 = 1, nstate
-         el_pop(ist1) = cel_re(ist1)**2 + cel_im(ist1)**2
-      end do
-   end subroutine sh_calc_elpop
+   ! Calculate electronic population of a given state
+   ! from the SH wavefunction.
+   real(DP) function get_elpop(state) result(el_pop)
+      integer, intent(in) :: state
+      el_pop = cel_re(state)**2 + cel_im(state)**2
+   end function get_elpop
 
    ! Calculates transitions matrix according to the Tully's fewest switches algorithm
    subroutine sh_TFS_transmat(dotproduct_int, dotproduct_newint, ist, pop0, t, dtp)
@@ -396,8 +399,6 @@ contains
       cel_re(current_state) = cel_re(current_state) * renormalization_factor
       cel_im(current_state) = cel_im(current_state) * renormalization_factor
 
-      call sh_calc_elpop()
-
    end subroutine sh_decoherence_correction
 
    subroutine sh_write_phase_bin(iunit)
@@ -411,40 +412,35 @@ contains
    subroutine sh_read_phase_bin(iunit)
       integer, intent(in) :: iunit
       integer :: ist1, ist2
+
+      if (.not. allocated(gama)) allocate(gama(nstate, nstate))
+
       do ist1 = 1, nstate
          read (iunit) (gama(ist1, ist2), ist2=1, nstate)
       end do
    end subroutine sh_read_phase_bin
 
-   subroutine sh_set_initialwf(initial_state, initial_poten, irest)
-      real(DP), intent(in) :: initial_poten
+   subroutine sh_set_initialwf(initial_state)
       integer, intent(in) :: initial_state
-      ! Did we restart or not?
-      integer, intent(in) :: irest
       integer :: ist1
 
       allocate (gama(nstate, nstate))
-      allocate (el_pop(nstate))
-
       gama = 0.0D0
 
-      if (irest == 0) then
-         allocate (cel_re(nstate), cel_im(nstate))
-         do ist1 = 1, nstate
-            cel_re(ist1) = 0.0D0
-            cel_im(ist1) = 0.0D0
-         end do
+      allocate (cel_re(nstate), cel_im(nstate))
+      do ist1 = 1, nstate
+         cel_re(ist1) = 0.0D0
+         cel_im(ist1) = 0.0D0
+      end do
 
-         cel_re(initial_state) = 1.0D0
-      end if
-
-      ! Eshift hard set as the potential energy of the ground state
-      ! Probably should be handled better (and differently for different trajs)
-      Eshift = -initial_poten
-
-      call sh_calc_elpop()
-
+      cel_re(initial_state) = 1.0D0
    end subroutine sh_set_initialwf
+
+   subroutine sh_set_energy_shift(potential_energy)
+      real(DP), intent(in) :: potential_energy
+
+      Eshift = -potential_energy
+   end subroutine sh_set_energy_shift
 
    subroutine sh_write_wf(outunit)
       integer, intent(in) :: outunit
@@ -468,19 +464,20 @@ contains
    end subroutine sh_read_wf
 
    real(DP) function check_popsum()
+      use mod_files, only: stderr
       real(DP) :: popsum
       integer :: ist1
 
       popsum = 0.0D0
       do ist1 = 1, nstate
-         popsum = popsum + el_pop(ist1)
+         popsum = popsum + get_elpop(ist1)
       end do
 
       if (abs(popsum - 1.0D0) > popsumthr) then
-         write (*, *) 'ERROR:Sum of electronic populations = ', popsum
-         write (*, *) 'which differs from 1.0 by more than popsumthr = ', popsumthr
-         write (*, *) 'Increase the number of substeps or use more accurate integrator.'
-         call fatal_error(__FILE__, __LINE__, 'Invalid SH integration')
+         write (stderr, *) 'ERROR: Sum of electronic populations = ', popsum
+         write (stderr, *) 'which differs from 1.0 by more than popsumthr = ', popsumthr
+         write (stderr, *) 'Increase the number of substeps or use more accurate integrator.'
+         call fatal_error(__FILE__, __LINE__, 'Inaccurate SH integration')
       end if
 
       check_popsum = popsum

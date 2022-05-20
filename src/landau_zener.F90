@@ -15,7 +15,7 @@ module mod_lz
    use mod_general, only: nwalk, pot, irest
    ! TODO: Break coupling between LZ and SH modules
    ! The following are needed for TERA-MPI interface
-   use mod_sh, only: istate_init, istate, inac
+   use mod_sh, only: set_current_state, inac
    use mod_sh_integ, only: nstate
    implicit none
    private
@@ -97,10 +97,10 @@ contains
                 vx_prev(natom, nwalk), vy_prev(natom, nwalk), vz_prev(natom, nwalk))
       en_array_lz = 0.0D0
 
-      !TERA-MPI parameters
+      ! TERA-MPI parameters
       if (pot == '_tera_') then
          nstate = nstate_lz
-         istate_init = initstate_lz
+         call set_current_state(initstate_lz)
          inac = 2
       end if
 
@@ -225,7 +225,7 @@ contains
             !We need to get to previous geometry, adjust its velocity according to
             !target state and do 1 step forward on the new state
             istate_lz = ihop
-            if (pot == '_tera_') istate = ihop !TERA-MPI TODO: refactor, separate lz from sh for _tera_ usage completely
+            if (pot == '_tera_') call set_current_state(ihop) !TERA-MPI TODO: refactor, separate lz from sh for _tera_ usage completely
             !a) Previous geometry
             x = x_prev; y = y_prev; z = z_prev; 
             !b) Previous velocities
@@ -558,8 +558,7 @@ contains
 
       !TERA-MPI parameters
       if (pot == '_tera_') then
-         istate_init = istate_lz
-         istate = istate_lz
+         call set_current_state(istate_lz)
       end if
 
       do ist = 1, nstate_lz

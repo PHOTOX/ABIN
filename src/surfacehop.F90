@@ -23,10 +23,11 @@ module mod_sh
    ! Helper subroutines
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
    public :: check_CIVector
+   public :: set_current_state
 
    ! Variables holding SH state
    ! TODO: Make these protected and write Set methods
-   public :: en_array, istate, tocalc
+   public :: en_array, tocalc
    public :: nacx, nacy, nacz
 
    ! Initial electronic state
@@ -91,8 +92,7 @@ module mod_sh
    ! diagonal elements correspond to electronic gradients
    integer, allocatable :: tocalc(:, :)
    ! Current electronic state
-   ! TODO: This one should definitely be private!
-   integer :: istate
+   integer, public, protected :: istate
    ! for ethylene 2-state SA3 dynamics
    integer :: ignore_state = 0
    save
@@ -123,7 +123,7 @@ contains
 
       ! Determining the initial state
       if (irest /= 1) then
-         istate = istate_init
+         call set_current_state(istate_init)
       end if
 
       if (nohop == 1) then
@@ -162,7 +162,11 @@ contains
       dum_fx = 0.0D0; dum_fy = 0.0D0; dum_fz = 0.0D0
       call force_clas(dum_fx, dum_fy, dum_fz, x, y, z, dum_eclas, pot)
 
-      call sh_set_initialwf(istate, en_array(1), irest)
+      ! When restarting, initial SH WF was already read from the restart file
+      if (irest == 0) then
+         call sh_set_initialwf(istate)
+      end if
+      call sh_set_energy_shift(en_array(1))
 
       entot0 = en_array(istate) + ekin_v(vx, vy, vz)
       entot0 = entot0 * AUtoEV
@@ -174,6 +178,11 @@ contains
       end if
 
    end subroutine sh_init
+
+   subroutine set_current_state(current_state)
+      integer, intent(in) :: current_state
+      istate = current_state
+   end subroutine
 
    subroutine check_sh_parameters()
       use mod_utils, only: int_positive, int_nonnegative, int_switch, real_nonnegative
@@ -323,9 +332,9 @@ contains
       if (popthr > 0) then
          ! COMPUTE NACME only if population of the states is gt.popthr
          do ist1 = 1, nstate - 1
-            pop = el_pop(ist1)
+            pop = get_elpop(ist1)
             do ist2 = ist1 + 1, nstate
-               pop2 = el_pop(ist2)
+               pop2 = get_elpop(ist2)
                if (pop < popthr .and. pop2 < popthr .and. ist1 /= istate .and. ist2 /= istate) then
                   tocalc(ist1, ist2) = 0
                end if
@@ -619,7 +628,7 @@ contains
          ist = istate
 
          ! pop0 is later used for Tully's fewest switches
-         pop0 = el_pop(ist)
+         pop0 = get_elpop(ist)
 
          ! INTERPOLATION
          fr = real(itp, DP) / real(substep, DP)
@@ -720,7 +729,7 @@ contains
 
          ! Write electronic populations
          write (formt, '(A10,I0,A13)') '(F15.2,I3,', nstate, 'F10.5,1F10.7)'
-         write (UPOP, fmt=formt) stepfs, istate, (el_pop(ist1), ist1=1, nstate), popsum
+         write (UPOP, fmt=formt) stepfs, istate, (get_elpop(ist1), ist1=1, nstate), popsum
 
          ! Write hopping probabilities
          t_tot = 1 - t_tot ! up to know, t_tot was the probability of not hopping
@@ -900,7 +909,7 @@ contains
          return
       end if
 
-      istate = outstate
+      call set_current_state(outstate)
       eclas = en_array(outstate)
       write (*, '(A,I0,A,I0)') '# Hop occured from state ', instate, ' to state ', outstate
 
@@ -1003,7 +1012,7 @@ contains
          vz = alfa * vz
 
          ! Switch states
-         istate = outstate
+         call set_current_state(outstate)
          eclas = en_array(outstate)
          ekin_new = ekin_v(vx, vy, vz)
 
