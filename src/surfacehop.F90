@@ -493,7 +493,7 @@ contains
                      nacz(iat, ist2, ist1) = -nacz(iat, ist1, ist2)
                   else
                      close (iunit, status='delete')
-                     write (*, *) 'WARNING: NACME between states', ist1, ist2, 'not read.'
+                     write (stderr, '(A,I0,A,I0,A)') 'WARNING: NACME between states ', ist1, ' and ', ist2, ' not read.'
                      read_nacm = iost
                      return
                   end if
