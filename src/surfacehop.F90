@@ -7,17 +7,10 @@ module mod_sh
    use mod_sh_integ
    implicit none
    private
-   ! TODO: We should make some of these private
-   ! We would need to read sh namelist inside this module
 
    ! INPUT PARAMETERS
-   public :: istate_init, substep, decoh_alpha
-   ! Parameters controling NACME computations
-   public :: deltaE, inac, nohop, popthr, nac_accu1, nac_accu2
-   ! Parameters controlling energy conservation checks
-   public :: energydifthr, energydriftthr, dE_S0S1_thr
-   public :: adjmom, revmom
-   public :: ignore_state
+   public :: read_sh_input, print_sh_input
+   public :: inac
    ! Main subroutines
    public :: surfacehop, sh_init
    ! Helper subroutines
@@ -95,6 +88,10 @@ module mod_sh
    integer, public, protected :: istate
    ! for ethylene 2-state SA3 dynamics
    integer :: ignore_state = 0
+
+   namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
+         nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
+         dE_S0S1_thr, correct_decoherence
    save
 
 contains
@@ -179,6 +176,22 @@ contains
       end if
 
    end subroutine sh_init
+
+   subroutine read_sh_input(param_unit)
+      use mod_utils, only: tolower
+      integer, intent(in) :: param_unit
+
+
+      rewind (param_unit)
+      read (param_unit, sh)
+      rewind (param_unit)
+
+      integ = tolower(integ)
+   end subroutine read_sh_input
+
+   subroutine print_sh_input()
+      write (stdout, nml=sh, delim='APOSTROPHE')
+   end subroutine print_sh_input
 
    subroutine set_current_state(current_state)
       integer, intent(in) :: current_state

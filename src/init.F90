@@ -40,8 +40,8 @@ contains
       use mod_nhc
       use mod_estimators
       use mod_potentials
-      use mod_sh_integ, only: nstate, integ, phase, popsumthr, correct_decoherence
-      use mod_sh
+      use mod_sh_integ, only: phase
+      use mod_sh, only: read_sh_input, print_sh_input
       use mod_lz
       use mod_qmmm, only: natqm, natmm
       use mod_force_mm, only: initialize_mm
@@ -138,9 +138,6 @@ contains
          k, r0, kx, ky, kz, r0_morse, d0_morse, k_morse, D0_dw, lambda_dw, k_dw, r0_dw, &
          Nshake, ishake1, ishake2, shake_tol, potential_file
 
-      namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
-         nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
-         dE_S0S1_thr, correct_decoherence
 
       namelist /lz/ initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz
 
@@ -363,9 +360,7 @@ contains
       rewind (uinput)
 
       if (ipimd == 2) then
-         read (uinput, sh)
-         rewind (uinput)
-         integ = tolower(integ)
+         call read_sh_input(uinput)
       end if
 
       if (ipimd == 5) then
@@ -776,7 +771,7 @@ contains
             write (stdout, *)
          end if
          if (ipimd == 2) then
-            write (stdout, nml=sh, delim='APOSTROPHE')
+            call print_sh_input()
             write (stdout, *)
          end if
          if (ipimd == 5) then
