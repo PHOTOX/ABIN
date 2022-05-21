@@ -8,7 +8,7 @@ module mod_sh_integ
    implicit none
    private
    public :: sh_set_initialwf, sh_set_energy_shift
-   public :: sh_integrate_wf
+   public :: sh_select_integrator, sh_integrate_wf
    public :: sh_decoherence_correction, check_popsum, sh_TFS_transmat
 
    ! Restart functionality
@@ -37,28 +37,36 @@ module mod_sh_integ
    ! See the comment in subroutine sh_decoherence_correction() for explanation.
    logical :: correct_decoherence = .true.
 
+   abstract interface
+      subroutine sh_integrator(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
+         import :: DP
+         ! Interpolated potential energies
+         real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
+         ! Interpolated dotproduct = nacm x velocity
+         real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
+         ! SH timestep
+         real(DP), intent(in) :: dtp
+      end subroutine sh_integrator
+   end interface
+
+   procedure(sh_integrator), pointer :: sh_integrate_wf => null()
+
 contains
 
-   subroutine sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
-      real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
-      real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
-      real(DP), intent(in) :: dtp ! Time step
+   subroutine sh_select_integrator(integrator)
+      character(len=*), intent(in) :: integrator
 
-      if (integ == 'butcher') then
-
-         call butcherstep(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
-
-      else if (integ == 'rk4') then
-
-         call rk4step(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
-
-      else if (integ == 'euler') then
-
-         call eulerstep(en_array_int, en_array_newint, dotproduct_int, dtp)
-
+      if (integrator == 'butcher') then
+         sh_integrate_wf => butcherstep
+      else if (integrator == 'rk4') then
+         sh_integrate_wf => rk4step
+      else if (integrator == 'euler') then
+         sh_integrate_wf => eulerstep
+      else
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Invalid Surface Hopping integrator "'//integrator//'"')
       end if
-
-   end subroutine sh_integrate_wf
+   end subroutine sh_select_integrator
 
    ! Calculate electronic population of a given state
    ! from the SH wavefunction.
@@ -165,11 +173,11 @@ contains
 
    end subroutine integ_gama
 
-   subroutine eulerstep(en_array_int, en_array_newint, dotproduct_int, dtp)
+   subroutine eulerstep(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
       real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
-      real(DP), intent(in), dimension(:, :) :: dotproduct_int
-      real(DP) :: dtp
-      real(DP), dimension(nstate, nstate) :: dotprod0, gam0
+      real(DP), intent(in), dimension(:, :) :: dotproduct_int, dotproduct_newint
+      real(DP), intent(in) :: dtp
+      real(DP), dimension(nstate, nstate) :: dotprod0, dotprod1, gam0
       real(DP), dimension(nstate) :: k1_re, k1_im
       real(DP), dimension(nstate) :: y_im, y_re, en0
       integer :: ist1, ist2
@@ -180,6 +188,8 @@ contains
          y_im(ist1) = cel_im(ist1)
          do ist2 = 1, nstate
             dotprod0(ist1, ist2) = dotproduct_int(ist1, ist2)
+            ! dotprod1 is not actually used in Euler method
+            dotprod1(ist1, ist2) = dotproduct_newint(ist1, ist2)
             gam0(ist1, ist2) = gama(ist1, ist2)
          end do
       end do

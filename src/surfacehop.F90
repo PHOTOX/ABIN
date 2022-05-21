@@ -167,6 +167,7 @@ contains
          call sh_set_initialwf(istate)
       end if
       call sh_set_energy_shift(en_array(1))
+      call sh_select_integrator(integ)
 
       entot0 = en_array(istate) + ekin_v(vx, vy, vz)
       entot0 = entot0 * AUtoEV
