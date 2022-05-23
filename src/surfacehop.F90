@@ -26,6 +26,9 @@ module mod_sh
    ! Initial electronic state
    integer :: istate_init = -1
 
+   ! Numerical integrator for SH wavefunction
+   ! (default is Butcher 5-th order)
+   character(len=50) :: integ = 'butcher'
    ! Number of substeps for integrating electronic Schrodinger eq.
    integer :: substep = 100
 

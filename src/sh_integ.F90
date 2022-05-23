@@ -17,7 +17,7 @@ module mod_sh_integ
    public :: get_elpop
 
    ! Input parameters
-   public :: integ, phase
+   public :: phase
    public :: nstate, popsumthr
    public :: correct_decoherence
 
@@ -31,8 +31,6 @@ module mod_sh_integ
    integer :: phase = 0
    ! Number of electronic states
    integer :: nstate = 1
-   ! Numerical integrator (default is Butcher 5-th order)
-   character(len=50) :: integ = 'butcher'
    ! NOTE: To exactly replicate older data, switch this to .false.
    ! See the comment in subroutine sh_decoherence_correction() for explanation.
    logical :: correct_decoherence = .true.
