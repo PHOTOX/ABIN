@@ -62,7 +62,7 @@ contains
          sh_integrate_wf => eulerstep
       else
          call fatal_error(__FILE__, __LINE__, &
-            & 'Invalid Surface Hopping integrator "'//integrator//'"')
+            & 'Invalid Surface Hopping integrator "'//trim(integrator)//'"')
       end if
    end subroutine sh_select_integrator
 
@@ -421,7 +421,7 @@ contains
       integer, intent(in) :: iunit
       integer :: ist1, ist2
 
-      if (.not. allocated(gama)) allocate(gama(nstate, nstate))
+      if (.not. allocated(gama)) allocate (gama(nstate, nstate))
 
       do ist1 = 1, nstate
          read (iunit) (gama(ist1, ist2), ist2=1, nstate)

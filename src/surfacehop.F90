@@ -93,8 +93,8 @@ module mod_sh
    integer :: ignore_state = 0
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
-         nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
-         dE_S0S1_thr, correct_decoherence
+      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
+      dE_S0S1_thr, correct_decoherence
    save
 
 contains
@@ -183,7 +183,6 @@ contains
    subroutine read_sh_input(param_unit)
       use mod_utils, only: tolower
       integer, intent(in) :: param_unit
-
 
       rewind (param_unit)
       read (param_unit, sh)
@@ -1098,7 +1097,7 @@ contains
 
       if (dE_S0S1 < threshold_ev) then
          write (stdout, *) 'S1 - S0 gap dropped below threshold!'
-         write (stdout, *) dE_S0S1, ' < ', threshold_ev 
+         write (stdout, *) dE_S0S1, ' < ', threshold_ev
          call finish(0)
          stop 0
       end if
