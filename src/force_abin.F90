@@ -102,7 +102,7 @@ contains
       shellscript = './'//trim(toupper(potential))//'/r.'//potential
       inquire (file=shellscript, exist=exists)
       if (.not. exists) then
-         call fatal_error(__FILE__, __LINE__, 'Shell executable '//shellscript//' does not exist')
+         call fatal_error(__FILE__, __LINE__, 'Shell executable '//trim(shellscript)//' does not exist')
       end if
    end function get_shellscript
 

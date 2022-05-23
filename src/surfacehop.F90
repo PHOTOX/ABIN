@@ -418,15 +418,8 @@ contains
       character(len=*), parameter :: restart_file = 'restart_sh.bin'
       integer :: iost, ist1, ist2, iat
       integer :: iunit1
-      logical :: file_exists
-      character(len=200) :: chmsg
 
       write (stdout, *) 'Reading Surface Hopping restart data from file '//trim(restart_file)
-      inquire (file=restart_file, exist=file_exists)
-      if (.not. file_exists) then
-         call fatal_error(__FILE__, __LINE__, &
-            & 'Surface Hopping restart file '//trim(restart_file)//' does not exist!')
-      end if
 
       open (newunit=iunit1, file=restart_file, action="read", status="old", access="sequential", form="unformatted")
 
@@ -437,11 +430,10 @@ contains
             if (inac == 0) then
 
                do iat = 1, natqm
-                  read (iunit1, iomsg=chmsg, IOSTAT=iost) nacx(iat, ist1, ist2), &
+                  read (iunit1, iostat=iost) nacx(iat, ist1, ist2), &
                                                         & nacy(iat, ist1, ist2), &
                                                         & nacz(iat, ist1, ist2)
                   if (iost /= 0) then
-                     write (*, *) chmsg
                      call fatal_error(__FILE__, __LINE__, &
                         & 'Could not read NACME from restart file '//trim(restart_file))
                   end if
