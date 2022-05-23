@@ -524,7 +524,7 @@ contains
 
       chsystem = './'//trim(toupper(pot))//'/r.'//trim(pot)//'.nacm '
       itrj = 1
-      write (chsystem, '(A,I13,I4.3,I3,A)') trim(chsystem), it, itrj, nac_accu, ' < state.dat'
+      write (chsystem, '(A,X,I0,X,I4.3,X,I0,X,A)') trim(chsystem), it, itrj, nac_accu, ' < state.dat'
 
       call execute_command_line(trim(chsystem), exitstat=istat, cmdstat=icmd)
 
@@ -535,7 +535,7 @@ contains
 
       ! We continue on, since we can retry calculation with decreased accuracy
       if (istat /= 0) then
-         write (stderr, *) 'WARNING: Command '//trim(chsystem)//' exited with non-zero status'
+         write (stderr, *) 'WARNING: Command "'//trim(chsystem)//'" exited with non-zero status'
       end if
    end subroutine calc_nacm
 
