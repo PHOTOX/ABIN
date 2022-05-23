@@ -1050,25 +1050,19 @@ contains
    end subroutine try_hop_simple_rescale
 
    subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz)
-      use mod_interfaces, only: finish
       use mod_const, only: AUtoEV
       use mod_kinetic, only: ekin_v
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
-      real(DP) :: ekin, ekin_old, entot, entot_old, dE_S0S1
+      real(DP) :: ekin, ekin_old, entot, entot_old
 
-      ! Special case for running MD with TDDFT:
-      ! End the simulation when S1-S0 energy difference drops below certain
-      ! small threshold.
-      if (nstate >= 2) then
-         dE_S0S1 = en_array(2) - en_array(1)
-         dE_S0S1 = dE_S0S1 * AUtoEV
-         if (dE_S0S1 < dE_S0S1_thr) then
-            write (*, *) 'S1 - S0 gap dropped below threshold!'
-            write (*, *) dE_S0S1, ' < ', dE_S0S1_thr
-            call finish(0)
-            stop 0
-         end if
+      ! Special case for running AIMD with TDDFT:
+      ! End the simulation when S1-S0 energy difference drops
+      ! below a certain small threshold.
+      if (dE_S0S1_thr > 0.0D0 .and. nstate >= 2) then
+         call check_S0S1_gap(en_S0=en_array(1), &
+                             en_S1=en_array(2), &
+                             threshold_ev=dE_S0S1_thr)
       end if
 
       ekin = ekin_v(vx, vy, vz)
@@ -1092,6 +1086,23 @@ contains
       end if
 
    end subroutine check_energy
+
+   subroutine check_S0S1_gap(en_S0, en_S1, threshold_ev)
+      use mod_interfaces, only: finish
+      use mod_const, only: AUtoEV
+      real(DP), intent(in) :: en_S0, en_S1
+      real(DP), intent(in) :: threshold_ev
+      real(DP) :: dE_S0S1
+
+      dE_S0S1 = (en_S1 - en_S0) * AUtoEV
+
+      if (dE_S0S1 < threshold_ev) then
+         write (stdout, *) 'S1 - S0 gap dropped below threshold!'
+         write (stdout, *) dE_S0S1, ' < ', threshold_ev 
+         call finish(0)
+         stop 0
+      end if
+   end subroutine check_S0S1_gap
 
    subroutine check_energydrift(vx, vy, vz)
       use mod_const, only: AUtoEV

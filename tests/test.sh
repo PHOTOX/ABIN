@@ -117,7 +117,7 @@ restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.
 if [[ $TESTS = "all" ]];then
    folders=(INIT CMD NHC-GLOBAL SHAKE \
             SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
-            SH_IGNORE SH_NACM_FAIL SH_ENERGY_DIFF SH_ENERGY_DRIFT \
+            SH_IGNORE SH_NACM_FAIL SH_S0S1 SH_ENERGY_DIFF SH_ENERGY_DRIFT \
             SH_BUTCHER_PHASE SH_SIMPLE_RESCALE SH_FRUSTRATED \
             LZ_SS LZ_ST LZ_ENE \
             PIMD ABINITIO ABINITIO-FAIL MTS \
