@@ -7,31 +7,28 @@ module mod_sh
    use mod_sh_integ
    implicit none
    private
-   ! TODO: We should make some of these private
-   ! We would need to read sh namelist inside this module
 
    ! INPUT PARAMETERS
-   public :: istate_init, substep, decoh_alpha
-   ! Parameters controling NACME computations
-   public :: deltaE, inac, nohop, popthr, nac_accu1, nac_accu2
-   ! Parameters controlling energy conservation checks
-   public :: energydifthr, energydriftthr, dE_S0S1_thr
-   public :: adjmom, revmom
-   public :: ignore_state
+   public :: read_sh_input, print_sh_input
+   public :: inac
    ! Main subroutines
    public :: surfacehop, sh_init
    ! Helper subroutines
    public :: move_vars, get_nacm, write_nacmrest, read_nacmrest
    public :: check_CIVector
+   public :: set_current_state
 
    ! Variables holding SH state
    ! TODO: Make these protected and write Set methods
-   public :: en_array, istate, tocalc
+   public :: en_array, tocalc
    public :: nacx, nacy, nacz
 
    ! Initial electronic state
    integer :: istate_init = -1
 
+   ! Numerical integrator for SH wavefunction
+   ! (default is Butcher 5-th order)
+   character(len=50) :: integ = 'butcher'
    ! Number of substeps for integrating electronic Schrodinger eq.
    integer :: substep = 100
 
@@ -91,10 +88,13 @@ module mod_sh
    ! diagonal elements correspond to electronic gradients
    integer, allocatable :: tocalc(:, :)
    ! Current electronic state
-   ! TODO: This one should definitely be private!
-   integer :: istate
+   integer, public, protected :: istate
    ! for ethylene 2-state SA3 dynamics
    integer :: ignore_state = 0
+
+   namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
+      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
+      dE_S0S1_thr, correct_decoherence
    save
 
 contains
@@ -123,7 +123,7 @@ contains
 
       ! Determining the initial state
       if (irest /= 1) then
-         istate = istate_init
+         call set_current_state(istate_init)
       end if
 
       if (nohop == 1) then
@@ -162,7 +162,12 @@ contains
       dum_fx = 0.0D0; dum_fy = 0.0D0; dum_fz = 0.0D0
       call force_clas(dum_fx, dum_fy, dum_fz, x, y, z, dum_eclas, pot)
 
-      call sh_set_initialwf(istate, en_array(1), irest)
+      ! When restarting, initial SH WF was already read from the restart file
+      if (irest == 0) then
+         call sh_set_initialwf(istate)
+      end if
+      call sh_set_energy_shift(en_array(1))
+      call sh_select_integrator(integ)
 
       entot0 = en_array(istate) + ekin_v(vx, vy, vz)
       entot0 = entot0 * AUtoEV
@@ -174,6 +179,26 @@ contains
       end if
 
    end subroutine sh_init
+
+   subroutine read_sh_input(param_unit)
+      use mod_utils, only: tolower
+      integer, intent(in) :: param_unit
+
+      rewind (param_unit)
+      read (param_unit, sh)
+      rewind (param_unit)
+
+      integ = tolower(integ)
+   end subroutine read_sh_input
+
+   subroutine print_sh_input()
+      write (stdout, nml=sh, delim='APOSTROPHE')
+   end subroutine print_sh_input
+
+   subroutine set_current_state(current_state)
+      integer, intent(in) :: current_state
+      istate = current_state
+   end subroutine
 
    subroutine check_sh_parameters()
       use mod_utils, only: int_positive, int_nonnegative, int_switch, real_nonnegative
@@ -323,9 +348,9 @@ contains
       if (popthr > 0) then
          ! COMPUTE NACME only if population of the states is gt.popthr
          do ist1 = 1, nstate - 1
-            pop = el_pop(ist1)
+            pop = get_elpop(ist1)
             do ist2 = ist1 + 1, nstate
-               pop2 = el_pop(ist2)
+               pop2 = get_elpop(ist2)
                if (pop < popthr .and. pop2 < popthr .and. ist1 /= istate .and. ist2 /= istate) then
                   tocalc(ist1, ist2) = 0
                end if
@@ -395,15 +420,8 @@ contains
       character(len=*), parameter :: restart_file = 'restart_sh.bin'
       integer :: iost, ist1, ist2, iat
       integer :: iunit1
-      logical :: file_exists
-      character(len=200) :: chmsg
 
       write (stdout, *) 'Reading Surface Hopping restart data from file '//trim(restart_file)
-      inquire (file=restart_file, exist=file_exists)
-      if (.not. file_exists) then
-         call fatal_error(__FILE__, __LINE__, &
-            & 'Surface Hopping restart file '//trim(restart_file)//' does not exist!')
-      end if
 
       open (newunit=iunit1, file=restart_file, action="read", status="old", access="sequential", form="unformatted")
 
@@ -414,11 +432,10 @@ contains
             if (inac == 0) then
 
                do iat = 1, natqm
-                  read (iunit1, iomsg=chmsg, IOSTAT=iost) nacx(iat, ist1, ist2), &
+                  read (iunit1, iostat=iost) nacx(iat, ist1, ist2), &
                                                         & nacy(iat, ist1, ist2), &
                                                         & nacz(iat, ist1, ist2)
                   if (iost /= 0) then
-                     write (*, *) chmsg
                      call fatal_error(__FILE__, __LINE__, &
                         & 'Could not read NACME from restart file '//trim(restart_file))
                   end if
@@ -470,7 +487,7 @@ contains
                      nacz(iat, ist2, ist1) = -nacz(iat, ist1, ist2)
                   else
                      close (iunit, status='delete')
-                     write (*, *) 'WARNING: NACME between states', ist1, ist2, 'not read.'
+                     write (stderr, '(A,I0,A,I0,A)') 'WARNING: NACME between states ', ist1, ' and ', ist2, ' not read.'
                      read_nacm = iost
                      return
                   end if
@@ -509,7 +526,7 @@ contains
 
       chsystem = './'//trim(toupper(pot))//'/r.'//trim(pot)//'.nacm '
       itrj = 1
-      write (chsystem, '(A,I13,I4.3,I3,A)') trim(chsystem), it, itrj, nac_accu, ' < state.dat'
+      write (chsystem, '(A,X,I0,X,I4.3,X,I0,X,A)') trim(chsystem), it, itrj, nac_accu, ' < state.dat'
 
       call execute_command_line(trim(chsystem), exitstat=istat, cmdstat=icmd)
 
@@ -520,7 +537,7 @@ contains
 
       ! We continue on, since we can retry calculation with decreased accuracy
       if (istat /= 0) then
-         write (stderr, *) 'WARNING: Command '//trim(chsystem)//' exited with non-zero status'
+         write (stderr, *) 'WARNING: Command "'//trim(chsystem)//'" exited with non-zero status'
       end if
    end subroutine calc_nacm
 
@@ -619,7 +636,7 @@ contains
          ist = istate
 
          ! pop0 is later used for Tully's fewest switches
-         pop0 = el_pop(ist)
+         pop0 = get_elpop(ist)
 
          ! INTERPOLATION
          fr = real(itp, DP) / real(substep, DP)
@@ -720,7 +737,7 @@ contains
 
          ! Write electronic populations
          write (formt, '(A10,I0,A13)') '(F15.2,I3,', nstate, 'F10.5,1F10.7)'
-         write (UPOP, fmt=formt) stepfs, istate, (el_pop(ist1), ist1=1, nstate), popsum
+         write (UPOP, fmt=formt) stepfs, istate, (get_elpop(ist1), ist1=1, nstate), popsum
 
          ! Write hopping probabilities
          t_tot = 1 - t_tot ! up to know, t_tot was the probability of not hopping
@@ -900,7 +917,7 @@ contains
          return
       end if
 
-      istate = outstate
+      call set_current_state(outstate)
       eclas = en_array(outstate)
       write (*, '(A,I0,A,I0)') '# Hop occured from state ', instate, ' to state ', outstate
 
@@ -1003,7 +1020,7 @@ contains
          vz = alfa * vz
 
          ! Switch states
-         istate = outstate
+         call set_current_state(outstate)
          eclas = en_array(outstate)
          ekin_new = ekin_v(vx, vy, vz)
 
@@ -1032,25 +1049,19 @@ contains
    end subroutine try_hop_simple_rescale
 
    subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz)
-      use mod_interfaces, only: finish
       use mod_const, only: AUtoEV
       use mod_kinetic, only: ekin_v
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
-      real(DP) :: ekin, ekin_old, entot, entot_old, dE_S0S1
+      real(DP) :: ekin, ekin_old, entot, entot_old
 
-      ! Special case for running MD with TDDFT:
-      ! End the simulation when S1-S0 energy difference drops below certain
-      ! small threshold.
-      if (nstate >= 2) then
-         dE_S0S1 = en_array(2) - en_array(1)
-         dE_S0S1 = dE_S0S1 * AUtoEV
-         if (dE_S0S1 < dE_S0S1_thr) then
-            write (*, *) 'S1 - S0 gap dropped below threshold!'
-            write (*, *) dE_S0S1, ' < ', dE_S0S1_thr
-            call finish(0)
-            stop 0
-         end if
+      ! Special case for running AIMD with TDDFT:
+      ! End the simulation when S1-S0 energy difference drops
+      ! below a certain small threshold.
+      if (dE_S0S1_thr > 0.0D0 .and. nstate >= 2) then
+         call check_S0S1_gap(en_S0=en_array(1), &
+                             en_S1=en_array(2), &
+                             threshold_ev=dE_S0S1_thr)
       end if
 
       ekin = ekin_v(vx, vy, vz)
@@ -1074,6 +1085,23 @@ contains
       end if
 
    end subroutine check_energy
+
+   subroutine check_S0S1_gap(en_S0, en_S1, threshold_ev)
+      use mod_interfaces, only: finish
+      use mod_const, only: AUtoEV
+      real(DP), intent(in) :: en_S0, en_S1
+      real(DP), intent(in) :: threshold_ev
+      real(DP) :: dE_S0S1
+
+      dE_S0S1 = (en_S1 - en_S0) * AUtoEV
+
+      if (dE_S0S1 < threshold_ev) then
+         write (stdout, *) 'S1 - S0 gap dropped below threshold!'
+         write (stdout, *) dE_S0S1, ' < ', threshold_ev
+         call finish(0)
+         stop 0
+      end if
+   end subroutine check_S0S1_gap
 
    subroutine check_energydrift(vx, vy, vz)
       use mod_const, only: AUtoEV

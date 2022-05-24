@@ -1,0 +1,32 @@
+#!/bin/bash
+cd MOLPRO
+timestep=$1
+ibead=$2
+nac_accu=$3
+
+cp nacm.dat.$timestep  ../nacm.dat
+
+echo "Timestep: $timestep" >> ../stateall.dat
+cat ../state.dat >> ../stateall.dat
+
+# Simulate calculating only one NACME
+if [[ $timestep -eq 1 && $nac_accu -eq 6 ]];then
+  head -6 nacm.dat.$timestep > ../nacm.dat
+  exit 1
+fi
+
+# Calculate the second one with lower accuracy
+if [[ $timestep -eq 1 && $nac_accu -eq 4 ]];then
+  tail -6 nacm.dat.$timestep > ../nacm.dat
+fi
+
+# Simulate calculating only one NACME
+if [[ $timestep -eq 2 && $nac_accu -eq 6 ]];then
+  head -6 nacm.dat.$timestep > ../nacm.dat
+fi
+
+# Fail even with lower accuracy
+if [[ $timestep -eq 2 && $nac_accu -eq 4 ]];then
+  rm ../nacm.dat
+  exit 1
+fi

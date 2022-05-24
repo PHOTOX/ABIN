@@ -295,7 +295,7 @@ contains
       use mod_estimators
       use mod_kinetic, only: entot_cumul, est_temp_cumul
       use mod_sh_integ, only: sh_read_wf
-      use mod_sh, only: write_nacmrest, istate
+      use mod_sh, only: write_nacmrest, set_current_state
       use mod_lz, only: lz_restin
       use mod_gle, only: gle_restin, pile_restin
       use mod_random, only: read_prng_state
@@ -304,7 +304,7 @@ contains
       real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(out) :: it
       real(DP) :: sim_time
-      integer :: iw, urest
+      integer :: iw, urest, istate
       character(len=100) :: chtemp
       character(len=50) :: chin
 
@@ -328,6 +328,7 @@ contains
          read (urest, '(A)') chtemp
          call checkchar(chtemp, chsh)
          read (urest, *) istate
+         call set_current_state(istate)
          call sh_read_wf(urest)
       end if
 
