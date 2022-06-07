@@ -409,7 +409,7 @@ contains
 
          do iw = 1, nwalk
             do iat = 1, natom
-               read (urest, '(3ES25.16E3)') x(iat, iw), y(iat, iw), z(iat, iw)
+               read (urest, *) x(iat, iw), y(iat, iw), z(iat, iw)
             end do
          end do
       end subroutine read_xyz
