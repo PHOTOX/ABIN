@@ -892,8 +892,10 @@ contains
       integer :: iat, iw
 
       iw = 1
-      ! Checking for frustrated hop
+      write (stdout, '(A,I0,A,I0)') 'Trying to hop from state ', instate, ' to state ', outstate
+      write (stdout, *) "Checking kinetic energy in the direction of NACME vector"
 
+      ! Checking for frustrated hop
       a_temp = 0.D0
       b_temp = 0.D0
 
@@ -910,8 +912,15 @@ contains
       a_temp = 0.5D0 * a_temp
       c_temp = b_temp**2 + 4 * a_temp * (en_array(instate) - en_array(outstate))
 
+      if (a_temp <= 0.0D0 ) then
+         write (stdout, *) 'WARNING: NACME vector is zero, using isotropic velocity rescaling'
+         call try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
+         return
+      end if
+
       if (c_temp < 0) then
-         write (*, *) '# Not enough momentum in the direction of NAC vector.'
+         write (stdout, *) 'WARNING:  Not enough kinetic energy in the direction of NAC vector.'
+         write (stdout, *) 'Trying isotropic velocity rescaling instead'
          ! Try, whether there is enough total kinetic energy and scale velocities.
          call try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
          return
@@ -919,7 +928,9 @@ contains
 
       call set_current_state(outstate)
       eclas = en_array(outstate)
-      write (*, '(A,I0,A,I0)') '# Hop occured from state ', instate, ' to state ', outstate
+      write (stdout, '(A,I0,A,I0)') '# Hop occured from state ', instate, ' to state ', outstate
+      write (stdout, '(A, E20.10)') 'Potential energy difference / a.u. = ', en_array(outstate) - en_array(instate)
+      write (stdout, '(A, E20.10)') 'Total kinetic energy before hop / a.u. = ', ekin
 
       ! Rescaling the velocities
 
@@ -939,11 +950,11 @@ contains
       end do
       ekin_new = ekin_v(vx, vy, vz)
 
-      write (*, '(A,2E20.10)') '# deltaE_pot     E_kin-total', &
+      write (stdout, '(A,2E20.10)') '# dE_pot     E_kin-total', &
                                & en_array(outstate) - en_array(instate), ekin
 
       call set_tocalc()
-      write (*, *) '# Calculating forces for the new state.'
+      write (stdout, *) '# Calculating forces for the new state.'
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
    end subroutine try_hop_nacme_rescale
@@ -1025,7 +1036,7 @@ contains
          ekin_new = ekin_v(vx, vy, vz)
 
          write (*, '(A,I0,A,I0)') '# Hop occured from state ', instate, ' to state ', outstate
-         write (*, '(A)') '# Adjusting velocities by simple scaling.'
+         write (*, '(A)') '# Adjusting velocities by isotropic scaling.'
 
          call set_tocalc()
          write (*, '(A)') '# Calculating forces for the new state.'
