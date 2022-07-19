@@ -1,0 +1,61 @@
+#!/bin/bash
+cd $(dirname $0)
+source ../SetEnvironment.sh XTB
+
+timestep=$1
+ibead=$2
+input=input$ibead
+natom=$(cat ../geom.dat.$ibead | wc -l )
+geom=../geom.dat.$ibead
+WRKDIR=OUT$ibead
+mkdir -p $WRKDIR ; cd $WRKDIR
+
+
+
+#Example of input for periodic system with cell 18.428 A computed with parametrization GFN0-xTB
+
+# Definitio of parametrization: 0 - GFN0-xTB, 1 - GFN1-xTB, 2 - GFN2-xTB
+
+p=0
+
+#Charge can be specified by changing value in a file .CHRG
+
+echo "0" > .CHRG
+
+cat > $input << EOF
+\$periodic 3
+\$cell angs
+    18.428    18.428    18.428  90  90  90
+\$coord angs
+
+
+EOF
+
+########END OF USE MODIFICATIONS###################
+
+cat ../$geom | awk '{printf "%14.6f %14.6f %14.6f %3s\n",$2,$3,$4,$1}' >> $input
+echo '$end' >>$input
+
+$XTBEXE --grad --gfn $p $input &> $input.out
+
+
+################################
+if [[ $? -eq 0 ]];then
+   cp $input.out $input.out.old
+else
+   echo "WARNING from r.xtb: XTB calculation probably failed."
+   echo "See $input.out.error" 
+   cp $input.out $input.out.error
+fi
+
+### EXTRACTING ENERGY AND FORCES
+#Archives all energies and forces, possible to comment
+
+tail -n 2 energy | head -n 1 | awk '{print $2}' > ../../engrad.dat.$ibead
+cat energy >> all_energies.dat
+let natom1=$natom+1
+tail -n $natom1 gradient | head -n $natom  >> ../../engrad.dat.$ibead
+cat gradient  >> all_gradients.dat
+rm energy gradient
+
+
