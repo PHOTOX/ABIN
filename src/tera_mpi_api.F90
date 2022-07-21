@@ -29,6 +29,7 @@ module mod_terampi
    public :: TC_TAG
 #ifdef USE_MPI
    integer, allocatable :: tc_comms(:)
+   logical, allocatable :: communication_established(:)
 
    public :: get_tc_communicator
    public :: wait_for_terachem
@@ -61,7 +62,9 @@ contains
       end if
 
       allocate (tc_comms(nteraservers))
+      allocate (communication_established(nteraservers))
       tc_comms = MPI_COMM_NULL
+      communication_established = .false.
 
       ! Setting MPI_ERRORS_RETURN error handler allows us to retry
       ! failed MPI_LOOKUP_NAME() call. It also allows us
@@ -82,6 +85,7 @@ contains
          !!$OMP PARALLEL DO PRIVATE(i)
          do i = 1, nteraservers
             call connect_tc_server(trim(tc_server_name), i)
+            communication_established(i) = .true.
          end do
          !!$OMP END PARALLEL DO
       end if
@@ -243,6 +247,8 @@ contains
 
       do itera = 1, nteraservers
 
+         if (.not.communication_established(itera)) cycle
+
          write (stdout, '(A,I0)') 'Shutting down TeraChem server id = ', itera
 
          call MPI_Send(empty, 0, MPI_INTEGER, 0, mpi_tag, tc_comms(itera), ierr)
@@ -260,7 +266,7 @@ contains
 
       end do
 
-      deallocate (tc_comms)
+      deallocate (tc_comms, communication_established)
    end subroutine finalize_terachem
 
    subroutine wait_for_terachem(tc_comm)
