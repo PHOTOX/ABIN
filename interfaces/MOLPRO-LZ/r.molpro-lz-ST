@@ -43,8 +43,7 @@ numerforce=1   # How do we calculate forces?
 
 rm -f ../engrad.dat.$ibead 
 
-#-How many atoms?
-natom=$(cat ../geom.dat.$ibead | wc -l )
+natom=$(wc -l < ../geom.dat.$ibead)
 let natom1=natom+1 
 let natom2=natom+2 
 

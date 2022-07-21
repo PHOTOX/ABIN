@@ -3,14 +3,14 @@ cd $(dirname $0)
 timestep=$1
 ibead=$2
 input=input$ibead.inp
-natom=`cat ../geom.dat.$ibead | wc -l` 
+natom=$(wc -l < ../geom.dat.$ibead)
 let lines=natom+2
 
 source ../SetEnvironment.sh CP2K
 
 echo "$natom" > input$ibead.xyz
 echo " " >> input$ibead.xyz
-cat ../geom.dat.$ibead >> input$ibead.xyz  #only xyz coordinates
+cat ../geom.dat.$ibead >> input$ibead.xyz
 
 # TEMPLATE FOR AB INITIO DYNAMICS with CP2K
 # MODIFY accordingly and set pot='cp2k' in input.in
@@ -117,25 +117,17 @@ cat > $input << EOF
 EOF
 
 
-#END OF USER INPUT################
-
-#######LAUNCHING PROGRAM###########
-
 $MPIRUN -np $nproc $CP2KEXE_MPI $input > $input.out
-
-#check whether all is ok
 if [[ $? -eq 0 ]];then
    cp $input.out $input.out.old
 else
-   echo "WARNING: CP2K calculation probably failed."
+   echo "ERROR from CP2K/r.cp2k: CP2K calculation probably failed."
    echo "See CP2K/$input.out.error"
    cp $input.out $input.out.error
 fi
 
 ################################
 
-### EXTRACTING ENERGY AND GRADIENTS
+# Extract energy and gradients
 grep 'ENERGY| Total FORCE_EVAL ( QS ) energy (a.u.):' $input.out | tr -s " " | awk -F ":" '{print $2}' > ../engrad.dat.$ibead
 grep 'ATOMIC FORCES in \[a.u.\]' $input.out -A$lines | tail -n $natom |  awk '{printf" % 1.8f  % 1.8f  % 1.8f \n",-$4,-$5,-$6}' >> ../engrad.dat.$ibead
-
-

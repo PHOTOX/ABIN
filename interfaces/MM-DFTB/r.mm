@@ -7,9 +7,14 @@ ibead=$2
 input=input$ibead
 geom=../geom_mm.dat.$ibead
 
-natom=`cat $geom | wc -l`
+natom=$(wc -l < $geom)
 WRKDIR=OUT$ibead.$natom
-mkdir -p $WRKDIR ; cd $WRKDIR
+rm -rf ${WRKDIR}.old
+if [[ -d $WRKDIR ]];then
+  mv $WRKDIR ${WRKDIR}.old
+fi
+mkdir -p $WRKDIR
+cd $WRKDIR
 
 # You have to specify, which elements are present in your system
 # i.e. define array id[x]="element"
@@ -46,12 +51,16 @@ fi
 rm -f detailed.out
 
 $DFTBEXE  &> $input.out
-################################
-cp $input.out $input.out.old
+if [[ $? -eq 0 ]];then
+   cp $input.out $input.out.old
+else
+   cp $input.out $input.out.error
+   echo "ERROR from MM/r.mm: DFTB job probably failed."
+   echo "See $input.out.error"
+   exit 2
+fi
 
-### EXTRACTING ENERGY AND FORCES
+# Extract energy and gradients
 grep 'Total energy:' detailed.out | awk '{print $3}' > ../../engrad_mm.dat.$ibead
 awk -v natom=$natom '{if ($2=="Forces"){for (i=1;i<=natom;i++){getline;printf"%3.15e %3.15e %3.15e \n",-$1,-$2,-$3}}}' \
  detailed.out >> ../../engrad_mm.dat.$ibead
-
-

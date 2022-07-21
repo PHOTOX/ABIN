@@ -11,7 +11,7 @@ PARAM_FILE=template.param
 timestep=$1
 ibead=$2
 input=input$ibead
-natom=$(cat ../geom.dat.$ibead | wc -l )
+natom=$(wc -l < ../geom.dat.$ibead)
 
 ./prepare_castep_cellfile.py -c $CELL_FILE -x ../geom.dat.$ibead > $input.cell
 
@@ -22,36 +22,20 @@ output=$input.castep
 # CASTEP by default apppends, so remove the old output files
 rm -f $output $input.cst_esp $input.check $input.castep_bin
 
-##### LAUNCHING CASTEP ########################
+# Launch CASTEP
+source ../SetEnvironment.sh CP2K
 
-# First, try to determine the cluster
-node=$(uname -a | awk '{print $2}')
-if [[ $node =~ ^p[0-9]+$ ]];then
-   #echo "Recognized PROMETHEUS cluster!"
-   # It seems that CASTEP also outputs to stdin, so we need to get rid of that
-   mpiexec castep $input > /dev/null
-
-else
-   # Assume that if we are not at Prometheus, we are at SCARF
-
-   export PSPOT_DIR=/apps/castep/pseudopotentials
-   . /etc/profile.d/modules.sh
-   module load contrib/castep/7.0.1
-
-#   mpirun -lsf castep $input
-fi
-
+$CASTEPEXE $input
 if [[ $? -eq 0 ]];then
    cp $output $output.old
-#  cat $output >  $output.all
 else
-   echo "WARNING from r.castep: CASTEP calculation probably failed."
-   echo "See $output.error" 
+   echo "ERROR in CASTEP/r.castep: CASTEP calculation probably failed."
+   echo "See CASTEP/$output.error" 
    cp $output $output.error
    exit 2
 fi
 
-############## EXTRACTING ENERGY AND FORCES ##########################
+# Extract energy and gradients
 # We are expecting energy and forces in defult CASTEP units
 # i.e. eV and eV/Angstroms
 

@@ -5,20 +5,23 @@ source ../SetEnvironment.sh XTB
 timestep=$1
 ibead=$2
 input=input$ibead
-natom=$(cat ../geom.dat.$ibead | wc -l )
+natom=$(wc -l < ../geom.dat.$ibead)
 geom=../geom.dat.$ibead
 WRKDIR=OUT$ibead
 
-rm -rf ${WRKDIR}.old
-mv $WRKDIR ${WRKDIR}.old
+if [[ -d WRKDIR ]];then
+    rm -rf ${WRKDIR}.old
+    mv $WRKDIR ${WRKDIR}.old
+fi
 mkdir -p $WRKDIR && cd $WRKDIR
 
-#Example of input for periodic system with cell 18.428 A computed with parametrization GFN0-xTB
-
-# Definitio of parametrization: 0 - GFN0-xTB, 1 - GFN1-xTB, 2 - GFN2-xTB
-
+# Example of input for periodic system with cell 18.428 Angstrom
+# NOTE: Periodic calculations seems to be broken in xtb versions >= 6.3
+# Definition of parametrization: 
+# 0 - GFN0-xTB
+# 1 - GFN1-xTB
+# 2 - GFN2-xTB
 parametrization=0
-
 charge=0
 
 echo $charge > .CHRG
@@ -29,29 +32,23 @@ cat > $input << EOF
 \$coord angs
 EOF
 
-########END OF USE MODIFICATIONS###################
+#### END OF USE MODIFICATIONS ####
 
 awk '{printf "%14.6f %14.6f %14.6f %3s\n",$2,$3,$4,$1}' ../$geom >> $input
 echo '$end' >>$input
 
 $XTBEXE --grad --gfn $parametrization $input &> $input.out
-
-
-################################
 if [[ $? -eq 0 ]];then
    cp $input.out $input.out.old
 else
    echo "WARNING from r.xtb: XTB calculation probably failed."
    echo "See $input.out.error" 
    cp $input.out $input.out.error
-   
    exit 2
 fi
 
-### EXTRACTING ENERGY AND FORCES
+# Extract energy and gradients
 tail -n 2 energy | head -n 1 | awk '{print $2}' > ../../engrad.dat.$ibead
 let natom1=$natom+1
 tail -n $natom1 gradient | head -n $natom  >> ../../engrad.dat.$ibead
 rm energy gradient
-
-

@@ -36,7 +36,7 @@ source molpro.setup
 rm -f ../engrad.dat.$ibead ../nacm.dat
 
 #-How many atoms?
-natom=$(cat ../geom.dat.$ibead | wc -l )
+natom=$(wc -l < ../geom.dat.$ibead)
 let natom1=natom+1 
 let natom2=natom+2 
 

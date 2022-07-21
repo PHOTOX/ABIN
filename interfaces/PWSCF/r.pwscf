@@ -4,7 +4,7 @@ cd $(dirname $0)
 timestep=$1
 ibead=$2
 input=input$ibead
-natom=$(cat ../geom.dat.$ibead | wc -l )
+natom=$(wc -l < ../geom.dat.$ibead)
 
 cat > $input << EOF
 &CONTROL 
@@ -101,5 +101,3 @@ fi
 
 let natom1=natom+1
 grep -A $natom1 'Forces acting on atoms (cartesian axes, Ry/au):' $output  | tail -n $natom | awk '{printf("%15.8f %15.8f %15.8f\n",-$7/2,-$8/2,-$9/2)}' >> ../engrad.dat.$ibead
-
-

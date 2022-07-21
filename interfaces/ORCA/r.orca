@@ -5,7 +5,7 @@ source ../SetEnvironment.sh ORCA
 timestep=$1
 ibead=$2
 input=input$ibead
-natom=$(cat ../geom.dat.$ibead | wc -l )
+natom=$(wc -l < ../geom.dat.$ibead)
 
 rm -f *engrad
 

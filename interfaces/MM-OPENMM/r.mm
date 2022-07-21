@@ -9,7 +9,7 @@ timestep=$1
 ibead=$2
 input=input$ibead
 geom=../geom_mm.dat.$ibead
-natom=`cat $geom | wc -l`
+natom=$(wc -l < $geom)
 
 # TBD: create PDB file, probably according to some template
 templatefile=template.pdb
@@ -24,4 +24,3 @@ templatefile=template.pdb
 
 # Run OPENMM script
 python openmm_engrap.py > ../../engrad_mm.dat.$ibead
-
