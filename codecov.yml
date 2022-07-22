@@ -1,6 +1,7 @@
 codecov:
   require_ci_to_pass: yes
   notify:
+    require_changes: yes
     # Send report to Github PR only after all CIs
     # are completed, otherwise we'll temporarily receive
     # incomplete coverage reports.
@@ -24,6 +25,8 @@ coverage:
         target: auto
         # Allow coverage drop by x%
         threshold: 0.5%
+        flags:
+          - unittests
     patch:
       default:
         target: auto
@@ -43,9 +46,9 @@ comment:
   require_changes: no
 
 ignore:
-  - "docs/"
-  - "sample_inputs/"
-  - "interfaces/"
-  - "tests/"
-  - "utils/"
-  - "dev_scripts/"
+  - "docs"
+  - "sample_inputs"
+  - "interfaces"
+  - "utils"
+  - "dev_scripts"
+  - "**/*.md"

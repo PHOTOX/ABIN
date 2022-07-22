@@ -7,9 +7,8 @@ timestep=$1
 ibead=$2
 input=input$ibead
 geom=../geom.dat.$ibead
-natom=$(cat $geom | wc -l )
+natom=$(wc -l < $geom)
 let natom2=natom+2
-
 
 CHKFILE="$PWD/checkpoint$ibead.chk"
 
@@ -49,16 +48,16 @@ if [[ $? -eq 0 ]];then
    cp $input.log $input.log.old
 else
    cp $input.log $input.log.error
-   echo "WARNING from r.g09: G09 job probably failed."
+   echo "ERROR from G09/r.g09: G09 job probably failed."
    echo " See $input.log.error"
+   exit 2
 fi
 
 /bin/rm -rf /$GAUSS_SCRDIR
 /bin/rm -rf core
 ################################
 
-### EXTRACTING ENERGY AND FORCES
+# Extract energy and gradients
 grep -e 'SCF Done' -e 'EUMP2' $input.log |tail -1|awk '{if ($1=="SCF"){print $5} else if ($1=="E2"){print $6}}' > ../engrad.dat.$ibead
 
 grep -A$natom2 'Forces (Hartrees/Bohr)' $input.log | tail -n $natom | awk '{printf"%1.9f %1.9f %1.9f \n",-1*$3,-1*$4,-1*$5}' >> ../engrad.dat.$ibead
-

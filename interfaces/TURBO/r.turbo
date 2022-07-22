@@ -60,7 +60,7 @@ else
   exit 2
 fi
 
-# Extract energy and forces
+# Extract energy and gradients
 if [[ $TYPE = "RI-MP2" ]];then
 
   grep 'Final MP2 energy' grad.out | awk '{print $6}' | tail -1 > $BACK/../engrad.dat.$ibead

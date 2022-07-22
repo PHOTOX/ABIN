@@ -24,7 +24,7 @@ geom=../geom.dat.$ibead
 read -t 2 -a nstate
 #read -t 2 -a tocalc   # This is not used here
 
-natom=`cat $geom | wc -l`
+natom=$(wc -l < $geom)
 WRKDIR=OUT$ibead
 mkdir -p $WRKDIR ; cd $WRKDIR
 
@@ -63,8 +63,14 @@ fi
 rm -f detailed.out
 
 $DFTBEXE  &> $input.out
-################################
-cp $input.out $input.out.old
+if [[ $? -eq 0 ]];then
+   cp $input.out $input.out.old
+else
+   echo "ERROR in TD-DFTBP/r.td-dftbp: DFTB calculation probably failed."
+   echo "See TD-DFTBP/$input.out.error" 
+   cp $input.out $input.out.error
+   exit 2
+fi
 
 ### EXTRACTING ENERGY
 EN_GS=$(grep 'Total energy:' detailed.out | awk '{print $3}') 

@@ -1,0 +1,47 @@
+#!/bin/bash
+cd $(dirname $0)
+#source ../SetEnvironment.sh XTB
+XTBEXE=xtb
+
+timestep=$1
+ibead=$2
+input=input$ibead
+natom=$(wc -l < ../geom.dat.$ibead)
+geom=../geom.dat.$ibead
+WRKDIR=OUT$ibead
+
+mkdir -p $WRKDIR && cd $WRKDIR
+rm -f energy gradient $input.out
+
+#### SETUP ####
+# Definition of parametrization: 
+# 0 - GFN0-xTB
+# 1 - GFN1-xTB
+# 2 - GFN2-xTB
+parametrization=2
+charge=0
+unpaired_electrons=0
+# Parallelization
+nproc=1
+#### END OF USE MODIFICATIONS ####
+
+echo -en "$natom\n\n" > $geom.xyz
+cat ../$geom >> $geom.xyz
+
+# We're paranoid so we're turning warnings into errors with '--strict'
+# You might need to relaxe this for your particular use case
+# Try `xtb --help` to get all the xtb options.
+$XTBEXE --strict -P $nproc --grad -c $charge -u $unpaired_electrons --gfn $parametrization $geom.xyz &> $input.out
+if [[ $? -eq 0 ]];then
+   cp $input.out $input.out.old
+else
+   echo "WARNING from r.xtb: XTB calculation probably failed."
+   echo "See $input.out.error" 
+   cp $input.out $input.out.error
+   exit 2
+fi
+
+# Extract energy and gradients
+tail -n 2 energy | head -n 1 | awk '{print $2}' > ../../engrad.dat.$ibead
+let natom1=$natom+1
+tail -n $natom1 gradient | head -n $natom  >> ../../engrad.dat.$ibead
