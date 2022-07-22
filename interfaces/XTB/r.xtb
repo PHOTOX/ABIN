@@ -1,6 +1,7 @@
 #!/bin/bash
 cd $(dirname $0)
-source ../SetEnvironment.sh XTB
+#source ../SetEnvironment.sh XTB
+XTBEXE=xtb
 
 timestep=$1
 ibead=$2
@@ -9,35 +10,28 @@ natom=$(wc -l < ../geom.dat.$ibead)
 geom=../geom.dat.$ibead
 WRKDIR=OUT$ibead
 
-if [[ -d WRKDIR ]];then
-    rm -rf ${WRKDIR}.old
-    mv $WRKDIR ${WRKDIR}.old
-fi
 mkdir -p $WRKDIR && cd $WRKDIR
+rm -f energy gradient $input.out
 
-# Example of input for periodic system with cell 18.428 Angstrom
-# NOTE: Periodic calculations seems to be broken in xtb versions >= 6.3
+#### SETUP ####
 # Definition of parametrization: 
 # 0 - GFN0-xTB
 # 1 - GFN1-xTB
 # 2 - GFN2-xTB
-parametrization=0
+parametrization=2
 charge=0
-
-echo $charge > .CHRG
-cat > $input << EOF
-\$periodic 3
-\$cell angs
-    18.428    18.428    18.428  90  90  90
-\$coord angs
-EOF
-
+unpaired_electrons=0
+# Parallelization
+nproc=1
 #### END OF USE MODIFICATIONS ####
 
-awk '{printf "%14.6f %14.6f %14.6f %3s\n",$2,$3,$4,$1}' ../$geom >> $input
-echo '$end' >>$input
+echo -en "$natom\n\n" > $geom.xyz
+cat ../$geom >> $geom.xyz
 
-$XTBEXE --grad --gfn $parametrization $input &> $input.out
+# We're paranoid so we're turning warnings into errors with '--strict'
+# You might need to relaxe this for your particular use case
+# Try `xtb --help` to get all the xtb options.
+$XTBEXE --strict -P $nproc --grad -c $charge -u $unpaired_electrons --gfn $parametrization $geom.xyz &> $input.out
 if [[ $? -eq 0 ]];then
    cp $input.out $input.out.old
 else
@@ -51,4 +45,3 @@ fi
 tail -n 2 energy | head -n 1 | awk '{print $2}' > ../../engrad.dat.$ibead
 let natom1=$natom+1
 tail -n $natom1 gradient | head -n $natom  >> ../../engrad.dat.$ibead
-rm energy gradient
