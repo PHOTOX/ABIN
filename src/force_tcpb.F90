@@ -40,7 +40,9 @@ contains
           & //trim(host)//" and port ", port
       status = -1
 
+#ifdef USE_TCPB
       call tc_connect(host, port, status)
+#endif
 
       if (status == 0) then
          write (stdout, *) "Successfully connected to TeraChem server."
@@ -58,7 +60,9 @@ contains
 
       ! Setup TeraChem
       status = -1
+#ifdef USE_TCPB
       call tc_setup(tcfile, qmattypes, natqm, status)
+#endif
       status = 0
       if (status == 0) then
         write (*,*) "TeraChem setup completed with success."
@@ -77,7 +81,9 @@ contains
    subroutine finalize_tcpb()
       ! TODO: I am not sure whether this actually does anything.
       ! TCPB server output is silent when this is called.
+#ifdef USE_TCPB
       call tc_finalize()
+#endif
    end subroutine finalize_tcpb
 
    subroutine force_tcpb(x, y, z, fx, fy, fz, eclas, walkmax)
@@ -107,8 +113,10 @@ contains
          end do
 
          status = -1
+#ifdef USE_TCPB
          call tc_compute_energy_gradient(qmattypes, qmcoords, natqm, eclas, qmgrad, &
              & mmcoords, mmcharges, natmm, mmgrad, globaltreatment, status)
+#endif
          if (status == 0) then
             write (stdout, *) "TCPB Computed energy and gradient with success."
          else if (status == 1) then
