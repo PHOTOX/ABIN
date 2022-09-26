@@ -135,6 +135,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_splined_grid, only: force_splined_grid
    use mod_cp2k, only: force_cp2k
    use mod_shell_interface, only: force_abin
+   use mod_force_tcpb, only: force_tcpb
    use mod_force_tera, only: force_tera
    use mod_terampi_sh, only: force_terash
    implicit none
@@ -167,6 +168,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
       call force_doublewell(x, y, fx, fy, eclas, walkmax)
    case ("_cp2k_")
       call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
+   case ("_tcpb_")
+      call force_tcpb(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_tera_")
       if (ipimd == 2 .or. ipimd == 5) then
          call force_terash(x, y, z, fx, fy, fz, eclas)

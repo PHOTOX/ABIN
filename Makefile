@@ -21,6 +21,7 @@ MPI=FALSE
 FFTW=FALSE
 CP2K=FALSE
 PLUMED=FALSE
+TCPB=FALSE
 # https://www.gnu.org/software/make/manual/html_node/Implicit-Variables.html
 LDLIBS=
 LDFLAGS=
@@ -69,6 +70,12 @@ endif
 
 ifeq  ($(strip $(MPI)),TRUE) 
   DFLAGS += -DUSE_MPI
+endif
+
+ifeq  ($(strip $(TCPB)),TRUE)
+  DFLAGS += -DUSE_TCPB
+  LDLIBS += -ltcpb
+  LDFLAGS += -L${TCPB_LIB}
 endif
 
 LDLIBS := -labin -lwater ${LDLIBS} -lm -lstdc++

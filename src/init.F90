@@ -61,6 +61,7 @@ contains
       use mod_transform, only: initialize_pi_masses
       use mod_cp2k
       use mod_remd
+      use mod_force_tcpb, only: initialize_tcpb
       use mod_terampi
       use mod_terampi_sh
       use mod_mdstep, only: initialize_integrator, nabin, nstep_ref
@@ -387,6 +388,10 @@ contains
          if (ipimd == 2 .or. ipimd == 5) then
             call init_terash(x, y, z)
          end if
+      end if
+
+      if (pot == '_tcpb_' .or. restrain_pot == '_tcpb_' .or. pot_ref == '_tcpb_') then
+         call initialize_tcpb(natqm, atnames)
       end if
 
       ! Check whether input parameters make sense
@@ -1209,6 +1214,7 @@ subroutine finish(error_code)
    use mod_terampi_sh, only: finalize_terash
    use mod_splined_grid, only: finalize_spline
    use mod_force_mm, only: finalize_mm
+   use mod_force_tcpb, only: finalize_tcpb
    use mod_mpi, only: finalize_mpi
    implicit none
    integer, intent(in) :: error_code
@@ -1218,6 +1224,10 @@ subroutine finish(error_code)
          call finalize_terash()
       end if
       call finalize_terachem(error_code)
+   end if
+
+   if (pot == '_tcpb_') then
+      call finalize_tcpb()
    end if
 
    call deallocate_arrays()
