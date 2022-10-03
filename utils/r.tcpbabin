@@ -23,7 +23,11 @@ GEOM_IN=mini.xyz
 VELOC_IN=
 
 TC_IN=tc.inp
+TCPB_CPP_LIB= # path_to/tcpb-cpp/lib/
 ################
+if [[ -n $TCPB_CPP_LIB ]];then
+  export LD_LIBRARY_PATH=$TCPB_CPP_LIB:$LD_LIBRARY_PATH
+fi
 
 JOBNAME=TCPBABIN_${JOB_ID}_$$
 
@@ -120,19 +124,28 @@ cd $SCRDIR
 trap copy_from_scrdir EXIT SIGUSR2
 
 declare -A job_pids
-# LAUNCH TERACHEM
 # TODO: We need to randomize the port number,
 # otherwise different jobs on single node might clash.
 # Alternatively we need a way to scan for open ports
+TC_HOST=localhost
 TC_PORT=8080
+TC_OUT=$(basename $TC_IN .inp)
+TC_OUT=$TC_OUT".tcpb.out"
+
+#### LAUNCH TERACHEM ####
 $TERAEXE -s $TC_PORT > $TC_IN.tcpb.out 2>&1 &
 job_pids[tcpb]=$!
+# 10 seconds is a conservative number for TCPB startup
+sleep 10
 
-# LAUNCH ABIN
 ABIN_CMD="$ABINEXE -i $ABIN_IN -x $GEOM_IN"
 if [[ -n $VELOC_IN ]];then
    ABIN_CMD=$ABIN_CMD" -v $VELOC_IN"
 fi
+# Add TCPB options
+ABIN_CMD=$ABIN_CMD" --tcpb-host $TC_HOST --tcpb-port $TC_PORT --tcpb-input-file $TC_IN"
+
+#### LAUNCH ABIN ####
 $ABIN_CMD > $ABIN_OUT 2>&1 &
 job_pids[abin]=$!
 

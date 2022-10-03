@@ -9,59 +9,91 @@ module mod_force_tcpb
    implicit none
    private
    public :: initialize_tcpb, finalize_tcpb, force_tcpb
-   ! TODO: Pack these into a derived type
-   integer :: port, status, globaltreatment
-   character(len=80)  :: host
-   character(len=256) :: tcfile
+   ! TODO: Provide type bound function for validation
+   ! https://fortran-lang.org/en/learn/quickstart/derived_types/
+   type :: tcpb_params
+      integer :: port = -1
+      character(len=1024) :: hostname = ''
+      character(len=1024) :: input_file = ''
+      ! TODO: Find out what this does
+      integer :: globaltreatment = 0
+   end type
+   type(tcpb_params) :: tcpb
    character(len=5), allocatable :: qmattypes(:)
    save
 
 contains
 
-   subroutine initialize_tcpb(natqm, at_names)
+   subroutine initialize_tcpb(natqm, at_names, tc_port, tc_host, tc_file)
+      use mod_error, only: not_compiled_with
+      use mod_utils, only: file_exists_or_exit
       integer, intent(in) :: natqm
       character(len=2), intent(in) :: at_names(:)
+      integer, intent(in) :: tc_port
+      character(len=*), intent(in) :: tc_host, tc_file
       integer, parameter :: natmm = 0
+      integer, parameter :: MIN_PORT_NUMBER = 1025, MAX_PORT_NUMBER = 65536
+      integer :: status
       integer :: i
 
-      ! TODO: These all need to be either cmdline arguments or input file params
-      host = c_string("localhost")
-      port = 12345
-      tcfile = c_string("terachem.inp")
-      ! TODO: Find out what this does
-      globaltreatment = 0
+#ifndef USE_TCPB
+      call not_compiled_with("TCPB interface")
+#endif
+      if (tc_port < MIN_PORT_NUMBER .and. tc_port > 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & "Invalid TCPB port. Ports between 0 and 1024 are reserved by the system")
+      else if (tc_port < 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & "Invalid TCPB port. Port cannot be negative and must be between 1025 and 65536")
+      else if (tc_port > MAX_PORT_NUMBER) then
+         call fatal_error(__FILE__, __LINE__, &
+            & "TCPB port out of range. Port must be between 1025 and 65536")
+      end if
+
+      if (trim(tc_file) == "") then
+         call fatal_error(__FILE__, __LINE__, &
+            & "TCPB input file not provided")
+      end if
+      call file_exists_or_exit(tc_file)
+
+      if (trim(tc_host) == "") then
+         call fatal_error(__FILE__, __LINE__, &
+            & "TCPB hostname not provided")
+      end if
+
+      tcpb = tcpb_params(port=tc_port, input_file=c_string(tc_file), hostname=c_string(tc_host))
 
       allocate (qmattypes(natqm))
       do i = 1, natqm
          qmattypes(i) = c_string(at_names(i))
       end do
 
-      write (*, '(A,I0)') "Attempting to connect to TeraChem server using host " &
-          & //trim(host)//" and port ", port
+      write (*, '(A,I0,A)') "Connecting to TeraChem TCPB server at " &
+          & //trim(tc_host)//":", tcpb%port, " with input file "//trim(tc_file)
       status = -1
 
 #ifdef USE_TCPB
-      call tc_connect(host, port, status)
+      call tc_connect(tcpb%hostname, tcpb%port, status)
 #endif
 
       if (status == 0) then
          write (stdout, *) "Successfully connected to TeraChem server."
       else if (status == 1) then
         call fatal_error(__FILE__, __LINE__, &
-           & "ERROR: Connection to TeraChem server failed!")
+           & "Connection to TeraChem TCPB server failed! Is it running?")
       else if (status == 2) then
         call fatal_error(__FILE__, __LINE__, &
-           & "ERROR: Connection to TeraChem server succeed, but the "&
+           & "Connection to TeraChem server succeed, but the "&
            &  //" server is not available!")
       else
         call fatal_error(__FILE__, __LINE__, &
-           & "ERROR: Status on tc_connect function is not recognized!")
+           & "Could not connect to TCPB server. Is it running?")
       end if
 
       ! Setup TeraChem
       status = -1
 #ifdef USE_TCPB
-      call tc_setup(tcfile, qmattypes, natqm, status)
+      call tc_setup(tcpb%input_file, qmattypes, natqm, status)
 #endif
       status = 0
       if (status == 0) then
@@ -88,14 +120,16 @@ contains
 
    subroutine force_tcpb(x, y, z, fx, fy, fz, eclas, walkmax)
       use mod_general, only: iqmmm
-      use mod_qmmm, only: natqm, natmm
+      use mod_qmmm, only: natqm
       use mod_shell_interface, only: oniom
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
       integer, intent(in) :: walkmax
       real(DP), dimension(:), allocatable :: qmcoords, qmcharges, qmgrad
+      ! For now we do not support QM/MM
       real(DP), dimension(1) :: mmcoords, mmcharges, mmgrad
+      integer, parameter :: natmm = 0
       integer :: iw, iat, status
       logical :: abort
 
@@ -103,6 +137,12 @@ contains
       allocate (qmcharges(natqm))
       allocate (qmcoords(3 * natqm))
       allocate (qmgrad(3* natqm))
+
+      qmgrad = 0.0D0
+      mmgrad = 0.0D0
+      mmcoords = 0.0D0
+      mmcharges= 0.0D0
+      qmcharges= 0.0D0
 
       do iw = 1, walkmax
 
@@ -115,7 +155,7 @@ contains
          status = -1
 #ifdef USE_TCPB
          call tc_compute_energy_gradient(qmattypes, qmcoords, natqm, eclas, qmgrad, &
-             & mmcoords, mmcharges, natmm, mmgrad, globaltreatment, status)
+             & mmcoords, mmcharges, natmm, mmgrad, tcpb%globaltreatment, status)
 #endif
          if (status == 0) then
             write (stdout, *) "TCPB Computed energy and gradient with success."

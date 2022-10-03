@@ -1,1 +1,1 @@
-ERROR in cmdline.F90: Empty -M argument. Provide name of the TeraChem server
+ERROR in cmdline.F90: Empty -M argument. Provide name of the TeraChem MPI server

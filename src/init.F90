@@ -102,7 +102,8 @@ contains
       character(len=20) :: xyz_units
       character(len=60) :: chdivider
       character(len=60) :: mdtype
-      character(len=1024) :: tc_server_name
+      character(len=1024) :: tc_server_name, tcpb_input_file, tcpb_host
+      integer :: tcpb_port
       logical :: file_exists
       logical :: rem_comvel, rem_comrot
       integer :: my_rank, mpi_world_size
@@ -148,6 +149,9 @@ contains
       chinput = 'input.in'
       chveloc = ''
       tc_server_name = ''
+      tcpb_host = 'localhost'
+      tcpb_input_file = ''
+      tcpb_port = -1
       mdtype = ''
       dt = -1
       nproc = 1
@@ -156,7 +160,7 @@ contains
 
       chdivider = "######################################################"
 
-      call get_cmdline(chinput, chcoords, chveloc, tc_server_name)
+      call get_cmdline(chinput, chcoords, chveloc, tc_server_name, tcpb_input_file, tcpb_host, tcpb_port)
 
       ! Reading main input parameters from namelist &general
       open (newunit=uinput, file=chinput, status='OLD', delim='APOSTROPHE', action="READ")
@@ -391,7 +395,7 @@ contains
       end if
 
       if (pot == '_tcpb_' .or. restrain_pot == '_tcpb_' .or. pot_ref == '_tcpb_') then
-         call initialize_tcpb(natqm, atnames)
+         call initialize_tcpb(natqm, atnames, tcpb_port, tcpb_host, tcpb_input_file)
       end if
 
       ! Check whether input parameters make sense
