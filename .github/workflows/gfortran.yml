@@ -229,8 +229,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [7, 9, 10]
-         mpich_v: ["3.3.2", "3.4.2"]
+         gcc_v: [7, 10]
+         mpich_v: ["3.4.3", "4.0.2"]
     env:
       # To speed-up MPICH build
       CFLAGS: -O0
@@ -261,9 +261,10 @@ jobs:
       # that call the same routine with arguments of different types"
       # Unfortunately, previous GCC versions do not have this flag
       # so we need to set it conditionally.
+      # MPICH 4.0 also needs FCFLAGS set.
       # We also need to set it for ABIN compilation below.
       run: |
-        if [ $GCC_V -eq 10 ];then export FFLAGS="-fallow-argument-mismatch $FFLAGS";fi && \
+        if [ $GCC_V -eq 10 ];then export FFLAGS="-fallow-argument-mismatch";export FCFLAGS="-fallow-argument-mismatch";fi && \
         ./dev_scripts/install_mpich.sh ${HOME}/mpich ${MPICH_V}
 
     - name: build ABIN
@@ -342,7 +343,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         plumed_v: [2.5.3, 2.6.2, 2.8.0]
+         plumed_v: [2.7.4, 2.8.0]
          gcc_v: [7]
 
     env:
