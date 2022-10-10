@@ -1,0 +1,4 @@
+basis     sto-3g
+method    pbe
+charge    0
+spinmult  1

@@ -150,7 +150,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run End-to-End tests
-      run: LD_LIBRARY_PATH=${HOME}/tcpb-cpp/lib make e2etest
+      run: make e2etest
 
   optimized_build:
     name: Optimized build

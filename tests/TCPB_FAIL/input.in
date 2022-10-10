@@ -1,0 +1,11 @@
+! Here we test that we go through initialization and try to connect to TeraChem.
+! The connection will fail, since we do not launch TC server.
+&general
+pot='_tcpb_'
+mdtype='md'
+dt=20.
+nstep=1,
+/
+&nhcopt
+inose=0
+/
