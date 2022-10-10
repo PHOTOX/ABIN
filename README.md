@@ -61,6 +61,7 @@ The optional libraries are:
       - If you just need REMD you can also use other MPI libraries such as OpenMPI or IntelMPI.
  - [FFTW](http://www.fftw.org/): Fast Fourier Transform library used for normal mode transformation in Path Integral MD.
  - [PLUMED](https://www.plumed.org/): A collection of very useful tools for free energy calculations (MetaDynamics, Umbrella Sampling etc).
+ - [TCPB-CPP](https://github.com/mtzgroup/tcpb-cpp): [EXPERIMENTAL] TCPB interface to TeraChem
 
 For some features, you will also need to install the FFTW library.
 It is usually provided with your Linux distribution,

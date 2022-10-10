@@ -116,6 +116,40 @@ jobs:
     - name: Run End-to-End tests
       run: make e2etest
 
+  tcpb_build:
+    name: TCPB build
+    runs-on: ubuntu-20.04
+    needs: basic_build
+    env:
+      FC: gfortran
+      GCC_V: 9
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
+
+    - name: Install protocol buffers library
+      run: sudo apt install protobuf-compiler
+
+    - name: TCBP build cache
+      id: tcpb-cache
+      uses: actions/cache@v2
+      with:
+        path: ~/tcpb-cpp/lib
+        # To force a rebuild (bust the cache), make a change to install_tcpb.sh
+        key: ${{ runner.os }}-tcpb-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_tcpb.sh') }}
+
+    - name: Download and build tcpb_cpp
+      if: steps.tcpb-cache.outputs.cache-hit != 'true'
+      run: ./dev_scripts/install_tcpb.sh ${HOME}/tcpb-cpp
+
+    - name: Build ABIN
+      run: ./configure --tcpb ${HOME}/tcpb-cpp/lib && make
+      env:
+        FFLAGS: ${{ env.ABIN_FFLAGS }}
+
+    - name: Run End-to-End tests
+      run: LD_LIBRARY_PATH=${HOME}/tcpb-cpp/lib make e2etest
 
   optimized_build:
     name: Optimized build

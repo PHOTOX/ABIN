@@ -1,6 +1,8 @@
 module mod_force_tcpb
 ! ----------------------------------------------------------------
-! Interface for TeraChem based QM and QM/MM MD.
+! Interface for TeraChem based QM MD.
+!
+! TODO: Write documentation
 ! ----------------------------------------------------------------
    use mod_const, only: DP
    use mod_error, only: fatal_error
