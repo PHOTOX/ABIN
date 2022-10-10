@@ -147,6 +147,7 @@ jobs:
       run: ./configure --tcpb ${HOME}/tcpb-cpp/lib && make
       env:
         FFLAGS: ${{ env.ABIN_FFLAGS }}
+        LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run End-to-End tests
       run: LD_LIBRARY_PATH=${HOME}/tcpb-cpp/lib make e2etest
