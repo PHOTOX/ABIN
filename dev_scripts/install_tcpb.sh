@@ -12,7 +12,7 @@ if [[ -e $REPO_DIR ]];then
   exit 1
 fi
 
-git clone --recursive "${REPO_URL}" "${REPO_DIR}" && cd "$REPO_DIR"
+git clone "${REPO_URL}" "${REPO_DIR}" && cd "$REPO_DIR"
 
 export FC=gfortran
 export FFLAGS=
