@@ -125,6 +125,7 @@ jobs:
     env:
       FC: gfortran
       GCC_V: 9
+      CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
     steps:
     - uses: actions/checkout@v2
       with:
