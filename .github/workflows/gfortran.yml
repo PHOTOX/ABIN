@@ -118,12 +118,14 @@ jobs:
 
   tcpb_build:
     name: TCPB build
-    runs-on: ubuntu-18.04
+    # NOTE: tcpb-cpp fails to build on Ubuntu 18.04,
+    # probably because of old libprotobuf library?
+    runs-on: ubuntu-20.04
     needs: basic_build
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [7, 9, 10]
+         gcc_v: [8, 9, 10, 11]
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
