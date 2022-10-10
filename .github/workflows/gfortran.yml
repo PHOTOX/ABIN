@@ -122,23 +122,13 @@ jobs:
     # probably because of old libprotobuf library?
     runs-on: ubuntu-20.04
     needs: basic_build
-    strategy:
-      fail-fast: false
-      matrix:
-         gcc_v: [8, 9, 10, 11]
     env:
       FC: gfortran
-      GCC_V: ${{ matrix.gcc_v}}
+      GCC_V: 9
     steps:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 2
-
-    - name: Set GFortran version
-      run: |
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
-        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V} \
-        --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_V}
 
     - name: Install protocol buffers library
       run: sudo apt install protobuf-compiler
@@ -163,6 +153,14 @@ jobs:
 
     - name: Run End-to-End tests
       run: make e2etest
+
+    - name: Codecov upload
+      uses: codecov/codecov-action@v3.1.0
+      with:
+        name: ${{env.CODECOV_NAME}}
+        fail_ci_if_error: true
+        gcov: true
+
 
   optimized_build:
     name: Optimized build

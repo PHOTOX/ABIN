@@ -11,7 +11,7 @@ codecov:
     # mpich builds (6)
     # FFTW Build
     # Plumed Builds (3 total)
-    after_n_builds: 14
+    after_n_builds: 12
     wait_for_ci: yes
 
 coverage:
