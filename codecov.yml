@@ -1,7 +1,6 @@
 codecov:
   require_ci_to_pass: yes
   notify:
-    require_changes: yes
     # Send report to Github PR only after all CIs
     # are completed, otherwise we'll temporarily receive
     # incomplete coverage reports.
