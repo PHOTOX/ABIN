@@ -135,7 +135,6 @@ contains
       integer :: iw, iat, status
       logical :: abort
 
-      ! TODO: Preallocate these in the init function
       allocate (qmcharges(natqm))
       allocate (qmcoords(3 * natqm))
       allocate (qmgrad(3* natqm))

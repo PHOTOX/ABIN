@@ -62,6 +62,7 @@ function copy_from_scrdir() {
   fi
 
   rm $LAUNCH_DIR/job.log
+  kill $abin_pid $tcpb_pid &> /dev/null
   rm -r $SCRDIR
 }
 
@@ -154,7 +155,7 @@ while true;do
       break
    elif [[ $njobs -lt 2 ]];then
       echo "TCPB server or ABIN died. Killing the other." >&2
-      kill -9 $abin_pid $tcpb_pid &> /dev/null
+      kill $abin_pid $tcpb_pid &> /dev/null
       break
    fi
    sleep 5
