@@ -58,7 +58,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -68,7 +68,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -125,7 +125,7 @@ jobs:
     env:
       FC: gfortran
       GCC_V: 9
-      CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
+      CODECOV_NAME: ${{format('{0} GCC9', github.job)}}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -156,9 +156,10 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
-        name: ${{env.CODECOV_NAME}}
+        name: tcpb
+        verbose: true
         fail_ci_if_error: true
         gcov: true
 
@@ -252,7 +253,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -262,7 +263,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -323,7 +324,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -376,7 +377,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -439,7 +440,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -449,7 +450,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
