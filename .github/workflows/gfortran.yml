@@ -134,6 +134,12 @@ jobs:
       with:
         fetch-depth: 2
 
+    - name: Set GFortran version
+      run: |
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
+        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V} \
+        --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_V}
+
     - name: Install protocol buffers library
       run: sudo apt install protobuf-compiler
 
