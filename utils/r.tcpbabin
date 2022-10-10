@@ -115,7 +115,6 @@ source SetEnvironment.sh TERACHEM
 source SetEnvironment.sh ABIN
 set -u
 
-# HERE WE GO!
 uname -n > job.log
 echo "$SCRDIR" >> job.log
 
@@ -124,7 +123,7 @@ cd $SCRDIR
 
 trap copy_from_scrdir EXIT SIGUSR2
 
-# $RANDOM returns 0-32767, which is below the maximum port number on unix
+# $RANDOM returns 0-32767, which is within port range on Linux.
 # We add 1025 to avoid clashing with system-reserved ports.
 TC_PORT=$((1025+RANDOM))
 TC_HOST=localhost
@@ -140,7 +139,6 @@ ABIN_CMD="$ABINEXE -i $ABIN_IN -x $GEOM_IN"
 if [[ -n $VELOC_IN ]];then
    ABIN_CMD=$ABIN_CMD" -v $VELOC_IN"
 fi
-# Add TCPB options
 ABIN_CMD=$ABIN_CMD" --tcpb-host $TC_HOST --tcpb-port $TC_PORT --tcpb-input-file $TC_IN"
 
 #### LAUNCH ABIN ####

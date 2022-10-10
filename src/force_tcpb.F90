@@ -1,8 +1,22 @@
 module mod_force_tcpb
 ! ----------------------------------------------------------------
-! Interface for TeraChem based QM MD.
+! Interface for TeraChem based ab initio MD based on Protocol Buffers.
 !
-! TODO: Write documentation
+! Amber MPI interface that we've been using for ground state MD (force_tera.F90)
+! was removed in 2021 from TeraChem.
+! This module implements a replacement interface based on plain unix socket
+! communication and data serialization through Google's Protocol buffers library.
+!
+! We don't need to deal with the details of the interface on ABIN side
+! thanks to the tcpb-cpp library that provides a thin Fortran API. See
+! https://github.com/mtzgroup/tcpb-cpp
+!
+! The simulations with this interface are triggered by pot='_tcpb_',
+! see utils/r.tcpbabin for full setup.
+!
+! WARNING:
+!  - QM/MM not implemented yet
+!  - REMD is not supported as we cannot connect to multiple TC servers concurrently.
 ! ----------------------------------------------------------------
    use mod_const, only: DP
    use mod_error, only: fatal_error
@@ -17,7 +31,7 @@ module mod_force_tcpb
       integer :: port = -1
       character(len=1024) :: hostname = ''
       character(len=1024) :: input_file = ''
-      ! TODO: Find out what this does
+      ! This make TC reuse WF from previous step.
       integer :: globaltreatment = 0
    end type
    type(tcpb_params) :: tcpb
