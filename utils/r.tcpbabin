@@ -2,7 +2,7 @@
 # This is a sample script for launching an ABIN simulation
 # in cluster environments using TCPB TeraChem interface.
 
-set -euo pipefail
+set -uo pipefail
 
 # Sample SGE Params on PHOTOX clusters
 #$ -V -cwd -notify
@@ -26,10 +26,10 @@ TC_IN=tc.inp
 TCPB_CPP_LIB= # path_to/tcpb-cpp/lib/
 ################
 if [[ -n $TCPB_CPP_LIB ]];then
-  export LD_LIBRARY_PATH=$TCPB_CPP_LIB:$LD_LIBRARY_PATH
+  export LD_LIBRARY_PATH=$TCPB_CPP_LIB:${LD_LIBRARY_PATH-}
 fi
 
-JOBNAME=TCPBABIN_${JOB_ID}_$$
+JOBNAME=TCPBABIN_${JOB_ID-}_$$
 
 SCRDIR=/scratch/$USER/$JOBNAME
 LAUNCH_DIR=$PWD
@@ -123,18 +123,15 @@ cd $SCRDIR
 
 trap copy_from_scrdir EXIT SIGUSR2
 
-declare -A job_pids
-# TODO: We need to randomize the port number,
-# otherwise different jobs on single node might clash.
-# Alternatively we need a way to scan for open ports
+# $RANDOM returns 0-32767, which is below the maximum port number on unix
+# We add 1025 to avoid clashing with system-reserved ports.
+TC_PORT=$((1025+RANDOM))
 TC_HOST=localhost
-TC_PORT=8080
-TC_OUT=$(basename $TC_IN .inp)
-TC_OUT=$TC_OUT".tcpb.out"
+TC_OUT=$(basename $TC_IN .inp)".tcpb.out"
 
 #### LAUNCH TERACHEM ####
-$TERAEXE -s $TC_PORT > $TC_IN.tcpb.out 2>&1 &
-job_pids[tcpb]=$!
+$TERAEXE -s $TC_PORT &> $TC_OUT &
+tcpb_pid=$!
 # 10 seconds is a conservative number for TCPB startup
 sleep 10
 
@@ -146,21 +143,19 @@ fi
 ABIN_CMD=$ABIN_CMD" --tcpb-host $TC_HOST --tcpb-port $TC_PORT --tcpb-input-file $TC_IN"
 
 #### LAUNCH ABIN ####
-$ABIN_CMD > $ABIN_OUT 2>&1 &
-job_pids[abin]=$!
+$ABIN_CMD &> $ABIN_OUT &
+abin_pid=$!
 
 # PERIODICALLY CHECK WHETHER ABIN AND TC ARE RUNNING
-function join_by { local IFS="$1"; shift; echo "$*"; }
-regex=`join_by \| ${job_pids[@]}`
 while true;do
-   njobs=$(ps -eo pid | egrep "$regex" | wc -l)
+   njobs=$(ps -eo pid | egrep "$tcpb_pid|$abin_pid" | wc -l)
    if [[ $njobs -eq 0 ]];then
       echo "Both ABIN and TeraChem stopped"
       break
-   elif [[ $njobs -lt ${#job_pids[@]} ]];then
-      echo "server or ABIN died. Killing the rest." >&2
-      kill -9 ${job_pids[@]} 
+   elif [[ $njobs -lt 2 ]];then
+      echo "TCPB server or ABIN died. Killing the other." >&2
+      kill -9 $abin_pid $tcpb_pid &> /dev/null
       break
    fi
-   sleep 3
+   sleep 5
 done
