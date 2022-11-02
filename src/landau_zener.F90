@@ -69,8 +69,9 @@ contains
    end subroutine check_lz_parameters
 
    !Initialization
-   subroutine lz_init()
+   subroutine lz_init(pot)
       use mod_general, only: natom
+      character(len=*), intent(in) :: pot
       integer :: ist1
 
       call check_lz_parameters()
@@ -99,8 +100,7 @@ contains
 
       ! TERA-MPI parameters
       if (pot == '_tera_') then
-         nstate = nstate_lz
-         inac = 2
+         call lz_init_terash()
       end if
 
    end subroutine lz_init
@@ -108,6 +108,10 @@ contains
    subroutine lz_init_terash()
        use mod_general, only: natom
        use mod_sh, only: en_array, tocalc, nacx, nacy, nacz
+
+       nstate = nstate_lz !Needed in init_terash
+       inac = 2           !Turns off couplings calculation
+
        !Based on sh_init() routine, sharing most of the functions
        !TODO: Break dependence - separation of MPI interface needed
        allocate (en_array(nstate_lz))

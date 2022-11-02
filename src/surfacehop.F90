@@ -174,7 +174,7 @@ contains
 
       call set_tocalc()
 
-      if (irest == 1 .and. ipimd /= 5) then
+      if (irest == 1) then
          call read_nacmrest()
       end if
 
