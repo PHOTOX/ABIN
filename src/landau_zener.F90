@@ -19,7 +19,7 @@ module mod_lz
    use mod_sh_integ, only: nstate
    implicit none
    private
-   public :: lz_init, lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize !Routines
+   public :: lz_init, lz_init_terash, lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize !Routines
    public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz !User defined variables
    public :: en_array_lz, tocalc_lz, istate_lz !Routine variables
    !Caveat: Every time we call force_clas en_array_lz is updated
@@ -100,11 +100,26 @@ contains
       ! TERA-MPI parameters
       if (pot == '_tera_') then
          nstate = nstate_lz
-         call set_current_state(initstate_lz)
          inac = 2
       end if
 
    end subroutine lz_init
+
+   subroutine lz_init_terash()
+       use mod_general, only: natom
+       use mod_sh, only: en_array, tocalc, nacx, nacy, nacz
+       !Based on sh_init() routine, sharing most of the functions
+       !TODO: Break dependence - separation of MPI interface needed
+       allocate (en_array(nstate_lz))
+       allocate (nacx(natom, nstate_lz, nstate_lz))
+       allocate (nacy(natom, nstate_lz, nstate_lz))
+       allocate (nacz(natom, nstate_lz, nstate_lz))
+       allocate (tocalc(nstate, nstate))
+       en_array = 0.0D0
+       tocalc = 0
+       tocalc(istate_lz, istate_lz) = 1
+       call set_current_state(istate_lz)
+   end subroutine lz_init_terash
 
    !LZ singlets hop
    subroutine lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, chpot)

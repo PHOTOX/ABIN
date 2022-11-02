@@ -25,7 +25,7 @@ program abin
       & nwrite, nstep, ncalc, it, inormalmodes, istage, irest
    use mod_init, only: init
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
-   use mod_lz, only: lz_hop, en_array_lz, lz_rewind
+   use mod_lz, only: lz_hop, en_array_lz, lz_rewind, lz_init_terash
    use mod_kinetic, only: temperature
    use mod_utils, only: del_file, archive_file
    use mod_transform, only: initialize_pi_transforms, &
@@ -64,8 +64,7 @@ program abin
    if (ipimd == 2) then
       call sh_init(x, y, z, vx, vy, vz)
    else if (ipimd == 5 .and. pot == '_tera_') then
-      call sh_init(x, y, z, vx, vy, vz)
-      call lz_rewind(en_array_lz)
+      call lz_init_terash()
    end if
 
    write (stdout, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))

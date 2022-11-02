@@ -126,7 +126,7 @@ contains
       call check_recv_count(status, nstate * nstate, MPI_DOUBLE_PRECISION)
 
       ! Should change the following according to what is done in TeraChem
-      if (oldwfn /= 0) then
+      if (oldwfn /= 0 .and. ipimd /=  5) then
          i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
       end if
 
