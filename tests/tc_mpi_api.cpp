@@ -840,6 +840,133 @@ void TCServerMock::populate_fms_data() {
   populate_CIvecs(Data_.CIvecs, Data_.nci);
 }
 
+// Reading energies and gradients from files (TERAPI-LZ)
+void TCServerMock::populate_fms_data_from_file(int step) {
+  int total_atoms = FMS_.NAtoms + FMS_.MMAtoms;
+  int states = FMSNumStates;
+  double energies[FMSNumStates];
+  double forces[total_atoms][FMSNumStates];
+
+  printf("Entering populate_fms_data_from_file\n");
+  printf("Loop number: %d\n", step);
+
+  //Load energies from file
+  //Note: expects energies of all states separated by spaces, every call reads another line
+  //      no C error handling or safeguards for files, for new tests check they are read correctly
+  FILE *enefile;
+  enefile = fopen("allenergies", "r");
+
+  //Skip to current line
+  for(int i = 0; i < step; i++) {
+    fscanf(enefile, "%*[^\n]\n");
+  }
+  //Read energy
+  for (int j = 0 ; j < states; j++) {
+    fscanf(enefile," %lg",&energies[j]);
+  }
+  fclose(enefile);
+  //Print
+  printf("Energies:\n");
+  for (int i = 0 ; i < states; i++) {
+    printf(" %.10e", energies[i]);
+  }
+  printf("\n");
+
+  for (int i = 0; i < FMSNumStates; i++) {
+    Data_.Energy[i] = energies[i];
+  }
+
+  for (int i = 0; i < FMSNumStates * 3; i++) {
+    Data_.Dip[i] = 0.0;
+  }
+  // Populate other variables by 0 
+  double DTotal = 0.0;
+  computeFakeQMDipoleMoment(Data_.Dip[0], Data_.Dip[1], Data_.Dip[2], DTotal);
+  for (int i=0; i<FMSNumStates-1; i++) {
+    // For now we only support singlets here.
+    // if (FMS_Mults[i+1] == 1) {
+    int FMS_Mults = 1;
+    if (FMS_Mults == 1) {
+        Data_.TDip[i*3+0] = 0.0;
+        Data_.TDip[i*3+1] = 0.0;
+        Data_.TDip[i*3+2] = 0.0;
+    }   
+    // Assumes spin-pure states so singlet-triplet tdips are zero
+    else {
+        Data_.TDip[i*3+0] = 0.0;
+        Data_.TDip[i*3+1] = 0.0;
+        Data_.TDip[i*3+2] = 0.0;
+    }
+  }
+
+ for (int i = 0, ij = 0; i < FMSNumStates; i++) {
+    for (int j = 0; j < FMSNumStates; j++, ij++) {
+      // Best case scenario for now, perfect overlap between wavefuntions
+      // ABIN is ignoring this at the moment anyway
+      if (i == j) {
+        Data_.SMatrix[ij] = 1.0;
+      } else {
+        Data_.SMatrix[ij] = 0.0;
+      }
+    }
+  }
+
+  //Load gradients from file
+  //Note: expects regular format like forces.xyz, there must be commet on the 2nd line
+  //      again no error handling implemented, for new tests check if they are read correctly
+  FILE *forcefile;
+  forcefile=fopen("allforces", "r");
+  
+  //Skip to current forces
+  int skiplines = (step * (total_atoms + 2)) + 2;
+  for (int i = 0; i < skiplines; i++) {
+    fscanf(forcefile, "%*[^\n]\n"); 
+  }
+  //Read 
+  for (int j = 0 ; j < total_atoms; j++) {
+     //Atom name
+     fscanf(forcefile,"%*s");
+     //Forces
+     for (int k = 0; k < 3; k++) {
+       fscanf(forcefile," %lg",&forces[j][k]);
+     }
+  }
+  
+  fclose(forcefile);
+  //Print
+  printf("Forces:\n");
+  for (int j = 0 ; j < total_atoms; j++)
+  {
+    for (int k = 0; k < 3; k++)
+    {
+      printf("%.10e ", forces[j][k]);
+    }
+    printf("\n");
+  }
+
+  //Populating gradients of all states by the same force data
+  for (int i=0, ij=0; i<FMSNumStates; i++) {
+    for (int j=i; j<FMSNumStates; j++, ij++) {
+      if ( j==i ) {
+        int offset = ij * 3 * total_atoms ;
+        for(int k = 0; k < total_atoms; k++) {
+          printf("%.10e ", forces[k][0]);
+          Data_.DerivMat[3*k + offset]   = -forces[k][0];
+          Data_.DerivMat[3*k+1 + offset] = -forces[k][1];
+          Data_.DerivMat[3*k+2 + offset] = -forces[k][2];
+	}
+	printf("\n");
+      }
+    }
+  }
+
+  //Other unnecessary variables
+  populate_array(Data_.MOs, Data_.nbf * Data_.nbf, 2.5, 2.0);
+  populate_array(Data_.Blob, Data_.nblob, 5.0, 3.0);
+  populate_CIvecs(Data_.CIvecs, Data_.nci);
+
+}              
+
 void TCServerMock::check_array_equality(double *A, double *B, int size) {
   for (int i = 0; i < size; i++) {
     if (A[i] != B[i]) {
