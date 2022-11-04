@@ -102,7 +102,7 @@ contains
    ! Initialization routine (ugly, but works)
    subroutine sh_init(x, y, z, vx, vy, vz)
       use mod_const, only: AUtoEV
-      use mod_general, only: irest, natom, pot, ipimd
+      use mod_general, only: irest, natom, pot
       use mod_interfaces, only: force_clas
       use mod_kinetic, only: ekin_v
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
