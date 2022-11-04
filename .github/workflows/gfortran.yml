@@ -154,7 +154,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run End-to-End tests
-      run: make e2etest
+      run: make e2etest && cd src/
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
@@ -164,7 +164,6 @@ jobs:
         verbose: true
         gcov: true
         gcov_args: "-p"
-      run: cd src/
 
 
   optimized_build:
