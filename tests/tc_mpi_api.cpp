@@ -858,7 +858,7 @@ void TCServerMock::populate_fms_data_from_file(int step) {
 
   //Skip to current line
   for(int i = 0; i < step; i++) {
-    fscanf(enefile, "%*[^\n]\n");
+    (void)fscanf(enefile, "%*[^\n]\n");
   }
   //Read energy
   for (int j = 0 ; j < states; j++) {
@@ -920,12 +920,12 @@ void TCServerMock::populate_fms_data_from_file(int step) {
   //Skip to current forces
   int skiplines = (step * (total_atoms + 2)) + 2;
   for (int i = 0; i < skiplines; i++) {
-    fscanf(forcefile, "%*[^\n]\n"); 
+    (void)fscanf(forcefile, "%*[^\n]\n"); 
   }
   //Read 
   for (int j = 0 ; j < total_atoms; j++) {
      //Atom name
-     fscanf(forcefile,"%*s");
+     (void)fscanf(forcefile,"%*s");
      //Forces
      for (int k = 0; k < 3; k++) {
        fscanf(forcefile," %lg",&forces[j][k]);

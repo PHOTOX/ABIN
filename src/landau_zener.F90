@@ -12,14 +12,13 @@ module mod_lz
    use mod_const, only: DP
    use mod_error, only: fatal_error
    use mod_files, only: stdout, stderr
-   use mod_general, only: nwalk, pot, irest
    ! TODO: Break coupling between LZ and SH modules
    ! The following are needed for TERA-MPI interface
    use mod_sh, only: set_current_state, inac
    use mod_sh_integ, only: nstate
    implicit none
    private
-   public :: lz_init, lz_init_terash, lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize !Routines
+   public :: lz_init, lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize !Routines
    public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz !User defined variables
    public :: en_array_lz, tocalc_lz, istate_lz !Routine variables
    !Caveat: Every time we call force_clas en_array_lz is updated
@@ -70,7 +69,7 @@ contains
 
    !Initialization
    subroutine lz_init(pot)
-      use mod_general, only: natom
+      use mod_general, only: natom, nwalk
       character(len=*), intent(in) :: pot
       integer :: ist1
 
@@ -560,6 +559,7 @@ contains
    end subroutine lz_restout
 
    subroutine lz_restin(fileunit, x, y, z, vx, vy, vz)
+      use mod_general, only: pot
       integer, intent(in) :: fileunit
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
