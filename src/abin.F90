@@ -63,9 +63,6 @@ program abin
    ! Surface hopping initialization
    if (ipimd == 2) then
       call sh_init(x, y, z, vx, vy, vz)
-   else if (ipimd == 5 .and. pot == '_tera_') then
-      call sh_init(x, y, z, vx, vy, vz)
-      call lz_rewind(en_array_lz)
    end if
 
    write (stdout, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
