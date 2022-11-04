@@ -72,6 +72,7 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
+        verbose: true
         gcov: true
 
   intel_build:
@@ -160,6 +161,7 @@ jobs:
       with:
         name: tcpb
         fail_ci_if_error: true
+        verbose: true
         gcov: true
 
 
