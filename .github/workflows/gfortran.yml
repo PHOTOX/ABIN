@@ -164,6 +164,7 @@ jobs:
         verbose: true
         gcov: true
         gcov_args: "-p"
+        working-directory: "src/"
 
 
   optimized_build:
