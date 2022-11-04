@@ -109,6 +109,7 @@ class TCServerMock {
 
     void allocate_fms_data();
     void populate_fms_data();
+    void populate_fms_data_from_file(int);
 
     // Unfortunately, the number of FMS/SH states are given in TC input,
     // NOT via MPI interface. So we have no way to pass this from ABIN directly.

@@ -145,6 +145,8 @@ if [[ $TESTS = "all" ]];then
       folders[index]=TERAPI-FAILS
       let index++
       folders[index]=TERAPI-SH-S0
+      let index++
+      folders[index]=TERAPI-LZ
    else
       let index=${#folders[@]}+1
       folders[index]=WITHOUT_MPI

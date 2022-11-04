@@ -1,0 +1,30 @@
+Smoke test for TERAMPI LZ
+Energies and gradients based on simulation
+
+&general
+pot='_tera_',
+irandom=1104190577,
+nstep=3,
+dt=10.,
+
+ipimd=5,
+nwrite=1,
+nwritef=1,
+nwritev=1,
+nwritex=1,
+nrest=1,
+narchive=1
+idebug=4
+/
+
+&nhcopt
+inose=0,
+temp=0.0d0
+/
+
+&lz
+initstate_lz=3,		! initial electronic state
+nstate_lz=3,		! number of electronic states
+nsinglet_lz=3,
+deltaE_lz=1.0
+/

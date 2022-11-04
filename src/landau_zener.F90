@@ -12,7 +12,6 @@ module mod_lz
    use mod_const, only: DP
    use mod_error, only: fatal_error
    use mod_files, only: stdout, stderr
-   use mod_general, only: nwalk, pot, irest
    ! TODO: Break coupling between LZ and SH modules
    ! The following are needed for TERA-MPI interface
    use mod_sh, only: set_current_state, inac
@@ -69,8 +68,9 @@ contains
    end subroutine check_lz_parameters
 
    !Initialization
-   subroutine lz_init()
-      use mod_general, only: natom
+   subroutine lz_init(pot)
+      use mod_general, only: natom, nwalk
+      character(len=*), intent(in) :: pot
       integer :: ist1
 
       call check_lz_parameters()
@@ -99,12 +99,30 @@ contains
 
       ! TERA-MPI parameters
       if (pot == '_tera_') then
-         nstate = nstate_lz
-         call set_current_state(initstate_lz)
-         inac = 2
+         call lz_init_terash()
       end if
 
    end subroutine lz_init
+
+   subroutine lz_init_terash()
+       use mod_general, only: natom
+       use mod_sh, only: en_array, tocalc, nacx, nacy, nacz
+
+       nstate = nstate_lz !Needed in init_terash
+       inac = 2           !Turns off couplings calculation
+
+       !Based on sh_init() routine, sharing most of the functions
+       !TODO: Break dependence - separation of MPI interface needed
+       allocate (en_array(nstate_lz))
+       allocate (nacx(natom, nstate_lz, nstate_lz))
+       allocate (nacy(natom, nstate_lz, nstate_lz))
+       allocate (nacz(natom, nstate_lz, nstate_lz))
+       allocate (tocalc(nstate, nstate))
+       en_array = 0.0D0
+       tocalc = 0
+       tocalc(istate_lz, istate_lz) = 1
+       call set_current_state(istate_lz)
+   end subroutine lz_init_terash
 
    !LZ singlets hop
    subroutine lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, chpot)
@@ -541,6 +559,7 @@ contains
    end subroutine lz_restout
 
    subroutine lz_restin(fileunit, x, y, z, vx, vy, vz)
+      use mod_general, only: pot
       integer, intent(in) :: fileunit
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)

@@ -370,7 +370,7 @@ contains
       if (ipimd == 5) then
          read (uinput, lz)
          rewind (uinput)
-         call lz_init() !Init arrays for possible restart
+         call lz_init(pot) !Init arrays for possible restart
       end if
 
       if (iremd == 1) then
