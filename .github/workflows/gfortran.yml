@@ -273,7 +273,7 @@ jobs:
   mpich_build:
     name: MPICH build
     runs-on: ubuntu-18.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     needs: basic_build
     strategy:
       fail-fast: false
@@ -335,7 +335,7 @@ jobs:
   openmpi_build:
     name: OpenMPI build
     runs-on: ubuntu-18.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     needs: basic_build
     strategy:
       fail-fast: false

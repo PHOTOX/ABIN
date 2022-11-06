@@ -85,7 +85,6 @@ contains
          !!$OMP PARALLEL DO PRIVATE(i)
          do i = 1, nteraservers
             call connect_tc_server(trim(tc_server_name), i)
-            communication_established(i) = .true.
          end do
          !!$OMP END PARALLEL DO
       end if
@@ -124,8 +123,10 @@ contains
       ! This is a horrible hack :-(
       if (iremd == 1) then
          tc_comms(1) = newcomm
+         communication_established(1) = .true.
       else
          tc_comms(itera) = newcomm
+         communication_established(itera) = .true.
       end if
    end subroutine connect_tc_server
 
