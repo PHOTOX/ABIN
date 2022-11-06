@@ -15,32 +15,41 @@ MPI=FALSE
 CP2K=FALSE
 PLUMED=FALSE
 FFTW=FALSE
+TCPB=FALSE
 ABINEXE=abin
 
 MPI_PATH=''
 PFUNIT_PATH=''
 PLUMED_PATH=''
 CP2K_PATH=''
+TCPB_PATH=''
 
-function show_help()
-{
+function show_help() {
 echo "
 NAME
    configure - generate local configuration for ABIN
 
 SYNOPSIS
-   configure [--debug] [--mpi path/to/mpi] [--plumed path/to/plumed/lib] [--pfunit path/to/pfunit] [--cp2k]
+   configure [--debug] [--mpi path/to/mpi] [--tcpb path/to/tcpb/lib] [--plumed path/to/plumed/lib] [--pfunit path/to/pfunit] [--cp2k]
 
 OPTIONS
    --debug       Compile in debug mode
    --mpi         Compile with MPI support
                  (needed for REMD and interface with TeraChem)
+   --tcpb        Compile with TCPB interface to TeraChem
    --plumed      Compile with Plumed library
    --fftw        Use FFTW library (needed for normal mode PIMD)
    --cp2k        Cross-compile with CP2K (experimental)
    --pfunit      Compile with unit tests using pFUnit library
                  (use ./install_pfunit.sh to install it first)
 "
+}
+
+function check_path() {
+    if [[ ! -d $1 ]]; then
+        echo "$1 is not a directory!"
+        exit 1
+    fi
 }
 
 warning_flags="-Wall -Wno-integer-division -Wno-maybe-uninitialized"
@@ -62,10 +71,19 @@ while [[ $# -gt 0 ]]; do
         MPI_PATH=$2
         # We allow passing "" as empty path to allow
         # default system-wide MPI installations
-        if [[ ! -z $MPI_PATH && ! -d $MPI_PATH ]]; then
-            echo "$MPI_PATH is not a directory!"
+        if [[ ! -z "$MPI_PATH" ]]; then
+            check_path "$MPI_PATH"
+        fi
+        shift 2
+        ;;
+      --tcpb)
+        TCPB=TRUE
+        if [[ $# -lt 2 ]]; then
+            echo "Error: missing TCPB_PATH argument"
             exit 1
         fi
+        TCPB_PATH=$2
+        check_path "$TCPB_PATH"
         shift 2
         ;;
       --plumed)
@@ -75,10 +93,7 @@ while [[ $# -gt 0 ]]; do
             exit 1
         fi
         PLUMED_PATH=$2
-        if [[ ! -d $PLUMED_PATH ]]; then
-            echo "$PLUMED_PATH is not a directory!"
-            exit 1
-        fi
+        check_path "$PLUMED_PATH"
         shift 2
         ;;
       --pfunit)
@@ -87,10 +102,7 @@ while [[ $# -gt 0 ]]; do
             exit 1
         fi
         PFUNIT_PATH=$2
-        if [[ ! -d $PFUNIT_PATH ]]; then
-            echo "$PFUNIT_PATH is not a directory!"
-            exit 1
-        fi
+        check_path "$PFUNIT_PATH"
         shift 2
         ;;
       --fftw)
@@ -179,6 +191,10 @@ MPI_PATH = $MPI_PATH
 # Compilation with Plumed library
 PLUMED = $PLUMED
 PLUMED_INC = ${PLUMED_INC:-}
+
+# TCBP interface to TeraChem
+TCPB = $TCPB
+TCPB_LIB = $TCPB_PATH
 
 # FFTW library is typically shipped with your system
 # It is needed for normal mode coordinate transformation in PIMD

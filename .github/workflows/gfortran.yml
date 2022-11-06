@@ -55,24 +55,25 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
-      run: make unittest
+      run: make unittest && cd src/ && gcov *.o
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
-        gcov: true
+        gcov: false
 
     - name: Run End-to-End tests
-      run: make e2etest
+      run: make e2etest && cd src/ && gcov *.o
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        gcov: true
+        verbose: true
+        gcov: false 
 
   intel_build:
     name: Intel OneAPI build
@@ -115,6 +116,53 @@ jobs:
 
     - name: Run End-to-End tests
       run: make e2etest
+
+  tcpb_build:
+    name: TCPB build
+    # NOTE: tcpb-cpp fails to build on Ubuntu 18.04,
+    # probably because of old libprotobuf library?
+    runs-on: ubuntu-20.04
+    needs: basic_build
+    env:
+      FC: gfortran
+      GCC_V: 9
+      CODECOV_NAME: ${{format('{0} GCC9', github.job)}}
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
+
+    - name: Install protocol buffers library
+      run: sudo apt install protobuf-compiler
+
+    - name: TCBP build cache
+      id: tcpb-cache
+      uses: actions/cache@v2
+      with:
+        path: ~/tcpb-cpp/lib
+        # To force a rebuild (bust the cache), make a change to install_tcpb.sh
+        key: ${{ runner.os }}-tcpb-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_tcpb.sh') }}
+
+    - name: Download and build tcpb_cpp
+      if: steps.tcpb-cache.outputs.cache-hit != 'true'
+      run: ./dev_scripts/install_tcpb.sh ${HOME}/tcpb-cpp
+
+    - name: Build ABIN
+      run: ./configure --tcpb ${HOME}/tcpb-cpp/lib && make
+      env:
+        FFLAGS: ${{ env.ABIN_FFLAGS }}
+        LDLIBS: ${{ env.ABIN_LDLIBS }}
+
+    - name: Run End-to-End tests
+      run: make e2etest && cd src/ && gcov *.o
+
+    - name: Codecov upload
+      uses: codecov/codecov-action@v3
+      with:
+        name: tcpb
+        fail_ci_if_error: true
+        verbose: true
+        gcov: false
 
 
   optimized_build:
@@ -206,7 +254,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -216,7 +264,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -275,13 +323,13 @@ jobs:
         FFLAGS: ${{ env.ABIN_FFLAGS }} -g
         LDLIBS: ${{ env.ABIN_LDLIBS }}
     - name: test ABIN
-      run: make test
+      run: make test && cd src/ && gcov *.o
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        gcov: true
+        gcov: false
 
   openmpi_build:
     name: OpenMPI build
@@ -330,7 +378,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -393,7 +441,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -403,7 +451,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true

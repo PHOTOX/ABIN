@@ -1,0 +1,11 @@
+! Here we test that we fail early
+! when the binary is not compiled with TCPB interface
+&general
+pot='_tcpb_'
+mdtype='md'
+dt=20.
+nstep=1,
+/
+&nhcopt
+inose=0
+/

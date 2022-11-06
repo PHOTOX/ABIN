@@ -61,6 +61,7 @@ contains
       use mod_transform, only: initialize_pi_masses
       use mod_cp2k
       use mod_remd
+      use mod_force_tcpb, only: initialize_tcpb
       use mod_terampi
       use mod_terampi_sh
       use mod_mdstep, only: initialize_integrator, nabin, nstep_ref
@@ -101,7 +102,8 @@ contains
       character(len=20) :: xyz_units
       character(len=60) :: chdivider
       character(len=60) :: mdtype
-      character(len=1024) :: tc_server_name
+      character(len=1024) :: tc_server_name, tcpb_input_file, tcpb_host
+      integer :: tcpb_port
       logical :: file_exists
       logical :: rem_comvel, rem_comrot
       integer :: my_rank, mpi_world_size
@@ -147,6 +149,9 @@ contains
       chinput = 'input.in'
       chveloc = ''
       tc_server_name = ''
+      tcpb_host = 'localhost'
+      tcpb_input_file = ''
+      tcpb_port = -1
       mdtype = ''
       dt = -1
       nproc = 1
@@ -155,7 +160,7 @@ contains
 
       chdivider = "######################################################"
 
-      call get_cmdline(chinput, chcoords, chveloc, tc_server_name)
+      call get_cmdline(chinput, chcoords, chveloc, tc_server_name, tcpb_input_file, tcpb_host, tcpb_port)
 
       ! Reading main input parameters from namelist &general
       open (newunit=uinput, file=chinput, status='OLD', delim='APOSTROPHE', action="READ")
@@ -387,6 +392,10 @@ contains
          if (ipimd == 2 .or. ipimd == 5) then
             call init_terash(x, y, z)
          end if
+      end if
+
+      if (pot == '_tcpb_' .or. restrain_pot == '_tcpb_' .or. pot_ref == '_tcpb_') then
+         call initialize_tcpb(natqm, atnames, tcpb_port, tcpb_host, tcpb_input_file)
       end if
 
       ! Check whether input parameters make sense
@@ -1209,6 +1218,7 @@ subroutine finish(error_code)
    use mod_terampi_sh, only: finalize_terash
    use mod_splined_grid, only: finalize_spline
    use mod_force_mm, only: finalize_mm
+   use mod_force_tcpb, only: finalize_tcpb
    use mod_mpi, only: finalize_mpi
    implicit none
    integer, intent(in) :: error_code
@@ -1218,6 +1228,10 @@ subroutine finish(error_code)
          call finalize_terash()
       end if
       call finalize_terachem(error_code)
+   end if
+
+   if (pot == '_tcpb_') then
+      call finalize_tcpb()
    end if
 
    call deallocate_arrays()

@@ -25,10 +25,15 @@ contains
       print '(a)', ''
    end subroutine print_help
 
-   subroutine get_cmdline(chinput, chcoords, chveloc, tc_server_name)
+   subroutine get_cmdline(chinput, chcoords, chveloc, &
+                        & tc_server_name, tcpb_input_file, tcpb_host, tcpb_port)
       use mod_error, only: fatal_error
       use mod_utils, only: file_exists_or_exit
-      character(len=*), intent(inout) :: chinput, chcoords, chveloc, tc_server_name
+      character(len=*), intent(inout) :: chinput, chcoords, chveloc
+      character(len=*), intent(inout) :: tc_server_name   ! TeraChem MPI interface
+      character(len=*), intent(inout) :: tcpb_input_file  ! TeraChem protobuf interface
+      character(len=*), intent(inout) :: tcpb_host
+      integer, intent(inout) :: tcpb_port
       character(len=len(chinput)) :: arg
       integer :: i
 
@@ -76,7 +81,34 @@ contains
             read (arg, '(A)') tc_server_name
             if (trim(tc_server_name) == '') then
                call fatal_error(__FILE__, __LINE__, &
-                  & 'Empty -M argument. Provide name of the TeraChem server')
+                  & 'Empty -M argument. Provide name of the TeraChem MPI server')
+            end if
+         case ('--tcpb-input-file')
+            i = i + 1
+            call get_command_argument(i, arg)
+            read (arg, '(A)') tcpb_input_file
+            if (trim(tcpb_input_file) == '') then
+               call fatal_error(__FILE__, __LINE__, &
+                  & 'Empty --tcpb-input-file argument. Provide name of the TeraChem input file')
+            end if
+         case ('--tcpb-host')
+            i = i + 1
+            call get_command_argument(i, arg)
+            read (arg, '(A)') tcpb_host
+            if (trim(tcpb_host) == '') then
+               call fatal_error(__FILE__, __LINE__, &
+                  & 'Empty --tcpb-host argument. Provide hostname of the TeraChem TCPB server')
+            end if
+         case ('--tcpb-port')
+            i = i + 1
+            call get_command_argument(i, arg)
+            ! NOTE: If the port number is too large, this will trim it!
+            ! This is okay since in the launch script we determine port number automatically anyway.
+            read (arg, '(I5)') tcpb_port
+            ! NOTE: When the parameter is missing, at least GCC compilers assign 0 as default
+            if (tcpb_port == 0) then
+               call fatal_error(__FILE__, __LINE__, &
+                  & 'Empty --tcpb-port argument. Provide port of the TeraChem TCPB server')
             end if
          case default
             call print_help()

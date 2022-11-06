@@ -19,7 +19,8 @@ REMD/restart.xyz.??.*
 */restart.xyz.10
 */restart.xyz.0?.old
 */debug.nacm
-*/ERROR
+ERROR
+ERROR?
 SH_*/geom.?.?.?
 CP2K*/WATER*
 engrad.dat.???

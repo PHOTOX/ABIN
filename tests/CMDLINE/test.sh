@@ -33,3 +33,12 @@ mv ERROR ABIN_ERROR4
 
 $ABINEXE -M >> abin.out 2>&1 || true
 mv ERROR ABIN_ERROR5
+
+$ABINEXE --tcpb-host >> abin.out 2>&1 || true
+mv ERROR ABIN_ERROR6
+
+$ABINEXE --tcpb-input-file >> abin.out 2>&1 || true
+mv ERROR ABIN_ERROR7
+
+$ABINEXE --tcpb-port >> abin.out 2>&1 || true
+mv ERROR ABIN_ERROR8

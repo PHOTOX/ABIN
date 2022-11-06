@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Parameters are passed from Makefile.
-if [[ $# -ne 7 ]]; then
+if [[ $# -ne 8 ]]; then
   echo "ERROR: Incorrect number of parameters passed to $0"
   echo "Invoked as:"
   echo "$0 $@"
@@ -16,7 +16,8 @@ MPI="$3"
 FFTW="$4"
 PLUMED="$5"
 CP2K="$6"
-ACTION="$7"
+TCPB="$7"
+ACTION="$8"
 
 # NOTE: For MPI tests, we rely on the fact that
 # MPI_PATH is defined in make.vars and exported in Makefile.
@@ -28,6 +29,10 @@ if [[ $ACTION = "makeref" && $TESTS = "all" ]];then
   echo "Specify a concrete test which you want to modify, e.g."
   echo "make makeref TEST=CMD"
   exit 1
+fi
+
+if [[ $TCPB = "TRUE" ]];then
+  export LD_LIBRARY_PATH=${TCPB_LIB}:${LD_LIBRARY_PATH-}
 fi
 
 cd $(dirname $0)
@@ -177,6 +182,14 @@ if [[ $TESTS = "all" ]];then
    else
       let index=${#folders[@]}+1
       folders[index]=WITHOUT_PLUMED
+   fi
+
+   if [[ $TCPB = "TRUE" ]];then
+      let index=${#folders[@]}+1
+      folders[index]=TCPB_FAIL
+   else
+      let index=${#folders[@]}+1
+      folders[index]=WITHOUT_TCPB
    fi
 
 else

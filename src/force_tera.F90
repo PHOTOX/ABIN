@@ -16,7 +16,6 @@ module mod_force_tera
    use mod_error, only: fatal_error
    use mod_files, only: stderr
    use mod_terampi
-   use mod_error, only: fatal_error
 #ifdef USE_MPI
    use mpi
    use mod_mpi, only: handle_mpi_error, check_recv_count
