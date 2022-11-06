@@ -65,7 +65,7 @@ jobs:
         gcov: true
 
     - name: Run End-to-End tests
-      run: make e2etest && ls -l && ls src/
+      run: make e2etest && cd src/ && gcov *.o
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
@@ -73,8 +73,8 @@ jobs:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
         verbose: true
-        gcov: true
-        working-directory: /home/runner/work/ABIN/ABIN/src
+        gcov: false 
+        #working-directory: /home/runner/work/ABIN/ABIN/src
         #root_dir: /home/runner/work/ABIN/ABIN/src
 
   intel_build:
@@ -156,7 +156,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run End-to-End tests
-      run: make e2etest
+      run: make e2etest && cd src/ && gcov *.o
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
@@ -164,9 +164,9 @@ jobs:
         name: tcpb
         fail_ci_if_error: true
         verbose: true
-        gcov: true
+        gcov: false
         gcov_args: "-p"
-        root_dir: ~/work/ABIN/ABIN/src
+        #root_dir: ~/work/ABIN/ABIN/src
 
 
   optimized_build:
