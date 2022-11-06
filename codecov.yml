@@ -11,7 +11,7 @@ codecov:
     # FFTW Build
     # Intel Build
     # Plumed Builds (2 total)
-    after_n_builds: 12
+    after_n_builds: 18
     wait_for_ci: yes
 
 coverage:
