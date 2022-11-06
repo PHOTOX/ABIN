@@ -74,8 +74,6 @@ jobs:
         fail_ci_if_error: true
         verbose: true
         gcov: false 
-        #working-directory: /home/runner/work/ABIN/ABIN/src
-        #root_dir: /home/runner/work/ABIN/ABIN/src
 
   intel_build:
     name: Intel OneAPI build

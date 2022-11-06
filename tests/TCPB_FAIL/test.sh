@@ -45,3 +45,8 @@ $ABINEXE -i input.in -x mini.xyz \
   --tcpb-port 66000 \
   --tcpb-input-file $TCPB_IN &>> abin.out
 mv ERROR ERROR5
+
+# TC input file does not exist
+$ABINEXE -i input.in -x mini.xyz \
+  --tcpb-port $TCPB_PORT &>> abin.out
+mv ERROR ERROR6
