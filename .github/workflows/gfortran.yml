@@ -65,7 +65,7 @@ jobs:
         gcov: true
 
     - name: Run End-to-End tests
-      run: make e2etest
+      run: make e2etest && ls -l && ls src/
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
@@ -74,7 +74,8 @@ jobs:
         fail_ci_if_error: true
         verbose: true
         gcov: true
-        root_dir: /home/runner/work/ABIN/ABIN/src
+        working-directory: /home/runner/work/ABIN/ABIN/src
+        #root_dir: /home/runner/work/ABIN/ABIN/src
 
   intel_build:
     name: Intel OneAPI build
@@ -155,7 +156,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/
+      run: make e2etest
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
@@ -165,7 +166,7 @@ jobs:
         verbose: true
         gcov: true
         gcov_args: "-p"
-        root_dir: ~/ABIN/src
+        root_dir: ~/work/ABIN/ABIN/src
 
 
   optimized_build:
