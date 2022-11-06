@@ -65,7 +65,7 @@ jobs:
         gcov: true
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/
+      run: make e2etest
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
@@ -74,6 +74,7 @@ jobs:
         fail_ci_if_error: true
         verbose: true
         gcov: true
+        root_dir: /home/runner/work/ABIN/ABIN/src
 
   intel_build:
     name: Intel OneAPI build
@@ -164,6 +165,7 @@ jobs:
         verbose: true
         gcov: true
         gcov_args: "-p"
+        root_dir: ~/ABIN/src
 
 
   optimized_build:
