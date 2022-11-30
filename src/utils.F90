@@ -106,7 +106,6 @@ contains
                & 'Suspicious character "'//ch//'" in input string "'//string//'"')
          end if
       end do
-
    end function sanitize_string
 
    ! Convert FORTRAN string to zero-terminated C string
@@ -121,13 +120,10 @@ contains
    function validate_atom_name(atom_name) result(adjustl_name)
       character(len=*), intent(in) :: atom_name
       character(len=len(atom_name)) :: adjustl_name
-      character(len=30) :: error_msg
       ! Note that sanitize_string does adjustl() on the string.
-      ! This is quite confusing, maybe we should change that.
       adjustl_name = sanitize_string(atom_name)
       if (len_trim(adjustl_name) > 2) then
-         error_msg = 'Incorrect atom name: "'//atom_name//'"'
-         call fatal_error(__FILE__, __LINE__, error_msg)
+         call fatal_error(__FILE__, __LINE__, 'Incorrect atom name: "'//atom_name//'"')
       end if
    end function validate_atom_name
 
@@ -136,11 +132,10 @@ contains
       atname = validate_atom_name(atom_name)
       atname(1:1) = toupper(atname(1:1))
       ! Lower the second character of atom name,
-      ! this looks niced in the output, and is also needed by TeraChem.
+      ! this looks nicer in the output and is also needed by TeraChem.
       if (len_trim(atname) == 2) then
          atname(2:2) = tolower(atname(2:2))
       else
-         ! Not sure if this is neccessary?
          atname(2:2) = ' '
       end if
    end function normalize_atom_name
@@ -153,7 +148,7 @@ contains
       integer :: iat
       atom_count = 0
       norm_name = normalize_atom_name(atom_name)
-      ! We suppose that the names array is already normalized!
+      ! We expect that the atom names in 'names' array are already normalized!
       do iat = 1, natom
          if (names(iat) == norm_name) then
             atom_count = atom_count + 1
@@ -265,12 +260,11 @@ contains
 
    subroutine file_exists_or_exit(fname)
       character(len=*), intent(in) :: fname
-      character(len=len(fname) + 30) :: error_msg
       logical :: exists
       inquire (file=trim(fname), exist=exists)
       if (.not. exists) then
-         error_msg = 'Could not find file "'//trim(fname)//'"'
-         call fatal_error(__FILE__, __LINE__, error_msg)
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Could not find file "'//trim(fname)//'"')
       end if
    end subroutine file_exists_or_exit
 

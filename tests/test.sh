@@ -9,7 +9,7 @@ if [[ $# -ne 8 ]]; then
   exit 1
 fi
 
-ABINEXE="$PWD/src/$1 -x mini.xyz"
+ABINEXE="$PWD/bin/$1 -x mini.xyz"
 ABINOUT="abin.out"
 TESTS="$2"
 MPI="$3"
