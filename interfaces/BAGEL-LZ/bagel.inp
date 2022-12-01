@@ -1,0 +1,6 @@
+basis=cc-pvdz
+df_basis=cc-pvdz-jkfit
+nstates=2
+nact=7
+nclosed=11
+maxiter=100

@@ -1,0 +1,136 @@
+#!/bin/bash
+
+cd BAGEL
+source bagel.inp
+
+timestep=$1
+ibead=$2
+input=input$ibead
+if [[ -z $3 ]];then
+   accu=7
+else
+   accu=$3
+fi
+
+# Definition of wavefunction
+# (common for both forces and NACME)
+####################################################################
+
+#-COMMENTS ON DF-CASSCF---------------------------------------------
+#-For new density fitting CASSCF code, seek more info here: http://www.molpro.net/info/2012.1/doc/update/node6.html
+#-http://www.molpro.net/info/2012.1/doc/manual/node114.html - about basis sets
+#-about Density Fitting: http://www.molpro.net/info/2012.1/doc/manual/node133.html
+#-Easiest way to do DF-CASSCF is to use turbomole (Ahlrichs) Def2 basis sets (SVP,TZVP etc.)
+#-For Dunnging basis sets, DF bases are available, but you won't calculate NAC
+#-For Pople basis sets, you need to specify DF basis manually, probably some of the DF Ahlrichs basis sets.
+
+rm -f ../engrad.dat.$ibead ../nacm.dat
+
+#-How many atoms?
+natom=$(cat ../geom.dat.$ibead | wc -l )
+let natom1=natom+1 
+let natom2=natom+2 
+
+# reading from state.dat
+# Number of states,state we are on and which NACM to compute
+read -t 2 -a nstate
+read -t 2 -a tocalc
+
+# BAGEL-CASPT2
+cat > $input.json << EOF
+{ "bagel" : [
+
+{
+    "title" : "molecule",
+    "basis" : "$basis",
+    "df_basis" : "$df_basis",
+    "angstrom" : "true",
+    "geometry" : [
+EOF
+length=`cat ../geom.dat.$ibead | wc -l`
+for j in `seq 1 $length`; do
+    atom=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $1}')
+    x=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $2}')
+    y=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $3}')
+    z=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $4}')
+    echo -n '{ "atom" : "'$atom'", "xyz" : [ '$x', '$y', '$z' ]}' >> $input.json
+    if [ $j -lt $length ]; then
+        echo -n ',' >> $input.json
+    fi
+    echo '' >> $input.json
+done
+cat >> $input.json << EOF
+    ]
+},
+EOF
+if [ $timestep -ne 0 ]; then
+cat >> $input.json << EOF
+{
+    "title" : "load_ref",
+    "file" : "orbitals",
+    "continue_geom" : false
+},
+EOF
+fi
+cat >> $input.json << EOF
+{
+    "title" : "forces",
+    "grads" : [
+EOF
+
+istate=$(expr $tocalc - 1)
+echo '{ "title" : "force", "target" : '"$istate"' }' >> $input.json
+
+cat >> $input.json << EOF
+    ],
+    "export" : true,
+    "method" : [ {
+        "title" : "caspt2",
+        "smith" : {
+            "method" : "caspt2",
+            "xms" : "true",
+            "shift" : 0.25
+        },
+        "maxiter" : $maxiter,
+        "nact" : $nact,
+        "nclosed" : $nclosed,
+        "nstate" : $nstates
+  } ]
+},
+
+{
+    "title" : "save_ref",
+    "file" : "orbitals"
+}
+
+]}
+EOF
+
+#----------BAGEL JOB-------------------------
+export BAGEL_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+/home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL $input.json > $input.out
+
+if $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ) ;then 
+    echo "ERROR: Algorithm could not converge!"
+    exit 2
+fi
+
+#####################################################################
+
+# NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN
+
+# Extracting energy.
+cat ENERGY.out >> ../engrad.dat.$ibead
+cat ENERGY.out >> ../engrad_all.dat
+
+# Extracting GRADIENT
+tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat.$ibead
+tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad_all.dat
+
+
+cat ../state.dat >> ../stateall.dat
+
+echo "TIMESTEP = $timestep" >> $input.out.all
+echo "####################" >> $input.out.all
+cat $input.out >> $input.out.all
