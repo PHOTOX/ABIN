@@ -4,3 +4,5 @@ nstates=2
 nact=7
 nclosed=11
 maxiter=100
+method=xms      # xms='xms-caspt2'; ms='ms-caspt2'; casscf='sa-casscf'
+shift=0.15      # real shift for caspt2 (default 0.25)
