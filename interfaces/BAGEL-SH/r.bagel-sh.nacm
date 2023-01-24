@@ -5,28 +5,34 @@
 
 
 # This script is should be called by ABIN as
-# MOLPRO-SH/r.molpro-sh.nacm timestep 001 nac_accu < state.dat
+# BAGEL/r.bagel.nacm timestep 001 nac_accu < state.dat
 
 # You should't need to modify this file!
 # Specification of CAS wavefunction is in file molpro.setup
 
-cd BAGEL
+
+cd BAGEL-SH
 source bagel.inp
 timestep=$1
 ibead=$2
 input=input$ibead.nacm
-nac_accu=$3
+let nac_accu=$3+1       # default in BAGEL is 10^-8, therefore "+1"
 
-# Definition of wavefunction
-# (common for both forces and NACME)
+# setting shift for caspt2 to default 0.25 if not specified in bagel.inp
+if [[ -z ${shift+x} ]]; then
+    shift=0.25
+fi
 
-# TODO: should do this differently
 rm -f ../nacm.dat
+
+#-How many atoms?
+natom=$(cat ../geom.dat.$ibead | wc -l )
 
 # reading from state.dat
 # Number of states and which NACME to compute
 read -t 2 -a nstate
 read -t 2 -a tocalc
+
 
 cat > $input.json << EOF
 { "bagel" : [
@@ -38,14 +44,14 @@ cat > $input.json << EOF
     "angstrom" : "true",
     "geometry" : [
 EOF
-length=`cat ../geom.dat.$ibead | wc -l`
-for j in `seq 1 $length`; do
+# section for geometry specification in json format
+for j in `seq 1 $natom`; do
     atom=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $1}')
     x=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $2}')
     y=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $3}')
     z=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $4}')
     echo -n '{ "atom" : "'$atom'", "xyz" : [ '$x', '$y', '$z' ]}' >> $input.json
-    if [ $j -lt $length ]; then
+    if [ $j -lt $natom ]; then
         echo -n ',' >> $input.json
     fi
     echo '' >> $input.json
@@ -53,17 +59,11 @@ done
 cat >> $input.json << EOF
     ]
 },
-EOF
-if [ $timestep -ne 0 ]; then
-cat >> $input.json << EOF
 {
     "title" : "load_ref",
     "file" : "orbitals",
     "continue_geom" : false
 },
-EOF
-fi
-cat >> $input.json << EOF
 {
     "title" : "forces",
     "grads" : [
@@ -74,7 +74,7 @@ tocalc_idx=0
 for ((ist1=istate; ist1<nstate-1; ist1++))
 do
     for ((ist2=jstate; ist2<nstate; ist2++))
-    do
+   do
         if [[ ${tocalc[$tocalc_idx]} -eq 1 ]];then
             echo "{ \"title\" : \"nacme\", \"target\" : $ist1, \"target2\" : $ist2 }," >> $input.json
         fi
@@ -86,26 +86,72 @@ sed -i '$ s/,$//' $input.json
 cat >> $input.json << EOF
     ],
     "export" : true,
+EOF
+
+# preparing if for method of choice selection
+if [[ $method == "xms" ]];
+then
+
+    cat >> $input.json << EOF
     "method" : [ {
         "title" : "caspt2",
+        "nspin" : $nspin,
+        "charge" : $charge,
         "smith" : {
             "method" : "caspt2",
             "xms" : "true",
-            "shift" : 0.25
+            "shift" : $shift,
+            "maxiter" : $maxiter_CASPT2,
+            "thresh" : 1.0e-$nac_accu 
         },
-        "maxiter" : $maxiter,
+EOF
+elif [[ $method == "ms" ]];
+then
+    cat >> $input.json << EOF
+    "method" : [ {
+        "title" : "caspt2",
+        "nspin" : $nspin,
+        "charge" : $charge,
+        "smith" : {
+            "method" : "caspt2",
+            "ms" : "true",
+            "xms" : "false",
+            "shift" : $shift,
+            "maxiter" : $maxiter_CASPT2,
+            "thresh" : 1.0e-$nac_accu
+        },
+EOF
+
+# TODO:this is probably not correct
+elif [[ $method == "casscf" ]];
+then
+    cat >> $input.json << EOF
+    "method" : [ {
+        "title" : "casscf",
+        "nspin" : $nspin,
+        "charge" : $charge,
+EOF
+else
+    echo "Unknown method ($method). Available only \"xms\", \"ms\" or \"casscf\""
+fi
+
+cat >> $input.json << EOF
+        "maxiter" : $maxiter_CASSCF,
         "nact" : $nact,
         "nclosed" : $nclosed,
         "nstate" : $nstates
   } ]
+},
+
+{
+    "title" : "save_ref",
+    "file" : "orbitals"
 }
 
 ]}
 EOF
-# TODO: maxiter should go to the caspt2 loop
+
 ###############################################################
-
-
 
 
 # END OF BAGEL INPUT
@@ -113,25 +159,33 @@ EOF
 # BAGEL JOB
 export BAGEL_NUM_THREADS=1
 export OMP_NUM_THREADS=1
+# launching BAGEL - change for different computers
 /home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL $input.json > $input.out
 
-if $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ) ;then 
-    echo "ERROR: Algorithm could not converge!"
+echo "TIMESTEP = $timestep" >> $input.out.all
+echo "####################" >> $input.out.all
+cat $input.out >> $input.out.all
+
+
+# Check whether all is OK.
+if [[ $? -eq 0 ]];then
+   cp $input.com.out $input.com.out.prev
+elif $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ); then 
+    echo "ERROR: convergence during second-order optimization not reached (usually CASSCF not converged during NAC calculation)"
+    echo "try increase maxiter_CASSCF in bagel.inp"
+    cp $input.out $input.out.error.$timestep
+elif $( grep -q 'ERROR: EXCEPTION RAISED:  SMITH convergence not reached.' $input.out ) ;then
+    echo "ERROR: Convergence in SMITH routine not achieved! Error durring NAC calcualtion during CASPT2 routine."
+    cp $input.out $input.out.error.$timestep
+    echo "Try increase maxiter_CASPT2 in bagel.inp."
     exit 2
 fi
-# Check whether all is OK.
-# if [[ $? -eq 0 ]];then
-   # cp $input.com.out $input.com.out.prev
-# else 
-   # cp $input.com.out $input.com.out.errornacm.$timestep
-   # TODO: indicate different problems with different exit signals
-   # exit 2
-# fi
+
+
+
 
 # Collect output for ABIN
-
 # Extracting non-adiabatic coupling matrix elements (NACME)
-# Better precision in $input.pun
 
 istate=0
 jstate=1
@@ -147,3 +201,5 @@ do
     done
     let jstate++
 done
+
+rm -f NACME_*

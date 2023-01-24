@@ -1,35 +1,24 @@
 #!/bin/bash
 
-cd BAGEL
+cd BAGEL-SH
 source bagel.inp
 
 timestep=$1
 ibead=$2
 input=input$ibead
-if [[ -z $3 ]];then
-   accu=7
-else
-   accu=$3
+thresh=1.0e-8       # deafult value is 1.0e-8, shouldn't be modified. In the case of persisting convergence errors, see the "CHECK CHONVERGENCES" section bellow
+
+##############################
+
+# setting shift for caspt2 to default 0.25 if not specified in bagel.inp
+if [[ -z ${shift+x} ]]; then
+    shift=0.25
 fi
-
-# Definition of wavefunction
-# (common for both forces and NACME)
-####################################################################
-
-#-COMMENTS ON DF-CASSCF---------------------------------------------
-#-For new density fitting CASSCF code, seek more info here: http://www.molpro.net/info/2012.1/doc/update/node6.html
-#-http://www.molpro.net/info/2012.1/doc/manual/node114.html - about basis sets
-#-about Density Fitting: http://www.molpro.net/info/2012.1/doc/manual/node133.html
-#-Easiest way to do DF-CASSCF is to use turbomole (Ahlrichs) Def2 basis sets (SVP,TZVP etc.)
-#-For Dunnging basis sets, DF bases are available, but you won't calculate NAC
-#-For Pople basis sets, you need to specify DF basis manually, probably some of the DF Ahlrichs basis sets.
 
 rm -f ../engrad.dat.$ibead ../nacm.dat
 
 #-How many atoms?
 natom=$(cat ../geom.dat.$ibead | wc -l )
-let natom1=natom+1 
-let natom2=natom+2 
 
 # reading from state.dat
 # Number of states,state we are on and which NACM to compute
@@ -47,14 +36,15 @@ cat > $input.json << EOF
     "angstrom" : "true",
     "geometry" : [
 EOF
-length=`cat ../geom.dat.$ibead | wc -l`
-for j in `seq 1 $length`; do
+
+# section for geometry specification in json format
+for j in `seq 1 $natom`; do
     atom=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $1}')
     x=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $2}')
     y=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $3}')
     z=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $4}')
     echo -n '{ "atom" : "'$atom'", "xyz" : [ '$x', '$y', '$z' ]}' >> $input.json
-    if [ $j -lt $length ]; then
+    if [ $j -lt $natom ]; then
         echo -n ',' >> $input.json
     fi
     echo '' >> $input.json
@@ -63,6 +53,20 @@ cat >> $input.json << EOF
     ]
 },
 EOF
+
+if [ $timestep -eq 0 ];then
+cat >> $input.json << EOF
+{
+    "title" : "$hf_variant",
+    "charge" : $charge,
+    "nspin" : $nspin
+},
+
+EOF
+fi
+
+
+# loading orbitals from previous step if not the first step
 if [ $timestep -ne 0 ]; then
 cat >> $input.json << EOF
 {
@@ -72,6 +76,7 @@ cat >> $input.json << EOF
 },
 EOF
 fi
+
 cat >> $input.json << EOF
 {
     "title" : "forces",
@@ -90,14 +95,56 @@ done
 cat >> $input.json << EOF
     ],
     "export" : true,
+EOF
+
+
+# preparing if for method of choice selection
+if [[ $method == "xms" ]];
+then
+
+    cat >> $input.json << EOF
     "method" : [ {
         "title" : "caspt2",
+        "nspin" : $nspin,
+        "charge" : $charge,
         "smith" : {
             "method" : "caspt2",
             "xms" : "true",
-            "shift" : 0.25
+            "shift" : $shift,
+            "maxiter" : $maxiter_CASPT2,
+            "thresh" : $thresh
         },
-        "maxiter" : $maxiter,
+EOF
+elif [[ $method == "ms" ]];
+then
+    cat >> $input.json << EOF
+    "method" : [ {
+        "title" : "caspt2",
+        "nspin" : $nspin,
+        "charge" : $charge,
+        "smith" : {
+            "method" : "caspt2",
+            "ms" : "true",
+            "xms" : "false",
+            "shift" : $shift,
+            "maxiter" : $maxiter_CASPT2,
+            "thresh" : $thresh
+        },
+EOF
+elif [[ $method == "casscf" ]];
+then
+    cat >> $input.json << EOF
+    "method" : [ {
+        "title" : "casscf",
+        "nspin" : $nspin,
+        "charge" : $charge,
+EOF
+else
+    echo "Unknown method ($method). Available only \"xms\", \"ms\" or \"casscf\""
+fi
+
+cat >> $input.json << EOF 
+        "maxiter" : $maxiter_CASSCF,
         "nact" : $nact,
         "nclosed" : $nclosed,
         "nstate" : $nstates
@@ -115,14 +162,46 @@ EOF
 #----------BAGEL JOB-------------------------
 export BAGEL_NUM_THREADS=1
 export OMP_NUM_THREADS=1
+# specific launching of BAGEL - modify for different machines
 /home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL $input.json > $input.out
 
-if $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ) ;then 
-    echo "ERROR: Algorithm could not converge!"
+
+echo "TIMESTEP = $timestep" >> $input.out.all
+echo "####################" >> $input.out.all
+cat $input.out >> $input.out.all
+
+
+############ CHECK CHONVERGENCES + RESTART BAGEL JOB with  convergence threshold and increased itterations  ########################
+
+if $( grep -q 'ERROR: EXCEPTION RAISED:  SMITH convergence not reached.' $input.out ) ;then
+    echo "ERROR: Convergence in force calculation not achieved, try again with different settings! Error in SMITH."
+    cp $input.out $input.out.error.$timestep
+    cp $input.json $input.second_try.json
+    sed -z -i "s/\"maxiter\" : $maxiter_CASPT2,\n            \"thresh\" : $thresh/\"maxiter\" : 1000,\n            \"thresh\" : 1.0e-6/"  $input.second_try.json
+    ####################run the job for the second time###########################
+    # specific launching of BAGEL - modify for different machines
+    /home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL  $input.second_try.json > $input.second_try.out
+
+elif $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ) ; then
+    echo " ERROR: convergence during second-order optimization not reached (usually CASSCF not converged)"
+    cp $input.out $input.out.error.$timestep  
+    cp $input.json $input.second_try.json
+    sed -z -i "s/\"maxiter\" : $maxiter_CASSCF,\n        \"nact\" : $nact,/\"maxiter\" : 1500,\n        \"nact\" : $nact,/" $input.second_try.json
+    ####################run the job for the second time###########################
+    # specific launching of BAGEL - modify for different machines
+    /home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL  $input.second_try.json > $input.second_try.out
+fi
+
+if $( grep -q 'ERROR: EXCEPTION RAISED:' $input.second_try.out ) ;then
+    echo "ERROR: second try of forces calculation did not converge"
     exit 2
 fi
 
-#####################################################################
+# COMMENT: Authors of BAGEL claim, that CASSCF implementation is great and any convergence error must have origin in wrong active space or somethink like that. 
+# COMMENT: Therefore, I skipped changing covergence criteria during CASSCF routine. 
+
+
+####################################################################
 
 # NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN
 
@@ -134,9 +213,6 @@ cat ENERGY.out >> ../engrad_all.dat
 tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat.$ibead
 tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad_all.dat
 
-
 cat ../state.dat >> ../stateall.dat
 
-echo "TIMESTEP = $timestep" >> $input.out.all
-echo "####################" >> $input.out.all
-cat $input.out >> $input.out.all
+rm -f FORCE_*

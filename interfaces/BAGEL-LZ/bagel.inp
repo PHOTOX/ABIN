@@ -1,8 +1,12 @@
 basis=cc-pvdz
 df_basis=cc-pvdz-jkfit
-nstates=2
-nact=7
-nclosed=11
-maxiter=100
-method=xms      # xms='xms-caspt2'; ms='ms-caspt2'; casscf='sa-casscf'
-shift=0.15      # real shift for caspt2 (default 0.25)
+nstates=4
+nact=4
+nclosed=6
+maxiter_CASSCF=250      # maximum number of CASSCF iterations
+maxiter_CASPT2=250      # maximum number of CASPT2 iterations
+nspin=1                 # 0 singlet, 1 dublet, 2 triplet ...
+charge=1
+hf_variant=rohf           # hf/rohf/uhf;  hf stands for restricted hf
+method=xms              # xms='xms-caspt2'; ms='ms-caspt2'; casscf='sa-casscf'
+shift=0.25              # real shift for caspt2 (default 0.25)

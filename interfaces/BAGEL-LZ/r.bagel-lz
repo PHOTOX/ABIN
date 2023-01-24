@@ -1,18 +1,19 @@
 #!/bin/bash
 
-cd BAGEL
+cd BAGEL-LZ
 source bagel.inp
 
 timestep=$1
 ibead=$2
 input=input$ibead
+thresh=1.0e-8       # deafult value is 1.0e-8, shouldn't be modified. In the case of persisting convergence errors, see the "CHECK CHONVERGENCES" section bellow
+
+##############################
 
 # setting shift for caspt2 to default 0.25 if not specified in bagel.inp
 if [[ -z ${shift+x} ]]; then
     shift=0.25
 fi
-
-####################################################################
 
 rm -f ../engrad.dat.$ibead ../nacm.dat
 
@@ -53,6 +54,18 @@ cat >> $input.json << EOF
 },
 EOF
 
+if [ $timestep -eq 0 ];then
+cat >> $input.json << EOF
+{
+    "title" : "$hf_variant",
+    "charge" : $charge,
+    "nspin" : $nspin
+},
+
+EOF
+fi
+
+
 # loading orbitals from previous step if not the first step
 if [ $timestep -ne 0 ]; then
 cat >> $input.json << EOF
@@ -64,34 +77,31 @@ cat >> $input.json << EOF
 EOF
 fi
 
+istate=$(expr $tocalc - 1)
 cat >> $input.json << EOF
 {
     "title" : "forces",
     "grads" : [
-EOF
-
-# why is this different to SH? otherwise include to previous cat
-istate=$(expr $tocalc - 1)
-echo '{ "title" : "force", "target" : '"$istate"' }' >> $input.json
-
-
-
-cat >> $input.json << EOF
+    { "title" : "force", "target" : $istate }                                                                                                                                                                                           
     ],
     "export" : true,
 EOF
 
-
 # preparing if for method of choice selection
 if [[ $method == "xms" ]];
 then
+
     cat >> $input.json << EOF
     "method" : [ {
         "title" : "caspt2",
+        "nspin" : $nspin,
+        "charge" : $charge,
         "smith" : {
             "method" : "caspt2",
             "xms" : "true",
-            "shift" : $shift
+            "shift" : $shift,
+            "maxiter" : $maxiter_CASPT2,
+            "thresh" : $thresh
         },
 EOF
 elif [[ $method == "ms" ]];
@@ -99,32 +109,31 @@ then
     cat >> $input.json << EOF
     "method" : [ {
         "title" : "caspt2",
+        "nspin" : $nspin,
+        "charge" : $charge,
         "smith" : {
             "method" : "caspt2",
             "ms" : "true",
             "xms" : "false",
-            "shift" : $shift
+            "shift" : $shift,
+            "maxiter" : $maxiter_CASPT2,
+            "thresh" : $thresh
         },
 EOF
 elif [[ $method == "casscf" ]];
 then
-    #TODO: CASSCF input must be insert!!!!!
     cat >> $input.json << EOF
     "method" : [ {
-        "title" : "caspt2",
-        "smith" : {
-            "method" : "caspt2",
-            "ms" : "true",
-            "xms" : "true",
-            "shift" : $shift
-        },
+        "title" : "casscf",
+        "nspin" : $nspin,
+        "charge" : $charge,
 EOF
 else
     echo "Unknown method ($method). Available only \"xms\", \"ms\" or \"casscf\""
 fi
 
-cat >> $input.json << EOF
-        "maxiter" : $maxiter,
+cat >> $input.json << EOF 
+        "maxiter" : $maxiter_CASSCF,
         "nact" : $nact,
         "nclosed" : $nclosed,
         "nstate" : $nstates
@@ -142,14 +151,46 @@ EOF
 #----------BAGEL JOB-------------------------
 export BAGEL_NUM_THREADS=1
 export OMP_NUM_THREADS=1
+# specific launching of BAGEL - modify for different machines
 /home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL $input.json > $input.out
 
-if $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ) ;then 
-    echo "ERROR: Algorithm could not converge!"
+
+echo "TIMESTEP = $timestep" >> $input.out.all
+echo "####################" >> $input.out.all
+cat $input.out >> $input.out.all
+
+
+############ CHECK CHONVERGENCES + RESTART BAGEL JOB with  convergence threshold and increased itterations  ########################
+
+if $( grep -q 'ERROR: EXCEPTION RAISED:  SMITH convergence not reached.' $input.out ) ;then
+    echo "ERROR: Convergence in force calculation not achieved, try again with different settings! Error in SMITH."
+    cp $input.out $input.out.error.$timestep
+    cp $input.json $input.second_try.json
+    sed -z -i "s/\"maxiter\" : $maxiter_CASPT2,\n            \"thresh\" : $thresh/\"maxiter\" : 1000,\n            \"thresh\" : 1.0e-6/"  $input.second_try.json
+    ####################run the job for the second time###########################
+    # specific launching of BAGEL - modify for different machines
+    /home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL  $input.second_try.json > $input.second_try.out
+
+elif $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ) ; then
+    echo " ERROR: convergence during second-order optimization not reached (usually CASSCF not converged)"
+    cp $input.out $input.out.error.$timestep  
+    cp $input.json $input.second_try.json
+    sed -z -i "s/\"maxiter\" : $maxiter_CASSCF,\n        \"nact\" : $nact,/\"maxiter\" : 1500,\n        \"nact\" : $nact,/" $input.second_try.json
+    ####################run the job for the second time###########################
+    # specific launching of BAGEL - modify for different machines
+    /home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL  $input.second_try.json > $input.second_try.out
+fi
+
+if $( grep -q 'ERROR: EXCEPTION RAISED:' $input.second_try.out ) ;then
+    echo "ERROR: second try of forces calculation did not converge"
     exit 2
 fi
 
-#####################################################################
+# COMMENT: Authors of BAGEL claim, that CASSCF implementation is great and any convergence error must have origin in wrong active space or somethink like that. 
+# COMMENT: Therefore, I skipped changing covergence criteria during CASSCF routine. 
+
+
+####################################################################
 
 # NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN
 
@@ -161,9 +202,9 @@ cat ENERGY.out >> ../engrad_all.dat
 tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat.$ibead
 tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad_all.dat
 
-
 cat ../state.dat >> ../stateall.dat
 
+rm -f FORCE_*
 echo "TIMESTEP = $timestep" >> $input.out.all
 echo "####################" >> $input.out.all
 cat $input.out >> $input.out.all
