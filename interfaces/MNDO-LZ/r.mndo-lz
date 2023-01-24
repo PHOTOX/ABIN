@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# MNDO/Landau-Zener Surface Hopping Interface for ABIN
+# Created by M. Belina, J. Janos and J. Polena
+
+cd MNDO-LZ
+
+# ------------------ LOADING VARIABLES ---------------------
+
+source SetEnvironment.sh MNDO
+source mndo.inp
+
+timestep=$1
+ibead=$2
+input=input$ibead
+geom=../geom.dat.$ibead
+natom=$(cat $geom | wc -l )
+
+comment1="Timestep $timestep"	# Optional comment
+comment2=""	# Optional comment
+jop="-2" 	# Type of the calcuation
+igeom=1		# 0 - Internal coordinates, 1 - Cartesian coordinates
+iform=1 	# Type of input format
+nsav15=3	# Compulsory: Prints desired output file
+ipubo=1		# Compulsory: Saves wavefunction
+ktrial=11	# Compulsory: Loads wavefunction
+ifast=2         # Fast diagonalizations in SCF (0 - Allowed, 1 - Allowed after init full diagonalization, 2 - Not allowed)
+
+cp ../engrad.dat.$ibead ../engrad.dat.$ibead.old
+rm -f ../engrad.dat.$ibead
+
+# -------------- DETERMINING CURRENT STATE -----------------
+
+# Reading from state.dat
+# Number of states and state we are on 
+read -t 2 -a nstate
+read -t 2 -a tocalc
+read -t 1 -a nsinglet		# or doublet, just multiplicity of ground state
+read -t 1 -a ntriplet		# (not used) 
+
+# ---------------------- MNDO INPUT ------------------------
+
+cat > $input << EOF
+$method jop=$jop igeom=$igeom iform=$iform nsav15=$nsav15 kharge=$charge imult=$multi +
+ipubo=$ipubo ktrial=$ktrial immdp=$disper kci=5 ici1i=$occ ici2=$unocc lroot=$tocalc iroot=$nstate +
+nciref=1 mciref=3 levexc=$levelexc ioutci=1 kitscf=1500 iuvcd=2 ifast=$ifast
+$comment1
+$comment2
+EOF
+
+# Conversion of XYZ input to MNDO geom
+# It uses dummy atoms for small molecules otherwise it switches automatically from XYZ to Z-Matrix format
+
+awk '
+BEGIN{
+}
+{
+   printf "%s %.12g %i %.12g %i %.12g %i\n", $1, $2, 1,  $3, 1,  $4, 1
+}
+END {
+   for (i = 1; i <= 4 - NR; i++)
+        print 99, 0, 0, 0, 0, 0, 0
+}
+' $geom >> $input
+
+# ---------------------- JOB LAUNCH ------------------------
+
+$MNDOEXE < $input &> $input.out
+
+# --------------------- ERROR CHECK ------------------------
+
+if [[ $? -ne 0 ]] || ! $( grep -q "COMPUTATION TIME" $input.out ) || ! $( grep -q "SCF TOTAL ENERGY" $input.out ) ;then
+   echo "WARNING from r.mndo: MNDO calculation probably failed."
+   echo "See $input.out.error"
+   cp $input.out $input.out.error
+fi
+
+# ------------------- DATA EXTRACTION ---------------------- 
+
+grep -e 'Dipole-length electric dipole transition moments' -A `expr $lroot + 1`  $input.out | tail -1 |  \
+awk '
+	BEGIN {
+		AUtoD=2.541746473
+	}
+	{
+		print $4;
+		print $6/AUtoD, $7/AUtoD, $8/AUtoD
+	}
+' >> ../rawdata.dat
+
+
+grep 'State  ' $input.out | awk '{printf "%.8f\n\n", $9/27.211396}' > ../engrad.dat.$ibead
+
+
+grep -A$(($natom*3))  'INTERNAL COORDINATES AND GRADIENTS'  fort.15 | tail -n +2 | awk '
+	BEGIN{toAU=0.000843297}
+	NR%3==1{gradx=$4*toAU}
+	NR%3==2{grady=$4*toAU}
+	NR%3==0{gradz=$4*toAU; printf"%.12f %.12f %.12f\n",gradx,grady,gradz}
+' >> ../engrad.dat.$ibead
+
