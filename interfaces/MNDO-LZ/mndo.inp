@@ -1,0 +1,35 @@
+# ----------------------------------------------------------
+# ---------------------- USER SETUP ------------------------
+# ----------------------------------------------------------
+
+method=OM3	# ODM3, ODM2, MNDO/d, OM3, PM3, OM2, OM1, AM1, MNDOC, MNDO, MINDO/3, CNDO/2, SCC-DTFB, 6 (SCC-DFTB with additional params), -3 (MNDO/H), -13 (MNDO/dH)  
+charge=0	# Molecular charge
+multi=0		# Multiplicity
+              		# 0 Closed-shell singlet
+              		# 1 Open-shell singlet with two singly occupied orbitals, this usually corresponds to an excited singlet state
+              		# 2 Doublet
+              		# 3 Triplet
+occ=3           # Number of highest occupied orbitals
+unocc=3         # Number of lowest unoccupied orbitals
+initstate=2     # Initial state (1 - Ground state, 2 - 1st Excited state, and so on ...)
+levelexc=2	# Maximum excitation level
+			# 1 CIS
+			# 2 CISD
+			# 3 CISDT
+			# 4 CISDTQ
+			# n Up to n-fold excitations
+disper=-1     	# Dispersion function corrections (only for AM1, PM3, OM2, OM3, ODM2, and ODM3)
+              			# -1 not included
+              			#  0 equivalent to -1 except for ODM2 and ODM3 
+              		# for AM1 and PM3:
+              			#  1  Include dispersion corrections (PCCP 9, 2362 (2007)).
+              		# for OM2 and OM3:
+              			#  1  Like immdp=2 with Elstner's damping function alias D1
+              			#  2  Include the D2 dispersion correction from Grimme with Yang's damping function
+              		# for OM2, OM3, ODM2, and ODM3:
+              			#  3  Include the D3 dispersion correction from Grimme with Becke-Johnson damping and without three-body terms
+              			# -3  Like immdp=3, but with three-body terms included.
+
+# ----------------------------------------------------------
+# --------------------- END OF SETUP -----------------------
+# ----------------------------------------------------------
