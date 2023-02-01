@@ -9,9 +9,9 @@ multi=0		# Multiplicity
               		# 1 Open-shell singlet with two singly occupied orbitals, this usually corresponds to an excited singlet state
               		# 2 Doublet
               		# 3 Triplet
-occ=6           # Number of highest occupied orbitals
-unocc=7         # Number of lowest unoccupied orbitals
-initstate=2     # Inital state
+occ=3           # Number of highest occupied orbitals
+unocc=3         # Number of lowest unoccupied orbitals
+initstate=2     # Initial state (1 - Ground state, 2 - 1st Excited state, and so on ...)
 levelexc=2	# Maximum excitation level
 			# 1 CIS
 			# 2 CISD

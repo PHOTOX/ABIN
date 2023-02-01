@@ -14,8 +14,10 @@ timestep=$1
 ibead=$2
 input=input$ibead
 geom=../geom.dat.$ibead
-natom=$(cat $geom | wc -l )
+natom=$(wc -l < $geom)
 
+# advanced option, should be changed carefully
+# main options are in "mndo.inp"
 comment1="Timestep $timestep"	# Optional comment
 comment2=""	# Optional comment
 jop="-2" 	# Type of the calcuation
@@ -25,9 +27,6 @@ nsav15=3	# Compulsory: Prints desired output file
 ipubo=1		# Compulsory: Saves wavefunction
 ktrial=11	# Compulsory: Loads wavefunction
 ifast=2         # Fast diagonalizations in SCF (0 - Allowed, 1 - Allowed after init full diagonalization, 2 - Not allowed)
-
-cp ../engrad.dat.$ibead ../engrad.dat.$ibead.old
-rm -f ../engrad.dat.$ibead
 
 # -------------- DETERMINING CURRENT STATE -----------------
 
@@ -52,8 +51,6 @@ EOF
 # It uses dummy atoms for small molecules otherwise it switches automatically from XYZ to Z-Matrix format
 
 awk '
-BEGIN{
-}
 {
    printf "%s %.12g %i %.12g %i %.12g %i\n", $1, $2, 1,  $3, 1,  $4, 1
 }
@@ -73,24 +70,12 @@ if [[ $? -ne 0 ]] || ! $( grep -q "COMPUTATION TIME" $input.out ) || ! $( grep -
    echo "WARNING from r.mndo: MNDO calculation probably failed."
    echo "See $input.out.error"
    cp $input.out $input.out.error
+   exit 2
 fi
 
 # ------------------- DATA EXTRACTION ---------------------- 
 
-grep -e 'Dipole-length electric dipole transition moments' -A `expr $lroot + 1`  $input.out | tail -1 |  \
-awk '
-	BEGIN {
-		AUtoD=2.541746473
-	}
-	{
-		print $4;
-		print $6/AUtoD, $7/AUtoD, $8/AUtoD
-	}
-' >> ../rawdata.dat
-
-
 grep 'State  ' $input.out | awk '{printf "%.8f\n\n", $9/27.211396}' > ../engrad.dat.$ibead
-
 
 grep -A$(($natom*3))  'INTERNAL COORDINATES AND GRADIENTS'  fort.15 | tail -n +2 | awk '
 	BEGIN{toAU=0.000843297}
