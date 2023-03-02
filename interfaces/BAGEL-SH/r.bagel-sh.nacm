@@ -1,14 +1,10 @@
 #!/bin/bash
 
-#----------INPUT-------------------------
-#--------------------------------------------
-
-
 # This script is should be called by ABIN as
 # BAGEL/r.bagel.nacm timestep 001 nac_accu < state.dat
 
 # You should't need to modify this file!
-# Specification of CAS wavefunction is in file molpro.setup
+# Specification of CAS wavefunction is in file "bagel.inp"
 
 
 cd BAGEL-SH
@@ -19,14 +15,14 @@ input=input$ibead.nacm
 let nac_accu=$3+1       # default in BAGEL is 10^-8, therefore "+1"
 
 # setting shift for caspt2 to default 0.25 if not specified in bagel.inp
-if [[ -z ${shift+x} ]]; then
+if [[ -z $shift ]]; then
     shift=0.25
 fi
 
 rm -f ../nacm.dat
 
 #-How many atoms?
-natom=$(cat ../geom.dat.$ibead | wc -l )
+natom=$(wc -l < ../geom.dat.$ibead)
 
 # reading from state.dat
 # Number of states and which NACME to compute
@@ -45,17 +41,8 @@ cat > $input.json << EOF
     "geometry" : [
 EOF
 # section for geometry specification in json format
-for j in `seq 1 $natom`; do
-    atom=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $1}')
-    x=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $2}')
-    y=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $3}')
-    z=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $4}')
-    echo -n '{ "atom" : "'$atom'", "xyz" : [ '$x', '$y', '$z' ]}' >> $input.json
-    if [ $j -lt $natom ]; then
-        echo -n ',' >> $input.json
-    fi
-    echo '' >> $input.json
-done
+awk -v natom="$natom" '{printf "{ \"atom\" : \"%s\", \"xyz\" : [ %.10f, %.10f, %.10f ]}", $1, $2, $3, $4} NR != natom {print ","}END{print ""}'  ../geom.dat.$ibead >> $input.json
+
 cat >> $input.json << EOF
     ]
 },
@@ -89,7 +76,7 @@ cat >> $input.json << EOF
 EOF
 
 # preparing if for method of choice selection
-if [[ $method == "xms" ]];
+if [[ $method == "xms_caspt2" ]];
 then
 
     cat >> $input.json << EOF
@@ -105,7 +92,7 @@ then
             "thresh" : 1.0e-$nac_accu 
         },
 EOF
-elif [[ $method == "ms" ]];
+elif [[ $method == "ms_caspt2" ]];
 then
     cat >> $input.json << EOF
     "method" : [ {
@@ -123,7 +110,7 @@ then
 EOF
 
 # TODO:this is probably not correct
-elif [[ $method == "casscf" ]];
+elif [[ $method == "sa_casscf" ]];
 then
     cat >> $input.json << EOF
     "method" : [ {
@@ -132,7 +119,7 @@ then
         "charge" : $charge,
 EOF
 else
-    echo "Unknown method ($method). Available only \"xms\", \"ms\" or \"casscf\""
+    echo "Unknown method ($method). Available only \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\""
 fi
 
 cat >> $input.json << EOF
@@ -157,10 +144,8 @@ EOF
 # END OF BAGEL INPUT
 
 # BAGEL JOB
-export BAGEL_NUM_THREADS=1
-export OMP_NUM_THREADS=1
-# launching BAGEL - change for different computers
-/home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL $input.json > $input.out
+source SetEnvironment.sh BAGEL
+$BAGELEXE $input.json > $input.out
 
 echo "TIMESTEP = $timestep" >> $input.out.all
 echo "####################" >> $input.out.all

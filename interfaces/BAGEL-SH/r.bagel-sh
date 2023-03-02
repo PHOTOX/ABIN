@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# You should't need to modify this file!
+# Specification of CAS wavefunction is in file "bagel.inp"
+
 cd BAGEL-SH
 source bagel.inp
 
@@ -11,14 +14,14 @@ thresh=1.0e-8       # deafult value is 1.0e-8, shouldn't be modified. In the cas
 ##############################
 
 # setting shift for caspt2 to default 0.25 if not specified in bagel.inp
-if [[ -z ${shift+x} ]]; then
+if [[ -z $shift ]]; then
     shift=0.25
 fi
 
 rm -f ../engrad.dat.$ibead ../nacm.dat
 
 #-How many atoms?
-natom=$(cat ../geom.dat.$ibead | wc -l )
+natom=$(wc -l < ../geom.dat.$ibead)
 
 # reading from state.dat
 # Number of states,state we are on and which NACM to compute
@@ -38,17 +41,7 @@ cat > $input.json << EOF
 EOF
 
 # section for geometry specification in json format
-for j in `seq 1 $natom`; do
-    atom=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $1}')
-    x=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $2}')
-    y=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $3}')
-    z=$(echo $(cat ../geom.dat.$ibead | head -n $j | tail -n 1) | awk '{print $4}')
-    echo -n '{ "atom" : "'$atom'", "xyz" : [ '$x', '$y', '$z' ]}' >> $input.json
-    if [ $j -lt $natom ]; then
-        echo -n ',' >> $input.json
-    fi
-    echo '' >> $input.json
-done
+awk -v natom="$natom" '{printf "{ \"atom\" : \"%s\", \"xyz\" : [ %.10f, %.10f, %.10f ]}", $1, $2, $3, $4} NR != natom {print ","}END{print ""}'  ../geom.dat.$ibead >> $input.json
 cat >> $input.json << EOF
     ]
 },
@@ -99,7 +92,7 @@ EOF
 
 
 # preparing if for method of choice selection
-if [[ $method == "xms" ]];
+if [[ $method == "xms_caspt2" ]];
 then
 
     cat >> $input.json << EOF
@@ -115,7 +108,7 @@ then
             "thresh" : $thresh
         },
 EOF
-elif [[ $method == "ms" ]];
+elif [[ $method == "ms_caspt2" ]];
 then
     cat >> $input.json << EOF
     "method" : [ {
@@ -131,7 +124,7 @@ then
             "thresh" : $thresh
         },
 EOF
-elif [[ $method == "casscf" ]];
+elif [[ $method == "sa_casscf" ]];
 then
     cat >> $input.json << EOF
     "method" : [ {
@@ -140,7 +133,7 @@ then
         "charge" : $charge,
 EOF
 else
-    echo "Unknown method ($method). Available only \"xms\", \"ms\" or \"casscf\""
+    echo "Unknown method ($method). Available only \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\""
 fi
 
 cat >> $input.json << EOF 
@@ -160,10 +153,8 @@ cat >> $input.json << EOF
 EOF
 
 #----------BAGEL JOB-------------------------
-export BAGEL_NUM_THREADS=1
-export OMP_NUM_THREADS=1
-# specific launching of BAGEL - modify for different machines
-/home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL $input.json > $input.out
+source SetEnvironment.sh BAGEL
+$BAGELEXE $input.json > $input.out
 
 
 echo "TIMESTEP = $timestep" >> $input.out.all
@@ -180,7 +171,7 @@ if $( grep -q 'ERROR: EXCEPTION RAISED:  SMITH convergence not reached.' $input.
     sed -z -i "s/\"maxiter\" : $maxiter_CASPT2,\n            \"thresh\" : $thresh/\"maxiter\" : 1000,\n            \"thresh\" : 1.0e-6/"  $input.second_try.json
     ####################run the job for the second time###########################
     # specific launching of BAGEL - modify for different machines
-    /home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL  $input.second_try.json > $input.second_try.out
+    $BAGELEXE  $input.second_try.json > $input.second_try.out
 
 elif $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ) ; then
     echo " ERROR: convergence during second-order optimization not reached (usually CASSCF not converged)"
@@ -189,7 +180,7 @@ elif $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the seco
     sed -z -i "s/\"maxiter\" : $maxiter_CASSCF,\n        \"nact\" : $nact,/\"maxiter\" : 1500,\n        \"nact\" : $nact,/" $input.second_try.json
     ####################run the job for the second time###########################
     # specific launching of BAGEL - modify for different machines
-    /home/srsen/bin/anaconda3/bin/mpirun -np 1 BAGEL  $input.second_try.json > $input.second_try.out
+    $BAGELEXE  $input.second_try.json > $input.second_try.out
 fi
 
 if $( grep -q 'ERROR: EXCEPTION RAISED:' $input.second_try.out ) ;then
@@ -206,8 +197,8 @@ fi
 # NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN
 
 # Extracting energy.
-cat ENERGY.out >> ../engrad.dat.$ibead
-cat ENERGY.out >> ../engrad_all.dat
+cat ENERGY.out > ../engrad.dat.$ibead
+cat ENERGY.out > ../engrad_all.dat
 
 # Extracting GRADIENT
 tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat.$ibead
