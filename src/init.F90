@@ -682,6 +682,14 @@ contains
             write (*, *) 'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
             error = 1
          end if
+         if (nshake /= 0 .and. (inose == 2 .or. inose == 4)) then
+            write (*, *) 'SHAKE is not compatible with GLE thermostat!'
+            error = 1
+         end if
+         if (nshake /= 0 .and. inose == 3) then
+            write (*, *) 'SHAKE is currently not compatible with Langeving thermostat!'
+            error = 1
+         end if
          if ((natmm + natqm /= natom)) then
             write (*, *) 'Natmm+natqm /= natom!'
             error = 1
