@@ -175,7 +175,10 @@ contains
       end if
 
       do ist1 = ibeg, iend
-         if (ist1 == ist) cycle
+         if (ist1 == ist) cycle 
+         ! only closest states are considered for hopping
+         if (ist1 > (ist + 1) .or. ist1 < (ist - 1)) cycle 
+         
          do ihist = 1, 3
             en_diff(ihist) = abs(en_array_lz(ist, ihist) - en_array_lz(ist1, ihist))
          end do
