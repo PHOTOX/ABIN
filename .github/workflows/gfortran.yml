@@ -219,14 +219,12 @@ jobs:
     - name: Run End-to-End tests
       run: make e2etest
 
-  # Here we just take the defaults everywhere, except turning on FFTW
+  # Here we just take the defaults everywhere, except installing libfftw via apt
   # To use FFTW with other Gfortran versions, we would need to build it.
   fftw_build:
     runs-on: ubuntu-20.04
     name: FFTW build
     needs: basic_build
-    strategy:
-      fail-fast: false
     env:
       CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
@@ -255,7 +253,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
-      run: make unittest && cd src/ && gcov ${GCOV_ARGS} *.o
+      run: make unittest
 
     - name: Codecov upload unit tests
       uses: codecov/codecov-action@v3
@@ -264,13 +262,14 @@ jobs:
         flags: unittests
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/ && gcov ${GCOV_ARGS} *.o
+      run: make e2etest
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
+        gcov: true
 
   mpich_build:
     name: MPICH build
