@@ -15,11 +15,11 @@ jobs:
 
   basic_build:
     name: Basic build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [7, 9, 10]
+         gcc_v: [9, 10, 11]
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
@@ -119,8 +119,6 @@ jobs:
 
   tcpb_build:
     name: TCPB build
-    # NOTE: tcpb-cpp fails to build on Ubuntu 18.04,
-    # probably because of old libprotobuf library?
     runs-on: ubuntu-20.04
     needs: basic_build
     env:
@@ -167,11 +165,11 @@ jobs:
 
   optimized_build:
     name: Optimized build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: basic_build
     strategy:
       matrix:
-         gcc_v: [7, 9, 10]
+         gcc_v: [8, 9, 10]
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
@@ -215,16 +213,13 @@ jobs:
     # However, some tests started to fail, with small numerical differences ~1E-15.
     # Not sure why, since default gfortran on 20.04 is 9.3.0, i.e. the same as we already
     # test above. I tested this with both -O0 and -O2. 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     name: FFTW build
     needs: basic_build
     strategy:
       fail-fast: false
-      matrix:
-         gcc_v: [7]
     env:
-      GCC_V: ${{ matrix.gcc_v}}
-      CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
+      CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -238,7 +233,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/pfunit/build/installed
-        key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
+        key: ${{ runner.os }}-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
 
     - name: Download and build pFUnit
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
@@ -272,13 +267,13 @@ jobs:
 
   mpich_build:
     name: MPICH build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 25
     needs: basic_build
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [7, 10]
+         gcc_v: [9, 10]
          mpich_v: ["3.4.3", "4.0.2"]
     env:
       # To speed-up MPICH build
@@ -334,21 +329,15 @@ jobs:
 
   openmpi_build:
     name: OpenMPI build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 25
     needs: basic_build
     strategy:
       fail-fast: false
-      # Let's just test one GFortran version, we do not really
-      # use OpenMPI with ABIN, and we already test all GCC
-      # versions with MPICH.
-      matrix:
-         gcc_v: [7]
     env:
       # To speed-up OpenMPI build
       CFLAGS: -O0
-      GCC_V: ${{ matrix.gcc_v}}
-      CODECOV_NAME: ${{format('{0} GCC-{1} OpenMPI-4.0', github.job, matrix.gcc_v)}}
+      CODECOV_NAME: ${{format('{0} OpenMPI-4.0', github.job)}}
       OPENMPI_V: "4.1"
       OPENMPI_PATCH: "2"
 
@@ -356,16 +345,12 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 2
-    - name: Set GFortran version
-      run: |
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
-        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V}
     - name: OpenMPI build cache
       id: openmpi-cache
       uses: actions/cache@v2
       with:
         path: ~/openmpi/${{ env.OPENMPI_V }}/install
-        key: ${{runner.os}}-openmpi${{ env.OPENMPI_V }}-gfortran${{ env.GCC_V }}-${{hashFiles('dev_scripts/install_openmpi.sh')}}
+        key: ${{runner.os}}-openmpi${{ env.OPENMPI_V }}-gfortran-default-${{hashFiles('dev_scripts/install_openmpi.sh')}}
 
     - name: Build and Install OpenMPI
       if: steps.openmpi-cache.outputs.cache-hit != 'true'
@@ -387,21 +372,19 @@ jobs:
 
   plumed_build:
     name: PLUMED build
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: basic_build
     strategy:
       fail-fast: false
       matrix:
          plumed_v: [2.7.4, 2.8.0]
-         gcc_v: [7]
 
     env:
       PLUMED_V: ${{ matrix.plumed_v}}
-      GCC_V: ${{ matrix.gcc_v}}
       # Speeding up the Plumed build
       CFLAGS: -O0
       CXXLAGS: -O0
-      CODECOV_NAME: ${{format('{0} GCC-{1} PLUMED-{2}', github.job, matrix.gcc_v, matrix.plumed_v)}}
+      CODECOV_NAME: ${{format('{0} PLUMED-{2}', github.job, matrix.plumed_v)}}
 
     steps:
     - uses: actions/checkout@v2
@@ -412,7 +395,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/plumed/${{ env.PLUMED_V }}/install
-        key: ${{runner.os}}-plumed${{env.PLUMED_V}}-gcc${{ env.GCC_V }}-${{hashFiles('dev_scripts/install_plumed.sh')}}
+        key: ${{runner.os}}-plumed${{env.PLUMED_V}}-gcc-default-${{hashFiles('dev_scripts/install_plumed.sh')}}
 
     - name: Build and Install PLUMED
       if: steps.plumed-cache.outputs.cache-hit != 'true'
@@ -423,7 +406,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/pfunit/build/installed
-        key: ${{ runner.os }}-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
+        key: ${{ runner.os }}-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
 
     - name: Download and build pFUnit
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
