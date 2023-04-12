@@ -229,7 +229,7 @@ jobs:
         fetch-depth: 2
 
     - name: Install FFTW libraries
-      run: sudo apt-get install libfftw3-dev
+      run: sudo apt-get install libfftw3-dev gcov
 
     - name: pFUnit build Cache
       id: pfunit-cache
@@ -267,6 +267,7 @@ jobs:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
         gcov: true
+        verbose: true
 
   mpich_build:
     name: MPICH build
@@ -443,3 +444,4 @@ jobs:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
         gcov: true
+        verbose: true
