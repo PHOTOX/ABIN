@@ -213,11 +213,6 @@ jobs:
   # Here we just take the defaults everywhere, except turning on FFTW
   # To use FFTW with other Gfortran versions, we would need to build it.
   fftw_build:
-    # NOTE: I tried using `ubuntu-20.04` instead of `ubuntu-18.04`.
-    # https://github.com/actions/virtual-environments#available-environments
-    # However, some tests started to fail, with small numerical differences ~1E-15.
-    # Not sure why, since default gfortran on 20.04 is 9.3.0, i.e. the same as we already
-    # test above. I tested this with both -O0 and -O2. 
     runs-on: ubuntu-20.04
     name: FFTW build
     needs: basic_build
