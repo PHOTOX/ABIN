@@ -88,7 +88,6 @@ jobs:
         intel-oneapi-compiler-fortran
         intel-oneapi-mpi
         intel-oneapi-mpi-devel
-
       # intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
 
     steps:
@@ -159,7 +158,6 @@ jobs:
       with:
         name: tcpb
         fail_ci_if_error: true
-        verbose: true
 
 
   optimized_build:
@@ -261,7 +259,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        verbose: true
 
   mpich_build:
     name: MPICH build
@@ -323,7 +320,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        gcov: false
 
   openmpi_build:
     name: OpenMPI build
@@ -435,4 +431,3 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
-        verbose: true
