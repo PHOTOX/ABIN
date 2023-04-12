@@ -16,7 +16,7 @@ env:
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
   # These are the defaults used in Codecov, see:
   # https://github.com/codecov/uploader/blob/main/src/helpers/gcov.ts
-  GCOV_ARGS: -pb
+  GCOV_ARGS: ""
 
 jobs:
 
