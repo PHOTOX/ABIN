@@ -11,7 +11,7 @@ on:
 
 env:
   # FFLAGS for building ABIN, applicable for most jobs
-  ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
+  ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -finstrument-functions -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
   # These are the defaults used in Codecov, see:
@@ -67,7 +67,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
-      run: make unittest && cd src/ && gcov ${GCOV_ARGS} *.o
+      run: make unittest
 
     - name: Codecov upload unit tests
       uses: codecov/codecov-action@v3
@@ -76,13 +76,14 @@ jobs:
         flags: unittests
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/ && gcov ${GCOV_ARGS} *.o
+      run: make e2etest
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
+        gcov: true
 
   intel_build:
     name: Intel OneAPI build
