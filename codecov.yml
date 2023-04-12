@@ -4,13 +4,7 @@ codecov:
     # Send report to Github PR only after all CIs
     # are completed, otherwise we'll temporarily receive
     # incomplete coverage reports.
-    # Right now, the following builds are collecting coverage data:
-    # Basic Builds - (2)
-    # OpenMPI Build
-    # mpich builds (4)
-    # FFTW Build
-    # Intel Build
-    # Plumed Builds (2 total)
+    # Note that unit test coverage builds count towards the build count!
     after_n_builds: 16
     wait_for_ci: yes
 
@@ -29,8 +23,7 @@ coverage:
           - unittests
     patch:
       default:
-        target: auto
-        threshold: 10%
+        target: 80%
 
 parsers:
   gcov:
@@ -44,11 +37,3 @@ comment:
   layout: "reach,diff,flags,tree"
   behavior: default
   require_changes: no
-
-ignore:
-  - "docs"
-  - "tests"
-  - "sample_inputs"
-  - "utils"
-  - "dev_scripts"
-  - "**/*.md"
