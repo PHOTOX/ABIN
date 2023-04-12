@@ -76,6 +76,7 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
+        gcov: true
 
     - name: Run End-to-End tests
       run: make e2etest
