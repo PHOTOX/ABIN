@@ -14,9 +14,6 @@ env:
   ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -finstrument-functions -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
-  # These are the defaults used in Codecov, see:
-  # https://github.com/codecov/uploader/blob/main/src/helpers/gcov.ts
-  GCOV_ARGS: ""
 
 jobs:
 
@@ -177,8 +174,6 @@ jobs:
     name: Optimized build
     # NOTE: We use a more recent Ubuntu version here
     # so we can test more recent GCC versions.
-    # NOTE: Because the cache key does not take into account OS version,
-    # we cannot test same GCC versions as in the basic build.
     runs-on: ubuntu-22.04
     needs: basic_build
     strategy:
@@ -323,12 +318,12 @@ jobs:
       # MPICH 4.0 also needs FCFLAGS set.
       # We also need to set it for ABIN compilation below.
       run: |
-        if [ $GCC_V -eq 10 ];then export FFLAGS="-fallow-argument-mismatch";export FCFLAGS="-fallow-argument-mismatch";fi && \
+        if [ $GCC_V -ge 10 ];then export FFLAGS="-fallow-argument-mismatch";export FCFLAGS="-fallow-argument-mismatch";fi && \
         ./dev_scripts/install_mpich.sh ${HOME}/mpich ${MPICH_V}
 
     - name: build ABIN
       run: |
-        if [ $GCC_V -eq 10 ];then export FFLAGS="-fallow-argument-mismatch $FFLAGS";fi && \
+        if [ $GCC_V -ge 10 ];then export FFLAGS="-fallow-argument-mismatch $FFLAGS";fi && \
         ./configure --mpi ${HOME}/mpich/${MPICH_V}/install && make
       env:
         FFLAGS: ${{ env.ABIN_FFLAGS }} -g
