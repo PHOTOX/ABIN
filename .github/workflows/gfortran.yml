@@ -59,7 +59,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
-      run: make unittest && cd src/ && gcov *.o
+      run: make unittest && cd src/ && gcov -uba *.o
 
     - name: Codecov upload unit tests
       uses: codecov/codecov-action@v3
@@ -68,7 +68,7 @@ jobs:
         flags: unittests
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/ && gcov *.o
+      run: make e2etest && cd src/ && gcov -uba *.o
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
