@@ -260,6 +260,7 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
+        gcov: true
 
     - name: Run End-to-End tests
       run: make e2etest
@@ -433,19 +434,21 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
-      run: make unittest && cd src/ && gcov ${GCOV_ARGS} *.o
+      run: make unittest
 
     - name: Codecov upload unit tests
       uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
+        gcov: true
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/ && gcov ${GCOV_ARGS} *.o
+      run: make e2etest
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
+        gcov: true
