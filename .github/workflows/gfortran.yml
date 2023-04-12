@@ -380,7 +380,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         plumed_v: [2.7.4, 2.8.0]
+         plumed_v: [2.7.6, 2.8.2]
 
     env:
       PLUMED_V: ${{ matrix.plumed_v}}
