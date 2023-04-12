@@ -5,7 +5,7 @@ codecov:
     # are completed, otherwise we'll temporarily receive
     # incomplete coverage reports.
     # Note that unit test coverage builds count towards the build count!
-    after_n_builds: 16
+    after_n_builds: 18
     wait_for_ci: yes
 
 coverage:
