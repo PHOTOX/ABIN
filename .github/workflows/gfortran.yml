@@ -39,7 +39,9 @@ jobs:
 
     - name: Install GCC-7
       if: matrix.gcc_v == 7
-      run: sudo apt install gcc-7 gfortran-7 g++-7
+      run: |
+        sudo apt install gcc-7 gfortran-7 g++-7
+        echo "ABIN_FFLAGS=${ABIN_FFLAGS/-fprofile-abs-path/}" >> $GITHUB_ENV
 
     - name: Set GFortran version
       run: |
@@ -293,7 +295,9 @@ jobs:
 
     - name: Install GCC-7
       if: matrix.gcc_v == 7
-      run: sudo apt install gcc-7 gfortran-7 g++-7
+      run: |
+        sudo apt install gcc-7 gfortran-7 g++-7
+        echo "ABIN_FFLAGS=${ABIN_FFLAGS/-fprofile-abs-path/}" >> $GITHUB_ENV
 
     - name: Set GFortran version
       run: |
