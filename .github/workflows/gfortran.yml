@@ -165,11 +165,16 @@ jobs:
 
   optimized_build:
     name: Optimized build
+    # NOTE: We use a more recent Ubuntu version here
+    # so we can test more recent GCC versions.
+    # NOTE: Because the cache key does not take into account OS version,
+    # we cannot test same GCC versions as in the basic build.
     runs-on: ubuntu-22.04
     needs: basic_build
     strategy:
+      fail-fast: false
       matrix:
-         gcc_v: [10, 11, 12]
+         gcc_v: [11, 12]
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
@@ -384,7 +389,7 @@ jobs:
       # Speeding up the Plumed build
       CFLAGS: -O0
       CXXLAGS: -O0
-      CODECOV_NAME: ${{format('{0} PLUMED-{2}', github.job, matrix.plumed_v)}}
+      CODECOV_NAME: ${{format('{0} PLUMED-{1}', github.job, matrix.plumed_v)}}
 
     steps:
     - uses: actions/checkout@v2
