@@ -245,7 +245,7 @@ jobs:
     - name: Build ABIN
       run: ./configure --pfunit ${HOME}/pfunit/build/installed/ --fftw && make
       env:
-        FFLAGS: ${{ env.ABIN_FFLAGS }}
+        FFLAGS: ${{ env.ABIN_FFLAGS }} -Og
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
