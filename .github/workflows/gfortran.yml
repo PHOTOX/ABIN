@@ -276,7 +276,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [9, 10]
+         gcc_v: [7, 10]
          mpich_v: ["3.4.3", "4.0.2"]
     env:
       # To speed-up MPICH build
@@ -289,6 +289,11 @@ jobs:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 2
+
+    - name: Install GCC-7
+      if: matrix.gcc_v == 7
+      run: sudo apt install gcc-7 gfortran-7 g++-7
+
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
