@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [9, 10, 11]
+         gcc_v: [9, 10]
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
@@ -165,11 +165,11 @@ jobs:
 
   optimized_build:
     name: Optimized build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: basic_build
     strategy:
       matrix:
-         gcc_v: [8, 9, 10]
+         gcc_v: [10, 11, 12]
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
