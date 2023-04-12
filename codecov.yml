@@ -46,9 +46,14 @@ comment:
   require_changes: no
 
 ignore:
-  - "docs"
-  - "sample_inputs"
-  - "interfaces"
-  - "utils"
-  - "dev_scripts"
+  - "docs/*"
+  - "tests/*"
+  - "sample_inputs/*"
+  - "interfaces/*"
+  - "utils/*"
+  - "dev_scripts/*"
+  - "*.md"
   - "**/*.md"
+
+fixes:
+  - "::src/"
