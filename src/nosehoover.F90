@@ -108,6 +108,13 @@ contains
 
       error = .false.
 
+      call int_nonnegative(inose, 'inose')
+      call int_positive(nchain, 'nchain')
+      call int_positive(nrespnose, 'nrespnose')
+      call int_positive(nmolt, 'nmolt')
+      call int_switch(imasst, 'imasst')
+      call real_nonnegative(temp, 'temp')
+
       if (nchain > maxchain) then
          write (stderr, '(A)') 'Maximum number of Nose-Hoover chains exceeded'
          error = .true.
@@ -131,9 +138,17 @@ contains
          error = .true.
       end if
 
+      if (temp * AUTOK < 1 .and. inose > 0) then
+         write (stderr, '(A)') 'Temperature below 1 Kelvin. Are you sure?'
+         write (stderr, '(A)') chknow
+         if (iknow /= 1) error = .true.
+      end if
+
       if (nmolt > natom) then
          write (stdout, '(A)') 'nmolt > natom, which is not possible. Consult the manual.'
-         error = .true.
+         ! We need to exit early here, otherwise we risk out-of-bounds arrays access below
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Invalid NHC thermostat parameter(s)')
       end if
 
       if (imasst == 0) then
@@ -156,19 +171,6 @@ contains
             if (iknow /= 1) error = .true.
          end if
       end if
-
-      if (temp * AUTOK < 1 .and. inose > 0) then
-         write (stderr, '(A)') 'Temperature below 1 Kelvin. Are you sure?'
-         write (stderr, '(A)') chknow
-         if (iknow /= 1) error = .true.
-      end if
-
-      call int_nonnegative(inose, 'inose')
-      call int_positive(nchain, 'nchain')
-      call int_positive(nrespnose, 'nrespnose')
-      call int_positive(nmolt, 'nmolt')
-      call int_switch(imasst, 'imasst')
-      call real_nonnegative(temp, 'temp')
 
       if (error) then
          call fatal_error(__FILE__, __LINE__, &
