@@ -52,7 +52,7 @@ jobs:
     # pFUnit library is used to build and run unit tests
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/pfunit/build/installed
         # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
@@ -145,7 +145,7 @@ jobs:
 
     - name: TCBP build cache
       id: tcpb-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/tcpb-cpp/lib
         # To force a rebuild (bust the cache), make a change to install_tcpb.sh
@@ -198,7 +198,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
@@ -238,7 +238,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu20.04-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
@@ -306,7 +306,7 @@ jobs:
         --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_V}
     - name: MPICH build Cache
       id: mpich-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/mpich/${{ env.MPICH_V }}/install
         key: ${{runner.os}}-ubuntu20.04-mpich${{ env.MPICH_V }}-gfortran${{ env.GCC_V }}-${{hashFiles('dev_scripts/install_mpich.sh')}}
@@ -359,7 +359,7 @@ jobs:
         fetch-depth: 2
     - name: OpenMPI build cache
       id: openmpi-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/openmpi/${{ env.OPENMPI_V }}/install
         key: ${{runner.os}}-ubuntu20.04-openmpi${{ env.OPENMPI_V }}-gfortran-default-${{hashFiles('dev_scripts/install_openmpi.sh')}}
@@ -403,7 +403,7 @@ jobs:
         fetch-depth: 2
     - name: Plumed build cache
       id: plumed-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/plumed/${{ env.PLUMED_V }}/install
         key: ${{runner.os}}-ubuntu20.04-plumed${{env.PLUMED_V}}-gcc-default-${{hashFiles('dev_scripts/install_plumed.sh')}}
@@ -414,7 +414,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu20.04-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
