@@ -229,7 +229,7 @@ jobs:
         fetch-depth: 2
 
     - name: Install FFTW libraries
-      run: sudo apt-get install libfftw3-dev gcov
+      run: sudo apt-get install libfftw3-dev
 
     - name: pFUnit build Cache
       id: pfunit-cache
