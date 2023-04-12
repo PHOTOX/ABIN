@@ -14,6 +14,9 @@ env:
   ABIN_FFLAGS: -O0 -fopenmp --coverage -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
+  # These are the defaults used in Codecov, see:
+  # https://github.com/codecov/uploader/blob/main/src/helpers/gcov.ts
+  GCOV_ARGS: -pb
 
 jobs:
 
@@ -63,7 +66,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
-      run: make unittest && cd src/ && gcov -uba *.o
+      run: make unittest && cd src/ && gcov ${GCOV_ARGS} *.o
 
     - name: Codecov upload unit tests
       uses: codecov/codecov-action@v3
@@ -72,7 +75,7 @@ jobs:
         flags: unittests
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/ && gcov -uba *.o
+      run: make e2etest && cd src/ && gcov ${GCOV_ARGS} *.o
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
@@ -155,7 +158,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/ && gcov *.o
+      run: make e2etest && cd src/ && gcov ${GCOV_ARGS} *.o
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
@@ -247,7 +250,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
-      run: make unittest && cd src/ && gcov *.o
+      run: make unittest && cd src/ && gcov ${GCOV_ARGS} *.o
 
     - name: Codecov upload unit tests
       uses: codecov/codecov-action@v3
@@ -256,7 +259,7 @@ jobs:
         flags: unittests
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/ && gcov *.o
+      run: make e2etest && cd src/ && gcov ${GCOV_ARGS} *.o
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
@@ -318,7 +321,7 @@ jobs:
         FFLAGS: ${{ env.ABIN_FFLAGS }} -g
         LDLIBS: ${{ env.ABIN_LDLIBS }}
     - name: test ABIN
-      run: make test && cd src/ && gcov *.o
+      run: make test && cd src/ && gcov ${GCOV_ARGS} *.o
     - name: Codecov upload
       uses: codecov/codecov-action@v3
       with:
@@ -360,7 +363,7 @@ jobs:
         FFLAGS: ${{ env.ABIN_FFLAGS }}
         LDLIBS: ${{ env.ABIN_LDLIBS }}
     - name: test ABIN
-      run: make test && cd src/ && gcov *.o
+      run: make test && cd src/ && gcov ${GCOV_ARGS} *.o
     - name: Codecov upload
       uses: codecov/codecov-action@v3
       with:
@@ -419,7 +422,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
-      run: make unittest && cd src/ && gcov *.o
+      run: make unittest && cd src/ && gcov ${GCOV_ARGS} *.o
 
     - name: Codecov upload unit tests
       uses: codecov/codecov-action@v3
@@ -428,7 +431,7 @@ jobs:
         flags: unittests
 
     - name: Run End-to-End tests
-      run: make e2etest && cd src/ && gcov *.o
+      run: make e2etest && cd src/ && gcov ${GCOV_ARGS} *.o
 
     - name: Codecov upload
       uses: codecov/codecov-action@v3
