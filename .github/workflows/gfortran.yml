@@ -11,7 +11,7 @@ on:
 
 env:
   # FFLAGS for building ABIN, applicable for most jobs
-  ABIN_FFLAGS: -g -Og -fopenmp --coverage -fprofile-abs-path -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
+  ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
 
@@ -39,6 +39,13 @@ jobs:
       run: |
         sudo apt install gcc-7 gfortran-7 g++-7
         echo "ABIN_FFLAGS=${ABIN_FFLAGS/-fprofile-abs-path/}" >> $GITHUB_ENV
+
+    - name: Enable runtime checks
+      # It looks like this messes up the code coverage, so enabling only some builds
+      if: matrix.gcc_v != 7
+      run: |
+        echo "ABIN_FFLAGS=${ABIN_FFLAGS} -fcheck=all -fsanitize=address,undefined,leak" >> $GITHUB_ENV
+        echo "ABIN_LDFLAGS=${ABIN_LDFLAGS -fsanitize=address,undefined,leak" >> $GITHUB_ENV
 
     - name: Set GFortran version
       run: |
