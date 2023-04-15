@@ -83,6 +83,7 @@ jobs:
         gcov: true
 
     - name: Run End-to-End tests
+      if: always()
       run: make e2etest
 
     - name: Codecov upload
