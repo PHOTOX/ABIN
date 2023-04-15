@@ -91,7 +91,6 @@ contains
          attypes(itype) = normalize_atom_name(atom_types(i))
          itype = itype + 1
       end do
-      deallocate (attypes)
    end function normalize_atom_types
 
    ! Here we create the mapping from atom index
