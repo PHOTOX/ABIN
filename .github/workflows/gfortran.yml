@@ -45,7 +45,7 @@ jobs:
       if: matrix.gcc_v != 7
       run: |
         echo "ABIN_FFLAGS=${ABIN_FFLAGS} -fcheck=all -fsanitize=address,undefined,leak" >> $GITHUB_ENV
-        echo "ABIN_LDFLAGS=${ABIN_LDFLAGS} -fsanitize=address,undefined,leak" >> $GITHUB_ENV
+        echo "ABIN_LDLIBS=${ABIN_LDLIBS} -fsanitize=address,undefined,leak" >> $GITHUB_ENV
 
     - name: Set GFortran version
       run: |
