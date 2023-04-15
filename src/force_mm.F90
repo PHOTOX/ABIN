@@ -53,6 +53,7 @@ contains
       call flush (stdout)
       call flush (stderr)
       write (stdout, '(A)') ''
+      deallocate (normalized_atom_types)
    end subroutine initialize_mm
 
    subroutine finalize_mm()
@@ -90,6 +91,7 @@ contains
          attypes(itype) = normalize_atom_name(atom_types(i))
          itype = itype + 1
       end do
+      deallocate (attypes)
    end function normalize_atom_types
 
    ! Here we create the mapping from atom index
