@@ -61,7 +61,6 @@ contains
    end subroutine
 
    @test
-   @disable
    subroutine test_like_charges()
       types = (/'Kr', 'Xe'/)
       names = types
@@ -98,7 +97,6 @@ contains
       @assertLessThan(fz(1, 1), 0.0D0, 'fz repel')
    end subroutine
 
-   @disable
    subroutine test_opposite_charges()
       types = (/'Kr', 'Xe'/)
       names = types
@@ -126,7 +124,6 @@ contains
    end subroutine
 
    @test
-   @disable
    subroutine test_LJ_minimum()
       real(DP), dimension(NATOM, NWALK) :: fzero = 0.0D0
       real(DP) :: E_min
@@ -155,7 +152,6 @@ contains
    end subroutine
 
    @test
-   @disable
    subroutine test_bead_scaling()
       integer, parameter :: NTYPES = 2
       real(DP), dimension(NATOM, NWALK) :: fx1, fy1, fz1
@@ -208,8 +204,6 @@ contains
    end subroutine
 
    ! Helper function if you want to check the potential
-   @test
-   @disable
    subroutine print_lj_potential()
       integer, parameter :: NATOM = 2, NWALK = 1
       real(DP) :: r0, rmax, r, dr
@@ -248,8 +242,6 @@ contains
       close (u)
    end subroutine
 
-   @test
-   @disable
    subroutine print_coulomb_potential()
       integer, parameter :: NATOM = 2, NWALK = 1
       real(DP) :: r0, rmax, r, dr
