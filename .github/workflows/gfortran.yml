@@ -11,7 +11,7 @@ on:
 
 env:
   # FFLAGS for building ABIN, applicable for most jobs
-  ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -fno-inline -fcheck=all -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
+  ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -fno-early-inlining -fcheck=all -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
 
