@@ -4,13 +4,7 @@ codecov:
     # Send report to Github PR only after all CIs
     # are completed, otherwise we'll temporarily receive
     # incomplete coverage reports.
-    # Right now, the following builds are collecting coverage data:
-    # Basic Builds - (Gfortran versions 7, 8, 9)
-    # OpenMPI Build
-    # mpich builds (4)
-    # FFTW Build
-    # Intel Build
-    # Plumed Builds (2 total)
+    # Note that unit test coverage builds count towards the build count!
     after_n_builds: 18
     wait_for_ci: yes
 
@@ -29,8 +23,7 @@ coverage:
           - unittests
     patch:
       default:
-        target: auto
-        threshold: 10%
+        target: 80%
 
 parsers:
   gcov:
@@ -46,9 +39,4 @@ comment:
   require_changes: no
 
 ignore:
-  - "docs"
-  - "sample_inputs"
-  - "interfaces"
   - "utils"
-  - "dev_scripts"
-  - "**/*.md"

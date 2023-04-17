@@ -204,8 +204,6 @@ contains
    end subroutine
 
    ! Helper function if you want to check the potential
-   @test
-   @disable
    subroutine print_lj_potential()
       integer, parameter :: NATOM = 2, NWALK = 1
       real(DP) :: r0, rmax, r, dr
@@ -244,8 +242,6 @@ contains
       close (u)
    end subroutine
 
-   @test
-   @disable
    subroutine print_coulomb_potential()
       integer, parameter :: NATOM = 2, NWALK = 1
       real(DP) :: r0, rmax, r, dr
