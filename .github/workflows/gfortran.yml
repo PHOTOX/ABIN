@@ -13,6 +13,7 @@ env:
   # FFLAGS for building ABIN, applicable for most jobs
   ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
+  GCOV_ARGS: -abcfu
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
 
 jobs:
@@ -81,6 +82,7 @@ jobs:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
         gcov: true
+        gcov_args: ${{env.GCOV_ARGS}}
 
     - name: Run End-to-End tests
       if: always()
@@ -92,6 +94,7 @@ jobs:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
         gcov: true
+        gcov_args: ${{env.GCOV_ARGS}}
 
   intel_build:
     name: Intel OneAPI build
@@ -176,6 +179,7 @@ jobs:
         name: tcpb
         fail_ci_if_error: true
         gcov: true
+        gcov_args: ${{env.GCOV_ARGS}}
 
 
   optimized_build:
@@ -265,6 +269,7 @@ jobs:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
         gcov: true
+        gcov_args: ${{env.GCOV_ARGS}}
 
     - name: Run End-to-End tests
       run: make e2etest
@@ -275,6 +280,7 @@ jobs:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
         gcov: true
+        gcov_args: ${{env.GCOV_ARGS}}
 
   mpich_build:
     name: MPICH build
