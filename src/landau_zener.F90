@@ -214,7 +214,7 @@ contains
                 if (der_check > 1.3) then
                     write (stdout,*) "ERROR: Change of curvature --> discontinuity in PES!"
                     write (stdout,*) "Probability set to 0!"
-                    prob(ist1) = 0.0d
+                    prob(ist1) = 0.0D0
                 ! 30% threshold was set empirically and should capture most discontinuities
                 ! yet it can also be a conical intersection. Thus, we just issue an warning
                 ! and let the user to evaluate on his own.
