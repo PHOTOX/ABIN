@@ -472,10 +472,10 @@ contains
 
       ! Doing this here so that we can do it even when reading velocities from file
       if (rem_comvel) then
-         call remove_comvel(vx, vy, vz, am, rem_comvel)
+         call remove_comvel(vx, vy, vz, am)
       end if
       if (rem_comrot) then
-         call remove_rotations(x, y, z, vx, vy, vz, am, rem_comrot)
+         call remove_rotations(x, y, z, vx, vy, vz, am)
       end if
 
       if (conatom > 0) then
@@ -484,7 +484,7 @@ contains
 
       ! If scaleveloc=1, scale initial velocitites to match the temperature
       ! Otherwise, just print the temperature.
-      call ScaleVelocities(vx, vy, vz)
+      call scale_velocities(vx, vy, vz)
 
       ! Initialize spherical boundary onditions
       if (isbc == 1) then
