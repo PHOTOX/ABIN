@@ -1,9 +1,9 @@
 This is a sample input file for PIMD simulation in ABIN,
-using staging transformation and Nose-Hoover Chain thermostat
+using staging transformation and Nose-Hoover Chain thermostat.
 
 &general
-pot='g09'
-mdtype='pimd',		
+pot='orca'
+mdtype='pimd'
 nwalk=20,               ! number of path integral beads
 istage=1,               ! turn on staging transformation (this must be ON)
 nstep=50000,		! number of steps

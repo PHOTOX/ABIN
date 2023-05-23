@@ -1,9 +1,11 @@
 This is a sample input file for ABIN.
 
-It shows also how to use some more obscure settings.
+This file also shows how to use some more obscure settings.
+Generally, you want to start from the specific files for the type of simulation
+that you want to run (e.g. for PIMD look at input.in.pimd)
 
 &general
-pot='orca'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,nab,harm,morse,guillot,2dho 
+pot='orca'		! where do we obtain forces?
 conatom=0,		! number of constrained atoms
 irest=0,		! Should we restart from restart.xyz? (ignoring mini.dat)
 

@@ -18,6 +18,7 @@ nwritev=0,		! how often we print velocities?
 /
 
 &nhcopt
-temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
-inose=2,		! GLE thermostat 2, needs GLE-A and GLE-C files
+temp=298.15,		! temperature (Kelvins) for initial Maxwell-Boltzmann sampling of velocities
+                        ! WARNING: The actual temperature of the simulation is determined via the GLE parameters!
+inose=2,		! GLE thermostat for QT or PI+GLE, needs additional parameters in "GLE-A" and "GLE-C" files
 /

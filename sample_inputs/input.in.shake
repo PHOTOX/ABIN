@@ -6,12 +6,10 @@ mdtype='md'
 nstep=10,
 dt=20.,
 
-
-nwrite=1,		! how often some output should be printed (estimators etc.)
-nwritex=1,		! how often should we print coordinates?
+nwrite=1,
+nwritex=1,
 nwritev=1,
-nrest=1,		! how often we print restart files?
-irest=0,		! should we restart from restart.xyz? (ignoring mini.dat), NOT working yet!!
+irest=0,
 /
 
 &system
@@ -27,9 +25,6 @@ natmolt=53*3            ! number of atoms in each partition
 nshakemol=2,2,0,2,2,3*0,  ! number of constraints in each partition
 imasst=0,               ! DO NOT use massive thermostat when using SHAKE
 inose=1,		! Only global Nose-Hoover is available for SHAKE
-nchain=4,		! number of nose-hoover chains
 temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 tau0=0.001
-nyosh=7,
-nrespnose=3
 /
