@@ -151,28 +151,6 @@ contains
 
    end subroutine remove_comvel
 
-   subroutine calc_angular_momentum(x, y, z, vx, vy, vz, masses, iw, Lx, Ly, Lz, L_tot)
-      use mod_general, only: natom
-      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-      real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
-      real(DP), intent(in) :: masses(:)
-      integer, intent(in) :: iw ! Bead index
-      real(DP), intent(out) :: Lx, Ly, Lz, L_tot
-      integer :: iat
-
-      Lx = 0.0D0
-      Ly = 0.0D0
-      Lz = 0.0D0
-
-      do iat = 1, natom
-         Lx = Lx + (y(iat, iw) * vz(iat, iw) - z(iat, iw) * vy(iat, iw)) * masses(iat)
-         Ly = Ly + (z(iat, iw) * vx(iat, iw) - x(iat, iw) * vz(iat, iw)) * masses(iat)
-         Lz = Lz + (x(iat, iw) * vy(iat, iw) - y(iat, iw) * vx(iat, iw)) * masses(iat)
-      end do
-
-      L_tot = dsqrt(Lx**2 + Ly**2 + Lz**2)
-   end subroutine calc_angular_momentum
-
    ! This code has been adopted from the AmberTools package (file com.c, I think)
    subroutine remove_rotations(x, y, z, vx, vy, vz, masses)
       use mod_system, only: dime
@@ -242,43 +220,6 @@ contains
 
    contains
 
-      ! https://en.wikipedia.org/wiki/Moment_of_inertia#Inertia_tensor
-      subroutine calc_inertia_tensor(x, y, z, masses, iw, I)
-         use mod_general, only: natom
-         real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-         real(DP), intent(in) :: masses(:)
-         integer, intent(in) :: iw ! Bead index
-         real(DP) :: I(0:8)
-         real(DP) :: xx, xy, xz, yy, yz, zz
-         integer :: iat
-
-         xx = 0.0D0
-         xy = 0.0D0
-         xz = 0.0D0
-         yy = 0.0D0
-         yz = 0.0D0
-         zz = 0.0D0
-
-         do iat = 1, natom
-            xx = xx + x(iat, iw) * x(iat, iw) * masses(iat)
-            xy = xy + x(iat, iw) * y(iat, iw) * masses(iat)
-            xz = xz + x(iat, iw) * z(iat, iw) * masses(iat)
-            yy = yy + y(iat, iw) * y(iat, iw) * masses(iat)
-            yz = yz + y(iat, iw) * z(iat, iw) * masses(iat)
-            zz = zz + z(iat, iw) * z(iat, iw) * masses(iat)
-         end do
-
-         I(0) = (yy + zz)
-         I(1) = -xy
-         I(2) = -xz
-         I(3) = -xy
-         I(4) = (xx + zz)
-         I(5) = -yz
-         I(6) = -xz
-         I(7) = -yz
-         I(8) = (xx + yy)
-      end subroutine calc_inertia_tensor
-
       ! brute force inverse of 3x3 matrix
       subroutine mat_inv_3x3(a, ainv, linear)
          real(DP), intent(in) :: a(0:8)
@@ -316,6 +257,65 @@ contains
       end subroutine mat_inv_3x3
 
    end subroutine remove_rotations
+
+   ! https://en.wikipedia.org/wiki/Moment_of_inertia#Inertia_tensor
+   subroutine calc_inertia_tensor(x, y, z, masses, iw, I)
+      use mod_general, only: natom
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: masses(:)
+      integer, intent(in) :: iw ! Bead index
+      real(DP) :: I(0:8)
+      real(DP) :: xx, xy, xz, yy, yz, zz
+      integer :: iat
+
+      xx = 0.0D0
+      xy = 0.0D0
+      xz = 0.0D0
+      yy = 0.0D0
+      yz = 0.0D0
+      zz = 0.0D0
+
+      do iat = 1, natom
+         xx = xx + x(iat, iw) * x(iat, iw) * masses(iat)
+         xy = xy + x(iat, iw) * y(iat, iw) * masses(iat)
+         xz = xz + x(iat, iw) * z(iat, iw) * masses(iat)
+         yy = yy + y(iat, iw) * y(iat, iw) * masses(iat)
+         yz = yz + y(iat, iw) * z(iat, iw) * masses(iat)
+         zz = zz + z(iat, iw) * z(iat, iw) * masses(iat)
+      end do
+
+      I(0) = (yy + zz)
+      I(1) = -xy
+      I(2) = -xz
+      I(3) = -xy
+      I(4) = (xx + zz)
+      I(5) = -yz
+      I(6) = -xz
+      I(7) = -yz
+      I(8) = (xx + yy)
+   end subroutine calc_inertia_tensor
+
+   subroutine calc_angular_momentum(x, y, z, vx, vy, vz, masses, iw, Lx, Ly, Lz, L_tot)
+      use mod_general, only: natom
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
+      real(DP), intent(in) :: masses(:)
+      integer, intent(in) :: iw ! Bead index
+      real(DP), intent(out) :: Lx, Ly, Lz, L_tot
+      integer :: iat
+
+      Lx = 0.0D0
+      Ly = 0.0D0
+      Lz = 0.0D0
+
+      do iat = 1, natom
+         Lx = Lx + (y(iat, iw) * vz(iat, iw) - z(iat, iw) * vy(iat, iw)) * masses(iat)
+         Ly = Ly + (z(iat, iw) * vx(iat, iw) - x(iat, iw) * vz(iat, iw)) * masses(iat)
+         Lz = Lz + (x(iat, iw) * vy(iat, iw) - y(iat, iw) * vx(iat, iw)) * masses(iat)
+      end do
+
+      L_tot = dsqrt(Lx**2 + Ly**2 + Lz**2)
+   end subroutine calc_angular_momentum
 
    subroutine constrainP(px, py, pz, constrained_atoms)
       use mod_general, only: nwalk
