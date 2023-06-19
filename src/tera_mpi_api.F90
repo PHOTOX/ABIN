@@ -21,11 +21,11 @@ module mod_terampi
    integer :: nteraservers = 1
    ! How long do we wait for TC port [seconds]
    real(DP) :: max_wait_time = 30
-   ! Sleep interval while waiting for TC calculation to finish.
-   real(DP) :: mpi_sleep = 0.05
+   ! Sleep interval (microseconds) while waiting for TC calculation to finish.
+   integer :: mpi_milisleep = 50
 
    public :: nteraservers
-   public :: mpi_sleep, max_wait_time
+   public :: mpi_milisleep, max_wait_time
    public :: TC_TAG
 #ifdef USE_MPI
    integer, allocatable :: tc_comms(:)
@@ -55,10 +55,8 @@ contains
 
       write (stdout, '(A,I0)') 'Number of TeraChem servers: ', nteraservers
 
-      if (mpi_sleep <= 0) then
-         write (stdout, *) 'WARNING: Parameter "mpi_sleep" must be positive!'
-         write (stdout, *) 'Setting it back to default value'
-         mpi_sleep = 0.05D0
+      if (mpi_milisleep < 0) then
+         mpi_milisleep = 0
       end if
 
       allocate (tc_comms(nteraservers))
@@ -173,7 +171,7 @@ contains
          if (idebug > 1) then
             write (stdout, '(A)') 'Waiting for TC port'
          end if
-         call execute_command_line('sleep 0.5')
+         call milisleep(500)
 
       end do
 
@@ -206,7 +204,7 @@ contains
          end if
 
          write (stdout, '(A)') 'WARNING: Cannot open file '//portfile
-         call execute_command_line('sleep 0.5')
+         call milisleep(500)
 
       end do
 
@@ -272,7 +270,6 @@ contains
 
    subroutine wait_for_terachem(tc_comm)
       integer, intent(in) :: tc_comm
-      character(len=20) :: chsys_sleep
       integer :: status(MPI_STATUS_SIZE)
       integer :: ierr
       logical :: ready
@@ -280,23 +277,40 @@ contains
       ! we don't wait forever if TeraChem crashes.
       ! At this moment, this is ensured at the BASH script level.
 
-      ! The idea here is to reduce the CPU usage of MPI_Recv() via system call to 'sleep'.
+      if (mpi_milisleep <= 0) return
+
+      ! The idea here is to reduce the CPU usage of MPI_Recv() by taking a brief nap.
       ! In most MPI implementations, MPI_Recv() is actively polling the other end
       ! (in this case TeraChem) and consumes a whole CPU core. That's clearly wasteful,
-      ! since we're waiting for a long time for the ab initio result.
+      ! since we're typically waiting for a long time for the ab initio result.
 
       ! Some implementation provide an option to change this behaviour,
-      ! but I didn't figure out any for MPICH so we rather inelegantly call system sleep.
+      ! but I didn't figure out any for MPICH.
       ! Based according to an answer here:
       ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
       ready = .false.
-      write (chsys_sleep, '(A6, F10.4)') 'sleep ', mpi_sleep
       do while (.not. ready)
          call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, ready, status, ierr)
          call handle_mpi_error(ierr)
-         call execute_command_line(trim(chsys_sleep))
+         call milisleep(mpi_milisleep)
       end do
    end subroutine wait_for_terachem
+
+   subroutine milisleep(milisec)
+      use, intrinsic :: iso_c_binding, only: c_int, c_int32_t
+      use mod_interfaces, only: usleep
+      integer :: milisec
+      integer(kind=c_int32_t) :: usec
+      integer(kind=c_int) :: c_err
+
+      usec = int(milisec * 1000, c_int)
+      ! TODO: See usleep manpage, we probably should not sleep more than a second
+      c_err = usleep(usec)
+      if (c_err /= 0) then
+         write (stderr, *) "usleep returned an error: ", c_err
+         call fatal_error(__FILE__, __LINE__, "usleep failed!")
+      end if
+   end subroutine milisleep
 
    subroutine append_scrdir_name(buffer, offset, iw, remd_replica)
       use mod_general, only: iremd
