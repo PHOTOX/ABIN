@@ -7,7 +7,8 @@ http://dx.doi.org/10.1063/1.3556661
 
 &general
 pot='orca'		! where do we obtain forces?
-mdtype='md',		! md = classical MD (i.e. Newton's equations of motion).
+mdtype='md',		! md = classical MD
+                        ! but due to GLE thermostat, nuclear quantum effects will be (approximately) included.
                         ! But nuclear quantum effects are still captured via GLE thermostat!
 nstep=50000,		! number of steps
 dt=20.,			! timestep (a.u.)

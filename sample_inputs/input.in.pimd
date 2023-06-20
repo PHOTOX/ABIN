@@ -3,7 +3,7 @@ using staging transformation and Nose-Hoover Chain thermostat.
 
 &general
 pot='orca'
-mdtype='pimd'
+mdtype='pimd'		! pimd = Path Integral MD
 nwalk=20,               ! number of path integral beads
 istage=1,               ! turn on staging transformation (this must be ON)
 nstep=50000,		! number of steps

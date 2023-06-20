@@ -3,7 +3,7 @@ This is a sample input file for ABIN for PI+GLE simulation
 
 &general
 pot='g09'		! where do we obtain forces? options are:g09,orca,tera,turbo,molpro,orca,qchem 
-mdtype='pimd',		
+mdtype='pimd',		! pimd = Path Integral MD
 nwalk=4,                ! 4 is usually sufficient for PIGLE simulations
 istage=0,               ! for PIGLE, istage must be 0
 nstep=50000,		! number of steps

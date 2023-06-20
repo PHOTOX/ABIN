@@ -2,7 +2,7 @@ This is a sample input file for classical MD with SHAKE constraints
 
 &general
 pot='mmwater'
-mdtype='md'
+mdtype='md',    ! md = classical MD
 nstep=10,
 dt=20.,
 

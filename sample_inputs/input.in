@@ -9,7 +9,7 @@ pot='orca'		! where do we obtain forces?
 conatom=0,		! number of constrained atoms
 irest=0,		! Should we restart from restart.xyz? (ignoring mini.dat)
 
-mdtype='md',		! 'md' = classical MD
+mdtype='md',		! md = classical MD
 nwalk=1,		! number of random walkers 
 nstep=5000,		! number of steps
 dt=20.,			! timestep [au]
@@ -18,6 +18,14 @@ dt=20.,			! timestep [au]
 nwrite=10,		! how often some output should be printed (estimators etc.)
 nwritex=5,		! how often should we print coordinates?
 nrest=10,		! how often we print restart files?
+narchive=10000,         ! archive restart files every narchive steps
+                        ! restart files are overwritten by default, although for safety there is always also
+                        ! previous restart file in 'restart.xyz.old', in case the last restart file gets corrupted.
+                        ! In addition, every narchive step we copy the restart.xyz to restart.xyz.<step>,
+                        ! which in principle allows restarting from different times along the trajectory.
+                        ! This is especially usefull when running Surface Hopping, where the trajectory often dies
+                        ! due to energy conservation, but restarting from last restart might be too late, and one wants to
+                        ! restart from an earlier point in time.
 nwritev=0,		! how often we print velocities?
 nwritef=0,		! how often we print forces?
 /

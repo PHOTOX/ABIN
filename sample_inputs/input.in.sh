@@ -4,7 +4,7 @@ This is a sample input file for Surface-Hopping simulation in ABIN
 pot='molpro-sh'		! where do we obtain forces?
 irest=0,		! should we restart from restart.xyz?
 
-mdtype='sh',		! sh = surface-hopping MD
+mdtype='sh',		! sh = Surface Hopping non adiabatic MD
 nstep=1000,		! number of steps
 dt=20.,			! timestep [au]
 
