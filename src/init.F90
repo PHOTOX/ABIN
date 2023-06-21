@@ -128,7 +128,7 @@ contains
          isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_milisleep, narchive, xyz_units, &
          dime, ncalc, idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
          en_restraint, en_diff, en_kk, restrain_pot, &
-         pot_ref, nstep_ref, nteraservers, max_wait_time, cp2k_mpi_beads
+         pot_ref, nstep_ref, nteraservers, max_mpi_wait_time, cp2k_mpi_beads
 
       namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
 

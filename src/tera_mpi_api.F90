@@ -4,6 +4,7 @@ module mod_terampi
    use mod_const, only: DP
    use mod_error, only: fatal_error
    use mod_files, only: stdout, stderr
+   use mod_utils, only: milisleep
 #ifdef USE_MPI
    use mpi
    use mod_mpi, only: handle_mpi_error, get_mpi_error_string
@@ -20,12 +21,13 @@ module mod_terampi
 
    integer :: nteraservers = 1
    ! How long do we wait for TC port [seconds]
-   real(DP) :: max_wait_time = 30
-   ! Sleep interval (microseconds) while waiting for TC calculation to finish.
+   real(DP) :: max_mpi_wait_time = 30
+   ! Sleep interval in miliseconds while waiting for TC calculation to finish.
    integer :: mpi_milisleep = 50
 
    public :: nteraservers
-   public :: mpi_milisleep, max_wait_time
+   ! NOTE: max_mpi_wait_time is public only for testing
+   public :: mpi_milisleep, max_mpi_wait_time
    public :: TC_TAG
 #ifdef USE_MPI
    integer, allocatable :: tc_comms(:)
@@ -54,10 +56,6 @@ contains
       end if
 
       write (stdout, '(A,I0)') 'Number of TeraChem servers: ', nteraservers
-
-      if (mpi_milisleep < 0) then
-         mpi_milisleep = 0
-      end if
 
       allocate (tc_comms(nteraservers))
       allocate (communication_established(nteraservers))
@@ -160,8 +158,8 @@ contains
             end if
          end if
 
-         ! Timeout after max_wait_time seconds
-         if ((MPI_WTIME() - timer) > max_wait_time) then
+         ! Timeout after max_mpi_wait_time seconds
+         if ((MPI_WTIME() - timer) > max_mpi_wait_time) then
             call fatal_error(__FILE__, __LINE__, &
                & 'Server name '//server_name//' not found.')
          end if
@@ -198,7 +196,7 @@ contains
             exit
          end if
 
-         if ((MPI_WTIME() - timer) > max_wait_time) then
+         if ((MPI_WTIME() - timer) > max_mpi_wait_time) then
             call fatal_error(__FILE__, __LINE__, &
                & 'Could not open file '//portfile)
          end if
@@ -295,22 +293,6 @@ contains
          call milisleep(mpi_milisleep)
       end do
    end subroutine wait_for_terachem
-
-   subroutine milisleep(milisec)
-      use, intrinsic :: iso_c_binding, only: c_int, c_int32_t
-      use mod_interfaces, only: usleep
-      integer :: milisec
-      integer(kind=c_int32_t) :: usec
-      integer(kind=c_int) :: c_err
-
-      usec = int(milisec * 1000, c_int)
-      ! TODO: See usleep manpage, we probably should not sleep more than a second
-      c_err = usleep(usec)
-      if (c_err /= 0) then
-         write (stderr, *) "usleep returned an error: ", c_err
-         call fatal_error(__FILE__, __LINE__, "usleep failed!")
-      end if
-   end subroutine milisleep
 
    subroutine append_scrdir_name(buffer, offset, iw, remd_replica)
       use mod_general, only: iremd
