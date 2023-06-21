@@ -1,0 +1,28 @@
+This is a sample input file for ABIN for Quantum Thermostat (QT) simulations
+based on the Generalized Langevin Equation (GLE) thermostat.
+For more info, see:
+M. Ceriotti, D. E. Manolopoulos, and M. Parrinello, J. Chem. Phys. 134, 084104 (2011)
+Accelerating the convergence of path integral dynamics with a generalized Langevin equation
+http://dx.doi.org/10.1063/1.3556661
+
+&general
+pot='orca'		! where do we obtain forces?
+mdtype='md',		! md = classical MD
+                        ! but due to GLE thermostat, nuclear quantum effects will be (approximately) included.
+                        ! But nuclear quantum effects are still captured via GLE thermostat!
+nstep=50000,		! number of steps
+dt=20.,			! timestep (a.u.)
+
+irest=0,		! should we restart from restart.xyz?
+
+nwrite=1,		! how often some output should be printed (energies etc.)
+nwritex=5,		! how often to print coordinates?
+nrest=5,		! how often to print restart files?
+nwritev=0,		! how often to print velocities?
+/
+
+&nhcopt
+temp=298.15,		! temperature (Kelvins) for initial Maxwell-Boltzmann sampling of velocities
+                        ! WARNING: The actual temperature of the simulation is determined via the GLE parameters!
+inose=2,		! GLE thermostat for QT or PI+GLE, needs additional parameters in "GLE-A" and "GLE-C" files
+/
