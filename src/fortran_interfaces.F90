@@ -4,6 +4,7 @@
 ! Some functions are currently outside of modules due to
 ! circular dependencies.
 module mod_interfaces
+   use, intrinsic :: iso_c_binding, only: c_int, c_int32_t
    use mod_const, only: DP
    public
    interface
@@ -53,6 +54,14 @@ module mod_interfaces
       !   real(C_DOUBLE), intent(inout) :: eclas
       !   integer(C_INT), intent(in) :: natom, walkmax, watpot
       !end subroutine
+
+      ! https://cyber.dabamos.de/programming/modernfortran/sleep.html
+      ! int usleep(useconds_t useconds)
+      function usleep(useconds) bind(c, name='usleep')
+         import :: c_int, c_int32_t
+         integer(kind=c_int32_t), value :: useconds
+         integer(kind=c_int) :: usleep
+      end function usleep
 
    end interface
 
