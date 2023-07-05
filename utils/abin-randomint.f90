@@ -39,6 +39,7 @@ program abin_randomint
    do i = 1, nran
       write (*, '(I0)') irans(i)
    end do
+   deallocate (irans)
 end program
 
 subroutine get_cmdline(iseed, nran)
