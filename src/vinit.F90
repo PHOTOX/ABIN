@@ -1,9 +1,10 @@
 module mod_vinit
    use mod_const, only: DP
-   use mod_files, only: stdout
+   use mod_files, only: stdout, stderr
    implicit none
    private
-   public :: vinit, scalevelocities, remove_rotations, remove_comvel, constrainP
+   public :: vinit, scale_velocities, remove_rotations, remove_comvel
+   public :: calc_angular_momentum, constrainP
    ! This parameter is read from namelist nhcopt
    public :: scaleveloc
    ! Whether to scale velocities to target temperature
@@ -77,7 +78,7 @@ contains
 
    ! Scaling of velocities to correct temperature after COM velocity removal
    ! or if restarting to different temperature
-   subroutine ScaleVelocities(vx, vy, vz)
+   subroutine scale_velocities(vx, vy, vz)
       use mod_const, only: autok
       use mod_general, only: natom, nwalk
       use mod_system, only: dime, f, conatom
@@ -111,14 +112,12 @@ contains
          write (stdout, *) 'Temperature after scaling (K):', temp_mom * autok
       end if
 
-   end subroutine ScaleVelocities
+   end subroutine scale_velocities
 
-   subroutine remove_comvel(vx, vy, vz, mass, lremove)
+   subroutine remove_comvel(vx, vy, vz, mass)
       use mod_general, only: natom, nwalk
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: mass(:)
-      ! This variable decides whether we actually remove the momenta
-      logical, intent(in) :: lremove
       real(DP) :: vcmx, vcmy, vcmz, tm
       integer :: iat, iw
 
@@ -140,92 +139,57 @@ contains
          vcmz = vcmz / tm
 
          ! Shift velocities such that momentum of center of mass is zero
-         if (lremove) then
-            if (iw == 1) write (stdout, *) 'Removing center of mass velocity.'
-            do iat = 1, natom
-               vx(iat, iw) = vx(iat, iw) - vcmx
-               vy(iat, iw) = vy(iat, iw) - vcmy
-               vz(iat, iw) = vz(iat, iw) - vcmz
-            end do
-         end if
+         if (iw == 1) write (stdout, *) 'Removing center of mass velocity.'
+
+         do iat = 1, natom
+            vx(iat, iw) = vx(iat, iw) - vcmx
+            vy(iat, iw) = vy(iat, iw) - vcmy
+            vz(iat, iw) = vz(iat, iw) - vcmz
+         end do
 
       end do
 
    end subroutine remove_comvel
 
-   subroutine remove_rotations(x, y, z, vx, vy, vz, masses, lremove)
+   ! This code has been adopted from the AmberTools package (file com.c, I think)
+   subroutine remove_rotations(x, y, z, vx, vy, vz, masses)
       use mod_system, only: dime
       use mod_general, only: natom, nwalk
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: masses(:)
-      ! This variable decides whether we actually remove the momenta
-      logical, intent(in) :: lremove
       real(DP) :: Lx, Ly, Lz, L_tot
-      real(DP) :: xx, xy, xz, yy, yz, zz
       real(DP) :: I(0:8), Iinv(0:8)
       real(DP) :: Omx, Omy, Omz, Om_tot
       integer :: iat, iw
       logical :: linear
 
-      ! Current code cannot handle linear systems...
-      ! We will probably crash in the case of linear n-atoms...
-      if (dime == 1 .or. natom < 3) then
-         write (*, *) 'WARNING: Cannot remove rotations from linear systems'
+      ! Single atom cannot rotate :-)
+      if (dime == 1 .or. natom == 1) then
          return
       end if
 
-      ! It would probably be more correct to calculate angular momentum
+      ! The current code cannot handle linear systems.
+      ! TODO: We should special-case the code at least for the 2-atom systems.
+      ! More than 2 atoms in a linear arrangment case is handled below.
+      if (natom == 2) then
+         write (stderr, *) 'WARNING: Cannot remove rotations from linear systems at the moment.'
+         return
+      end if
+
+      ! It would be more correct to calculate angular momentum
       ! for the whole bead necklace, same with COM velocity
       do iw = 1, nwalk
 
-         ! Angular momentum
-         Lx = 0.0D0
-         Ly = 0.0D0
-         Lz = 0.0D0
-
-         do iat = 1, natom
-            Lx = Lx + (y(iat, iw) * vz(iat, iw) - z(iat, iw) * vy(iat, iw)) * masses(iat)
-            Ly = Ly + (z(iat, iw) * vx(iat, iw) - x(iat, iw) * vz(iat, iw)) * masses(iat)
-            Lz = Lz + (x(iat, iw) * vy(iat, iw) - y(iat, iw) * vx(iat, iw)) * masses(iat)
-         end do
-
-         L_tot = dsqrt(Lx**2 + Ly**2 + Lz**2)
-
-         write (*, *) "Angular momenta:", Lx, Ly, Lz, L_tot
+         call calc_angular_momentum(x, y, z, vx, vy, vz, masses, iw, Lx, Ly, Lz, L_tot)
 
          ! tensor of inertia
-
-         xx = 0.0D0
-         xy = 0.0D0
-         xz = 0.0D0
-         yy = 0.0D0
-         yz = 0.0D0
-         zz = 0.0D0
-
-         do iat = 1, natom
-            xx = xx + x(iat, iw) * x(iat, iw) * masses(iat)
-            xy = xy + x(iat, iw) * y(iat, iw) * masses(iat)
-            xz = xz + x(iat, iw) * z(iat, iw) * masses(iat)
-            yy = yy + y(iat, iw) * y(iat, iw) * masses(iat)
-            yz = yz + y(iat, iw) * z(iat, iw) * masses(iat)
-            zz = zz + z(iat, iw) * z(iat, iw) * masses(iat)
-         end do
-
-         I(0) = (yy + zz)
-         I(1) = -xy
-         I(2) = -xz
-         I(3) = -xy
-         I(4) = (xx + zz)
-         I(5) = -yz
-         I(6) = -xz
-         I(7) = -yz
-         I(8) = (xx + yy)
+         call calc_inertia_tensor(x, y, z, masses, iw, I)
 
          ! inverse of tensor
          call mat_inv_3x3(I, Iinv, linear)
          if (linear) then
-            print*,'WARNING: Linear system detected, cannot remove rotational velocity.'
+            write (stderr, *) 'WARNING: Linear system detected, cannot remove rotational velocity.'
             return
          end if
 
@@ -245,18 +209,17 @@ contains
          !write(*,*)"Angular kinetic energy:", 0.5 * Om* Om_tot**2
          !write(*,*)"Angular kinetic energy:", 0.5 * * Om_tot**2
 
-         if (lremove) then
-            write (stdout, *) 'Removing angular momentum.'
-            do iat = 1, natom
-               vx(iat, iw) = vx(iat, iw) - Omy * z(iat, iw) + Omz * y(iat, iw)
-               vy(iat, iw) = vy(iat, iw) - Omz * x(iat, iw) + Omx * z(iat, iw)
-               vz(iat, iw) = vz(iat, iw) - Omx * y(iat, iw) + Omy * x(iat, iw)
-            end do
-         end if
+         write (stdout, *) 'Removing angular momentum.'
+         do iat = 1, natom
+            vx(iat, iw) = vx(iat, iw) - Omy * z(iat, iw) + Omz * y(iat, iw)
+            vy(iat, iw) = vy(iat, iw) - Omz * x(iat, iw) + Omx * z(iat, iw)
+            vz(iat, iw) = vz(iat, iw) - Omx * y(iat, iw) + Omy * x(iat, iw)
+         end do
 
       end do
 
    contains
+
       ! brute force inverse of 3x3 matrix
       subroutine mat_inv_3x3(a, ainv, linear)
          real(DP), intent(in) :: a(0:8)
@@ -294,6 +257,65 @@ contains
       end subroutine mat_inv_3x3
 
    end subroutine remove_rotations
+
+   ! https://en.wikipedia.org/wiki/Moment_of_inertia#Inertia_tensor
+   subroutine calc_inertia_tensor(x, y, z, masses, iw, I)
+      use mod_general, only: natom
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: masses(:)
+      integer, intent(in) :: iw ! Bead index
+      real(DP) :: I(0:8)
+      real(DP) :: xx, xy, xz, yy, yz, zz
+      integer :: iat
+
+      xx = 0.0D0
+      xy = 0.0D0
+      xz = 0.0D0
+      yy = 0.0D0
+      yz = 0.0D0
+      zz = 0.0D0
+
+      do iat = 1, natom
+         xx = xx + x(iat, iw) * x(iat, iw) * masses(iat)
+         xy = xy + x(iat, iw) * y(iat, iw) * masses(iat)
+         xz = xz + x(iat, iw) * z(iat, iw) * masses(iat)
+         yy = yy + y(iat, iw) * y(iat, iw) * masses(iat)
+         yz = yz + y(iat, iw) * z(iat, iw) * masses(iat)
+         zz = zz + z(iat, iw) * z(iat, iw) * masses(iat)
+      end do
+
+      I(0) = (yy + zz)
+      I(1) = -xy
+      I(2) = -xz
+      I(3) = -xy
+      I(4) = (xx + zz)
+      I(5) = -yz
+      I(6) = -xz
+      I(7) = -yz
+      I(8) = (xx + yy)
+   end subroutine calc_inertia_tensor
+
+   subroutine calc_angular_momentum(x, y, z, vx, vy, vz, masses, iw, Lx, Ly, Lz, L_tot)
+      use mod_general, only: natom
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
+      real(DP), intent(in) :: masses(:)
+      integer, intent(in) :: iw ! Bead index
+      real(DP), intent(out) :: Lx, Ly, Lz, L_tot
+      integer :: iat
+
+      Lx = 0.0D0
+      Ly = 0.0D0
+      Lz = 0.0D0
+
+      do iat = 1, natom
+         Lx = Lx + (y(iat, iw) * vz(iat, iw) - z(iat, iw) * vy(iat, iw)) * masses(iat)
+         Ly = Ly + (z(iat, iw) * vx(iat, iw) - x(iat, iw) * vz(iat, iw)) * masses(iat)
+         Lz = Lz + (x(iat, iw) * vy(iat, iw) - y(iat, iw) * vx(iat, iw)) * masses(iat)
+      end do
+
+      L_tot = dsqrt(Lx**2 + Ly**2 + Lz**2)
+   end subroutine calc_angular_momentum
 
    subroutine constrainP(px, py, pz, constrained_atoms)
       use mod_general, only: nwalk

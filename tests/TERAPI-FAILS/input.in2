@@ -2,7 +2,7 @@ Intentionally invalid ABIN input
 (requires PIMD without thermostat)
 
 &general
-mpi_sleep=-1
+mpi_milisleep=-1
 
 pot='_tera_'
 ipimd=1,

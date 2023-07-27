@@ -1,5 +1,5 @@
 &general
-max_wait_time=0.5
+max_mpi_wait_time=0.5
 
 pot='_tera_'
 ipimd=0,

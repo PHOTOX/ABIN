@@ -20,7 +20,7 @@ contains
       use mod_shake, only: nshake
       use mod_error, only: fatal_error
       use mod_arrays, only: hess
-      real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       ! fxab array is classical force in cartesian coordinates
       real(DP), intent(in) :: fxab(:, :), fyab(:, :), fzab(:, :)
       real(DP), intent(in) :: eclas
