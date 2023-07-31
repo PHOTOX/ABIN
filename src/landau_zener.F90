@@ -3,6 +3,7 @@
 !    Nonadiabatic nuclear dynamics of atomic collisions based on branching classical trajectories
 !    Andrey K. Belyaev and Oleg V. Lebedev
 ! Implemented by: J. Suchan, (J. Chalabala)
+! Modified by J. Janos (2023)
 
 ! No S/T TeraChem functionality YET
 ! No energy drift check
@@ -19,7 +20,7 @@ module mod_lz
    implicit none
    private
    public :: lz_init, lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize !Routines
-   public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz !User defined variables
+   public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz !User defined variables, [deltaE_lz] = eV
    public :: en_array_lz, tocalc_lz, istate_lz !Routine variables
    !Caveat: Every time we call force_clas en_array_lz is updated
 
@@ -90,7 +91,7 @@ contains
       end do
 
       !Allocate energy arrays
-      allocate (en_array_lz(nstate_lz, 3), en_array_lz_backup(nstate_lz, 3)) !last 3 energies (1: current, 2: n-1, 3: n-3)
+      allocate (en_array_lz(nstate_lz, 4), en_array_lz_backup(nstate_lz, 4)) !last 3 energies (1: current, 2: n-1, 3: n-3)
       allocate (fx_old(natom, nwalk), fy_old(natom, nwalk), fz_old(natom, nwalk))
       allocate (px_temp(natom, nwalk), py_temp(natom, nwalk), pz_temp(natom, nwalk))
       allocate (x_prev(natom, nwalk), y_prev(natom, nwalk), z_prev(natom, nwalk), &
@@ -143,7 +144,7 @@ contains
 
       real(DP) :: prob(nstate_lz), prob2(nstate_lz), probc
       real(DP) :: ran(10)
-      real(DP) :: en_diff(3), second_der, soc_matrix(nsinglet_lz, ntriplet_lz)
+      real(DP) :: en_diff(4), second_der, second_der_back, der_check, soc_matrix(nsinglet_lz, ntriplet_lz)
       integer :: ihop, icross, ihist, ist1, iat, ibeg, iend !, istatus
       integer :: S_to_T !itest, iost
       integer :: ist ! =istate_lz
@@ -175,10 +176,17 @@ contains
       end if
 
       do ist1 = ibeg, iend
-         if (ist1 == ist) cycle
-         do ihist = 1, 3
+         if (ist1 == ist) cycle 
+         ! only closest states are considered for hopping
+         if (ist1 > (ist + 1) .or. ist1 < (ist - 1)) cycle 
+
+         do ihist = 1, 4
             en_diff(ihist) = abs(en_array_lz(ist, ihist) - en_array_lz(ist1, ihist))
          end do
+
+         ! the energy condition is considered here, otherwise it messes up probabilities
+         if (abs(en_diff(2) * AUTOEV) > deltaE_lz) cycle
+
          ! Three point minima of adiabatic splitting Zjk
          if ((en_diff(1) > en_diff(2)) .and. (en_diff(2) < en_diff(3)) .and. (it > 2)) then
             second_der = ((en_diff(3) - 2 * en_diff(2) + en_diff(1)) / dt**2)
@@ -192,9 +200,36 @@ contains
                call fatal_error(__FILE__, __LINE__, 'LZ probability > 1')
             end if
 
+            ! Adding check for false 3P-minima
+            ! only for significant probabilities, for tiny probabilities this does not make sense
+            ! e.g. for parallel states (the whole LZ does not make sense for this case)
+            if (prob(ist1) > 0.01) then
+                ! Calculating backward second derivative formula. We are not using the newest energy 
+                ! but the previous three. Discontinuity would not affect this formula.
+                second_der_back = ((en_diff(2) - 2 * en_diff(3) + en_diff(4)) / dt**2)
+                ! We have central and backward second derivative formulas and compare them.
+                ! If the change is too large, we either almost hit the CI or we have discontinuity.
+                der_check = abs((second_der - second_der_back) / second_der)
+                ! If they differ by more then 130%, we have aa unphysical change of curvature --> certain discontinuity.
+                if (der_check > 1.3) then
+                    write (stdout,*) "ERROR: Change of curvature --> discontinuity in PES!"
+                    write (stdout,*) "Probability set to 0!"
+                    prob(ist1) = 0.0D0
+                ! 30% threshold was set empirically and should capture most discontinuities
+                ! yet it can also be a conical intersection. Thus, we just issue an warning
+                ! and let the user to evaluate on his own.
+                else if (der_check > 0.3) then
+                    write (stdout,*) "WARNING: Possible discontinuity in PES! Check PES.dat!"
+                end if
+           end if
+
          end if
       end do
-      !write(stdout,*) "diff1",en_diff(1),"diff2",en_diff(2),"diff3",en_diff(3)
+
+      ! LZ warning
+      if (sum(prob) > 1) then
+          write (stdout, *) "WARNING: Sum of hopping probabilities > 1. Breakdown of LZ assumptions"
+      end if
 
       !Hop?
       ihop = 0
@@ -231,7 +266,7 @@ contains
       if (ihop /= 0) then
          Ekin = ekin_v(vx, vy, vz)
          dE = (en_array_lz(ihop, 2) - en_array_lz(ist, 2))
-         Epot = abs(en_array_lz(ist, 1) - en_array_lz(ihop, 1))
+         Epot = abs(en_array_lz(ist, 1) - en_array_lz(ihop, 1)) ! This is not used anywhere in the code
          Epot2 = abs(en_array_lz(ist, 2) - en_array_lz(ihop, 2))
          write (fmt_in, '(I2.2)') istate_lz
          write (fmt_out, '(I2.2)') ihop
@@ -282,6 +317,7 @@ contains
             !e) Update only last energy history entry
             en_array_lz(:, 2) = en_array_lz_backup(:, 2)
             en_array_lz(:, 3) = en_array_lz_backup(:, 3)
+            en_array_lz(:, 4) = en_array_lz_backup(:, 4)
 
          else
             write (stdout, *) "NO adiabatic HOP (", trim(fmt_in), "->", trim(fmt_out), ")dE/a.u.", Epot2, &
@@ -553,7 +589,7 @@ contains
 
       write (fileunit, *) istate_lz
       do ist = 1, nstate_lz
-         write (fileunit, '(3ES25.16E3)') en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3)
+         write (fileunit, '(3ES25.16E3)') en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3), en_array_lz(ist, 4)
       end do
 
    end subroutine lz_restout
@@ -581,7 +617,7 @@ contains
       end if
 
       do ist = 1, nstate_lz
-         read (fileunit, *) en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3)
+         read (fileunit, *) en_array_lz(ist, 1), en_array_lz(ist, 2), en_array_lz(ist, 3), en_array_lz(ist, 4)
       end do
 
       !Store previous step values

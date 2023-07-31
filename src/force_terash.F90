@@ -75,6 +75,7 @@ contains
       ! Landau-Zener arrays
       if (ipimd == 5) then
          !Move old energies by 1
+         en_array_lz(:, 4) = en_array_lz(:, 3); 
          en_array_lz(:, 3) = en_array_lz(:, 2); 
          en_array_lz(:, 2) = en_array_lz(:, 1); 
          !Store the new one

@@ -4,7 +4,7 @@ Energies and gradients based on simulation
 &general
 pot='_tera_',
 irandom=1104190577,
-nstep=3,
+nstep=4,
 dt=10.,
 
 ipimd=5,
