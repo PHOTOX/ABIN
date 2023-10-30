@@ -19,8 +19,14 @@ if [[ -f ~/.vimrc ]];then
   $CWD/setup_vim.sh
 fi
 
-# Install fprettify to autoformat our code.
-# (needs Python 3)
-# NOTE: Due to a vast variety of different Python environments,
-# you're required to do this step yourself.
-#pip3 install --upgrade fprettify
+if which pip3;then
+  PIPEXE=pip3
+elif which pip;then
+  PIPEXE=pip
+fi
+if [[ -n $PIPEXE ]];then
+  echo "Installing configargparse via pip."
+  $PIPEXE install --user configargparse
+else
+  echo "Could not find pip. Please install configargparse Python package manually."
+fi

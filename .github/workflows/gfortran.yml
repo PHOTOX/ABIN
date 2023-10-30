@@ -17,6 +17,25 @@ env:
 
 jobs:
 
+  format:
+    name: Format check
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Install fprettify dependencies
+      run: pip install --user configargparse
+
+    - name: Run fprettify
+      run: |
+        ./autoformat.py
+        f=`git ls-files -m`; if [[ -n $f ]];then echo -e "ERROR: Detected unformatted files:\n$f";exit 1;fi
+
   basic_build:
     name: Basic build
     runs-on: ubuntu-20.04
@@ -30,7 +49,7 @@ jobs:
       CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 2
 
@@ -108,7 +127,7 @@ jobs:
       # intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 2
 
@@ -142,7 +161,7 @@ jobs:
       FC: gfortran
       CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 2
 
@@ -193,7 +212,7 @@ jobs:
       GCC_V: ${{ matrix.gcc_v}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 2
     - name: Set GFortran version
@@ -232,7 +251,7 @@ jobs:
     env:
       CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 2
 
@@ -294,7 +313,7 @@ jobs:
       CODECOV_NAME: ${{format('{0} GCC-{1} MPICH-{2}', github.job, matrix.gcc_v, matrix.mpich_v)}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 2
 
@@ -360,7 +379,7 @@ jobs:
       OPENMPI_PATCH: "2"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 2
     - name: OpenMPI build cache
@@ -405,7 +424,7 @@ jobs:
       CODECOV_NAME: ${{format('{0} PLUMED-{1}', github.job, matrix.plumed_v)}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 2
     - name: Plumed build cache
