@@ -244,7 +244,7 @@ contains
 
       do itera = 1, nteraservers
 
-         if (.not.communication_established(itera)) cycle
+         if (.not. communication_established(itera)) cycle
 
          write (stdout, '(A,I0)') 'Shutting down TeraChem server id = ', itera
 

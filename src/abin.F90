@@ -69,7 +69,7 @@ program abin
    write (stdout, *) ''
 
    ! LZ warning for too many states
-   if (ipimd == 5 .and. (nsinglet_lz > 2 .or. ntriplet_lz > 2 )) then
+   if (ipimd == 5 .and. (nsinglet_lz > 2 .or. ntriplet_lz > 2)) then
       write (*, *) 'WARNING: LZ was derived for a two-state problem. More states might cause unphysical behavior.'
       write (stdout, *) ''
    end if

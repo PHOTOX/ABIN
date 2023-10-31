@@ -30,8 +30,8 @@ contains
       use mod_error, only: fatal_error
       use mod_utils, only: file_exists_or_exit
       character(len=*), intent(inout) :: chinput, chcoords, chveloc
-      character(len=*), intent(inout) :: tc_server_name   ! TeraChem MPI interface
-      character(len=*), intent(inout) :: tcpb_input_file  ! TeraChem protobuf interface
+      character(len=*), intent(inout) :: tc_server_name ! TeraChem MPI interface
+      character(len=*), intent(inout) :: tcpb_input_file ! TeraChem protobuf interface
       character(len=*), intent(inout) :: tcpb_host
       integer, intent(inout) :: tcpb_port
       character(len=len(chinput)) :: arg

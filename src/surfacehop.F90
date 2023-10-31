@@ -912,7 +912,7 @@ contains
       a_temp = 0.5D0 * a_temp
       c_temp = b_temp**2 + 4 * a_temp * (en_array(instate) - en_array(outstate))
 
-      if (a_temp <= 0.0D0 ) then
+      if (a_temp <= 0.0D0) then
          write (stdout, *) 'WARNING: NACME vector is zero, rescaling velocities isotropically along the velocity vector'
          call try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
          return

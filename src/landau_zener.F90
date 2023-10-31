@@ -106,23 +106,23 @@ contains
    end subroutine lz_init
 
    subroutine lz_init_terash()
-       use mod_general, only: natom
-       use mod_sh, only: en_array, tocalc, nacx, nacy, nacz
+      use mod_general, only: natom
+      use mod_sh, only: en_array, tocalc, nacx, nacy, nacz
 
-       nstate = nstate_lz !Needed in init_terash
-       inac = 2           !Turns off couplings calculation
+      nstate = nstate_lz !Needed in init_terash
+      inac = 2 !Turns off couplings calculation
 
-       !Based on sh_init() routine, sharing most of the functions
-       !TODO: Break dependence - separation of MPI interface needed
-       allocate (en_array(nstate_lz))
-       allocate (nacx(natom, nstate_lz, nstate_lz))
-       allocate (nacy(natom, nstate_lz, nstate_lz))
-       allocate (nacz(natom, nstate_lz, nstate_lz))
-       allocate (tocalc(nstate, nstate))
-       en_array = 0.0D0
-       tocalc = 0
-       tocalc(istate_lz, istate_lz) = 1
-       call set_current_state(istate_lz)
+      !Based on sh_init() routine, sharing most of the functions
+      !TODO: Break dependence - separation of MPI interface needed
+      allocate (en_array(nstate_lz))
+      allocate (nacx(natom, nstate_lz, nstate_lz))
+      allocate (nacy(natom, nstate_lz, nstate_lz))
+      allocate (nacz(natom, nstate_lz, nstate_lz))
+      allocate (tocalc(nstate, nstate))
+      en_array = 0.0D0
+      tocalc = 0
+      tocalc(istate_lz, istate_lz) = 1
+      call set_current_state(istate_lz)
    end subroutine lz_init_terash
 
    !LZ singlets hop
@@ -176,9 +176,9 @@ contains
       end if
 
       do ist1 = ibeg, iend
-         if (ist1 == ist) cycle 
+         if (ist1 == ist) cycle
          ! only closest states are considered for hopping
-         if (ist1 > (ist + 1) .or. ist1 < (ist - 1)) cycle 
+         if (ist1 > (ist + 1) .or. ist1 < (ist - 1)) cycle
 
          do ihist = 1, 4
             en_diff(ihist) = abs(en_array_lz(ist, ihist) - en_array_lz(ist1, ihist))
@@ -204,31 +204,31 @@ contains
             ! only for significant probabilities, for tiny probabilities this does not make sense
             ! e.g. for parallel states (the whole LZ does not make sense for this case)
             if (prob(ist1) > 0.01) then
-                ! Calculating backward second derivative formula. We are not using the newest energy 
-                ! but the previous three. Discontinuity would not affect this formula.
-                second_der_back = ((en_diff(2) - 2 * en_diff(3) + en_diff(4)) / dt**2)
-                ! We have central and backward second derivative formulas and compare them.
-                ! If the change is too large, we either almost hit the CI or we have discontinuity.
-                der_check = abs((second_der - second_der_back) / second_der)
-                ! If they differ by more then 130%, we have aa unphysical change of curvature --> certain discontinuity.
-                if (der_check > 1.3) then
-                    write (stdout,*) "ERROR: Change of curvature --> discontinuity in PES!"
-                    write (stdout,*) "Probability set to 0!"
-                    prob(ist1) = 0.0D0
-                ! 30% threshold was set empirically and should capture most discontinuities
-                ! yet it can also be a conical intersection. Thus, we just issue an warning
-                ! and let the user to evaluate on his own.
-                else if (der_check > 0.3) then
-                    write (stdout,*) "WARNING: Possible discontinuity in PES! Check PES.dat!"
-                end if
-           end if
+               ! Calculating backward second derivative formula. We are not using the newest energy
+               ! but the previous three. Discontinuity would not affect this formula.
+               second_der_back = ((en_diff(2) - 2 * en_diff(3) + en_diff(4)) / dt**2)
+               ! We have central and backward second derivative formulas and compare them.
+               ! If the change is too large, we either almost hit the CI or we have discontinuity.
+               der_check = abs((second_der - second_der_back) / second_der)
+               ! If they differ by more then 130%, we have aa unphysical change of curvature --> certain discontinuity.
+               if (der_check > 1.3) then
+                  write (stdout, *) "ERROR: Change of curvature --> discontinuity in PES!"
+                  write (stdout, *) "Probability set to 0!"
+                  prob(ist1) = 0.0D0
+                  ! 30% threshold was set empirically and should capture most discontinuities
+                  ! yet it can also be a conical intersection. Thus, we just issue an warning
+                  ! and let the user to evaluate on his own.
+               else if (der_check > 0.3) then
+                  write (stdout, *) "WARNING: Possible discontinuity in PES! Check PES.dat!"
+               end if
+            end if
 
          end if
       end do
 
       ! LZ warning
       if (sum(prob) > 1) then
-          write (stdout, *) "WARNING: Sum of hopping probabilities > 1. Breakdown of LZ assumptions"
+         write (stdout, *) "WARNING: Sum of hopping probabilities > 1. Breakdown of LZ assumptions"
       end if
 
       !Hop?
