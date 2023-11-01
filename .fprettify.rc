@@ -1,6 +1,6 @@
-# Replace FORTRAN style relational operators with C-style
-# to make our code more readable for non-FORTRAN programmers
-# .e.g '.lt.' -> '<'
+# Replace Fortran-style relational operators with C-style
+# to make our code more readable for non-Fortran programmers
+# for example '.lt.' to '<'
 enable-replacements=True
 c-relations=True
 
@@ -25,15 +25,5 @@ enable-decl=True
 # Don't indent pre-processor statements
 disable-fypp=True
 
-# Change case of intrisics, currently
-# does not work in this file, per:
-# https://github.com/pseewald/fprettify/issues/94 
-# For now, we need to pass this as CLI params, e.g.
-# fprettify src/plumed.F90 -c .fprettify.rc --case 1 1 1 2
 case=[1,1,1,2]
-
-# Note that the exclude option currently does not work per
-# https://github.com/pseewald/fprettify/issues/110
-# For now, specify the excluded files manually as:
-# fprettify -r -case 1 1 1 2 -e random.F90 -e fftw3.F90 -e force_cp2k.F90 src/
 exclude=[random.F90,fftw3.F90,force_cp2k.F90]

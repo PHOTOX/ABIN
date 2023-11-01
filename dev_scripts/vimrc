@@ -5,8 +5,4 @@ syntax on
 
 filetype indent on
 filetype indent plugin on
-
-" use gqG to autoformat the whole open file with fprettify
-" TODO: Figure out how to autoformat on save
-autocmd Filetype fortran setlocal formatprg=fprettify\ --silent
 " END OF ABIN SETUP

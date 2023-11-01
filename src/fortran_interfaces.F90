@@ -4,7 +4,7 @@
 ! Some functions are currently outside of modules due to
 ! circular dependencies.
 module mod_interfaces
-   use, intrinsic :: iso_c_binding, only: c_int, c_int32_t
+   use, intrinsic :: iso_c_binding, only: C_INT, C_INT32_T
    use mod_const, only: DP
    public
    interface
@@ -58,9 +58,9 @@ module mod_interfaces
       ! https://cyber.dabamos.de/programming/modernfortran/sleep.html
       ! int usleep(useconds_t useconds)
       function usleep(useconds) bind(c, name='usleep')
-         import :: c_int, c_int32_t
-         integer(kind=c_int32_t), value :: useconds
-         integer(kind=c_int) :: usleep
+         import :: C_INT, C_INT32_T
+         integer(kind=C_INT32_T), value :: useconds
+         integer(kind=C_INT) :: usleep
       end function usleep
 
    end interface

@@ -5,7 +5,7 @@ Here's a couple of guidelines that you should keep in mind.
 
 ## Setup your environment
 
-To setup your environment, run:
+To setup your Unix environment, run:
 ```sh
 cd dev_scripts && ./setup_dev_environment.sh
 ```
@@ -13,11 +13,8 @@ Read through the script first to see what it does (it's not long, I promise).
 It is useful especially if you use VIM as your text editor, as it sets it up to use our code style rules.
 If you use a different editor, we welcome if you contribute your config files!
 
-You also should install `fprettify`, which is a Python program that we use for autoformatting the Fortran code. Due to a large variability of Python installation options and environments, we do not try to install it automatically. For example, you can use `pip` (or `pip3` if your default is Python2). 
-
-```sh
-pip install --upgrade fprettify
-```
+The script also tries to install the `configargparse` Python dependency,
+which is needed for the code autoformatting (see below).
 
 ### Install dev dependencies
 
@@ -50,9 +47,13 @@ end module mod_my_module
 ### Code formatting
 
 We're using `fprettify` to automatically format our code; you should use it too!
-That way you don't need to worry about it and just apply `fprettify` at the end, like so:
+That way you don't need to worry about it and just apply the autoformatter at the end, like so:
+```console
+./autoformat.py
 ```
-fprettify src/file_you_modified.F90 -c .fprettify.rc --case 1 1 1 2
+This will autoformat all Fortran files in `src/`. You can also autoformat individual files:
+```console
+./autoformat.py source.f90
 ```
 
 Here's a quick summary of our formatting style, as it is defined in `.fprettify.rc` config file.
@@ -62,7 +63,7 @@ Here's a quick summary of our formatting style, as it is defined in `.fprettify.
  - use capital letters only for defined constants (e.g. those from module `mod_const`). We use lower case for everything else.
  - use `snake_case` for naming your subroutines and variables. (not `camelCase`)
  - use C-style relational operators (`< > == /=`) instead of the old FORTRAN style (`.gt. .lt.`)
- - comments should start at the same indentation level as the code they are commnenting.
+ - comments should start at the same indentation level as the code they are commenting.
     - use an exclamation mark to start a comment
 
 ### Inspecting Git history

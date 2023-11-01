@@ -50,6 +50,7 @@ you should always clean up before the recompilation:
 ## Running the code
 
 After compilation, the executable binary should be available in `bin/abin`.
+You can copy the binary somewhere in your PATH, or add bin/ to your PATH.
 To execute an MD simulation using an input file `input.in` and initial XYZ coordinates in file `geom.xyz`, run:
 
 ```console
