@@ -3,207 +3,155 @@
 # You should't need to modify this file!
 # Specification of CAS wavefunction is in file "bagel.inp"
 
-cd BAGEL-SH
+set -u
+
+cd $(dirname $0)
 source bagel.inp
 
 timestep=$1
 ibead=$2
 input=input$ibead
-thresh=1.0e-8       # deafult value is 1.0e-8, shouldn't be modified. In the case of persisting convergence errors, see the "CHECK CHONVERGENCES" section bellow
+geom="../geom.dat.$ibead"
 
-##############################
-
-# setting shift for caspt2 to default 0.25 if not specified in bagel.inp
-if [[ -z $shift ]]; then
-    shift=0.25
-fi
-
-rm -f ../engrad.dat.$ibead ../nacm.dat
-
-#-How many atoms?
-natom=$(wc -l < ../geom.dat.$ibead)
-
-# reading from state.dat
-# Number of states,state we are on and which NACM to compute
+# Read Number of states, current state which NACM to compute from state.dat
 read -t 2 -a nstate
 read -t 2 -a tocalc
 
-# BAGEL-CASPT2
-cat > $input.json << EOF
-{ "bagel" : [
+thresh="1.0e-8"   # default value is 1.0e-8 and shouldn't be modified. 
+                  # In the case of persisting convergence errors, see the "CHECK CHONVERGENCES" section bellow
 
-{
-    "title" : "molecule",
-    "basis" : "$basis",
-    "df_basis" : "$df_basis",
-    "angstrom" : "true",
-    "geometry" : [
-EOF
+# Note that the actual filename is orbitals.archive
+ORBITAL_FILE=orbitals
 
-# section for geometry specification in json format
-awk -v natom="$natom" '{printf "{ \"atom\" : \"%s\", \"xyz\" : [ %.10f, %.10f, %.10f ]}", $1, $2, $3, $4} NR != natom {print ","}END{print ""}'  ../geom.dat.$ibead >> $input.json
-cat >> $input.json << EOF
-    ]
-},
-EOF
+file_exists $geom
 
-if [ $timestep -eq 0 ];then
-cat >> $input.json << EOF
-{
-    "title" : "$hf_variant",
-    "charge" : $charge,
-    "nspin" : $nspin
-},
+rm -f ../engrad.dat.$ibead ../nacm.dat FORCE_*
 
-EOF
+### GENERATE BAGEL INPUT
+specify_molecule "$geom" "$input.json"
+
+if [[ -f "$ORBITAL_FILE.archive" ]]; then
+    # Load orbitals if the archive file exists
+    load_orbitals $ORBITAL_FILE $input.json
+else
+    # Calculate HF guess if the initial orbitals are not provided via the 'orbitals.archive' file
+    generate_hf_orbitals $input.json
 fi
 
-
-# loading orbitals from previous step if not the first step
-if [ $timestep -ne 0 ]; then
-cat >> $input.json << EOF
-{
-    "title" : "load_ref",
-    "file" : "orbitals",
-    "continue_geom" : false
-},
-EOF
-fi
-
-cat >> $input.json << EOF
-{
-    "title" : "forces",
-    "grads" : [
-EOF
-
-istate=0
+# Determine for which state we need to calculate forces
 for ((ist=0; ist<nstate; ist++))
 do
-if [[ ${tocalc[$ist]} -eq 1 ]];then
-    echo '{ "title" : "force", "target" : '"$ist"' }' >> $input.json
-    istate=$ist
-fi
+  if [[ ${tocalc[$ist]} -eq 1 ]]; then
+    if [[ -z ${target_state-} ]]; then
+      target_state=$ist
+    else
+      >&2 echo "ERROR: Invalid tocalc, cannot compute gradient for more than one state"
+      exit 2
+    fi
+  fi
 done
 
 cat >> $input.json << EOF
-    ],
+  {
+    "title" : "forces",
     "export" : true,
+    "grads" : [
+      {
+        "title": "force",
+        "target": $target_state
+      }
+    ],
 EOF
 
+# CAS section
+if [[ $method == "xms_caspt2" ]]; then
 
-# preparing if for method of choice selection
-if [[ $method == "xms_caspt2" ]];
-then
+    print_cas "caspt2" "$thresh" "$maxiter_CASSCF" $input.json
+    print_caspt2 "true" "$thresh" "$maxiter_CASPT2" "$input.json"
 
-    cat >> $input.json << EOF
-    "method" : [ {
-        "title" : "caspt2",
-        "nspin" : $nspin,
-        "charge" : $charge,
-        "smith" : {
-            "method" : "caspt2",
-            "xms" : "true",
-            "shift" : $shift,
-            "maxiter" : $maxiter_CASPT2,
-            "thresh" : $thresh
-        },
-EOF
-elif [[ $method == "ms_caspt2" ]];
-then
-    cat >> $input.json << EOF
-    "method" : [ {
-        "title" : "caspt2",
-        "nspin" : $nspin,
-        "charge" : $charge,
-        "smith" : {
-            "method" : "caspt2",
-            "ms" : "true",
-            "xms" : "false",
-            "shift" : $shift,
-            "maxiter" : $maxiter_CASPT2,
-            "thresh" : $thresh
-        },
-EOF
-elif [[ $method == "sa_casscf" ]];
-then
-    cat >> $input.json << EOF
-    "method" : [ {
-        "title" : "casscf",
-        "nspin" : $nspin,
-        "charge" : $charge,
-EOF
+elif [[ $method == "ms_caspt2" ]]; then
+
+    print_cas "caspt2" "$thresh" "$maxiter_CASSCF" $input.json
+    print_caspt2 "false" "$thresh" "$maxiter_CASPT2" "$input.json"
+
+elif [[ $method == "sa_casscf" ]]; then
+
+    print_cas "casscf" "$thresh" "$maxiter_CASSCF" "$input.json"
+
 else
-    echo "Unknown method ($method). Available only \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\""
-fi
 
-cat >> $input.json << EOF 
-        "maxiter" : $maxiter_CASSCF,
-        "nact" : $nact,
-        "nclosed" : $nclosed,
-        "nstate" : $nstates
-  } ]
-},
-
-{
-    "title" : "save_ref",
-    "file" : "orbitals"
-}
-
-]}
-EOF
-
-#----------BAGEL JOB-------------------------
-source SetEnvironment.sh BAGEL
-$BAGELEXE $input.json > $input.out
-
-
-echo "TIMESTEP = $timestep" >> $input.out.all
-echo "####################" >> $input.out.all
-cat $input.out >> $input.out.all
-
-
-############ CHECK CHONVERGENCES + RESTART BAGEL JOB with  convergence threshold and increased itterations  ########################
-
-if $( grep -q 'ERROR: EXCEPTION RAISED:  SMITH convergence not reached.' $input.out ) ;then
-    echo "ERROR: Convergence in force calculation not achieved, try again with different settings! Error in SMITH."
-    cp $input.out $input.out.error.$timestep
-    cp $input.json $input.second_try.json
-    sed -z -i "s/\"maxiter\" : $maxiter_CASPT2,\n            \"thresh\" : $thresh/\"maxiter\" : 1000,\n            \"thresh\" : 1.0e-6/"  $input.second_try.json
-    ####################run the job for the second time###########################
-    # specific launching of BAGEL - modify for different machines
-    $BAGELEXE  $input.second_try.json > $input.second_try.out
-
-elif $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ) ; then
-    echo " ERROR: convergence during second-order optimization not reached (usually CASSCF not converged)"
-    cp $input.out $input.out.error.$timestep  
-    cp $input.json $input.second_try.json
-    sed -z -i "s/\"maxiter\" : $maxiter_CASSCF,\n        \"nact\" : $nact,/\"maxiter\" : 1500,\n        \"nact\" : $nact,/" $input.second_try.json
-    ####################run the job for the second time###########################
-    # specific launching of BAGEL - modify for different machines
-    $BAGELEXE  $input.second_try.json > $input.second_try.out
-fi
-
-if $( grep -q 'ERROR: EXCEPTION RAISED:' $input.second_try.out ) ;then
-    echo "ERROR: second try of forces calculation did not converge"
+    >&2 echo "ERROR: Unknown method ($method). Specify one of \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\" in bagel.inp"
     exit 2
+
 fi
 
-# COMMENT: Authors of BAGEL claim, that CASSCF implementation is great and any convergence error must have origin in wrong active space or somethink like that. 
-# COMMENT: Therefore, I skipped changing covergence criteria during CASSCF routine. 
+echo -e "      }]\n  }," >> $input.json
 
+save_orbitals $ORBITAL_FILE $input.json
 
-####################################################################
+if [[ ! -f "initial_orbitals.molden" ]];then
+    print_molden "initial_orbitals.molden" $input.json
+else
+    print_molden "orbitals.molden" $input.json
+fi
+
+echo "]}" >> $input.json
+### END OF INPUT GENERATION 
+
+### EXECUTE BAGEL
+exec_bagel $input.json $input.out
+returncode=$?
+
+### CHECK CHONVERGENCES + RESTART BAGEL JOB with convergence threshold and increased itterations  ###
+
+casscf_error='EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
+smith_error='EXCEPTION RAISED:  SMITH convergence not reached'
+
+# First check if CASSCF converged, then if CASPT2 converged, if computed.
+if grep -q "$casscf_error" $input.out; then
+    savefile=$input.out.error.$timestep
+    >&2 echo " ERROR: convergence during second-order optimization not reached (usually CASSCF not converged) - thresh set to 1.0e-7"
+    >&2 echo "See file $savefile"
+    cp $input.out $savefile
+    # TODO: Recognize a difference between CASSCF and CASPT2 maxiter
+    sed -i "s/\"thresh\": $thresh/\"thresh\": 1.0e-7/g" $input.json
+    sed -i "s/\"maxiter\": $maxiter_CASSCF/\"maxiter\": 600/" $input.json
+    # Run the job for the second time
+    exec_bagel $input.json $input.out
+    returncode=$?
+fi
+
+if grep -q "$smith_error" $input.out; then
+    savefile=$input.out.error.$timestep
+    >&2 echo "ERROR: Convergence in force calculation not achieved, trying again with looser thresholds and more iterations."
+    >&2 echo "See file $savefile"
+    cp $input.out $savefile
+    sed -z -i "s/\"thresh\": $thresh/\"thresh\": 1.0e-7/g" $input.json
+    sed -i "s/\"maxiter\": $maxiter_CASPT2/\"maxiter\": 1000/g" $input.json
+    # Run the job for the second time
+    exec_bagel $input.json $input.out
+    returncode=$?
+fi
+
+if grep -q 'EXCEPTION RAISED:' $input.out; then
+    errmsg="ERROR: BAGEL calculation failed!"
+    bagel_error "$errmsg" "$input.out" "$input.out.error.$timestep"
+fi
+
+if [[ $returncode -ne 0 ]];then
+    errmsg="ERROR: Bagel returned exit code $returncode"
+    bagel_error "$errmsg" "$input.out" "$input.out.error.$timestep"
+fi
 
 # NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN
 
-# Extracting energy.
+# Extract energy.
+file_exists "ENERGY.out"
 cat ENERGY.out > ../engrad.dat.$ibead
-cat ENERGY.out > ../engrad_all.dat
 
-# Extracting GRADIENT
-tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat.$ibead
-tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad_all.dat
+# Extract gradient
+file_exists "FORCE_${target_state}.out"
+tail -n +2 "FORCE_${target_state}.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat.$ibead
 
-cat ../state.dat >> ../stateall.dat
-
-rm -f FORCE_*
+cat ../state.dat >> state.dat.all
+rm ../state.dat

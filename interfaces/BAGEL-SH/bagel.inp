@@ -1,12 +1,174 @@
-basis=cc-pvdz
-df_basis=cc-pvdz-jkfit
-nstates=4
-nact=4
-nclosed=6
-maxiter_CASSCF=250      # maximum number of CASSCF iterations
-maxiter_CASPT2=250      # maximum number of CASPT2 iterations
-nspin=1                 # 0 singlet, 1 dublet, 2 triplet ...
-charge=1
+### Electronic structure parameters
+basis=aug-cc-pvdz
+df_basis=cc-pvtz-jkfit
+nstates=3
+nact=8
+nclosed=15
+maxiter_CASSCF=600      # maximum number of CASSCF iterations
+maxiter_CASPT2=350      # maximum number of CASPT2 iterations
+nspin=0                 # 0 singlet, 1 dublet, 2 triplet ...
+charge=0
 hf_variant=rohf         # hf/rohf/uhf;  hf stands for restricted hf
+                        # only used for initial orbitals in step 0 if not provided
 method=xms_caspt2       # xms_caspt2/ms_caspt2/sa_casscf
-shift=0.25              # real shift for caspt2 (default 0.25)
+shift=0.2               # real shift for caspt2 (default 0.25)
+
+### Setup BAGEL executable and number of cores 
+# You might need to modify how to launch BAGEL executable,
+# depending on how you compiled it and you cluster setup.
+source /nobackup/zcxn55/SOFTWARE/RUN_PROGRAMs/load-BAGEL.sh
+export BAGEL_NUM_THREADS=2
+export MKL_NUM_THREADS=2
+export BAGELEXE="mpirun -n 4 BAGEL"
+
+### Helper functions, no need to modify
+function exec_bagel {
+    input_file=$1
+    output_file=$2
+    # BAGEL does not print its input so we will prepend it.
+    cp $input_file $output_file
+    $BAGELEXE $input_file >> $output_file 2>&1
+    exitcode=$?
+
+    echo "TIMESTEP = $timestep" >> $output_file.all
+    echo "####################" >> $output_file.all
+    cat $output_file >> $input.out.all
+    return $exitcode
+}
+
+function bagel_error {
+    errmsg="$1"
+    bagel_output="$2"
+    copy="$3"
+    if [[ -f "$bagel_output" && -n "$copy" ]]; then
+        cp "$bagel_output" "$copy"
+    fi
+    >&2 echo -e "${errmsg}"
+    >&2 echo "Inspect file $(dirname $0)/$copy"
+    exit 2
+}
+
+function file_exists {
+    if [[ ! -f $1 ]];then
+        >&2 echo "File \"$1\" does not exist!"
+        exit 2
+    fi
+}
+
+### FUNCTIONS FOR GENERATING BAGEL INPUT
+ 
+# This function must be called first to start the bagel input
+function specify_molecule {
+    # XYZ coordinates provided by ABIN in geom.dat
+    xyz=$1
+    # Name of the bagel input file we are creating
+    inp=$2
+    natom=$(wc -l < $xyz)
+
+    # NOTE: $basis and $df_basis MUST be defined at the top of the file!
+    cat > $inp << EOF
+{"bagel": [
+  {
+    "title": "molecule",
+    "basis": "$basis",
+    "df_basis": "$df_basis",
+    "angstrom": "true",
+    "geometry": [
+EOF
+
+    # Geometry specification in json format
+    awk -v natom="$natom" '{printf "\t{\"atom\": \"%s\", \"xyz\": [ %.10f, %.10f, %.10f ]}", $1, $2, $3, $4} NR != natom {print ","}END{print ""}'  $xyz >> $inp
+    echo -e "    ]\n  }," >> $inp
+}
+
+function load_orbitals {
+    orbfile=$1
+    inp=$2
+    cat >> $inp << EOF
+  {
+    "title": "load_ref",
+    "file": "$orbfile",
+    "continue_geom": false
+  },
+EOF
+}
+
+function save_orbitals {
+    orbfile=$1
+    inp=$2
+    cat >> $inp << EOF
+  {
+    "title": "save_ref",
+    "file": "$orbfile"
+  },
+EOF
+}
+
+function print_molden {
+    moldenfile=$1
+    inp=$2
+    cat >> $inp << EOF
+  {
+    "title": "print",
+    "file": "$moldenfile",
+    "orbitals": true
+  }
+EOF
+}
+
+# Specify for which state we calculate the forces
+# (for now we only support one target state)
+# This needs to be called before the CAS section.
+function print_forces {
+    target_state=$1
+    inp=$2
+    cat >> $inp << EOF
+  {
+    "title" : "forces",
+    "export" : true,
+    "grads" : [
+      {
+        "title": "force",
+        "target": $target_state
+      }
+    ],
+EOF
+}
+
+function print_cas {
+    method=$1
+    thresh=$2
+    maxiter=$3
+    inp=$4
+    cat >> $inp << EOF
+    "method": [{
+      "title": "$method",
+      "nspin": $nspin,
+      "charge": $charge,
+      "maxiter": $maxiter,
+      "thresh": $thresh,
+      "nact": $nact,
+      "nclosed": $nclosed,
+      "nstate": $nstates,
+EOF
+# NOTE: We have to leave this unclosed since we might need to append CASPT2 input
+}
+
+function print_caspt2 {
+    # "true" or "false"
+    xms=$1
+    thresh=$2
+    maxiter=$3
+    inp=$4
+    # TODO: Make it possible to use real shift
+    cat >> $inp << EOF
+      "smith": {
+        "method": "caspt2",
+        "xms": "$xms",
+        "shift": $shift,
+        "shift_imag": true,
+        "maxiter": $maxiter,
+        "thresh": $thresh
+      }
+EOF
+}
