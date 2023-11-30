@@ -76,6 +76,8 @@ elif [[ $method == "ms_caspt2" ]]; then
 elif [[ $method == "sa_casscf" ]]; then
 
     print_cas "casscf" "$nac_thresh" "$maxiter_CASSCF" "$input.json"
+    # Remove extra dangling comma
+    sed -i '$ s/,$//' "$input.json"
 
 else
     >&2 echo "ERROR: Unknown method ($method). Specify one of \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\" in bagel.inp"

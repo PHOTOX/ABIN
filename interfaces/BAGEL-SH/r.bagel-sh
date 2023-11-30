@@ -77,6 +77,8 @@ elif [[ $method == "ms_caspt2" ]]; then
 elif [[ $method == "sa_casscf" ]]; then
 
     print_cas "casscf" "$thresh" "$maxiter_CASSCF" "$input.json"
+    # Remove extra dangling comma
+    sed -i '$ s/,$//' "$input.json"
 
 else
 
