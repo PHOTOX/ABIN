@@ -25,7 +25,7 @@ ORBITAL_FILE=orbitals
 
 file_exists $geom
 
-rm -f ../engrad.dat.$ibead ../nacm.dat FORCE_*
+rm -f ../engrad.dat.$ibead ../nacm.dat ENERGY.out FORCE_*
 
 ### GENERATE BAGEL INPUT
 specify_molecule "$geom" "$input.json"
@@ -111,11 +111,12 @@ smith_error='EXCEPTION RAISED:  SMITH convergence not reached'
 
 # First check if CASSCF converged, then if CASPT2 converged, if computed.
 if grep -q "$casscf_error" $input.out; then
-    savefile=$input.out.error.$timestep
-    >&2 echo " ERROR: convergence during second-order optimization not reached (usually CASSCF not converged) - thresh set to 1.0e-7"
+    error=true
+    savefile=$input.out.casscf_error.$timestep
+    >&2 echo "ERROR: CASSCF did not converge - let's set thresh=1.0e-7 and try again."
     >&2 echo "See file $savefile"
     cp $input.out $savefile
-    # TODO: Recognize a difference between CASSCF and CASPT2 maxiter
+    # TODO: This also changes thresh for CASPT2, is that a problem?
     sed -i "s/\"thresh\": $thresh/\"thresh\": 1.0e-7/g" $input.json
     sed -i "s/\"maxiter\": $maxiter_CASSCF/\"maxiter\": 600/" $input.json
     # Run the job for the second time
@@ -124,11 +125,12 @@ if grep -q "$casscf_error" $input.out; then
 fi
 
 if grep -q "$smith_error" $input.out; then
-    savefile=$input.out.error.$timestep
-    >&2 echo "ERROR: Convergence in force calculation not achieved, trying again with looser thresholds and more iterations."
+    error=true
+    savefile=$input.out.caspt2_error.$timestep
+    >&2 echo "ERROR: CASPT2 did not convergence, trying again with looser thresh=1.0e-7 and more iterations."
     >&2 echo "See file $savefile"
     cp $input.out $savefile
-    sed -z -i "s/\"thresh\": $thresh/\"thresh\": 1.0e-7/g" $input.json
+    sed -i "s/\"thresh\": $thresh/\"thresh\": 1.0e-7/g" $input.json
     sed -i "s/\"maxiter\": $maxiter_CASPT2/\"maxiter\": 1000/g" $input.json
     # Run the job for the second time
     exec_bagel $input.json $input.out
@@ -154,6 +156,10 @@ cat ENERGY.out > ../engrad.dat.$ibead
 # Extract gradient
 file_exists "FORCE_${target_state}.out"
 tail -n +2 "FORCE_${target_state}.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat.$ibead
+
+if [[ ${error:-false} = "true" ]]; then
+    >&2 echo "Calculation converged with looser tresholds for timestep $timestep"
+fi
 
 cat ../state.dat >> state.dat.all
 rm ../state.dat

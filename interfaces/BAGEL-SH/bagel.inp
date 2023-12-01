@@ -4,8 +4,8 @@ df_basis=cc-pvdz-jkfit
 nstates=3
 nact=8
 nclosed=15
-maxiter_CASSCF=600      # maximum number of CASSCF iterations
-maxiter_CASPT2=350      # maximum number of CASPT2 iterations
+maxiter_CASSCF=500      # maximum number of CASSCF iterations
+maxiter_CASPT2=300      # maximum number of CASPT2 iterations
 nspin=0                 # 0 singlet, 1 dublet, 2 triplet ...
 charge=0
 hf_variant=rohf         # hf/rohf/uhf;  hf stands for restricted hf
@@ -83,6 +83,17 @@ EOF
     # Geometry specification in json format
     awk -v natom="$natom" '{printf "\t{\"atom\": \"%s\", \"xyz\": [ %.10f, %.10f, %.10f ]}", $1, $2, $3, $4} NR != natom {print ","}END{print ""}'  $xyz >> $inp
     echo -e "    ]\n  }," >> $inp
+}
+
+function generate_hf_orbitals {
+    inp=$1
+    cat >> $inp << EOF
+  {
+    "title" : "$hf_variant",
+    "charge" : $charge,
+    "nspin" : $nspin
+  },
+EOF
 }
 
 function load_orbitals {
