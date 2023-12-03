@@ -19,6 +19,9 @@ read -t 2 -a tocalc
 
 thresh_CASSCF="1.0e-8"
 thresh_CASPT2="1.0e-8"
+# We will try to converge CASSCF by increasing thresh
+# until we hit max_thresh_CASSCF
+max_thresh_CASSCF="6.0e-6"
 
 # Note that the actual filename is orbitals.archive
 ORBITAL_FILE=orbitals
@@ -84,33 +87,45 @@ fi
 
 echo "]}" >> $input
 }
-
-generate_input $input.json
 ### END OF INPUT GENERATION 
 
+error=false
+function converge_casscf {
+    input=$1
+    output=$2
+    casscf_error='EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
+    generate_input "$input"
+
+    # Execute BAGEL
+    exec_bagel $input $input
+    returncode=$?
+    if grep -q "$casscf_error" $output; then
+        error=true
+        savefile=$output.casscf_error.$timestep
+        cp $output $savefile
+        >&2 echo "ERROR: CASSCF did not converge, see file $savefile"
+	# Return if we reached the maximum threshold value,
+	# further increase would lead to inaccurate results.
+	if awk "BEGIN{exit !($thresh_CASSCF >= $max_thresh_CASSCF)}" ;then
+	    return 1
+	fi
+	# Retry again 5*thresh
+	thresh_CASSCF=$(awk "BEGIN{print $thresh_CASSCF*5}")
+        maxiter_CASSCF=600
+        >&2 echo "Trying again with thresh=$thresh_CASSCF and maxiter=$maxiter_CASSCF"
+	converge_casscf $input $output
+        returncode=$?
+    fi
+    return $returncode
+}
+
 ### EXECUTE BAGEL
-exec_bagel $input.json $input.out
+converge_casscf $input.json $input.out
 returncode=$?
 
 ### CHECK CHONVERGENCES + RESTART BAGEL JOB with convergence threshold and increased itterations  ###
 
-casscf_error='EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
 smith_error='EXCEPTION RAISED:  SMITH convergence not reached'
-
-# First check if CASSCF converged, then if CASPT2 converged, if computed.
-if grep -q "$casscf_error" $input.out; then
-    error=true
-    savefile=$input.out.casscf_error.$timestep
-    thresh_CASSCF="1.0e-7"
-    maxiter_CASSCF=600
-    >&2 echo "ERROR: CASSCF did not converge, trying again with thresh=$thresh_CASSCF and maxiter=$maxiter_CASSCF."
-    >&2 echo "See file $savefile"
-    cp $input.out $savefile
-    generate_input "$input.json"
-    exec_bagel $input.json $input.out
-    returncode=$?
-fi
-
 if grep -q "$smith_error" $input.out; then
     error=true
     savefile=$input.out.caspt2_error.$timestep
