@@ -1,6 +1,6 @@
 Timestep: 0
 3
-0 0 0 
+0 0 1 
 Timestep: 0
 3
 0 0 1 
@@ -36,7 +36,7 @@ Timestep: 10
 0 0 1 
 Timestep: 10
 3
-0 0 0 
+0 0 1 
 Timestep: 10
 3
 0 0 1 
