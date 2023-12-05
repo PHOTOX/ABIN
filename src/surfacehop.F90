@@ -165,8 +165,8 @@ contains
       ! When restarting, initial SH WF was already read from the restart file
       if (irest == 0) then
          call sh_set_initialwf(istate)
+         call sh_set_energy_shift(en_array(1))
       end if
-      call sh_set_energy_shift(en_array(1))
       call sh_select_integrator(integ)
 
       entot0 = en_array(istate) + ekin_v(vx, vy, vz)

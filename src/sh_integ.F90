@@ -453,7 +453,7 @@ contains
    subroutine sh_write_wf(outunit)
       integer, intent(in) :: outunit
       integer :: ist1
-      write (outunit, *) eshift
+      write (outunit, *) Eshift
       do ist1 = 1, nstate
          write (outunit, *) cel_re(ist1), cel_im(ist1)
       end do
@@ -467,7 +467,7 @@ contains
          allocate (cel_re(nstate), cel_im(nstate))
       end if
 
-      read (inunit, *) eshift
+      read (inunit, *) Eshift
       do ist1 = 1, nstate
          read (inunit, *) cel_re(ist1), cel_im(ist1)
       end do

@@ -66,7 +66,7 @@ function diff_files {
     if [[ $error_code -ne 0 ]];then
        # The reference file is different, but maybe it's just numerical noise?
        error_code=0
-       diff -y -W 500  $test_file $ref_file | grep -e '|' -e '<' -e '>' > $test_file.diff
+       diff -y -W 500 $test_file $ref_file | grep -e '|' -e '<' -e '>' > $test_file.diff
 
        ../numdiff.py $test_file.diff || error_code=$?
 
