@@ -12,7 +12,9 @@ function cleanup {
   kill -9 $tcpid $abinpid > /dev/null 2>&1 || true
   grep 'what()' $TCOUT > TC_ERROR$IDX
   if [[ -f ERROR ]];then
-    mv ERROR ABIN_ERROR$IDX
+    # NOTE: Different compilers may print different errors here,
+    # so we strip the actual error and just check that it came from mpi_wrapper.F90
+    sed -E 's/(ERROR in mpi_wrapper.F90:).*/\1/' ERROR > ABIN_ERROR$IDX
   fi
   exit 0
 }
