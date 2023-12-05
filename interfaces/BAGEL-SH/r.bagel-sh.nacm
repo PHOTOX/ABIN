@@ -9,7 +9,7 @@
 # Print errors for undefined variables
 set -u
 
-cd $(dirname $0)
+cd "$(dirname "$0")" || exit 1
 
 ### READ INPUT PARAMETERS ###
 source bagel.inp
@@ -25,14 +25,14 @@ thresh="1.0e-8"
 
 ORBITAL_FILE=orbitals
 
-file_exists $geom
+file_exists "$geom"
 
 rm -f ../nacm.dat NACME_*.out
 
 # reading from state.dat
 # Number of states and which NACME to compute
-read -t 2 -a nstate
-read -t 2 -a tocalc
+read -r -t 2 -a nstate
+read -r -t 2 -a tocalc
 
 ### CREATE BAGEL INPUT ###
 specify_molecule "$geom" "$input.json"
@@ -63,17 +63,17 @@ sed -i '$ s/,$//' "$input.json"
 echo "    ]," >> "$input.json"
 
 # CAS section
-if [[ $method == "xms_caspt2" ]]; then
+if [[ $method = "xms_caspt2" ]]; then
 
     print_cas "caspt2" "$thresh" "$maxiter_CASSCF" "$input.json"
     print_caspt2 "true" "$nac_thresh" "$maxiter_CASPT2" "$input.json"
 
-elif [[ $method == "ms_caspt2" ]]; then
+elif [[ $method = "ms_caspt2" ]]; then
 
     print_cas "caspt2" "$thresh" "$maxiter_CASSCF" "$input.json"
     print_caspt2 "false" "$nac_thresh" "$maxiter_CASPT2" "$input.json"
 
-elif [[ $method == "sa_casscf" ]]; then
+elif [[ $method = "sa_casscf" ]]; then
 
     print_cas "casscf" "$nac_thresh" "$maxiter_CASSCF" "$input.json"
     # Remove extra dangling comma
@@ -88,7 +88,7 @@ echo -e "      }]\n  }\n]}" >> "$input.json"
 ### END OF BAGEL INPUT ###
 
 ### RUN BAGEL ###
-exec_bagel "$input.json" "$input.out"
+exec_bagel "$input.json" "$input.out" "$timestep"
 returncode=$?
 
 ### Check if BAGEL finished succesfully ###

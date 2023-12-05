@@ -1,3 +1,6 @@
+#!/bin/bash
+# NOTE: This script is meant to be sourced, not executed!
+ 
 ### Electronic structure parameters
 basis=cc-pvdz
 df_basis=cc-pvdz-jkfit
@@ -29,15 +32,16 @@ source SetEnvironment.sh BAGEL
 function exec_bagel {
     local input_file=$1
     local output_file=$2
+    local timestep=$3
     # BAGEL does not print its input so we will prepend it.
-    cp $input_file $output_file
-    $BAGELEXE $input_file >> $output_file 2>&1
+    cp "$input_file" "$output_file"
+    $BAGELEXE "$input_file" >> "$output_file" 2>&1
     local exitcode=$?
 
-    echo "TIMESTEP = $timestep" >> $output_file.all
-    date >> $output_file.all
-    echo "####################" >> $output_file.all
-    cat "$output_file" >> "$output_file.all"
+    echo "TIMESTEP = $timestep" >> "$output_file".all
+    date >> "$output_file".all
+    echo "####################" >> "$output_file".all
+    cat "$output_file" >> "$output_file".all
     return $exitcode
 }
 
@@ -49,7 +53,7 @@ function bagel_error {
         cp "$bagel_output" "$copy"
     fi
     >&2 echo -e "${errmsg}"
-    >&2 echo "Inspect file $(dirname $0)/$copy"
+    >&2 echo "Inspect file $(dirname "$0")/$copy"
     exit 2
 }
 
@@ -68,10 +72,11 @@ function specify_molecule {
     local xyz=$1
     # Name of the bagel input file we are creating
     local inp=$2
-    local natom=$(wc -l < $xyz)
+    local natom
+    natom=$(wc -l < "$xyz")
 
     # NOTE: $basis and $df_basis MUST be defined at the top of the file!
-    cat > $inp << EOF
+    cat > "$inp" << EOF
 {"bagel": [
   {
     "title": "molecule",
@@ -82,13 +87,13 @@ function specify_molecule {
 EOF
 
     # Geometry specification in json format
-    awk -v natom="$natom" '{printf "\t{\"atom\": \"%s\", \"xyz\": [ %.10f, %.10f, %.10f ]}", $1, $2, $3, $4} NR != natom {print ","}END{print ""}'  $xyz >> $inp
-    echo -e "    ]\n  }," >> $inp
+    awk -v natom="$natom" '{printf "\t{\"atom\": \"%s\", \"xyz\": [ %.10f, %.10f, %.10f ]}", $1, $2, $3, $4} NR != natom {print ","}END{print ""}'  "$xyz" >> "$inp"
+    echo -e "    ]\n  }," >> "$inp"
 }
 
 function generate_hf_orbitals {
     local inp=$1
-    cat >> $inp << EOF
+    cat >> "$inp" << EOF
   {
     "title" : "$hf_variant",
     "charge" : $charge,
@@ -100,7 +105,7 @@ EOF
 function load_orbitals {
     local orbfile=$1
     local inp=$2
-    cat >> $inp << EOF
+    cat >> "$inp" << EOF
   {
     "title": "load_ref",
     "file": "$orbfile",
@@ -112,7 +117,7 @@ EOF
 function save_orbitals {
     local orbfile=$1
     local inp=$2
-    cat >> $inp << EOF
+    cat >> "$inp" << EOF
   {
     "title": "save_ref",
     "file": "$orbfile"
@@ -123,7 +128,7 @@ EOF
 function print_molden {
     local moldenfile=$1
     local inp=$2
-    cat >> $inp << EOF
+    cat >> "$inp" << EOF
   {
     "title": "print",
     "file": "$moldenfile",
@@ -138,7 +143,7 @@ EOF
 function print_forces {
     local target_state=$1
     local inp=$2
-    cat >> $inp << EOF
+    cat >> "$inp" << EOF
   {
     "title" : "forces",
     "export" : true,
@@ -156,7 +161,7 @@ function print_cas {
     local thresh=$2
     local maxiter=$3
     local inp=$4
-    cat >> $inp << EOF
+    cat >> "$inp" << EOF
     "method": [{
       "title": "$method",
       "nspin": $nspin,
@@ -177,7 +182,7 @@ function print_caspt2 {
     local maxiter=$3
     local inp=$4
     # TODO: Make it possible to use a real shift instead of imaginary
-    cat >> $inp << EOF
+    cat >> "$inp" << EOF
       "smith": {
         "method": "caspt2",
         "xms": "$xms",

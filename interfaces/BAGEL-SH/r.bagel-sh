@@ -5,7 +5,7 @@
 
 set -u
 
-cd $(dirname $0)
+cd "$(dirname "$0")" || exit 1
 source bagel.inp
 
 timestep=$1
@@ -14,8 +14,8 @@ input=input$ibead
 geom="../geom.dat.$ibead"
 
 # Read Number of states, current state which NACM to compute from state.dat
-read -t 2 -a nstate
-read -t 2 -a tocalc
+read -r -t 2 -a nstate
+read -r -t 2 -a tocalc
 
 thresh_CASSCF="1.0e-8"
 thresh_CASPT2="1.0e-8"
@@ -26,9 +26,9 @@ max_thresh_CASSCF="6.0e-6"
 # Note that the actual filename is orbitals.archive
 ORBITAL_FILE=orbitals
 
-file_exists $geom
+file_exists "$geom"
 
-rm -f ../engrad.dat.$ibead ../nacm.dat ENERGY.out FORCE_*
+rm -f "../engrad.dat.$ibead" ../nacm.dat ENERGY.out FORCE_*
 
 ### GENERATE BAGEL INPUT
 #
@@ -47,15 +47,16 @@ done
 
 function generate_input {
     local input=$1
+    local method=$2
  
     specify_molecule "$geom" "$input"
  
     if [[ -f "$ORBITAL_FILE.archive" ]]; then
         # Load orbitals if the archive file exists
-        load_orbitals $ORBITAL_FILE $input
+        load_orbitals "$ORBITAL_FILE" "$input"
     else
         # Calculate HF guess if the initial orbitals are not provided via the 'orbitals.archive' file
-        generate_hf_orbitals $input
+        generate_hf_orbitals "$input"
     fi
  
     print_forces "$target_state" "$input"
@@ -75,16 +76,16 @@ function generate_input {
         >&2 echo "ERROR: Unknown method ($method). Specify one of \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\" in bagel.inp"
         exit 2
     fi
-    echo -e "      }]\n  }," >> $input
-    save_orbitals $ORBITAL_FILE $input
+    echo -e "      }]\n  }," >> "$input"
+    save_orbitals "$ORBITAL_FILE" "$input"
  
     if [[ ! -f "initial_orbitals.molden" ]];then
-        print_molden "initial_orbitals.molden" $input
+        print_molden "initial_orbitals.molden" "$input"
     else
-        print_molden "orbitals.molden" $input
+        print_molden "orbitals.molden" "$input"
     fi
  
-    echo "]}" >> $input
+    echo "]}" >> "$input"
 }
 ### END OF INPUT GENERATION 
 
@@ -92,15 +93,15 @@ function converge_casscf {
     local input=$1
     local output=$2
     local casscf_error='EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
-    generate_input "$input"
+    generate_input "$input" "$method"
 
     # Execute BAGEL
-    exec_bagel $input $output
+    exec_bagel "$input" "$output" "$timestep"
     local returncode=$?
-    if grep -q "$casscf_error" $output; then
+    if grep -q "$casscf_error" "$output"; then
         error=true
         local savefile=$output.casscf_error.$timestep
-        cp $output $savefile
+        cp "$output" "$savefile"
         >&2 echo "ERROR: CASSCF did not converge, see file $savefile"
 	# Return if we reached the maximum threshold value,
 	# further increase would lead to inaccurate results.
@@ -111,7 +112,7 @@ function converge_casscf {
 	thresh_CASSCF=$(awk "BEGIN{print $thresh_CASSCF*5}")
         maxiter_CASSCF=600
         >&2 echo "Trying again with thresh=$thresh_CASSCF and maxiter=$maxiter_CASSCF"
-	converge_casscf $input $output
+	converge_casscf "$input" "$output"
         returncode=$?
     fi
     return $returncode
@@ -119,26 +120,26 @@ function converge_casscf {
 
 ### EXECUTE BAGEL
 error=false
-converge_casscf $input.json $input.out
+converge_casscf "$input.json" "$input.out"
 returncode=$?
 
 ### CHECK CHONVERGENCES + RESTART BAGEL JOB with convergence threshold and increased itterations  ###
 
 smith_error='EXCEPTION RAISED:  SMITH convergence not reached'
-if grep -q "$smith_error" $input.out; then
+if grep -q "$smith_error" "$input.out"; then
     error=true
     savefile=$input.out.caspt2_error.$timestep
     thresh_CASPT2="1.0e-7"
     maxiter_CASPT2=1000
     >&2 echo "ERROR: CASPT2 did not converge, trying again with thresh=$thresh_CASPT2 and maxiter=$maxiter_CASPT2."
     >&2 echo "See file $savefile"
-    cp $input.out $savefile
-    generate_input "$input.json"
-    exec_bagel $input.json $input.out
+    cp "$input.out" "$savefile"
+    generate_input "$input.json" "$method"
+    exec_bagel "$input".json "$input".out "$timestep"
     returncode=$?
 fi
 
-if grep -q 'EXCEPTION RAISED:' $input.out; then
+if grep -q 'EXCEPTION RAISED:' "$input.out"; then
     errmsg="ERROR: BAGEL calculation failed!"
     bagel_error "$errmsg" "$input.out" "$input.out.error.$timestep"
 fi
@@ -152,11 +153,11 @@ fi
 
 # Extract energy.
 file_exists "ENERGY.out"
-cat ENERGY.out > ../engrad.dat.$ibead
+cat ENERGY.out > "../engrad.dat.$ibead"
 
 # Extract gradient
 file_exists "FORCE_${target_state}.out"
-tail -n +2 "FORCE_${target_state}.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat.$ibead
+tail -n +2 "FORCE_${target_state}.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat."$ibead"
 
 if [[ ${error:-false} = "true" ]]; then
     >&2 echo "Calculation converged with looser tresholds for timestep $timestep"
