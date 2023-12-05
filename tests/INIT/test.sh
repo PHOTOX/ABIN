@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-rm -f ERROR abin.out movie.xyz restart.xyz *dat
+rm -f ERROR ABIN_ERROR? abin.out movie.xyz restart.xyz *dat
 if [[ $1 = "clean" ]];then
   exit 0
 fi

@@ -125,10 +125,10 @@ contains
       ! in this subroutine must ensure that the namelists can be in any order.
       namelist /general/ pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
          nwrite, nwritex, nwritev, nwritef, dt, irandom, nabin, irest, nrest, anal_ext, &
-         isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_sleep, narchive, xyz_units, &
+         isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_milisleep, narchive, xyz_units, &
          dime, ncalc, idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
          en_restraint, en_diff, en_kk, restrain_pot, &
-         pot_ref, nstep_ref, nteraservers, max_wait_time, cp2k_mpi_beads
+         pot_ref, nstep_ref, nteraservers, max_mpi_wait_time, cp2k_mpi_beads
 
       namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
 
@@ -472,10 +472,10 @@ contains
 
       ! Doing this here so that we can do it even when reading velocities from file
       if (rem_comvel) then
-         call remove_comvel(vx, vy, vz, am, rem_comvel)
+         call remove_comvel(vx, vy, vz, am)
       end if
       if (rem_comrot) then
-         call remove_rotations(x, y, z, vx, vy, vz, am, rem_comrot)
+         call remove_rotations(x, y, z, vx, vy, vz, am)
       end if
 
       if (conatom > 0) then
@@ -484,7 +484,7 @@ contains
 
       ! If scaleveloc=1, scale initial velocitites to match the temperature
       ! Otherwise, just print the temperature.
-      call ScaleVelocities(vx, vy, vz)
+      call scale_velocities(vx, vy, vz)
 
       ! Initialize spherical boundary onditions
       if (isbc == 1) then
@@ -680,6 +680,14 @@ contains
          if (nshake /= 0 .and. imasst == 1 .and. inose > 0) then
             write (*, *) 'SHAKE cannot use massive thermostating!'
             write (*, *) 'Set imasst=1 and nmolt, natmolt and nshakemol accordingly.'
+            error = 1
+         end if
+         if (nshake /= 0 .and. (inose == 2 .or. inose == 4)) then
+            write (*, *) 'SHAKE is not compatible with GLE thermostat!'
+            error = 1
+         end if
+         if (nshake /= 0 .and. inose == 3) then
+            write (*, *) 'SHAKE is currently not compatible with Langeving thermostat!'
             error = 1
          end if
          if ((natmm + natqm /= natom)) then

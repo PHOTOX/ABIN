@@ -53,6 +53,7 @@ contains
       call flush (stdout)
       call flush (stderr)
       write (stdout, '(A)') ''
+      deallocate (normalized_atom_types)
    end subroutine initialize_mm
 
    subroutine finalize_mm()

@@ -75,6 +75,7 @@ contains
       ! Landau-Zener arrays
       if (ipimd == 5) then
          !Move old energies by 1
+         en_array_lz(:, 4) = en_array_lz(:, 3); 
          en_array_lz(:, 3) = en_array_lz(:, 2); 
          en_array_lz(:, 2) = en_array_lz(:, 1); 
          !Store the new one
@@ -126,7 +127,7 @@ contains
       call check_recv_count(status, nstate * nstate, MPI_DOUBLE_PRECISION)
 
       ! Should change the following according to what is done in TeraChem
-      if (oldwfn /= 0 .and. ipimd /=  5) then
+      if (oldwfn /= 0 .and. ipimd /= 5) then
          i = Check_CIVector(CIvecs, CIvecs_old, civec, nstate)
       end if
 

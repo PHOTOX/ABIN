@@ -27,17 +27,15 @@ contains
                              nrest, nwritex, nstep, anal_ext, idebug
       use mod_analyze_geometry
       use mod_io
-      use mod_vinit, only: remove_rotations
       use mod_system, only: am
       implicit none
-      !intent inout because of estimators, writing to nwalk+1
-      real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: fxc(:, :), fyc(:, :), fzc(:, :)
-      real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
+      real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: eclas
 
       if (modulo(it, nwrite) == 0 .and. idebug > 0) then
-         call remove_rotations(x, y, z, vx, vy, vz, am, .false.)
+         call print_angular_momentum(x, y, z, vx, vy, vz, am)
       end if
 
       if (ipimd == 1 .or. icv == 1) then
@@ -82,6 +80,21 @@ contains
       end if
 
    end subroutine analysis
+
+   subroutine print_angular_momentum(x, y, z, vx, vy, vz, masses)
+      use mod_general, only: nwalk
+      use mod_vinit, only: calc_angular_momentum
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
+      real(DP), intent(in) :: masses(:)
+      real(DP) :: Lx, Ly, Lz, Ltot
+      integer :: iw
+
+      do iw = 1, nwalk
+         call calc_angular_momentum(x, y, z, vx, vy, vz, masses, iw, Lx, Ly, Lz, Ltot)
+         write (stdout, '(A, 4E17.8E3)') "Angular momentum (a.u.): Lx, Ly, Lz, Ltot ", Lx, Ly, Lz, Ltot
+      end do
+   end subroutine print_angular_momentum
 
    subroutine trajout(x, y, z, time_step)
       use mod_const, only: ANG

@@ -47,6 +47,19 @@ you should always clean up before the recompilation:
 
 `$ make clean && make`
 
+## Running the code
+
+After compilation, the executable binary should be available in `bin/abin`.
+You can copy the binary somewhere in your PATH, or add bin/ to your PATH.
+To execute an MD simulation using an input file `input.in` and initial XYZ coordinates in file `geom.xyz`, run:
+
+```console
+bin/abin -i input.in -x geom.xyz
+```
+
+Run `bin/abin --help` to see other options.
+Example input files for various types of simulations can be found in `sample_inputs/`.
+
 ## Optional dependencies
 
 Some functionality relies on external libraries. These are optional,
@@ -62,10 +75,6 @@ The optional libraries are:
  - [FFTW](http://www.fftw.org/): Fast Fourier Transform library used for normal mode transformation in Path Integral MD.
  - [PLUMED](https://www.plumed.org/): A collection of very useful tools for free energy calculations (MetaDynamics, Umbrella Sampling etc).
  - [TCPB-CPP](https://github.com/mtzgroup/tcpb-cpp): [EXPERIMENTAL] TCPB interface to TeraChem
-
-For some features, you will also need to install the FFTW library.
-It is usually provided with your Linux distribution,
-but can also be downloaded from http://www.fftw.org/
 
 
 ## Structure of the repository

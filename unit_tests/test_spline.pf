@@ -117,8 +117,8 @@ contains
 
    ! TODO: This needs to throw before the FP exception
    ! For some reason, missing y-value does not trip the read statement. :-(
-   @test
-   @disable
+   !@test
+   !@disable
    subroutine test_validate_grid_values()
       integer :: u
 

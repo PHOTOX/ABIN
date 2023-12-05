@@ -4,6 +4,7 @@ module mod_terampi
    use mod_const, only: DP
    use mod_error, only: fatal_error
    use mod_files, only: stdout, stderr
+   use mod_utils, only: milisleep
 #ifdef USE_MPI
    use mpi
    use mod_mpi, only: handle_mpi_error, get_mpi_error_string
@@ -20,12 +21,13 @@ module mod_terampi
 
    integer :: nteraservers = 1
    ! How long do we wait for TC port [seconds]
-   real(DP) :: max_wait_time = 30
-   ! Sleep interval while waiting for TC calculation to finish.
-   real(DP) :: mpi_sleep = 0.05
+   real(DP) :: max_mpi_wait_time = 30
+   ! Sleep interval in miliseconds while waiting for TC calculation to finish.
+   integer :: mpi_milisleep = 50
 
    public :: nteraservers
-   public :: mpi_sleep, max_wait_time
+   ! NOTE: max_mpi_wait_time is public only for testing
+   public :: mpi_milisleep, max_mpi_wait_time
    public :: TC_TAG
 #ifdef USE_MPI
    integer, allocatable :: tc_comms(:)
@@ -54,12 +56,6 @@ contains
       end if
 
       write (stdout, '(A,I0)') 'Number of TeraChem servers: ', nteraservers
-
-      if (mpi_sleep <= 0) then
-         write (stdout, *) 'WARNING: Parameter "mpi_sleep" must be positive!'
-         write (stdout, *) 'Setting it back to default value'
-         mpi_sleep = 0.05D0
-      end if
 
       allocate (tc_comms(nteraservers))
       allocate (communication_established(nteraservers))
@@ -162,8 +158,8 @@ contains
             end if
          end if
 
-         ! Timeout after max_wait_time seconds
-         if ((MPI_WTIME() - timer) > max_wait_time) then
+         ! Timeout after max_mpi_wait_time seconds
+         if ((MPI_WTIME() - timer) > max_mpi_wait_time) then
             call fatal_error(__FILE__, __LINE__, &
                & 'Server name '//server_name//' not found.')
          end if
@@ -173,7 +169,7 @@ contains
          if (idebug > 1) then
             write (stdout, '(A)') 'Waiting for TC port'
          end if
-         call execute_command_line('sleep 0.5')
+         call milisleep(500)
 
       end do
 
@@ -200,13 +196,13 @@ contains
             exit
          end if
 
-         if ((MPI_WTIME() - timer) > max_wait_time) then
+         if ((MPI_WTIME() - timer) > max_mpi_wait_time) then
             call fatal_error(__FILE__, __LINE__, &
                & 'Could not open file '//portfile)
          end if
 
          write (stdout, '(A)') 'WARNING: Cannot open file '//portfile
-         call execute_command_line('sleep 0.5')
+         call milisleep(500)
 
       end do
 
@@ -248,7 +244,7 @@ contains
 
       do itera = 1, nteraservers
 
-         if (.not.communication_established(itera)) cycle
+         if (.not. communication_established(itera)) cycle
 
          write (stdout, '(A,I0)') 'Shutting down TeraChem server id = ', itera
 
@@ -272,7 +268,6 @@ contains
 
    subroutine wait_for_terachem(tc_comm)
       integer, intent(in) :: tc_comm
-      character(len=20) :: chsys_sleep
       integer :: status(MPI_STATUS_SIZE)
       integer :: ierr
       logical :: ready
@@ -280,21 +275,22 @@ contains
       ! we don't wait forever if TeraChem crashes.
       ! At this moment, this is ensured at the BASH script level.
 
-      ! The idea here is to reduce the CPU usage of MPI_Recv() via system call to 'sleep'.
+      if (mpi_milisleep <= 0) return
+
+      ! The idea here is to reduce the CPU usage of MPI_Recv() by taking a brief nap.
       ! In most MPI implementations, MPI_Recv() is actively polling the other end
       ! (in this case TeraChem) and consumes a whole CPU core. That's clearly wasteful,
-      ! since we're waiting for a long time for the ab initio result.
+      ! since we're typically waiting for a long time for the ab initio result.
 
       ! Some implementation provide an option to change this behaviour,
-      ! but I didn't figure out any for MPICH so we rather inelegantly call system sleep.
+      ! but I didn't figure out any for MPICH.
       ! Based according to an answer here:
       ! http://stackoverflow.com/questions/14560714/probe-seems-to-consume-the-cpu
       ready = .false.
-      write (chsys_sleep, '(A6, F10.4)') 'sleep ', mpi_sleep
       do while (.not. ready)
          call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, tc_comm, ready, status, ierr)
          call handle_mpi_error(ierr)
-         call execute_command_line(trim(chsys_sleep))
+         call milisleep(mpi_milisleep)
       end do
    end subroutine wait_for_terachem
 

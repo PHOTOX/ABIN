@@ -1,3 +1,4 @@
 97db2437c0d06826fb1ac6695c8d6c4b8b2348dd # fprettify all source code
 9d9ca3fe1915106a4716bcb709c701370d491620 # moving source to src/
 e46d362bd83bba389cbbe5b09491200ac8c64b21 # fprettify after refactor
+4a2aeeb81396e525561d975242c4beae4f29b7ab # autoformat after vendoring fprettify

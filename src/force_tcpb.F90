@@ -95,15 +95,15 @@ contains
       if (status == 0) then
          write (stdout, *) "Successfully connected to TeraChem server."
       else if (status == 1) then
-        call fatal_error(__FILE__, __LINE__, &
-           & "Connection to TeraChem TCPB server failed! Is it running?")
+         call fatal_error(__FILE__, __LINE__, &
+            & "Connection to TeraChem TCPB server failed! Is it running?")
       else if (status == 2) then
-        call fatal_error(__FILE__, __LINE__, &
-           & "Connection to TeraChem server succeed, but the "&
-           &  //" server is not available!")
+         call fatal_error(__FILE__, __LINE__, &
+            & "Connection to TeraChem server succeed, but the "&
+            &  //" server is not available!")
       else
-        call fatal_error(__FILE__, __LINE__, &
-           & "Could not connect to TCPB server. Is it running?")
+         call fatal_error(__FILE__, __LINE__, &
+            & "Could not connect to TCPB server. Is it running?")
       end if
 
       ! Setup TeraChem
@@ -113,16 +113,16 @@ contains
 #endif
       status = 0
       if (status == 0) then
-        write (*,*) "TeraChem setup completed with success."
+         write (*, *) "TeraChem setup completed with success."
       else if (status == 1) then
-        call fatal_error(__FILE__, __LINE__, &
-           & "TCPB: No options read from TeraChem input file or mismatch in the input options!")
+         call fatal_error(__FILE__, __LINE__, &
+            & "TCPB: No options read from TeraChem input file or mismatch in the input options!")
       else if (status == 2) then
-        call fatal_error(__FILE__, __LINE__, &
-           & "TCPB: Failed to setup TeraChem.")
+         call fatal_error(__FILE__, __LINE__, &
+            & "TCPB: Failed to setup TeraChem.")
       else
-        call fatal_error(__FILE__, __LINE__, &
-           & "TCPB: Status on tc_setup function is not recognized!")
+         call fatal_error(__FILE__, __LINE__, &
+            & "TCPB: Status on tc_setup function is not recognized!")
       end if
    end subroutine initialize_tcpb
 
@@ -151,20 +151,20 @@ contains
 
       allocate (qmcharges(natqm))
       allocate (qmcoords(3 * natqm))
-      allocate (qmgrad(3* natqm))
+      allocate (qmgrad(3 * natqm))
 
       qmgrad = 0.0D0
       mmgrad = 0.0D0
       mmcoords = 0.0D0
-      mmcharges= 0.0D0
-      qmcharges= 0.0D0
+      mmcharges = 0.0D0
+      qmcharges = 0.0D0
 
       do iw = 1, walkmax
 
          do iat = 1, natqm
-            qmcoords(3*iat - 2) = x(iat, iw)
-            qmcoords(3*iat - 1) = y(iat, iw)
-            qmcoords(3*iat) = z(iat, iw)
+            qmcoords(3 * iat - 2) = x(iat, iw)
+            qmcoords(3 * iat - 1) = y(iat, iw)
+            qmcoords(3 * iat) = z(iat, iw)
          end do
 
          status = -1
@@ -186,9 +186,9 @@ contains
          end if
 
          do iat = 1, natqm
-            fx(iat, iw) = -qmgrad(3*iat - 2)
-            fy(iat, iw) = -qmgrad(3*iat - 1)
-            fz(iat, iw) = -qmgrad(3*iat)
+            fx(iat, iw) = -qmgrad(3 * iat - 2)
+            fy(iat, iw) = -qmgrad(3 * iat - 1)
+            fz(iat, iw) = -qmgrad(3 * iat)
          end do
 
          ! ONIOM was not yet tested!!

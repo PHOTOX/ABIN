@@ -346,4 +346,20 @@ contains
       end if
    end subroutine int_switch
 
+   subroutine milisleep(milisec)
+      use, intrinsic :: iso_c_binding, only: C_INT, C_INT32_T
+      use mod_interfaces, only: usleep
+      integer :: milisec
+      integer(kind=C_INT32_T) :: usec
+      integer(kind=C_INT) :: c_err
+
+      usec = int(milisec * 1000, C_INT32_T)
+      ! TODO: Based on usleep(2) manpage, we probably should not sleep more than a second
+      c_err = usleep(usec)
+      if (c_err /= 0) then
+         write (stderr, *) "usleep returned an error: ", c_err
+         call fatal_error(__FILE__, __LINE__, "usleep failed!")
+      end if
+   end subroutine milisleep
+
 end module mod_utils
