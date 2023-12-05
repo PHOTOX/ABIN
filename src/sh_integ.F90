@@ -453,7 +453,7 @@ contains
    subroutine sh_write_wf(outunit)
       integer, intent(in) :: outunit
       integer :: ist1
-      write (outunit, '(A4, ES24.16E3)')'E0= ', Eshift
+      write (outunit, '(A4, ES24.16E3)') 'E0= ', Eshift
       do ist1 = 1, nstate
          write (outunit, *) cel_re(ist1), cel_im(ist1)
       end do
