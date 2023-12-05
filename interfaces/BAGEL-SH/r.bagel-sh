@@ -35,73 +35,71 @@ rm -f ../engrad.dat.$ibead ../nacm.dat ENERGY.out FORCE_*
 # Determine for which state we need to calculate forces
 for ((ist=0; ist<nstate; ist++))
 do
-  if [[ ${tocalc[$ist]} -eq 1 ]]; then
-    if [[ -z ${target_state-} ]]; then
-      target_state=$ist
-    else
-      >&2 echo "ERROR: Invalid tocalc, cannot compute gradient for more than one state"
-      exit 2
+    if [[ ${tocalc[$ist]} -eq 1 ]]; then
+      if [[ -z ${target_state-} ]]; then
+          target_state=$ist
+      else
+          >&2 echo "ERROR: Invalid tocalc, cannot compute gradient for more than one state"
+          exit 2
+      fi
     fi
-  fi
 done
 
 function generate_input {
-
-input=$1
-
-specify_molecule "$geom" "$input"
-
-if [[ -f "$ORBITAL_FILE.archive" ]]; then
-    # Load orbitals if the archive file exists
-    load_orbitals $ORBITAL_FILE $input
-else
-    # Calculate HF guess if the initial orbitals are not provided via the 'orbitals.archive' file
-    generate_hf_orbitals $input
-fi
-
-print_forces "$target_state" "$input"
-
-# CAS section
-if [[ $method == "xms_caspt2" ]]; then
-    print_cas "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
-    print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
-elif [[ $method == "ms_caspt2" ]]; then
-    print_cas "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
-    print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
-elif [[ $method == "sa_casscf" ]]; then
-    print_cas "casscf" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
-    # Remove extra dangling comma
-    sed -i '$ s/,$//' "$input"
-else
-    >&2 echo "ERROR: Unknown method ($method). Specify one of \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\" in bagel.inp"
-    exit 2
-fi
-echo -e "      }]\n  }," >> $input
-save_orbitals $ORBITAL_FILE $input
-
-if [[ ! -f "initial_orbitals.molden" ]];then
-    print_molden "initial_orbitals.molden" $input
-else
-    print_molden "orbitals.molden" $input
-fi
-
-echo "]}" >> $input
+    local input=$1
+ 
+    specify_molecule "$geom" "$input"
+ 
+    if [[ -f "$ORBITAL_FILE.archive" ]]; then
+        # Load orbitals if the archive file exists
+        load_orbitals $ORBITAL_FILE $input
+    else
+        # Calculate HF guess if the initial orbitals are not provided via the 'orbitals.archive' file
+        generate_hf_orbitals $input
+    fi
+ 
+    print_forces "$target_state" "$input"
+ 
+    # CAS section
+    if [[ $method == "xms_caspt2" ]]; then
+        print_cas "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
+        print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
+    elif [[ $method == "ms_caspt2" ]]; then
+        print_cas "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
+        print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
+    elif [[ $method == "sa_casscf" ]]; then
+        print_cas "casscf" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
+        # Remove extra dangling comma
+        sed -i '$ s/,$//' "$input"
+    else
+        >&2 echo "ERROR: Unknown method ($method). Specify one of \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\" in bagel.inp"
+        exit 2
+    fi
+    echo -e "      }]\n  }," >> $input
+    save_orbitals $ORBITAL_FILE $input
+ 
+    if [[ ! -f "initial_orbitals.molden" ]];then
+        print_molden "initial_orbitals.molden" $input
+    else
+        print_molden "orbitals.molden" $input
+    fi
+ 
+    echo "]}" >> $input
 }
 ### END OF INPUT GENERATION 
 
-error=false
 function converge_casscf {
-    input=$1
-    output=$2
-    casscf_error='EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
+    local input=$1
+    local output=$2
+    local casscf_error='EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
     generate_input "$input"
 
     # Execute BAGEL
-    exec_bagel $input $input
-    returncode=$?
+    exec_bagel $input $output
+    local returncode=$?
     if grep -q "$casscf_error" $output; then
         error=true
-        savefile=$output.casscf_error.$timestep
+        local savefile=$output.casscf_error.$timestep
         cp $output $savefile
         >&2 echo "ERROR: CASSCF did not converge, see file $savefile"
 	# Return if we reached the maximum threshold value,
@@ -120,6 +118,7 @@ function converge_casscf {
 }
 
 ### EXECUTE BAGEL
+error=false
 converge_casscf $input.json $input.out
 returncode=$?
 
