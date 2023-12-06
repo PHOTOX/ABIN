@@ -11,8 +11,6 @@ set -u
 
 cd "$(dirname "$0")" || exit 1
 
-### READ INPUT PARAMETERS ###
-source bagel.inp
 timestep=$1
 ibead=$2
 input=input$ibead.nacm
@@ -26,6 +24,12 @@ thresh="1.0e-8"
 ORBITAL_FILE=orbitals
 
 file_exists "$geom"
+file_exists bagel.inp
+file_exists bagel_common.sh
+
+### READ INPUT PARAMETERS ###
+source bagel.inp
+source bagel_common.sh
 
 rm -f ../nacm.dat NACME_*.out
 
@@ -61,6 +65,9 @@ done
 # Remove dangling comma
 sed -i '$ s/,$//' "$input.json"
 echo "    ]," >> "$input.json"
+
+# Need to pass different thresholds
+#print_cas "$method" "$input"
 
 # CAS section
 if [[ $method = "xms_caspt2" ]]; then

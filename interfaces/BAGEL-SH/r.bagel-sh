@@ -2,11 +2,11 @@
 
 # You should't need to modify this file.
 # Specification of CAS wavefunction is in file "bagel.inp"
-
 set -u
 
 cd "$(dirname "$0")" || exit 1
 source bagel.inp
+source bagel_common.sh
 
 timestep=$1
 ibead=$2
@@ -30,8 +30,6 @@ file_exists "$geom"
 
 rm -f "../engrad.dat.$ibead" ../nacm.dat ENERGY.out FORCE_*
 
-### GENERATE BAGEL INPUT
-#
 # Determine for which state we need to calculate forces
 for ((ist=0; ist<nstate; ist++))
 do
@@ -45,6 +43,7 @@ do
     fi
 done
 
+### GENERATE BAGEL INPUT
 function generate_input {
     local input=$1
     local method=$2
@@ -60,63 +59,19 @@ function generate_input {
     fi
  
     print_forces "$target_state" "$input"
- 
-    # CAS section
-    if [[ $method == "xms_caspt2" ]]; then
-        print_cas "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
-        print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
-    elif [[ $method == "ms_caspt2" ]]; then
-        print_cas "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
-        print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
-    elif [[ $method == "sa_casscf" ]]; then
-        print_cas "casscf" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
-        # Remove extra dangling comma
-        sed -i '$ s/,$//' "$input"
-    else
-        >&2 echo "ERROR: Unknown method ($method). Specify one of \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\" in bagel.inp"
-        exit 2
-    fi
+
+    print_cas "$method" "$input"
     echo -e "      }]\n  }," >> "$input"
+
     save_orbitals "$ORBITAL_FILE" "$input"
- 
     if [[ ! -f "initial_orbitals.molden" ]];then
         print_molden "initial_orbitals.molden" "$input"
     else
         print_molden "orbitals.molden" "$input"
     fi
- 
     echo "]}" >> "$input"
 }
 ### END OF INPUT GENERATION 
-
-function converge_casscf {
-    local input=$1
-    local output=$2
-    local casscf_error='EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
-    generate_input "$input" "$method"
-
-    # Execute BAGEL
-    exec_bagel "$input" "$output" "$timestep"
-    local returncode=$?
-    if grep -q "$casscf_error" "$output"; then
-        error=true
-        local savefile=$output.casscf_error.$timestep
-        cp "$output" "$savefile"
-        >&2 echo "ERROR: CASSCF did not converge, see file $savefile"
-	# Return if we reached the maximum threshold value,
-	# further increase would lead to inaccurate results.
-	if awk "BEGIN{exit !($thresh_CASSCF >= $max_thresh_CASSCF)}" ;then
-	    return 1
-	fi
-	# Retry again 5*thresh
-	thresh_CASSCF=$(awk "BEGIN{print $thresh_CASSCF*5}")
-        maxiter_CASSCF=600
-        >&2 echo "Trying again with thresh=$thresh_CASSCF and maxiter=$maxiter_CASSCF"
-	converge_casscf "$input" "$output"
-        returncode=$?
-    fi
-    return $returncode
-}
 
 ### EXECUTE BAGEL
 error=false
@@ -124,7 +79,6 @@ converge_casscf "$input.json" "$input.out"
 returncode=$?
 
 ### CHECK CHONVERGENCES + RESTART BAGEL JOB with convergence threshold and increased itterations  ###
-
 smith_error='EXCEPTION RAISED:  SMITH convergence not reached'
 if grep -q "$smith_error" "$input.out"; then
     error=true
@@ -150,7 +104,6 @@ if [[ $returncode -ne 0 ]];then
 fi
 
 # NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN
-
 # Extract energy.
 file_exists "ENERGY.out"
 cat ENERGY.out > "../engrad.dat.$ibead"

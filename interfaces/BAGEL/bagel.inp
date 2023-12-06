@@ -1,7 +1,7 @@
 basis=cc-pvdz
 df_basis=cc-pvdz-jkfit
 nstates=1
-istate=0                # state to be calculated, 0=ground state
+target_state=0                # state to be calculated, 0=ground state
 nact=8
 nclosed=14
 maxiter_CASSCF=250      # maximum number of CASSCF iterations

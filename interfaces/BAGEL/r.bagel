@@ -1,195 +1,102 @@
 #!/bin/bash
 
-cd BAGEL
+# You should't need to modify this file.
+# Specification of CAS wavefunction is in file "bagel.inp"
+set -u
+
+cd "$(dirname "$0")" || exit 1
 source bagel.inp
+source bagel_common.sh
 
 timestep=$1
 ibead=$2
 input=input$ibead
-thresh=1.0e-8       # deafult value is 1.0e-8, shouldn't be modified. In the case of persisting convergence errors, see the "CHECK CHONVERGENCES" section bellow
+geom="../geom.dat.$ibead"
 
-##############################
+thresh_CASSCF="1.0e-8"
+thresh_CASPT2="1.0e-8"
+# We will try to converge CASSCF by increasing thresh
+# until we hit max_thresh_CASSCF
+max_thresh_CASSCF="6.0e-6"
 
-# setting shift for caspt2 to default 0.25 if not specified in bagel.inp
-if [[ -z $shift ]]; then
-    shift=0.25
-fi
+# Note that the actual filename is orbitals.archive
+ORBITAL_FILE=orbitals
 
-rm -f ../engrad.dat.$ibead ../nacm.dat
+file_exists "$geom"
+rm -f "../engrad.dat.$ibead" ENERGY.out FORCE_*
 
-#-How many atoms?
-natom=$(wc -l < ../geom.dat.$ibead)
+### GENERATE BAGEL INPUT
+function generate_input {
+    local input=$1
+    local method=$2
+ 
+    specify_molecule "$geom" "$input"
+ 
+    if [[ -f "$ORBITAL_FILE.archive" ]]; then
+        # Load orbitals if the archive file exists
+        load_orbitals "$ORBITAL_FILE" "$input"
+    else
+        # Calculate HF guess if the initial orbitals are not provided via the 'orbitals.archive' file
+        generate_hf_orbitals "$input"
+    fi
+ 
+    print_forces "$target_state" "$input"
 
-# reading from state.dat
-# Number of states,state we are on and which NACM to compute
+    print_cas "$method" "$input"
+    echo -e "      }]\n  }," >> "$input"
 
-# BAGEL-CASPT2
-cat > $input.json << EOF
-{ "bagel" : [
-
-{
-    "title" : "molecule",
-    "basis" : "$basis",
-    "df_basis" : "$df_basis",
-    "angstrom" : "true",
-    "geometry" : [
-EOF
-
-# section for geometry specification in json format
-awk -v natom="$natom" '{printf "{ \"atom\" : \"%s\", \"xyz\" : [ %.10f, %.10f, %.10f ]}", $1, $2, $3, $4} NR != natom {print ","}END{print ""}'  ../geom.dat.$ibead >> $input.json
-cat >> $input.json << EOF
-    ]
-},
-EOF
-
-if [ $timestep -eq 0 ];then
-cat >> $input.json << EOF
-{
-    "title" : "$hf_variant",
-    "charge" : $charge,
-    "nspin" : $nspin
-},
-
-EOF
-fi
-
-
-# loading orbitals from previous step if not the first step
-if [ $timestep -ne 0 ]; then
-cat >> $input.json << EOF
-{
-    "title" : "load_ref",
-    "file" : "orbitals",
-    "continue_geom" : false
-},
-EOF
-fi
-
-cat >> $input.json << EOF
-{
-    "title" : "forces",
-    "grads" : [
-    { "title" : "force", "target" : $istate }                                                                                                                                                                                           
-    ],
-    "export" : true,
-EOF
-
-# preparing if for method of choice selection
-if [[ $method == "xms_caspt2" ]];
-then
-
-    cat >> $input.json << EOF
-    "method" : [ {
-        "title" : "caspt2",
-        "nspin" : $nspin,
-        "charge" : $charge,
-        "smith" : {
-            "method" : "caspt2",
-            "xms" : "true",
-            "shift" : $shift,
-            "maxiter" : $maxiter_CASPT2,
-            "thresh" : $thresh
-        },
-EOF
-elif [[ $method == "ms_caspt2" ]];
-then
-    cat >> $input.json << EOF
-    "method" : [ {
-        "title" : "caspt2",
-        "nspin" : $nspin,
-        "charge" : $charge,
-        "smith" : {
-            "method" : "caspt2",
-            "ms" : "true",
-            "xms" : "false",
-            "shift" : $shift,
-            "maxiter" : $maxiter_CASPT2,
-            "thresh" : $thresh
-        },
-EOF
-elif [[ $method == "sa_casscf" ]];
-then
-    cat >> $input.json << EOF
-    "method" : [ {
-        "title" : "casscf",
-        "nspin" : $nspin,
-        "charge" : $charge,
-EOF
-else
-    echo "Unknown method ($method). Available only \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\""
-fi
-
-cat >> $input.json << EOF 
-        "maxiter" : $maxiter_CASSCF,
-        "nact" : $nact,
-        "nclosed" : $nclosed,
-        "nstate" : $nstates
-  } ]
-},
-
-{
-    "title" : "save_ref",
-    "file" : "orbitals"
+    save_orbitals "$ORBITAL_FILE" "$input"
+    if [[ ! -f "initial_orbitals.molden" ]];then
+        print_molden "initial_orbitals.molden" "$input"
+    else
+        print_molden "orbitals.molden" "$input"
+    fi
+    echo "]}" >> "$input"
 }
+### END OF INPUT GENERATION 
 
-]}
-EOF
+### EXECUTE BAGEL
+error=false
+converge_casscf "$input.json" "$input.out"
+returncode=$?
 
-#----------BAGEL JOB-------------------------
-source SetEnvironment.sh BAGEL
-$BAGELEXE $input.json > $input.out
-
-
-echo "TIMESTEP = $timestep" >> $input.out.all
-echo "####################" >> $input.out.all
-cat $input.out >> $input.out.all
-
-
-############ CHECK CHONVERGENCES + RESTART BAGEL JOB with  convergence threshold and increased itterations  ########################
-
-if $( grep -q 'ERROR: EXCEPTION RAISED:  SMITH convergence not reached.' $input.out ) ;then
-    echo "ERROR: Convergence in force calculation not achieved, try again with different settings! Error in SMITH."
-    cp $input.out $input.out.error.$timestep
-    cp $input.json $input.second_try.json
-    sed -z -i "s/\"maxiter\" : $maxiter_CASPT2,\n            \"thresh\" : $thresh/\"maxiter\" : 1000,\n            \"thresh\" : 1.0e-6/"  $input.second_try.json
-    ####################run the job for the second time###########################
-    # specific launching of BAGEL - modify for different machines
-    $BAGELEXE  $input.second_try.json > $input.second_try.out
-
-elif $( grep -q 'ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization.' $input.out ) ; then
-    echo " ERROR: convergence during second-order optimization not reached (usually CASSCF not converged)"
-    cp $input.out $input.out.error.$timestep  
-    cp $input.json $input.second_try.json
-    sed -z -i "s/\"maxiter\" : $maxiter_CASSCF,\n        \"nact\" : $nact,/\"maxiter\" : 1500,\n        \"nact\" : $nact,/" $input.second_try.json
-    ####################run the job for the second time###########################
-    # specific launching of BAGEL - modify for different machines
-    $BAGELEXE  $input.second_try.json > $input.second_try.out
+### CHECK CHONVERGENCES + RESTART BAGEL JOB with convergence threshold and increased itterations  ###
+smith_error='EXCEPTION RAISED:  SMITH convergence not reached'
+if grep -q "$smith_error" "$input.out"; then
+    error=true
+    savefile=$input.out.caspt2_error.$timestep
+    thresh_CASPT2="1.0e-7"
+    maxiter_CASPT2=1000
+    >&2 echo "ERROR: CASPT2 did not converge, trying again with thresh=$thresh_CASPT2 and maxiter=$maxiter_CASPT2."
+    >&2 echo "See file $savefile"
+    cp "$input.out" "$savefile"
+    generate_input "$input.json" "$method"
+    exec_bagel "$input".json "$input".out "$timestep"
+    returncode=$?
 fi
 
-if $( grep -q 'ERROR: EXCEPTION RAISED:' $input.second_try.out ) ;then
-    echo "ERROR: second try of forces calculation did not converge"
-    exit 2
+if grep -q 'EXCEPTION RAISED:' "$input.out"; then
+    errmsg="ERROR: BAGEL calculation failed!"
+    bagel_error "$errmsg" "$input.out" "$input.out.error.$timestep"
 fi
 
-# COMMENT: Authors of BAGEL claim, that CASSCF implementation is great and any convergence error must have origin in wrong active space or somethink like that. 
-# COMMENT: Therefore, I skipped changing covergence criteria during CASSCF routine. 
-
-
-####################################################################
+if [[ $returncode -ne 0 ]];then
+    errmsg="ERROR: Bagel returned exit code $returncode"
+    bagel_error "$errmsg" "$input.out" "$input.out.error.$timestep"
+fi
 
 # NOW IT'S TIME TO COLLECT ALL THE DATA FOR ABIN
+# Extract energy.
+file_exists "ENERGY.out"
+cat ENERGY.out > "../engrad.dat.$ibead"
 
-# Extracting energy.
-cat ENERGY.out > ../engrad.dat.$ibead
-cat ENERGY.out > ../engrad_all.dat
+# Extract gradient
+file_exists "FORCE_${target_state}.out"
+tail -n +2 "FORCE_${target_state}.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat."$ibead"
 
-# Extracting GRADIENT
-tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad.dat.$ibead
-tail -n +2 "FORCE_$istate.out" | head -n -1 | awk '{print $2,$3,$4}'>>../engrad_all.dat
+if [[ ${error:-false} = "true" ]]; then
+    >&2 echo "Calculation converged with looser tresholds for timestep $timestep"
+fi
 
-cat ../state.dat >> ../stateall.dat
-
-rm -f FORCE_*
-echo "TIMESTEP = $timestep" >> $input.out.all
-echo "####################" >> $input.out.all
-cat $input.out >> $input.out.all
+cat ../state.dat >> state.dat.all
+rm ../state.dat
