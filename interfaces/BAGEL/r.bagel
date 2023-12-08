@@ -25,6 +25,7 @@ ORBITAL_FILE=orbitals
 file_exists "$geom"
 rm -f "../engrad.dat.$ibead" ENERGY.out FORCE_*
 
+
 ### GENERATE BAGEL INPUT
 function generate_input {
     local input=$1
@@ -54,6 +55,36 @@ function generate_input {
     echo "]}" >> "$input"
 }
 ### END OF INPUT GENERATION 
+
+function converge_casscf {
+    local input=$1
+    local output=$2
+    local casscf_error='EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
+    generate_input "$input" "$method"
+
+    # Execute BAGEL
+    exec_bagel "$input" "$output" "$timestep"
+    local returncode=$?
+    if grep -q "$casscf_error" "$output"; then
+        error=true
+        local savefile=$output.casscf_error.$timestep
+        cp "$output" "$savefile"
+        >&2 echo "ERROR: CASSCF did not converge, see file $savefile"
+	# Return if we reached the maximum threshold value,
+	# further increase would lead to inaccurate results.
+	if awk "BEGIN{exit !($thresh_CASSCF >= $max_thresh_CASSCF)}" ;then
+	    return 1
+	fi
+	# Retry again 5*thresh
+	thresh_CASSCF=$(awk "BEGIN{print $thresh_CASSCF*5}")
+        maxiter_CASSCF=600
+        >&2 echo "Trying again with thresh=$thresh_CASSCF and maxiter=$maxiter_CASSCF"
+	converge_casscf "$input" "$output"
+        returncode=$?
+    fi
+    return $returncode
+}
+
 
 ### EXECUTE BAGEL
 error=false

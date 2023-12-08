@@ -134,13 +134,13 @@ function print_cas {
     local inp=$2
     # CAS section
     if [[ $method == "xms_caspt2" ]]; then
-        print_cas "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
+        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
         print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
     elif [[ $method == "ms_caspt2" ]]; then
-        print_cas "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
+        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
         print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
     elif [[ $method == "sa_casscf" ]]; then
-        print_cas "casscf" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
+        print_casscf "casscf" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
         # Remove extra dangling comma
         sed -i '$ s/,$//' "$input"
     else
@@ -185,33 +185,4 @@ function print_caspt2 {
         "thresh": $thresh
       }
 EOF
-}
-
-function converge_casscf {
-    local input=$1
-    local output=$2
-    local casscf_error='EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
-    generate_input "$input" "$method"
-
-    # Execute BAGEL
-    exec_bagel "$input" "$output" "$timestep"
-    local returncode=$?
-    if grep -q "$casscf_error" "$output"; then
-        error=true
-        local savefile=$output.casscf_error.$timestep
-        cp "$output" "$savefile"
-        >&2 echo "ERROR: CASSCF did not converge, see file $savefile"
-	# Return if we reached the maximum threshold value,
-	# further increase would lead to inaccurate results.
-	if awk "BEGIN{exit !($thresh_CASSCF >= $max_thresh_CASSCF)}" ;then
-	    return 1
-	fi
-	# Retry again 5*thresh
-	thresh_CASSCF=$(awk "BEGIN{print $thresh_CASSCF*5}")
-        maxiter_CASSCF=600
-        >&2 echo "Trying again with thresh=$thresh_CASSCF and maxiter=$maxiter_CASSCF"
-	converge_casscf "$input" "$output"
-        returncode=$?
-    fi
-    return $returncode
 }

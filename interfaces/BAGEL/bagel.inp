@@ -11,3 +11,15 @@ charge=0
 hf_variant=rohf         # hf/rohf/uhf;  hf stands for restricted hf
 method=sa_casscf       # xms_caspt2/ms_caspt2/sa_casscf
 shift=0.25              # real shift for caspt2 (default 0.25)
+
+### Setup BAGEL executable and number of cores 
+# You might need to modify how to launch BAGEL executable,
+# depending on how you compiled it and you cluster setup.
+# NOTE: OpenMP parallelization via BAGEL_NUM_THREADS and MKL_NUM_THREADS
+# does not seem very effective, prefer MPI parallelization via mpirun -n <NPROC>
+# export BAGEL_NUM_THREADS=1
+# export MKL_NUM_THREADS=1
+# export BAGELEXE="mpirun -n 1 BAGEL"
+
+# PHOTOX-specific setting
+source SetEnvironment.sh BAGEL
