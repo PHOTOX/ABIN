@@ -5,8 +5,13 @@
 set -u
 
 cd "$(dirname "$0")" || exit 1
-source bagel.inp
+if [[ ! -f bagel_common.sh ]];then
+    echo "File 'bagel_common.sh' not found!"
+    exit 2
+fi
 source bagel_common.sh
+file_exists bagel.inp
+source bagel.inp
 
 timestep=$1
 ibead=$2
@@ -27,7 +32,6 @@ max_thresh_CASSCF="6.0e-6"
 ORBITAL_FILE=orbitals
 
 file_exists "$geom"
-
 rm -f "../engrad.dat.$ibead" ../nacm.dat ENERGY.out FORCE_*
 
 # Determine for which state we need to calculate forces
@@ -60,7 +64,7 @@ function generate_input {
  
     print_forces "$target_state" "$input"
 
-    print_cas "$method" "$input"
+    print_cas "$method" "$nstate" "$input"
     echo -e "      }]\n  }," >> "$input"
 
     save_orbitals "$ORBITAL_FILE" "$input"

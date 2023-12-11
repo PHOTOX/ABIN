@@ -2,9 +2,9 @@
 # NOTE: This script is meant to be sourced, not executed!
  
 ### Electronic structure parameters
+# NOTE: Number of states is specified in ABIN input file!
 basis=cc-pvdz
 df_basis=cc-pvdz-jkfit
-nstates=3
 nact=8
 nclosed=15
 maxiter_CASSCF=500      # maximum number of CASSCF iterations

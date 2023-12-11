@@ -11,32 +11,29 @@ set -u
 
 cd "$(dirname "$0")" || exit 1
 
+source bagel_common.sh
+file_exists bagel.inp
+
+### READ INPUT PARAMETERS ###
+source bagel.inp
 timestep=$1
 ibead=$2
 input=input$ibead.nacm
 geom="../geom.dat.$ibead"
+ORBITAL_FILE=orbitals
 
 # default NACM accuracy in BAGEL is 10^-8, whereas ABIN passes uses 1.0e-7 as default, therefore "+1"
 let nac_accu=$3+1
 nac_thresh="1.0e-$nac_accu"
 thresh="1.0e-8"
 
-ORBITAL_FILE=orbitals
-
-file_exists "$geom"
-file_exists bagel.inp
-file_exists bagel_common.sh
-
-### READ INPUT PARAMETERS ###
-source bagel.inp
-source bagel_common.sh
-
-rm -f ../nacm.dat NACME_*.out
-
 # reading from state.dat
 # Number of states and which NACME to compute
 read -r -t 2 -a nstate
 read -r -t 2 -a tocalc
+
+file_exists "$geom"
+rm -f ../nacm.dat NACME_*.out
 
 ### CREATE BAGEL INPUT ###
 specify_molecule "$geom" "$input.json"
@@ -67,22 +64,22 @@ sed -i '$ s/,$//' "$input.json"
 echo "    ]," >> "$input.json"
 
 # Need to pass different thresholds
-#print_cas "$method" "$input"
+# print_cas "$method" "$nstate" "$input"
 
 # CAS section
 if [[ $method = "xms_caspt2" ]]; then
 
-    print_cas "caspt2" "$thresh" "$maxiter_CASSCF" "$input.json"
+    print_casscf "caspt2" "$thresh" "$maxiter_CASSCF" "$nstate" "$input.json"
     print_caspt2 "true" "$nac_thresh" "$maxiter_CASPT2" "$input.json"
 
 elif [[ $method = "ms_caspt2" ]]; then
 
-    print_cas "caspt2" "$thresh" "$maxiter_CASSCF" "$input.json"
+    print_casscf "caspt2" "$thresh" "$maxiter_CASSCF" "$nstate" "$input.json"
     print_caspt2 "false" "$nac_thresh" "$maxiter_CASPT2" "$input.json"
 
 elif [[ $method = "sa_casscf" ]]; then
 
-    print_cas "casscf" "$nac_thresh" "$maxiter_CASSCF" "$input.json"
+    print_casscf "casscf" "$nac_thresh" "$maxiter_CASSCF" "$nstate" "$input.json"
     # Remove extra dangling comma
     sed -i '$ s/,$//' "$input.json"
 

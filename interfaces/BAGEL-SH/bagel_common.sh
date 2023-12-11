@@ -131,10 +131,11 @@ EOF
 
 function print_cas {
     local method=$1
-    local inp=$2
+    local nstate=$2
+    local inp=$3
     # CAS section
     if [[ $method == "xms_caspt2" ]]; then
-        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
+        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$nstate" "$input"
         print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
     elif [[ $method == "ms_caspt2" ]]; then
         print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
@@ -153,7 +154,8 @@ function print_casscf {
     local method=$1
     local thresh=$2
     local maxiter=$3
-    local inp=$4
+    local nstate=$4
+    local inp=$5
     cat >> "$inp" << EOF
     "method": [{
       "title": "$method",
@@ -163,7 +165,7 @@ function print_casscf {
       "thresh": $thresh,
       "nact": $nact,
       "nclosed": $nclosed,
-      "nstate": $nstates,
+      "nstate": $nstate,
 EOF
 # NOTE: We have to leave this JSON section unclosed since we might need to append CASPT2 input
 }
