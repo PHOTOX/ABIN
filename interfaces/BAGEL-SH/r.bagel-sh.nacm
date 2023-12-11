@@ -66,7 +66,7 @@ done
 sed -i '$ s/,$//' "$input.json"
 echo "    ]," >> "$input.json"
 
-print_cas "$method" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$thresh_CASPT2" "$maxiter_CASSCF" "$maxiter_CASPT2" "$shift" "$input"
+print_cas "$method" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$thresh_CASPT2" "$maxiter_CASSCF" "$maxiter_CASPT2" "$shift" "$input.json"
 
 echo -e "      }]\n  }\n]}" >> "$input.json"
 ### END OF BAGEL INPUT ###
