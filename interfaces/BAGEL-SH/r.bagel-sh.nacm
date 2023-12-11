@@ -22,10 +22,12 @@ input=input$ibead.nacm
 geom="../geom.dat.$ibead"
 ORBITAL_FILE=orbitals
 
-# default NACM accuracy in BAGEL is 10^-8, whereas ABIN passes uses 1.0e-7 as default, therefore "+1"
+# default thresholda in BAGEL is 10^-8, whereas ABIN passes uses 1.0e-7 as default, therefore "+1"
 (( nac_accu=$3+1 ))
-nac_thresh="1.0e-$nac_accu"
-thresh="1.0e-8"
+# NOTE: BAGEL does not seem to have a threshold for NACM specifically,
+# so we will use this to specify CASSCF threshold.
+thresh_CASSCF="1.0e-$nac_accu"
+thresh_CASPT2="1.0e-8"
 
 # reading from file state.dat created by ABIN
 # Number of states
@@ -64,30 +66,7 @@ done
 sed -i '$ s/,$//' "$input.json"
 echo "    ]," >> "$input.json"
 
-# Need to pass different thresholds
-# print_cas "$method" "$nstate" "$input"
-
-# CAS section
-if [[ $method = "xms_caspt2" ]]; then
-
-    print_casscf "caspt2" "$thresh" "$maxiter_CASSCF" "$nstate" "$input.json"
-    print_caspt2 "true" "$nac_thresh" "$maxiter_CASPT2" "$input.json"
-
-elif [[ $method = "ms_caspt2" ]]; then
-
-    print_casscf "caspt2" "$thresh" "$maxiter_CASSCF" "$nstate" "$input.json"
-    print_caspt2 "false" "$nac_thresh" "$maxiter_CASPT2" "$input.json"
-
-elif [[ $method = "sa_casscf" ]]; then
-
-    print_casscf "casscf" "$nac_thresh" "$maxiter_CASSCF" "$nstate" "$input.json"
-    # Remove extra dangling comma
-    sed -i '$ s/,$//' "$input.json"
-
-else
-    >&2 echo "ERROR: Unknown method ($method). Specify one of \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\" in bagel.inp"
-    exit 2
-fi
+print_cas "$method" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$thresh_CASPT2" "$maxiter_CASSCF" "$maxiter_CASPT2" "$shift" "$input"
 
 echo -e "      }]\n  }\n]}" >> "$input.json"
 ### END OF BAGEL INPUT ###
@@ -99,6 +78,7 @@ returncode=$?
 ### Check if BAGEL finished succesfully ###
 
 # NOTE: Since we are starting from converged wavefunction, CASSCF should always converge
+# TODO: Not sure if this is true, since previous calculation may have converged with looser threshold!
 casscf_error='ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
 smith_error='ERROR: EXCEPTION RAISED:  SMITH convergence not reached.'
 

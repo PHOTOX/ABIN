@@ -137,64 +137,67 @@ EOF
 
 function print_cas {
     local method=$1
-    local nstate=$2
-    local thresh_CASSCF=$3
-    local thresh_CASPT2=$4
-    local maxiter_CASSCF=$5
-    local maxiter_CASPT2=$6
-    local inp=$7
-    # CAS section
+    local nspin=$2
+    local charge=$3
+    local nstate=$4
+    local nact=$5
+    local nclosed=$6
+    local thresh_CASSCF=$7
+    local thresh_CASPT2=$8
+    local maxiter_CASSCF=$9
+    local maxiter_CASPT2=${10}
+    local shift=${11}
+    local inp=${12}
+
     if [[ $method == "xms_caspt2" ]]; then
-        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$nstate" "$inp"
-        print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$inp"
+
+        print_casscf "caspt2" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$maxiter_CASSCF" "$inp"
+        print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$shift" "$inp"
+
     elif [[ $method == "ms_caspt2" ]]; then
-        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$inp"
-        print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$inp"
+
+        print_casscf "caspt2" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$maxiter_CASSCF" "$inp"
+        print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$shift" "$inp"
+
     elif [[ $method == "sa_casscf" ]]; then
-        print_casscf "casscf" "$thresh_CASSCF" "$maxiter_CASSCF" "$inp"
+
+        print_casscf "casscf" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$maxiter_CASSCF" "$inp"
         # Remove extra dangling comma
         sed -i '$ s/,$//' "$inp"
+
     else
+
         >&2 echo "ERROR: Unknown method ($method). Specify one of \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\" in bagel.inp"
         exit 2
+
     fi
 }
 
 function print_casscf {
-    local method=$1
-    local thresh=$2
-    local maxiter=$3
-    local nstate=$4
-    local inp=$5
-    cat >> "$inp" << EOF
+    cat >> "$9" << EOF
     "method": [{
-      "title": "$method",
-      "nspin": $nspin,
-      "charge": $charge,
-      "maxiter": $maxiter,
-      "thresh": $thresh,
-      "nact": $nact,
-      "nclosed": $nclosed,
-      "nstate": $nstate,
+      "title": "$1",
+      "nspin": $2,
+      "charge": $3,
+      "nstate": $4,
+      "nact": $5,
+      "nclosed": $6,
+      "thresh": $7,
+      "maxiter": $8,
 EOF
 # NOTE: We have to leave this JSON section unclosed since we might need to append CASPT2 input
 }
 
 function print_caspt2 {
-    # XMS-CASPT2 - "true" or "false"
-    local xms=$1
-    local thresh=$2
-    local maxiter=$3
-    local inp=$4
     # TODO: Make it possible to use a real shift instead of imaginary
-    cat >> "$inp" << EOF
+    cat >> "$5" << EOF
       "smith": {
         "method": "caspt2",
-        "xms": "$xms",
-        "shift": $shift,
+        "xms": $1,
+        "thresh": $2,
+        "maxiter": $3,
+        "shift": $4,
         "shift_imag": true,
-        "maxiter": $maxiter,
-        "thresh": $thresh
       }
 EOF
 }

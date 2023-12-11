@@ -69,7 +69,7 @@ function generate_input {
  
     print_forces "$target_state" "$input"
 
-    print_cas "$method" "$nstate" "$thresh_CASSCF" "$thresh_CASPT2" "$maxiter_CASSCF" "$maxiter_CASPT2" "$input"
+    print_cas "$method" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$thresh_CASPT2" "$maxiter_CASSCF" "$maxiter_CASPT2" "$shift" "$input"
     echo -e "      }]\n  }," >> "$input"
 
     save_orbitals "$ORBITAL_FILE" "$input"
