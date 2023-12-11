@@ -141,15 +141,15 @@ function print_cas {
     local inp=$3
     # CAS section
     if [[ $method == "xms_caspt2" ]]; then
-        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$nstate" "$input"
-        print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
+        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$nstate" "$inp"
+        print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$inp"
     elif [[ $method == "ms_caspt2" ]]; then
-        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
-        print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$input"
+        print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$inp"
+        print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$inp"
     elif [[ $method == "sa_casscf" ]]; then
-        print_casscf "casscf" "$thresh_CASSCF" "$maxiter_CASSCF" "$input"
+        print_casscf "casscf" "$thresh_CASSCF" "$maxiter_CASSCF" "$inp"
         # Remove extra dangling comma
-        sed -i '$ s/,$//' "$input"
+        sed -i '$ s/,$//' "$inp"
     else
         >&2 echo "ERROR: Unknown method ($method). Specify one of \"xms_caspt2\", \"ms_caspt2\" or \"sa_casscf\" in bagel.inp"
         exit 2
