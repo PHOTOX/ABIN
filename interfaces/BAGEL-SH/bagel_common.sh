@@ -25,7 +25,8 @@ function bagel_error {
     local bagel_output="$2"
     local copy="$3"
     if [[ -f "$bagel_output" && -n "$copy" ]]; then
-        cp "$bagel_output" "$copy"
+        # NOTE: There might be multiple errors per timestep so concatenate
+        cat "$bagel_output" >> "$copy"
     fi
     >&2 echo -e "${errmsg}"
     >&2 echo "Inspect file $(dirname "$0")/$copy"

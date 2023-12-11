@@ -95,7 +95,7 @@ function converge_casscf {
     if grep -q "$casscf_error" "$output"; then
         error=true
         local savefile=$output.casscf_error.$timestep
-        cp "$output" "$savefile"
+        cat "$output" >> "$savefile"
         >&2 echo "ERROR: CASSCF did not converge, see file $savefile"
 	# Return if we reached the maximum threshold value,
 	# further increase would lead to inaccurate results.
@@ -127,7 +127,7 @@ if grep -q "$smith_error" "$input.out"; then
     maxiter_CASPT2=1000
     >&2 echo "ERROR: CASPT2 did not converge, trying again with thresh=$thresh_CASPT2 and maxiter=$maxiter_CASPT2."
     >&2 echo "See file $savefile"
-    cp "$input.out" "$savefile"
+    cat "$input.out" >> "$savefile"
     generate_input "$input.json" "$method"
     exec_bagel "$input".json "$input".out "$timestep"
     returncode=$?
