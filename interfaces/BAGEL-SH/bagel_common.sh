@@ -67,7 +67,10 @@ EOF
 }
 
 function generate_hf_orbitals {
-    local inp=$1
+    local hf_variant=$1
+    local charge=$2
+    local nspin=$3
+    local inp=$4
     cat >> "$inp" << EOF
   {
     "title" : "$hf_variant",

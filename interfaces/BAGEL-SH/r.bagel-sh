@@ -64,7 +64,7 @@ function generate_input {
         load_orbitals "$ORBITAL_FILE" "$input"
     else
         # Calculate HF guess if the initial orbitals are not provided via the 'orbitals.archive' file
-        generate_hf_orbitals "$input"
+        generate_hf_orbitals "$hf_variant" "$charge" "$nspin" "$input"
     fi
  
     print_forces "$target_state" "$input"
