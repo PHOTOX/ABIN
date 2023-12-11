@@ -197,7 +197,7 @@ function print_caspt2 {
         "thresh": $2,
         "maxiter": $3,
         "shift": $4,
-        "shift_imag": true,
+        "shift_imag": true
       }
 EOF
 }
