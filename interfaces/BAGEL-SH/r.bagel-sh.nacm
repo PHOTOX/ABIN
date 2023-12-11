@@ -37,7 +37,7 @@ file_exists "$geom"
 rm -f ../nacm.dat NACME_*.out
 
 ### CREATE BAGEL INPUT ###
-specify_molecule "$geom" "$input.json"
+specify_molecule "$geom" "$basis" "$df_basis" "$input.json"
 load_orbitals "$ORBITAL_FILE" "$input.json"
 
 cat >> "$input.json" << EOF

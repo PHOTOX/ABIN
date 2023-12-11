@@ -45,8 +45,9 @@ function file_exists {
 function specify_molecule {
     # XYZ coordinates provided by ABIN in geom.dat
     local xyz=$1
-    # Name of the bagel input file we are creating
-    local inp=$2
+    local basis=$2
+    local df_basis=$3
+    local inp=$4
     local natom
     natom=$(wc -l < "$xyz")
 

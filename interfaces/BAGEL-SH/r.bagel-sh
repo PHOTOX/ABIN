@@ -57,7 +57,7 @@ function generate_input {
     local input=$1
     local method=$2
  
-    specify_molecule "$geom" "$input"
+    specify_molecule "$geom" "$basis" "$df_basis" "$input"
  
     if [[ -f "$ORBITAL_FILE.archive" ]]; then
         # Load orbitals if the archive file exists
