@@ -3,17 +3,17 @@
  
 ### Electronic structure parameters
 # NOTE: Number of states is specified in ABIN input file!
+nspin=0                 # 0 singlet, 1 dublet, 2 triplet ...
+charge=0
 basis=cc-pvdz
 df_basis=cc-pvdz-jkfit
+hf_variant=rohf         # hf/rohf/uhf;  hf stands for restricted hf
+                        # only used for initial orbitals in step 0 if not provided
+method=xms_caspt2       # xms_caspt2/ms_caspt2/sa_casscf
 nact=8
 nclosed=15
 maxiter_CASSCF=500      # maximum number of CASSCF iterations
 maxiter_CASPT2=300      # maximum number of CASPT2 iterations
-nspin=0                 # 0 singlet, 1 dublet, 2 triplet ...
-charge=0
-hf_variant=rohf         # hf/rohf/uhf;  hf stands for restricted hf
-                        # only used for initial orbitals in step 0 if not provided
-method=xms_caspt2       # xms_caspt2/ms_caspt2/sa_casscf
 shift=0.25              # real shift for caspt2 (default 0.25)
 
 ### Setup BAGEL executable and number of cores 
@@ -26,4 +26,5 @@ shift=0.25              # real shift for caspt2 (default 0.25)
 # export BAGELEXE="mpirun -n 1 BAGEL"
 
 # PHOTOX-specific setting
+# shellcheck source=/dev/null  # See https://www.shellcheck.net/wiki/SC1091
 source SetEnvironment.sh BAGEL
