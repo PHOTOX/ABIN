@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script is called by ABIN as:
+# $ BAGEL-SH/r.bagel-sh [timestep] 001 < state.dat
+
 # You should't need to modify this file.
 # Specification of CAS wavefunction is in file "bagel.inp"
 set -u
@@ -18,8 +21,10 @@ ibead=$2
 input=input$ibead
 geom="../geom.dat.$ibead"
 
-# Read Number of states, current state which NACM to compute from state.dat
-read -r -t 2 -a nstate
+# reading from file state.dat created by ABIN
+# Number of states
+read -r -t 2 nstate
+# Which state do we compute the gradient for?
 read -r -t 2 -a tocalc
 
 thresh_CASSCF="1.0e-8"

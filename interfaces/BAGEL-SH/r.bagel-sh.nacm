@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script is called by ABIN as:
-# $ BAGEL/r.bagel.nacm timestep 001 nac_accu < state.dat
+# $ BAGEL-SH/r.bagel-sh.nacm [timestep] 001 [nac_accu] < state.dat
 
 # You should't need to modify this file!
 # Specification of CAS wavefunction is in file "bagel.inp"
@@ -23,13 +23,14 @@ geom="../geom.dat.$ibead"
 ORBITAL_FILE=orbitals
 
 # default NACM accuracy in BAGEL is 10^-8, whereas ABIN passes uses 1.0e-7 as default, therefore "+1"
-let nac_accu=$3+1
+(( nac_accu=$3+1 ))
 nac_thresh="1.0e-$nac_accu"
 thresh="1.0e-8"
 
-# reading from state.dat
-# Number of states and which NACME to compute
-read -r -t 2 -a nstate
+# reading from file state.dat created by ABIN
+# Number of states
+read -r -t 2 nstate
+# Which NACME to compute?
 read -r -t 2 -a tocalc
 
 file_exists "$geom"
@@ -54,9 +55,9 @@ for ((ist1=istate; ist1<nstate-1; ist1++)); do
         if [[ ${tocalc[$tocalc_idx]} -eq 1 ]]; then
             echo "{\"title\": \"nacme\", \"target\": $ist1, \"target2\": $ist2}," >> "$input.json"
         fi
-        let tocalc_idx++
+        (( tocalc_idx++ ))
     done
-    let jstate++
+    (( jstate++ ))
 done
 
 # Remove dangling comma
@@ -127,9 +128,9 @@ for ((ist1=istate; ist1<nstate-1; ist1++)); do
             file_exists "NACME_${ist1}_${ist2}.out"
             tail -n +2 "NACME_${ist1}_${ist2}.out" | head -n -1 | awk '{print $2,$3,$4}' >> ../nacm.dat
         fi
-        let tocalc_idx++
+        (( tocalc_idx++ ))
     done
-    let jstate++
+    (( jstate++ ))
 done
 cat ../nacm.dat >> nacm.dat.all
 cat ../state.dat >> state.nacm.dat.all

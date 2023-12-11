@@ -11,10 +11,12 @@ function exec_bagel {
     $BAGELEXE "$input_file" >> "$output_file" 2>&1
     local exitcode=$?
 
-    echo "TIMESTEP = $timestep" >> "$output_file".all
-    date >> "$output_file".all
-    echo "####################" >> "$output_file".all
-    cat "$output_file" >> "$output_file".all
+    # Concatenate all output files
+    all_output="$output_file".all
+    sep="\n############################\n"
+    header="${sep}TIMESTEP = $timestep\n$(date)${sep}"
+    echo -e "${header}" >> "$all_output"
+    cat "$output_file" >> "$all_output"
     return $exitcode
 }
 
