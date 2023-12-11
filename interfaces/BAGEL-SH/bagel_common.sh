@@ -138,7 +138,11 @@ EOF
 function print_cas {
     local method=$1
     local nstate=$2
-    local inp=$3
+    local thresh_CASSCF=$3
+    local thresh_CASPT2=$4
+    local maxiter_CASSCF=$5
+    local maxiter_CASPT2=$6
+    local inp=$7
     # CAS section
     if [[ $method == "xms_caspt2" ]]; then
         print_casscf "caspt2" "$thresh_CASSCF" "$maxiter_CASSCF" "$nstate" "$inp"
