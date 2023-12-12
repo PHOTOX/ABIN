@@ -1,11 +1,13 @@
 #!/bin/bash
+set -u
 
 # This script is called by ABIN as:
-# $ BAGEL-SH/r.bagel-sh [timestep] 001 < state.dat
+# $ BAGEL/r.bagel <timestep> <ibead>
 
 # You should't need to modify this file.
 # Specification of CAS wavefunction is in file "bagel.inp"
-set -u
+# This script is used for the ground state MD.
+nstate=1
 
 cd "$(dirname "$0")" || exit 1
 if [[ ! -f bagel_common.sh ]];then
@@ -138,5 +140,4 @@ if [[ ${error:-false} = "true" ]]; then
     >&2 echo "Calculation converged with looser tresholds for timestep $timestep"
 fi
 
-cat ../state.dat >> state.dat.all
-rm ../state.dat "$geom"
+rm "$geom"
