@@ -1,7 +1,5 @@
 basis=cc-pvdz
 df_basis=cc-pvdz-jkfit
-nstates=1
-target_state=0                # state to be calculated, 0=ground state
 nact=8
 nclosed=14
 maxiter_CASSCF=250      # maximum number of CASSCF iterations
@@ -22,4 +20,5 @@ shift=0.25              # real shift for caspt2 (default 0.25)
 # export BAGELEXE="mpirun -n 1 BAGEL"
 
 # PHOTOX-specific setting
+# shellcheck source=/dev/null  # See https://www.shellcheck.net/wiki/SC1091
 source SetEnvironment.sh BAGEL

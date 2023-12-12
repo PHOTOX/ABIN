@@ -1,18 +1,27 @@
 #!/bin/bash
 
+# This script is called by ABIN as:
+# $ BAGEL-SH/r.bagel-sh [timestep] 001 < state.dat
+
 # You should't need to modify this file.
 # Specification of CAS wavefunction is in file "bagel.inp"
 set -u
 
 cd "$(dirname "$0")" || exit 1
-source bagel.inp
+if [[ ! -f bagel_common.sh ]];then
+    echo "File 'bagel_common.sh' not found!"
+    exit 2
+fi
 source bagel_common.sh
+file_exists bagel.inp
+source bagel.inp
 
 timestep=$1
 ibead=$2
 input=input$ibead
 geom="../geom.dat.$ibead"
 
+target_state=0  # state to be calculated, 0 = ground state
 thresh_CASSCF="1.0e-8"
 thresh_CASPT2="1.0e-8"
 # We will try to converge CASSCF by increasing thresh
@@ -25,25 +34,24 @@ ORBITAL_FILE=orbitals
 file_exists "$geom"
 rm -f "../engrad.dat.$ibead" ENERGY.out FORCE_*
 
-
 ### GENERATE BAGEL INPUT
 function generate_input {
     local input=$1
     local method=$2
  
-    specify_molecule "$geom" "$input"
+    specify_molecule "$geom" "$basis" "$df_basis" "$input"
  
     if [[ -f "$ORBITAL_FILE.archive" ]]; then
         # Load orbitals if the archive file exists
         load_orbitals "$ORBITAL_FILE" "$input"
     else
         # Calculate HF guess if the initial orbitals are not provided via the 'orbitals.archive' file
-        generate_hf_orbitals "$input"
+        generate_hf_orbitals "$hf_variant" "$charge" "$nspin" "$input"
     fi
  
     print_forces "$target_state" "$input"
 
-    print_cas "$method" "$input"
+    print_cas "$method" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$thresh_CASPT2" "$maxiter_CASSCF" "$maxiter_CASPT2" "$shift" "$input"
     echo -e "      }]\n  }," >> "$input"
 
     save_orbitals "$ORBITAL_FILE" "$input"
@@ -55,6 +63,7 @@ function generate_input {
     echo "]}" >> "$input"
 }
 ### END OF INPUT GENERATION 
+
 
 function converge_casscf {
     local input=$1
@@ -68,7 +77,7 @@ function converge_casscf {
     if grep -q "$casscf_error" "$output"; then
         error=true
         local savefile=$output.casscf_error.$timestep
-        cp "$output" "$savefile"
+        cat "$output" >> "$savefile"
         >&2 echo "ERROR: CASSCF did not converge, see file $savefile"
 	# Return if we reached the maximum threshold value,
 	# further increase would lead to inaccurate results.
@@ -100,7 +109,7 @@ if grep -q "$smith_error" "$input.out"; then
     maxiter_CASPT2=1000
     >&2 echo "ERROR: CASPT2 did not converge, trying again with thresh=$thresh_CASPT2 and maxiter=$maxiter_CASPT2."
     >&2 echo "See file $savefile"
-    cp "$input.out" "$savefile"
+    cat "$input.out" >> "$savefile"
     generate_input "$input.json" "$method"
     exec_bagel "$input".json "$input".out "$timestep"
     returncode=$?
@@ -130,4 +139,4 @@ if [[ ${error:-false} = "true" ]]; then
 fi
 
 cat ../state.dat >> state.dat.all
-rm ../state.dat
+rm ../state.dat "$geom"
