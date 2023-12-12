@@ -25,7 +25,17 @@ geom="../geom.dat.$ibead"
 # Number of states
 read -r -t 2 nstate
 # Which state do we compute the gradient for?
-read -r -t 2 -a tocalc
+read -r -t 2 target_state
+# ABIN counts from 1, BAGEL from 0
+(( target_state-- ))
+
+# Number of singlet states
+read -r -t 2 nstate_singlet
+# This interface only support singlet manifold, no S-T crossing
+if [[ $nstate -ne $nstate_singlet ]];then
+  >&2 echo "ERROR: This BAGEL interface does not support triplets!"
+  exit 2
+fi
 
 thresh_CASSCF="1.0e-8"
 thresh_CASPT2="1.0e-8"
@@ -38,19 +48,6 @@ ORBITAL_FILE=orbitals
 
 file_exists "$geom"
 rm -f "../engrad.dat.$ibead" ../nacm.dat ENERGY.out FORCE_*
-
-# Determine for which state we need to calculate forces
-for ((ist=0; ist<nstate; ist++))
-do
-    if [[ ${tocalc[$ist]} -eq 1 ]]; then
-      if [[ -z ${target_state-} ]]; then
-          target_state=$ist
-      else
-          >&2 echo "ERROR: Invalid tocalc, cannot compute gradient for more than one state"
-          exit 2
-      fi
-    fi
-done
 
 ### GENERATE BAGEL INPUT
 function generate_input {
