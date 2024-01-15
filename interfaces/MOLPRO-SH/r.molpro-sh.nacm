@@ -22,7 +22,7 @@ rm -f ../nacm.dat
 
 # reading from state.dat
 # Number of states and which NACME to compute
-read -t 2 -a nstate
+read -t 2 nstate
 read -t 2 -a tocalc
 
 # Copy WF from previous gradient computation
