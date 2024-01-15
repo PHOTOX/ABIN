@@ -14,6 +14,17 @@ env:
   ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
+  # Even for public builds, it is apparently useful to use CODECOV_TOKEN
+  # to minimize failed uploads, see:
+  # https://community.codecov.com/t/upload-issues-unable-to-locate-build-via-github-actions-api/3954
+  # NOTE: This breaks CI on PRs from forks. We might need to change this if it becomes an issue.
+  # NOTE: It would be safer to only pass the secret token to the codecov-upload action,
+  # but the impact of this token leaking is small anyway.
+  # NOTE: It appears that even with this token there are issues,
+  # so for now we let the CI succeed even if the upload fails.
+  # Reported by many people also at:
+  # https://github.com/codecov/codecov-action/issues/926
+  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
 jobs:
 
@@ -100,6 +111,7 @@ jobs:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
         gcov: true
+        fail_ci_if_error: false
 
     - name: Run End-to-End tests
       if: always()
@@ -109,7 +121,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         gcov: true
 
   intel_build:
@@ -193,7 +205,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         name: tcpb
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         gcov: true
 
 
@@ -292,7 +304,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         gcov: true
 
   mpich_build:
@@ -361,7 +373,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         gcov: true
 
   openmpi_build:
@@ -404,7 +416,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         gcov: true
 
   plumed_build:
@@ -475,5 +487,5 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         gcov: true
