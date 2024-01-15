@@ -1,16 +1,19 @@
 #!/bin/bash
-cd $(dirname $0)
-timestep=$1
+set -u
+
+# This script is called by ABIN as:
+# $ TERACHEM/r.terachem <timestep> <ibead>
+
+cd "$(dirname "$0")" || exit 1
 ibead=$2
-input=input$ibead.com
-natom=$(wc -l < ../geom.dat.$ibead)
+input="input$ibead.com"
+geom="../geom.dat.$ibead"
+natom=$(wc -l < "$geom")
 
 source ../SetEnvironment.sh TERACHEM
 
 ### USER INPUT FOR  TERACHEM
-parallel=0 # =1 if we execute ABIN in parallel for PIMD
-numgpus=1  # number of gpus per single point calculation
-cat > $input << EOF
+cat > "$input" << EOF
 basis 		6-31g*
 charge   	0
 spinmult	1
@@ -18,61 +21,63 @@ method 		pbe
 convthre        1e-6
 threall         1e-13
 EOF
+
+parallel=0 # =1 if we execute ABIN in parallel for PIMD
+numgpus=1  # number of gpus per single point calculation
+
 ### END OF USER INPUT
 
 scrdir="./scratch$ibead"
 
 if [[ $parallel -eq "1" ]];then
-   gpuid=""
-   let gpu0=ibead-1
-   let gpu0=gpu0*numgpus
+    gpuid=""
+    (( gpu0=ibead-1 ))
+    (( gpu0=gpu0*numgpus ))
 else
-   gpu0=0
+    gpu0=0
 fi
 
 for ((i=0;i<numgpus;i++ )) {
-   let gpuindex=gpu0+i
-   gpuid="$gpuid $gpuindex"
+    (( gpuindex=gpu0+i ))
+    gpuid="$gpuid $gpuindex"
 }
 
-cat >> $input << EOF
-scrdir		$scrdir
-keep_scr        yes
-coordinates	input$ibead.xyz
-units 		angstrom
-gpus		$numgpus $gpuid
-run 		gradient
-EOF
-
 ### Pass the wave function from previous step if it exists
+guess_string=""
 if [[ -f $scrdir/c0 ]];then
-    echo "guess $scrdir/c0" >> $input
+    guess_string="guess $scrdir/c0"
 fi
 if [[ -f $scrdir/ca0 && -f $scrdir/cb0 ]];then
-    echo "guess $scrdir/ca0 $scrdir/cb0" >> $input
+    guess_string="guess $scrdir/ca0 $scrdir/cb0"
 fi
 
-echo "end" >> $input
+cat >> "$input" << EOF
+scrdir        $scrdir
+keep_scr      yes
+coordinates   input$ibead.xyz
+units         angstrom
+gpus          $numgpus $gpuid
+run           gradient
+$guess_string
+end
+EOF
 
 ### Create XYZ geometry file
-echo -ne "$natom\n\n" > input$ibead.xyz
-head -n $natom ../geom.dat.$ibead >> input$ibead.xyz
+echo -ne "$natom\n\n" > "input$ibead.xyz"
+head -n "$natom" "$geom" >> "input$ibead.xyz"
 
 ### Launch TeraChem
 export OMP_NUM_THREADS=$numgpus
 
-$TERAEXE $input > $input.out 2>&1
-
-#check whether all is ok
-if [[ $? -eq 0 ]];then
-   cp $input.out $input.out.old
+if $TERAEXE "$input" > "$input.out" 2>&1; then
+    cp "$input.out" "$input.out.old"
 else
-   echo "WARNING: TeraChem calculation probably failed."
-   echo "See TERACHEM/$input.out.error"
-   cp $input.out $input.out.error
-   exit 2
+    echo "ERROR: TeraChem calculation probably failed."
+    echo "See TERACHEM/$input.out.error"
+    cp "$input.out" "$input.out.error"
+    exit 2
 fi
 
 ### Extract energy and forces
-grep 'FINAL ENERGY' $input.out | awk '{print $3}' > ../engrad.dat.$ibead
-grep -A$natom 'dE/dX' $input.out | tail -$natom >> ../engrad.dat.$ibead 
+grep 'FINAL ENERGY' "$input.out" | awk '{print $3}' > "../engrad.dat.$ibead"
+grep -A"$natom" 'dE/dX' "$input.out" | tail -"$natom" >> "../engrad.dat.$ibead" 
