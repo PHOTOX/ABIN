@@ -34,7 +34,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      uses: actions/setup-python@v4
+    - uses: actions/setup-python@v4
 
     - name: Install fprettify dependencies
       run: pip install configargparse
