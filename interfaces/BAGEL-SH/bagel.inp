@@ -14,7 +14,8 @@ nact=8
 nclosed=15
 maxiter_CASSCF=500      # maximum number of CASSCF iterations
 maxiter_CASPT2=300      # maximum number of CASPT2 iterations
-shift=0.25              # imaginary shift for caspt2 (default 0.25)
+shift=0.25              # real / imaginary shift for caspt2 (default 0.25)
+shift_imag=false        #
 
 ### Setup BAGEL executable and number of cores 
 # You might need to modify how to launch BAGEL executable,

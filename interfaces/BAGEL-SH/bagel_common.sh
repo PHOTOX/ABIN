@@ -148,17 +148,18 @@ function print_cas {
     local maxiter_CASSCF=$9
     local maxiter_CASPT2=${10}
     local shift=${11}
-    local inp=${12}
+    local shift_imag=${12}
+    local inp=${13}
 
     if [[ $method == "xms_caspt2" ]]; then
 
         print_casscf "caspt2" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$maxiter_CASSCF" "$inp"
-        print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$shift" "$inp"
+        print_caspt2 "true" "$thresh_CASPT2" "$maxiter_CASPT2" "$shift" "$shift_imag" "$inp"
 
     elif [[ $method == "ms_caspt2" ]]; then
 
         print_casscf "caspt2" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$maxiter_CASSCF" "$inp"
-        print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$shift" "$inp"
+        print_caspt2 "false" "$thresh_CASPT2" "$maxiter_CASPT2" "$shift" "$shift_imag" "$inp"
 
     elif [[ $method == "sa_casscf" ]]; then
 
@@ -191,14 +192,14 @@ EOF
 
 function print_caspt2 {
     # TODO: Make it possible to use a real shift instead of imaginary
-    cat >> "$5" << EOF
+    cat >> "$6" << EOF
       "smith": {
         "method": "caspt2",
         "xms": $1,
         "thresh": $2,
         "maxiter": $3,
         "shift": $4,
-        "shift_imag": true
+        "shift_imag": $5 
       }
 EOF
 }
