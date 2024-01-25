@@ -31,8 +31,8 @@ from fprettify import run
 try:
     import configargparse
 except ImportError:
-    print("Could not find configargparse package")
-    print("Please install it e.g. via 'pip install --user configargparse")
+    print("ERROR: Could not find configargparse package")
+    print("Please install the package, e.g. 'pip install --user configargparse'")
     sys.exit(1)
 
 if len(sys.argv) == 1:
