@@ -33,7 +33,6 @@ contains
          rOH2 = get_distance(x, y, z, 1, 3, iw)
          aHOH_deg = get_angle(x, y, z, 2, 1, 3, iw)
          aHOH_rad = aHOH_deg * PI / 180.0D0
-         print*, 'Angle = ', aHOH_deg, aHOH_rad
          rij(iw, 1) = rOH1
          rij(iw, 2) = rOH2
          rij(iw, 3) = aHOH_rad
