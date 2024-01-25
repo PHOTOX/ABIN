@@ -128,6 +128,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_const, only: DP
    use mod_general, only: natom, ipimd
    use mod_water, only: watpot
+   use mod_h2o_pes, only: force_h2o_schwenke
    use mod_force_mm, only: force_mm
    use mod_sbc, only: force_sbc, isbc
    use mod_plumed, only: iplumed, force_plumed
@@ -155,6 +156,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
       call force_mm(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_mmwater_")
       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
+   case ("_h2o_")
+      call force_h2o_schwenke(x, y, z, fx, fy, fz, eclas, natom, walkmax)
    case ("_splined_grid_")
       ! Only 1D spline grid supported at the moment
       call force_splined_grid(x, fx, eclas, walkmax)
