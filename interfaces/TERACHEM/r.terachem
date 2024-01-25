@@ -1,16 +1,19 @@
 #!/bin/bash
-set -u
-
 # This script is called by ABIN as:
-# $ TERACHEM/r.terachem <timestep> <ibead>
+# TERACHEM/r.terachem <timestep> <ibead>
+
+# SETUP the TeraChem environment
+# $TERAEXE (used below) should hold the path to the terachem binary
+# The SetEnvironment.sh script that handles this is specific to PHOTOX clusters.
+source ./SetEnvironment.sh TERACHEM
+
+set -u
 
 cd "$(dirname "$0")" || exit 1
 ibead=$2
 input="input$ibead.com"
 geom="../geom.dat.$ibead"
 natom=$(wc -l < "$geom")
-
-source ../SetEnvironment.sh TERACHEM
 
 ### USER INPUT FOR  TERACHEM
 cat > "$input" << EOF
@@ -39,7 +42,7 @@ fi
 
 for ((i=0;i<numgpus;i++ )) {
     (( gpuindex=gpu0+i ))
-    gpuid="$gpuid $gpuindex"
+    gpuid="${gpuid-} $gpuindex"
 }
 
 ### Pass the wave function from previous step if it exists
