@@ -1,0 +1,86 @@
+#!/bin/bash
+# This script is called by ABIN as:
+# TERACHEM/r.terachem <timestep> <ibead>
+
+# SETUP the TeraChem environment
+# $TERAEXE (used below) should hold the path to the terachem binary
+# The SetEnvironment.sh script that handles this is specific to PHOTOX clusters.
+source ./SetEnvironment.sh TERACHEM
+
+set -u
+
+cd "$(dirname "$0")" || exit 1
+ibead=$2
+input="input$ibead.com"
+geom="../geom.dat.$ibead"
+natom=$(wc -l < "$geom")
+
+### USER INPUT FOR  TERACHEM
+cat > "$input" << EOF
+basis 		6-31g*
+charge   	0
+spinmult	1
+method 		pbe
+convthre        1e-6
+threall         1e-13
+EOF
+
+parallel=0 # =1 if we execute ABIN in parallel for PIMD
+numgpus=1  # number of gpus per single point calculation
+
+### END OF USER INPUT
+
+scrdir="./scratch$ibead"
+
+if [[ $parallel -eq "1" ]];then
+    gpuid=""
+    (( gpu0=ibead-1 ))
+    (( gpu0=gpu0*numgpus ))
+else
+    gpu0=0
+fi
+
+for ((i=0;i<numgpus;i++ )) {
+    (( gpuindex=gpu0+i ))
+    gpuid="${gpuid-} $gpuindex"
+}
+
+### Pass the wave function from previous step if it exists
+guess_string=""
+if [[ -f $scrdir/c0 ]];then
+    guess_string="guess $scrdir/c0"
+fi
+if [[ -f $scrdir/ca0 && -f $scrdir/cb0 ]];then
+    guess_string="guess $scrdir/ca0 $scrdir/cb0"
+fi
+
+cat >> "$input" << EOF
+scrdir        $scrdir
+keep_scr      yes
+coordinates   input$ibead.xyz
+units         angstrom
+gpus          $numgpus $gpuid
+run           gradient
+$guess_string
+end
+EOF
+
+### Create XYZ geometry file
+echo -ne "$natom\n\n" > "input$ibead.xyz"
+head -n "$natom" "$geom" >> "input$ibead.xyz"
+
+### Launch TeraChem
+export OMP_NUM_THREADS=$numgpus
+
+if $TERAEXE "$input" > "$input.out" 2>&1; then
+    cp "$input.out" "$input.out.old"
+else
+    echo "ERROR: TeraChem calculation probably failed."
+    echo "See TERACHEM/$input.out.error"
+    cp "$input.out" "$input.out.error"
+    exit 2
+fi
+
+### Extract energy and forces
+grep 'FINAL ENERGY' "$input.out" | awk '{print $3}' > "../engrad.dat.$ibead"
+grep -A"$natom" 'dE/dX' "$input.out" | tail -"$natom" >> "../engrad.dat.$ibead" 
