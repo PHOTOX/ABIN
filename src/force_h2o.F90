@@ -1,6 +1,6 @@
 ! Interface to analytical H2O (single water molecule) potentials.
 ! This is invoked via pot='_h2o_', and the potential is selected via
-! h2opot='schwenke'
+! h2opot='schwenke' in namelist General in ABIN input file.
 module mod_force_h2o
    use mod_const, only: DP
    use mod_files, only: stdout, stderr
@@ -27,10 +27,11 @@ contains
          write (stderr, *) 'Water atoms must be ordered as "O H H"'
          call fatal_error(__FILE__, __LINE__, "This is not a water molecule!")
       end if
+      ! TODO: Some PES initialization could be performed here
    end subroutine initialize_h2o_pot
 
-   ! Compute internal coordinates from cartesians
-   ! OH distances in bohrs, HOH angle in radians
+   ! Compute internal coordinates from cartesians,
+   ! OH distances in Bohrs, HOH angle in radians.
    subroutine get_internal_coords(x, y, z, iw, rOH1, rOH2, aHOH_rad)
       use mod_const, only: PI
       use mod_utils, only: get_distance, get_angle
@@ -81,7 +82,9 @@ contains
       end do
 
       ! Calculated the potential for all PI beads at once
+      ! The potential is implemented in h2o_schwenke.f
       call h2o_pot_schwenke(rij, Epot, nbeads)
+
       ! For Path Integrals, the final energy of the PI necklace
       ! is an average over all beads.
       ! TODO: Forces need to be appropriately scaled as well!
