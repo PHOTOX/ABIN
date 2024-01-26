@@ -61,7 +61,7 @@ contains
       end if
    end subroutine force_h2o
 
-   subroutine force_h2o_schwenke(x, y, z, fx, fy, fz, eclas, natom, nbeads)
+   subroutine force_h2o_schwenke(x, y, z, fx, fy, fz, Eclas, natom, nbeads)
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
@@ -82,16 +82,16 @@ contains
 
       ! Calculated the potential for all PI beads at once
       call h2o_pot_schwenke(rij, Epot, nbeads)
-
-      call numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
-
       ! For Path Integrals, the final energy of the PI necklace
       ! is an average over all beads.
       ! TODO: Forces need to be appropriately scaled as well!
       do iw = 1, nbeads
-         eclas = eclas + Epot(iw)
+         Eclas = Eclas + Epot(iw)
       end do
-      eclas = eclas / nbeads
+      Eclas = Eclas / nbeads
+
+      call numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
+
    end subroutine force_h2o_schwenke
 
    ! TODO: Implement numerical forces generally for all potentials
