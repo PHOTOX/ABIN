@@ -65,11 +65,11 @@ module mod_interfaces
 
       ! Returns a potential energy of a water molecule
       ! using Schwenke potential, see h2o_schwenke.f
-      subroutine pes_h2o_schwenke(rij, v, n)
+      subroutine h2o_pot_schwenke(rij, v, n)
          import :: DP
          integer, intent(in) :: n
          real(DP) :: rij(n, 3), v(n)
-      end subroutine pes_h2o_schwenke
+      end subroutine h2o_pot_schwenke
 
    end interface
 

@@ -1,4 +1,4 @@
-      subroutine pes_h2o_schwenke(rij, v, n)
+      subroutine h2o_pot_schwenke(rij, v, n)
       implicit real*8 (a-h,o-z)
       integer, intent(in) :: n
       integer :: i, idx, j, ifirst
