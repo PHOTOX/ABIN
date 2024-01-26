@@ -45,6 +45,7 @@ contains
       use mod_lz
       use mod_qmmm, only: natqm, natmm
       use mod_force_mm, only: initialize_mm
+      use mod_force_h2o, only: initialize_h2o_pot, h2opot
       use mod_gle
       use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
       use mod_prng_init, only: initialize_prng
@@ -126,7 +127,7 @@ contains
       namelist /general/ pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
          nwrite, nwritex, nwritev, nwritef, dt, irandom, nabin, irest, nrest, anal_ext, &
          isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_milisleep, narchive, xyz_units, &
-         dime, ncalc, idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
+         dime, ncalc, idebug, enmini, rho, iknow, watpot, h2opot, iremd, iplumed, plumedfile, &
          en_restraint, en_diff, en_kk, restrain_pot, &
          pot_ref, nstep_ref, nteraservers, max_mpi_wait_time, cp2k_mpi_beads
 
@@ -510,6 +511,9 @@ contains
       end if
       if (pot == '_splined_grid_' .or. pot_ref == '_splined_grid_') then
          call initialize_spline(natom)
+      end if
+      if (pot == '_h2o_' .or. pot_ref == '_h2o_') then
+         call initialize_h2o_pot(natom, atnames)
       end if
       if (pot == '_mm_' .or. pot_ref == '_mm_') then
          call initialize_mm(natom, atnames, mm_types, q, LJ_rmin, LJ_eps)

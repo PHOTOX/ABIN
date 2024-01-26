@@ -5,7 +5,7 @@
 ! The basic workflow is very simple:
 ! 1. ABIN writes current geometry into file geom.dat
 !   in a XYZ format without the header.
-! 2. ABIN launches the shell script POT/r.pot
+! 2. ABIN launches the shell script <POT>/r.<pot>
 ! 3. The shellscript does a few things:
 !    i) Takes the input geometry and prepares the input file
 !    ii) Launches the QM program
@@ -15,7 +15,7 @@
 !
 ! NOTE: We append bead index to every file name so that we can
 ! call the interface in parallel in PIMD simulations.
-! NOTE: Interface for Surface Hopping is a bit more complicated,
+! NOTE: The interface for Surface Hopping is a bit more complicated,
 ! see interfaces/MOLPRO-SH/r.molpro-sh
 module mod_shell_interface_private
    use mod_const, only: DP, ANG

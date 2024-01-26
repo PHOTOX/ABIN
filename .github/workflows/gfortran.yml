@@ -29,18 +29,17 @@ env:
 jobs:
 
   format:
-    name: Format check
-    runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
+    name: Code format check
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
       with:
-        fetch-depth: 2
+        python-version: '3.11'
 
     - name: Install fprettify dependencies
-      run: pip install --user configargparse
+      run: pip install configargparse
 
     - name: Run fprettify
       run: |
