@@ -66,7 +66,7 @@ function diff_files {
     if [[ $error_code -ne 0 ]];then
        # The reference file is different, but maybe it's just numerical noise?
        error_code=0
-       diff -y -W 500  $test_file $ref_file | egrep -e '|' -e '<' -e '>' > $test_file.diff
+       diff -y -W 500  $test_file $ref_file | grep -e '|' -e '<' -e '>' > $test_file.diff
 
        ../numdiff.py $test_file.diff || error_code=$?
 
@@ -127,7 +127,7 @@ if [[ $TESTS = "all" ]];then
             LZ_SS LZ_ST LZ_ENE \
             PIMD ABINITIO ABINITIO-FAIL MTS \
             LANGEVIN QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
-            HARMON MORSE DOUBLEWELL SPLINE MM MINI QMMM \
+            H2O_SCHWENKE HARMON MORSE DOUBLEWELL SPLINE MM MINI QMMM \
             ANALYZE_EXT CMDLINE WATER_FAIL ERMD)
 
    if [[ $MPI = "TRUE" ]];then
