@@ -512,7 +512,7 @@ contains
       if (pot == '_splined_grid_' .or. pot_ref == '_splined_grid_') then
          call initialize_spline(natom)
       end if
-      if (pot == '_h2o_' .or. pot_ref == '_ref_') then
+      if (pot == '_h2o_' .or. pot_ref == '_h2o_') then
          call initialize_h2o_pot(natom, atnames)
       end if
       if (pot == '_mm_' .or. pot_ref == '_mm_') then
