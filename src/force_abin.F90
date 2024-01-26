@@ -122,7 +122,7 @@ contains
       ! Passing arguments to bash script
       ! First argument is time step
       ! Second argument is the bead index, neccessary for parallel calculations
-      write (call_cmd, '(A,I0,I4.3)') './'//trim(shellscript)//' ', it, iw
+      write (call_cmd, '(A,I0,I4.3)') trim(shellscript)//' ', it, iw
       call_cmd = append_rank(call_cmd)
 
       ! For SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)

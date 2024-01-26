@@ -117,7 +117,7 @@ contains
       ! - general: Most basic MD settings + misc
       ! - nhcopt:  parameters for thermostats
       ! - remd:    parameters for Replica Exchange MD
-      ! - sh:      parameters for Surface Hopping
+      ! - sh:      parameters for Surface Hopping, moved to mod_sh module
       ! - system:  system-specific parameters for model potentials, masses, SHAKE constraints...
       ! - lz:      parameters for Landau-Zener excited state dynamics.
       ! - qmmm:    parameters for internal QMMM (not really tested).
