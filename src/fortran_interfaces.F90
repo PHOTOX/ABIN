@@ -69,7 +69,7 @@ module mod_interfaces
          import :: DP
          integer, intent(in) :: n
          real(DP), intent(in) :: rij(n, 3)
-         real(DP),intent(out) :: v(n)
+         real(DP), intent(out) :: v(n)
       end subroutine h2o_pot_schwenke
 
       subroutine h2o_pot_cvrqd(V, rOH1, rOH2, aHOH, mH, mO)

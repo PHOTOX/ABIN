@@ -120,7 +120,7 @@ contains
       do iw = 1, nbeads
          call get_internal_coords(x, y, z, iw, rOH1, rOH2, aHOH_rad)
 
-         call h2o_pot_cvrqd(E, rOH1 , rOH2, aHOH_rad, mO, mH)
+         call h2o_pot_cvrqd(E, rOH1, rOH2, aHOH_rad, mO, mH)
 
          Eclas = Eclas + E
       end do
