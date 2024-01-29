@@ -109,9 +109,69 @@ contains
       ! This is the energy for the currrent geometry that has already been calculated
       real(DP), intent(in) :: Epot(nbeads)
       integer, intent(in) :: natom, nbeads
+      integer :: iw, iatom
 
       ! Need to implement numerical forces first
-      call fatal_error(__FILE__, __LINE__, 'Numerical forces not yet implemented!')
+      ! call fatal_error(__FILE__, __LINE__, 'Numerical forces not yet implemented!')
+
+      ! Implementing numerical forces using forward differences
+      real(DP), parameter :: delta = 1.0D-5
+      real(DP) :: force_diff, Epot_plus, eclas
+      real(DP) :: x_plus(natom, nbeads)
+      real(DP) :: y_plus(natom, nbeads)
+      real(DP) :: z_plus(natom, nbeads)
+
+      ! fx
+      do iw = 1, nbeads
+         do iatom = 1, natom
+            x_plus(iatom, iw) = x(iatom, iw) + delta
+
+            ! Calculate potential at x_plus
+            call force_h2o_schwenke(x_plus, y, z, fx, fy, fz, eclas, natom, nbeads)
+            Epot_plus = eclas
+
+            ! Numerical force using forward differences
+            force_diff = (Epot_plus - Epot(iw)) / delta
+
+            ! Update forces
+            fx(iatom, iw) = force_diff
+         end do
+      end do
+
+      ! fy
+      do iw = 1, nbeads
+         do iatom = 1, natom
+            y_plus(iatom, iw) = y(iatom, iw) + delta
+
+            ! Calculate potential at y_plus
+            call force_h2o_schwenke(x, y_plus, z, fx, fy, fz, eclas, natom, nbeads)
+            Epot_plus = eclas
+
+            ! Numerical force using forward differences
+            force_diff = (Epot_plus - Epot(iw)) / delta
+
+            ! Update forces
+            fy(iatom, iw) = force_diff
+         end do
+      end do
+
+      ! fz
+      do iw = 1, nbeads
+         do iatom = 1, natom
+            z_plus(iatom, iw) = z(iatom, iw) + delta
+
+            ! Calculate potential at y_plus
+            call force_h2o_schwenke(x, y, z_plus, fx, fy, fz, eclas, natom, nbeads)
+            Epot_plus = eclas
+
+            ! Numerical force using forward differences
+            force_diff = (Epot_plus - Epot(iw)) / delta
+
+            ! Update forces
+            fz(iatom, iw) = force_diff
+         end do
+      end do
+
    end subroutine numerical_forces
 
 end module mod_force_h2o
