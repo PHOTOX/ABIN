@@ -14,10 +14,6 @@ env:
   ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
-  # Even for public builds, it is apparently useful to use CODECOV_TOKEN
-  # to minimize failed uploads, see:
-  # https://community.codecov.com/t/upload-issues-unable-to-locate-build-via-github-actions-api/3954
-  # NOTE: This breaks CI on PRs from forks. We might need to change this if it becomes an issue.
   # NOTE: It would be safer to only pass the secret token to the codecov-upload action,
   # but the impact of this token leaking is small anyway.
   # NOTE: It appears that even with this token there are issues,
@@ -105,7 +101,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -117,7 +113,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
@@ -201,7 +197,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: tcpb
         fail_ci_if_error: false
@@ -290,7 +286,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -300,7 +296,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
@@ -369,7 +365,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
@@ -412,7 +408,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
@@ -473,7 +469,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -483,7 +479,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
