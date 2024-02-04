@@ -59,6 +59,7 @@ contains
          call force_h2o_schwenke(x, y, z, fx, fy, fz, eclas, natom, nbeads)
       else if (h2opot == 'cvrqd') then
          call force_h2o_cvrqd(x, y, z, fx, fy, fz, eclas, natom, nbeads)
+         call fatal_error(__FILE__, __LINE__, 'Numerical forces not yet implemented!')
       else
          call fatal_error(__FILE__, __LINE__, 'Potential '//trim(h2opot)//' not implemented')
       end if
@@ -126,6 +127,8 @@ contains
       end do
       Eclas = Eclas / nbeads
 
+      ! TODO: Given the small difference between the Schwenke potential,
+      ! we might not need to implement numerical forces here.
       ! call numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
 
    end subroutine force_h2o_cvrqd
