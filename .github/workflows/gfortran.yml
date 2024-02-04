@@ -105,7 +105,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
-        gcov: true
         fail_ci_if_error: false
 
     - name: Run End-to-End tests
@@ -117,7 +116,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
-        gcov: true
 
   intel_build:
     name: Intel OneAPI build
@@ -201,7 +199,6 @@ jobs:
       with:
         name: tcpb
         fail_ci_if_error: false
-        gcov: true
 
 
   optimized_build:
@@ -290,7 +287,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
-        gcov: true
 
     - name: Run End-to-End tests
       run: make e2etest
@@ -300,7 +296,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
-        gcov: true
 
   mpich_build:
     name: MPICH build
@@ -369,7 +364,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
-        gcov: true
 
   openmpi_build:
     name: OpenMPI build
@@ -412,7 +406,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
-        gcov: true
 
   plumed_build:
     name: PLUMED build
@@ -473,7 +466,6 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
-        gcov: true
 
     - name: Run End-to-End tests
       run: make e2etest
@@ -483,4 +475,3 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: false
-        gcov: true
