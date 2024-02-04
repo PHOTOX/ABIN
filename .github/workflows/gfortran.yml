@@ -105,7 +105,7 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
-        fail_ci_if_error: false
+        fail_ci_if_error: true
 
     - name: Run End-to-End tests
       if: always()
@@ -115,7 +115,7 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
+        fail_ci_if_error: true
 
   intel_build:
     name: Intel OneAPI build
@@ -198,7 +198,7 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         name: tcpb
-        fail_ci_if_error: false
+        fail_ci_if_error: true
 
 
   optimized_build:
@@ -295,7 +295,7 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
+        fail_ci_if_error: true
 
   mpich_build:
     name: MPICH build
@@ -363,7 +363,7 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
+        fail_ci_if_error: true
 
   openmpi_build:
     name: OpenMPI build
@@ -405,7 +405,7 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
+        fail_ci_if_error: true
 
   plumed_build:
     name: PLUMED build
@@ -474,4 +474,4 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
+        fail_ci_if_error: true
