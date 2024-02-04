@@ -63,13 +63,20 @@ module mod_interfaces
          integer(kind=C_INT) :: usleep
       end function usleep
 
-      ! Returns a potential energy of a water molecule
+      ! Computes potential energy of a water molecule
       ! using Schwenke potential, see h2o_schwenke.f
       subroutine h2o_pot_schwenke(rij, v, n)
          import :: DP
          integer, intent(in) :: n
-         real(DP) :: rij(n, 3), v(n)
+         real(DP), intent(in) :: rij(n, 3)
+         real(DP), intent(out) :: v(n)
       end subroutine h2o_pot_schwenke
+
+      subroutine h2o_pot_cvrqd(V, rOH1, rOH2, aHOH, mH, mO)
+         import :: DP
+         real(DP), intent(out) :: V
+         real(DP), intent(in) :: rOH1, rOH2, aHOH, mH, mO
+      end subroutine h2o_pot_cvrqd
 
    end interface
 
