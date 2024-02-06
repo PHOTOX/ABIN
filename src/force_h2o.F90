@@ -99,35 +99,110 @@ contains
 
    ! TODO: Implement numerical forces generally for all potentials
    ! For now, they can be implemented here and hardcoded for a specific H2O potential
+
    subroutine numerical_forces(x, y, z, Epot, fx, fy, fz, natom, nbeads)
-      real(DP), intent(in) :: x(natom, nbeads)
-      real(DP), intent(in) :: y(natom, nbeads)
-      real(DP), intent(in) :: z(natom, nbeads)
+      real(DP) :: x(natom, nbeads)
+      real(DP) :: y(natom, nbeads)
+      real(DP) :: z(natom, nbeads)
       real(DP), intent(inout) :: fx(natom, nbeads)
       real(DP), intent(inout) :: fy(natom, nbeads)
       real(DP), intent(inout) :: fz(natom, nbeads)
+      integer, intent(in) :: natom, nbeads
+      
       ! This is the energy for the currrent geometry that has already been calculated
       real(DP), intent(in) :: Epot(nbeads)
-      integer, intent(in) :: natom, nbeads
-      integer :: i
 
-      ! Central difference formula for the first bead (i=1)
-      fx(:, 1) = (Epot(2) - Epot(1)) / (2.0 * (x(:, 2) - x(:, 1)))
-      fy(:, 1) = (Epot(2) - Epot(1)) / (2.0 * (y(:, 2) - y(:, 1)))
-      fz(:, 1) = (Epot(2) - Epot(1)) / (2.0 * (z(:, 2) - z(:, 1)))
+      ! Internal water coordinates
+      real(DP) :: rOH1, rOH2, aHOH_rad
+      real(DP) :: rij(nbeads, 3)
+      
+      real(DP) :: Eclas_orig, Eclas_plus, Eclas_minus
+      real(DP) :: delta = 0.00005_DP
+      integer :: i, j, k, iw
 
-      ! Central difference formula for the last bead (i=nbeads)
-      fx(:, nbeads) = (Epot(nbeads) - Epot(nbeads-1)) / (2.0 * (x(:, nbeads) - x(:, nbeads-1)))
-      fy(:, nbeads) = (Epot(nbeads) - Epot(nbeads-1)) / (2.0 * (y(:, nbeads) - y(:, nbeads-1)))
-      fz(:, nbeads) = (Epot(nbeads) - Epot(nbeads-1)) / (2.0 * (z(:, nbeads) - z(:, nbeads-1)))
+      ! Calculate forces numerically using central differences
+      do j = 1, nbeads
+         ! Save the original energy
+         Eclas_orig = Epot(j)
+         do i = 1, natom
+            do k = 1, 3 ! x, y, z
+               ! Reset the energy
+               Eclas_plus = 0.0_DP
+               Eclas_minus = 0.0_DP
 
-      ! Central difference formula for beads in the middle (i=2 to nbeads-1)
-      do i = 2, nbeads-1
-         fx(:, i) = (Epot(i+1) - Epot(i-1)) / (2.0 * (x(:, i+1) - x(:, i-1)))
-         fy(:, i) = (Epot(i+1) - Epot(i-1)) / (2.0 * (y(:, i+1) - y(:, i-1)))
-         fz(:, i) = (Epot(i+1) - Epot(i-1)) / (2.0 * (z(:, i+1) - z(:, i-1)))
+               ! Move the atom forwards
+               select case (k)
+                  case (1)
+                     x(j, i) = x(j, i) + delta
+                  case (2)
+                     y(j, i) = y(j, i) + delta
+                  case (3)
+                     z(j, i) = z(j, i) + delta
+               end select
+
+               ! Calculate the energy for the forward perturbed geometry
+               do iw = 1, nbeads
+                  call get_internal_coords(x, y, z, iw, rOH1, rOH2, aHOH_rad)
+                  rij(iw, 1) = rOH1
+                  rij(iw, 2) = rOH2
+                  rij(iw, 3) = aHOH_rad
+               end do
+
+               call h2o_pot_schwenke(rij, Epot, nbeads)
+
+               do iw = 1, nbeads
+                  Eclas_plus = Eclas_plus + Epot(iw)
+               end do
+               Eclas_plus = Eclas_plus / nbeads
+
+               ! Move the atom backwards
+               select case (k)
+                  case (1)
+                     x(j, i) = x(j, i) - 2.0 * delta
+                  case (2)
+                     y(j, i) = y(j, i) - 2.0 * delta
+                  case (3)
+                     z(j, i) = z(j, i) - 2.0 * delta
+               end select
+               
+               ! Calculate the energy for the backward perturbed geometry
+               do iw = 1, nbeads
+                  call get_internal_coords(x, y, z, iw, rOH1, rOH2, aHOH_rad)
+                  rij(iw, 1) = rOH1
+                  rij(iw, 2) = rOH2
+                  rij(iw, 3) = aHOH_rad
+               end do
+
+               call h2o_pot_schwenke(rij, Epot, nbeads)
+
+               do iw = 1, nbeads
+                  Eclas_plus = Eclas_plus + Epot(iw)
+               end do
+               Eclas_plus = Eclas_plus / nbeads
+
+               ! Calculate the numerical force
+               select case (k)
+                  case (1)
+                     fx(j, i) = (Eclas_plus - Eclas_minus) / (2.0 * delta)
+                  case (2)
+                     fy(j, i) = (Eclas_plus - Eclas_minus) / (2.0 * delta)
+                  case (3)
+                     fz(j, i) = (Eclas_plus - Eclas_minus) / (2.0 * delta)
+               end select
+
+               ! Restore coordinates
+               select case (k)
+                  case (1)
+                     x(j, i) = x(j, i) + delta
+                  case (2)
+                     y(j, i) = y(j, i) + delta
+                  case (3)
+                     z(j, i) = z(j, i) + delta
+               end select
+
+            end do
+         end do
       end do
-
    end subroutine numerical_forces
 
 end module mod_force_h2o
