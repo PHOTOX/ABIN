@@ -101,108 +101,95 @@ contains
    ! For now, they can be implemented here and hardcoded for a specific H2O potential
 
    subroutine numerical_forces(x, y, z, Epot, fx, fy, fz, natom, nbeads)
-      real(DP) :: x(natom, nbeads)
-      real(DP) :: y(natom, nbeads)
-      real(DP) :: z(natom, nbeads)
-      real(DP), intent(inout) :: fx(natom, nbeads)
-      real(DP), intent(inout) :: fy(natom, nbeads)
-      real(DP), intent(inout) :: fz(natom, nbeads)
+      real(DP), intent(in) :: x(3, 1)
+      real(DP), intent(in) :: y(3, 1)
+      real(DP), intent(in) :: z(3, 1)
+      real(DP), intent(inout) :: fx(3, 1)
+      real(DP), intent(inout) :: fy(3, 1)
+      real(DP), intent(inout) :: fz(3, 1)
       integer, intent(in) :: natom, nbeads
-      
+
+      ! Create new copies of arrays
+      real(DP) :: x_new(3, 1)
+      real(DP) :: y_new(3, 1)
+      real(DP) :: z_new(3, 1)
+
       ! This is the energy for the currrent geometry that has already been calculated
-      real(DP), intent(in) :: Epot(nbeads)
+      real(DP), intent(in) :: Epot(1)
 
       ! Internal water coordinates
-      real(DP) :: rOH1, rOH2, aHOH_rad
-      real(DP) :: rij(nbeads, 3)
+      real(DP) :: new_rOH1, new_rOH2, new_aHOH_rad
+      real(DP) :: new_rij(1, 3)
+      ! Schwenke calculated peterbed geometry energy
+      real(DP) :: Epot_delta(1)
       
-      real(DP) :: Eclas_orig, Eclas_plus, Eclas_minus
+      real(DP) :: Eclas_orig, Eclas_plus
       real(DP) :: delta = 0.00005_DP
       integer :: i, j, k, iw
 
       ! Calculate forces numerically using central differences
-      do j = 1, nbeads
+      !do j = 1, 1 !nbeads
          ! Save the original energy
-         Eclas_orig = Epot(j)
-         do i = 1, natom
+         Eclas_orig = Epot(1)
+         
+         do i = 1, 3 !natom
+            write(stderr, *) 'Starting atom', i 
             do k = 1, 3 ! x, y, z
                ! Reset the energy
                Eclas_plus = 0.0_DP
-               Eclas_minus = 0.0_DP
+               
+               ! Copy the original atom coordinates
+               x_new(:, :) = x(:, :)
+               y_new(:, :) = y(:, :)
+               z_new(:, :) = z(:, :)
 
                ! Move the atom forwards
                select case (k)
                   case (1)
-                     x(j, i) = x(j, i) + delta
+                     x_new(i,1) = x_new(i,1) + delta
                   case (2)
-                     y(j, i) = y(j, i) + delta
+                     y_new(i,1) = y_new(i,1) + delta
                   case (3)
-                     z(j, i) = z(j, i) + delta
+                     z_new(i,1) = z_new(i,1) + delta
                end select
 
                ! Calculate the energy for the forward perturbed geometry
                do iw = 1, nbeads
-                  call get_internal_coords(x, y, z, iw, rOH1, rOH2, aHOH_rad)
-                  rij(iw, 1) = rOH1
-                  rij(iw, 2) = rOH2
-                  rij(iw, 3) = aHOH_rad
+                  call get_internal_coords(x_new, y_new, z_new, iw, new_rOH1, new_rOH2, new_aHOH_rad)
+                  new_rij(iw, 1) = new_rOH1
+                  new_rij(iw, 2) = new_rOH2
+                  new_rij(iw, 3) = new_aHOH_rad
                end do
 
-               call h2o_pot_schwenke(rij, Epot, nbeads)
+               call h2o_pot_schwenke(new_rij, Epot_delta, nbeads)
 
                do iw = 1, nbeads
-                  Eclas_plus = Eclas_plus + Epot(iw)
-               end do
-               Eclas_plus = Eclas_plus / nbeads
-
-               ! Move the atom backwards
-               select case (k)
-                  case (1)
-                     x(j, i) = x(j, i) - 2.0 * delta
-                  case (2)
-                     y(j, i) = y(j, i) - 2.0 * delta
-                  case (3)
-                     z(j, i) = z(j, i) - 2.0 * delta
-               end select
-               
-               ! Calculate the energy for the backward perturbed geometry
-               do iw = 1, nbeads
-                  call get_internal_coords(x, y, z, iw, rOH1, rOH2, aHOH_rad)
-                  rij(iw, 1) = rOH1
-                  rij(iw, 2) = rOH2
-                  rij(iw, 3) = aHOH_rad
-               end do
-
-               call h2o_pot_schwenke(rij, Epot, nbeads)
-
-               do iw = 1, nbeads
-                  Eclas_plus = Eclas_plus + Epot(iw)
+                  Eclas_plus = Eclas_plus + Epot_delta(iw)
                end do
                Eclas_plus = Eclas_plus / nbeads
 
                ! Calculate the numerical force
                select case (k)
                   case (1)
-                     fx(j, i) = (Eclas_plus - Eclas_minus) / (2.0 * delta)
+                     write (stderr, *) 'Current fx =', fx
+                     write (stderr, *) 'New fx(i,1) =', Eclas_plus
+                     fx(i,1) = (Eclas_plus - Eclas_orig) / delta
+                     write (stderr, *) 'fx(i,1) now =', fx
                   case (2)
-                     fy(j, i) = (Eclas_plus - Eclas_minus) / (2.0 * delta)
+                     write (stderr, *) 'Current fy =', fy
+                     write (stderr, *) 'New fy(i,1) =', Eclas_plus
+                     fy(i,1) = (Eclas_plus - Eclas_orig) / delta
+                     write (stderr, *) 'fy(i,1) now =', fy
                   case (3)
-                     fz(j, i) = (Eclas_plus - Eclas_minus) / (2.0 * delta)
+                     write (stderr, *) 'Current fz =', fz
+                     write (stderr, *) 'New fz(i,1) =', Eclas_plus
+                     fz(i,1) = (Eclas_plus - Eclas_orig) / delta
+                     write (stderr, *) 'fz(i,1) now =', fz
                end select
-
-               ! Restore coordinates
-               select case (k)
-                  case (1)
-                     x(j, i) = x(j, i) + delta
-                  case (2)
-                     y(j, i) = y(j, i) + delta
-                  case (3)
-                     z(j, i) = z(j, i) + delta
-               end select
-
             end do
          end do
-      end do
+      !end do
+      write (stderr, *) 'Finished numerical forces'
    end subroutine numerical_forces
 
 end module mod_force_h2o
