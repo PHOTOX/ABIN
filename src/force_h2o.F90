@@ -1,3 +1,4 @@
+
 ! Interface to analytical H2O (single water molecule) potentials.
 ! This is invoked via pot='_h2o_', and the potential is selected via
 ! h2opot='schwenke' in namelist General in ABIN input file.
@@ -115,13 +116,13 @@ contains
       real(DP) :: z_new(3, 1)
 
       ! This is the energy for the currrent geometry that has already been calculated
-      real(DP), intent(in) :: Epot(1)
+      real(DP), intent(in) :: Epot(1) !nbeads
 
       ! Internal water coordinates
       real(DP) :: new_rOH1, new_rOH2, new_aHOH_rad
       real(DP) :: new_rij(1, 3)
       ! Schwenke calculated peterbed geometry energy
-      real(DP) :: Epot_delta(1)
+      real(DP) :: Epot_delta(1) !nbeads
       
       real(DP) :: Eclas_orig, Eclas_plus
       real(DP) :: delta = 0.00005_DP
@@ -183,7 +184,7 @@ contains
                   case (3)
                      write (stderr, *) 'Current fz =', fz
                      write (stderr, *) 'New fz(i,1) =', Eclas_plus
-                     fz(i,1) = (Eclas_plus - Eclas_orig) / delta
+                     ! fz(i,1) = (Eclas_plus - Eclas_orig) / delta
                      write (stderr, *) 'fz(i,1) now =', fz
                end select
             end do
