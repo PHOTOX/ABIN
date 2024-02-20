@@ -101,7 +101,7 @@ contains
    ! TODO: Implement numerical forces generally for all potentials
    ! For now, they can be implemented here and hardcoded for a specific H2O potential
 
-   subroutine numerical_forces(x, y, z, Epot, fx, fy, fz, natom, nbeads)
+   subroutine numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
       real(DP), intent(in) :: x(3, 1)
       real(DP), intent(in) :: y(3, 1)
       real(DP), intent(in) :: z(3, 1)
@@ -125,7 +125,7 @@ contains
       real(DP) :: Epot_delta(1) !nbeads
       
       real(DP) :: Eclas_orig, Eclas_plus
-      real(DP) :: delta = 0.00005_DP
+      real(DP) :: delta = 0.005_DP
       integer :: i, j, k, iw
 
       ! Calculate forces numerically using central differences
@@ -134,7 +134,7 @@ contains
          Eclas_orig = Epot(1)
          
          do i = 1, 3 !natom
-            write(stderr, *) 'Starting atom', i 
+            !write(stderr, *) 'Starting atom', i 
             do k = 1, 3 ! x, y, z
                ! Reset the energy
                Eclas_plus = 0.0_DP
@@ -172,25 +172,15 @@ contains
                ! Calculate the numerical force
                select case (k)
                   case (1)
-                     write (stderr, *) 'Current fx =', fx
-                     write (stderr, *) 'New fx(i,1) =', Eclas_plus
                      fx(i,1) = (Eclas_plus - Eclas_orig) / delta
-                     write (stderr, *) 'fx(i,1) now =', fx
                   case (2)
-                     write (stderr, *) 'Current fy =', fy
-                     write (stderr, *) 'New fy(i,1) =', Eclas_plus
                      fy(i,1) = (Eclas_plus - Eclas_orig) / delta
-                     write (stderr, *) 'fy(i,1) now =', fy
                   case (3)
-                     write (stderr, *) 'Current fz =', fz
-                     write (stderr, *) 'New fz(i,1) =', Eclas_plus
-                     ! fz(i,1) = (Eclas_plus - Eclas_orig) / delta
-                     write (stderr, *) 'fz(i,1) now =', fz
+                     fz(i,1) = (Eclas_plus - Eclas_orig) / delta
                end select
             end do
          end do
       !end do
-      write (stderr, *) 'Finished numerical forces'
    end subroutine numerical_forces
 
 end module mod_force_h2o
