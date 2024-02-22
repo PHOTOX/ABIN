@@ -116,33 +116,34 @@ contains
       real(DP) :: z_new(3, 1)
 
       ! This is the energy for the currrent geometry that has already been calculated
-      real(DP), intent(in) :: Epot(1) !nbeads
+      real(DP), intent(in) :: Epot(nbeads) !nbeads
 
       ! Internal water coordinates
       real(DP) :: new_rOH1, new_rOH2, new_aHOH_rad
       real(DP) :: new_rij(1, 3)
+      
       ! Schwenke calculated peterbed geometry energy
-      real(DP) :: Epot_delta(1) !nbeads
+      real(DP) :: Epot_delta(nbeads) !nbeads
       
       real(DP) :: Eclas_orig, Eclas_plus
       real(DP) :: delta = 0.005_DP
       integer :: i, j, k, iw
 
       ! Calculate forces numerically using central differences
-      !do j = 1, 1 !nbeads
+      do j = 1, nbeads !nbeads
+      
          ! Save the original energy
-         Eclas_orig = Epot(1)
-         
-         do i = 1, 3 !natom
-            !write(stderr, *) 'Starting atom', i 
+         Eclas_orig = Epot(nbeads)         
+         do i = 1, natom !natom
+
             do k = 1, 3 ! x, y, z
                ! Reset the energy
                Eclas_plus = 0.0_DP
                
                ! Copy the original atom coordinates
-               x_new(:, :) = x(:, :)
-               y_new(:, :) = y(:, :)
-               z_new(:, :) = z(:, :)
+               x_new = x
+               y_new = y
+               z_new = z
 
                ! Move the atom forwards
                select case (k)
@@ -155,13 +156,11 @@ contains
                end select
 
                ! Calculate the energy for the forward perturbed geometry
-               do iw = 1, nbeads
-                  call get_internal_coords(x_new, y_new, z_new, iw, new_rOH1, new_rOH2, new_aHOH_rad)
-                  new_rij(iw, 1) = new_rOH1
-                  new_rij(iw, 2) = new_rOH2
-                  new_rij(iw, 3) = new_aHOH_rad
-               end do
-
+               call get_internal_coords(x_new, y_new, z_new, j, new_rOH1, new_rOH2, new_aHOH_rad)
+               new_rij(j, 1) = new_rOH1
+               new_rij(j, 2) = new_rOH2
+               new_rij(j, 3) = new_aHOH_rad
+               
                call h2o_pot_schwenke(new_rij, Epot_delta, nbeads)
 
                do iw = 1, nbeads
@@ -180,7 +179,7 @@ contains
                end select
             end do
          end do
-      !end do
+      end do
    end subroutine numerical_forces
 
 end module mod_force_h2o
