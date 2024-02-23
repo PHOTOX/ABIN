@@ -2,9 +2,9 @@ This is a sample input file for ABIN for Classical MD simulation --
 -- plain old Newton's equations of motion.
 
 &general
-pot='g09'		! where do we obtain forces and energies?
+pot='_h2o_'		! where do we obtain forces and energies?
 mdtype='md',		! md = classical MD
-nstep=50000,		! number of steps
+nstep=1000,		! number of steps
 dt=20.,			! timestep (a.u.)
 
 irest=0,		! should we restart from restart.xyz? (ignoring input coordinates and velocities)
@@ -12,7 +12,7 @@ irest=0,		! should we restart from restart.xyz? (ignoring input coordinates and 
 nwrite=1,		! how often some output should be printed (energies etc.)
                         ! 1 = every time step
                         ! 10 = each 10th time step
-nwritex=5,		! how often should we print coordinates?
+nwritex=1,		! how often should we print coordinates?
 nrest=5,		! how often we print restart files?
 nwritev=0,		! how often we print velocities? (by default ABIN does not print velocities)
 /
@@ -20,7 +20,7 @@ nwritev=0,		! how often we print velocities? (by default ABIN does not print vel
 
 &nhcopt
 temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
-inose=1,		! Thermostat options: 
+inose=0,		! Thermostat options: 
                         ! 0 = NVE( microcanonical)
                         ! 1 = Nose-Hoover
                         ! 2 = Generalized Langevin Equation (GLE)
