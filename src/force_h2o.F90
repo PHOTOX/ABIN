@@ -112,11 +112,8 @@ contains
 
       ! Create new copies of arrays
       real(DP) :: x_new_forward(3, 1)
-      real(DP) :: x_new_back(3,1)
       real(DP) :: y_new_forward(3, 1)
-      real(DP) :: y_new_back(3,1)
       real(DP) :: z_new_forward(3, 1)
-      real(DP) :: z_new_back(3,1)
 
       ! This is the energy for the currrent geometry that has already been calculated
       real(DP), intent(in) :: Epot(nbeads) !nbeads
@@ -128,81 +125,65 @@ contains
       ! Schwenke calculated peterbed geometry energy
       real(DP) :: Epot_delta(nbeads) !nbeads
       
-      real(DP) :: Eclas_orig, Eclas_plus, Eclas_minus
-      real(DP) :: delta = 0.005_DP
+      real(DP) :: Eclas_orig, Eclas_plus
+      real(DP) :: delta = 5.0E-5_DP
       integer :: i, j, k, iw
 
       ! Calculate forces numerically using central differences
       do j = 1, nbeads !nbeads
 
          ! Save the original energy
-         Eclas_orig = Epot(nbeads)         
+         Eclas_orig = Epot(j)
+         write (stdout, *) 'Eclas_orig: ', Eclas_orig      
+
+         write (stdout, *) 'x new: ', x
+         write (stdout, *) 'y new: ', y
+         write (stdout, *) 'z new: ', z
+         
          do i = 1, natom !natom
 
             do k = 1, 3 ! x, y, z
-               ! Reset the energy
-               Eclas_plus = 0.0_DP
-               Eclas_minus = 0.0_DP
                
                ! Copy the original atom coordinates
-               x_new_forward = x
-               x_new_back = x
-               y_new_forward = y
-               y_new_back = y
-               z_new_forward = z
-               z_new_back = z
+               x_new_forward(:,:) = x(:,:)
+               y_new_forward(:,:) = y(:,:)
+               z_new_forward(:,:) = z(:,:)
 
-               ! Move the atom forwards & backwards
+               ! Move the atom forwards
                select case (k)
                   case (1)
                      x_new_forward(i,1) = x_new_forward(i,1) + delta
-                     x_new_back(i,1) = x_new_back(i,1) + delta
                   case (2)
                      y_new_forward(i,1) = y_new_forward(i,1) + delta
-                     y_new_back(i,1) = y_new_back(i,1) + delta
                   case (3)
                      z_new_forward(i,1) = z_new_forward(i,1) + delta
-                     z_new_back(i,1) = z_new_back(i,1) + delta
                end select
 
                ! Calculate the energy for the forward perturbed geometry
                call get_internal_coords(x_new_forward, y_new_forward, z_new_forward, j, new_rOH1, new_rOH2, new_aHOH_rad)
-               new_rij(j, 1) = new_rOH1
-               new_rij(j, 2) = new_rOH2
-               new_rij(j, 3) = new_aHOH_rad
+               
+               new_rij(j, :) = [new_rOH1, new_rOH2, new_aHOH_rad]
                
                call h2o_pot_schwenke(new_rij, Epot_delta, nbeads)
 
-               do iw = 1, nbeads
-                  Eclas_plus = Eclas_plus + Epot_delta(iw)
-               end do
-               Eclas_plus = Eclas_plus / nbeads
+               Eclas_plus = Epot_delta(j)
 
-               ! Calculate the energy for the backward perturbed geometry
-               call get_internal_coords(x_new_back, y_new_back, z_new_back, j, new_rOH1, new_rOH2, new_aHOH_rad)
-               new_rij(j, 1) = new_rOH1
-               new_rij(j, 2) = new_rOH2
-               new_rij(j, 3) = new_aHOH_rad
-               
-               call h2o_pot_schwenke(new_rij, Epot_delta, nbeads)
-
-               do iw = 1, nbeads
-                  Eclas_minus = Eclas_minus + Epot_delta(iw)
-               end do
-               Eclas_minus = Eclas_minus / nbeads
+               write (stdout, *) i, j, k, ' Plus new: ', Eclas_plus
 
                ! Calculate the numerical force
                select case (k)
                   case (1)
-                     fx(i,1) = (Eclas_plus - Eclas_minus) / delta
+                     fx(i,1) = -(Eclas_plus - Eclas_orig) / delta
                   case (2)
-                     fy(i,1) = (Eclas_plus - Eclas_minus) / delta
+                     fy(i,1) = -(Eclas_plus - Eclas_orig) / delta
                   case (3)
-                     fz(i,1) = (Eclas_plus - Eclas_minus) / delta
+                     fz(i,1) = -(Eclas_plus - Eclas_orig) / delta
                end select
             end do
          end do
       end do
+      write (stdout, *) 'fx new: ', fx
+      write (stdout, *) 'fy new: ', fy
+      write (stdout, *) 'fz new: ', fz
    end subroutine numerical_forces
-
 end module mod_force_h2o
