@@ -134,11 +134,6 @@ contains
 
          ! Save the original energy
          Eclas_orig = Epot(j)
-         write (stdout, *) 'Eclas_orig: ', Eclas_orig      
-
-         write (stdout, *) 'x new: ', x
-         write (stdout, *) 'y new: ', y
-         write (stdout, *) 'z new: ', z
          
          do i = 1, natom !natom
 
@@ -168,8 +163,6 @@ contains
 
                Eclas_plus = Epot_delta(j)
 
-               write (stdout, *) i, j, k, ' Plus new: ', Eclas_plus
-
                ! Calculate the numerical force
                select case (k)
                   case (1)
@@ -182,8 +175,6 @@ contains
             end do
          end do
       end do
-      write (stdout, *) 'fx new: ', fx
-      write (stdout, *) 'fy new: ', fy
-      write (stdout, *) 'fz new: ', fz
    end subroutine numerical_forces
+   
 end module mod_force_h2o
