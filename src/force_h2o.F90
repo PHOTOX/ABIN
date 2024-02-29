@@ -102,32 +102,32 @@ contains
    ! For now, they can be implemented here and hardcoded for a specific H2O potential
 
    subroutine numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
-      real(DP), intent(in) :: x(3, 1)
-      real(DP), intent(in) :: y(3, 1)
-      real(DP), intent(in) :: z(3, 1)
-      real(DP), intent(inout) :: fx(3, 1)
-      real(DP), intent(inout) :: fy(3, 1)
-      real(DP), intent(inout) :: fz(3, 1)
+      real(DP), intent(in) :: x(natom, nbeads)
+      real(DP), intent(in) :: y(natom, nbeads)
+      real(DP), intent(in) :: z(natom, nbeads)
+      real(DP), intent(inout) :: fx(natom, nbeads)
+      real(DP), intent(inout) :: fy(natom, nbeads)
+      real(DP), intent(inout) :: fz(natom, nbeads)
       integer, intent(in) :: natom, nbeads
 
       ! Create new copies of arrays
-      real(DP) :: x_new_forward(3, 1)
-      real(DP) :: y_new_forward(3, 1)
-      real(DP) :: z_new_forward(3, 1)
+      real(DP) :: x_new_forward(natom, nbeads)
+      real(DP) :: y_new_forward(natom, nbeads)
+      real(DP) :: z_new_forward(natom, nbeads)
 
       ! This is the energy for the currrent geometry that has already been calculated
       real(DP), intent(in) :: Epot(nbeads) !nbeads
 
       ! Internal water coordinates
       real(DP) :: new_rOH1, new_rOH2, new_aHOH_rad
-      real(DP) :: new_rij(1, 3)
+      real(DP) :: new_rij(nbeads, natom)
       
       ! Schwenke calculated peterbed geometry energy
       real(DP) :: Epot_delta(nbeads) !nbeads
       
       real(DP) :: Eclas_orig, Eclas_plus
       real(DP) :: delta = 5.0E-5_DP
-      integer :: i, j, k, iw
+      integer :: i, j, k
 
       ! Calculate forces numerically using central differences
       do j = 1, nbeads !nbeads
@@ -147,11 +147,11 @@ contains
                ! Move the atom forwards
                select case (k)
                   case (1)
-                     x_new_forward(i,1) = x_new_forward(i,1) + delta
+                     x_new_forward(i,j) = x_new_forward(i,j) + delta
                   case (2)
-                     y_new_forward(i,1) = y_new_forward(i,1) + delta
+                     y_new_forward(i,j) = y_new_forward(i,j) + delta
                   case (3)
-                     z_new_forward(i,1) = z_new_forward(i,1) + delta
+                     z_new_forward(i,j) = z_new_forward(i,j) + delta
                end select
 
                ! Calculate the energy for the forward perturbed geometry
@@ -166,11 +166,11 @@ contains
                ! Calculate the numerical force
                select case (k)
                   case (1)
-                     fx(i,1) = -(Eclas_plus - Eclas_orig) / delta
+                     fx(i,j) = -(Eclas_plus - Eclas_orig) / delta
                   case (2)
-                     fy(i,1) = -(Eclas_plus - Eclas_orig) / delta
+                     fy(i,j) = -(Eclas_plus - Eclas_orig) / delta
                   case (3)
-                     fz(i,1) = -(Eclas_plus - Eclas_orig) / delta
+                     fz(i,j) = -(Eclas_plus - Eclas_orig) / delta
                end select
             end do
          end do
