@@ -10,6 +10,7 @@ h2opot='schwenke'
 mdtype='MD',		! classical MD
 dt=20.,			! number of steps and timestep
 nstep=1
+nwritef=1,		! write forces
 /
 
 &nhcopt

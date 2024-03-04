@@ -70,7 +70,7 @@ contains
       integer, intent(in) :: natom, nbeads
       ! Internal water coordinates
       real(DP) :: rOH1, rOH2, aHOH_rad
-      real(DP) :: rij(nbeads, 3)
+      real(DP) :: rij(1, 3)
       real(DP) :: Epot(nbeads)
       integer :: iw
 
@@ -116,26 +116,26 @@ contains
       real(DP) :: z_new_forward(natom, nbeads)
 
       ! This is the energy for the currrent geometry that has already been calculated
-      real(DP), intent(in) :: Epot(nbeads) !nbeads
+      real(DP), intent(in) :: Epot(nbeads)
 
       ! Internal water coordinates
       real(DP) :: new_rOH1, new_rOH2, new_aHOH_rad
       real(DP) :: new_rij(nbeads, natom)
       
       ! Schwenke calculated peterbed geometry energy
-      real(DP) :: Epot_delta(nbeads) !nbeads
+      real(DP) :: Epot_delta(1)
       
       real(DP) :: Eclas_orig, Eclas_plus
       real(DP) :: delta = 5.0E-5_DP
       integer :: i, j, k
 
       ! Calculate forces numerically using central differences
-      do j = 1, nbeads !nbeads
+      do j = 1, nbeads
 
          ! Save the original energy
          Eclas_orig = Epot(j)
          
-         do i = 1, natom !natom
+         do i = 1, natom
 
             do k = 1, 3 ! x, y, z
                
@@ -157,11 +157,11 @@ contains
                ! Calculate the energy for the forward perturbed geometry
                call get_internal_coords(x_new_forward, y_new_forward, z_new_forward, j, new_rOH1, new_rOH2, new_aHOH_rad)
                
-               new_rij(j, :) = [new_rOH1, new_rOH2, new_aHOH_rad]
+               new_rij(1, :) = [new_rOH1, new_rOH2, new_aHOH_rad]
                
-               call h2o_pot_schwenke(new_rij, Epot_delta, nbeads)
+               call h2o_pot_schwenke(new_rij, Epot_delta(1), nbeads)
 
-               Eclas_plus = Epot_delta(j)
+               Eclas_plus = Epot_delta(1)
 
                ! Calculate the numerical force
                select case (k)
