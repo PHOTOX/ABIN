@@ -15,6 +15,6 @@ nwritef=1,		! write forces
 
 &nhcopt
 inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
-temp=100
+temp=0
 rem_comrot=.true.       ! this is a default value, remove rotations at the beginning
 /
