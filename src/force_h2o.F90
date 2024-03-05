@@ -120,11 +120,11 @@ contains
 
       ! Internal water coordinates
       real(DP) :: new_rOH1, new_rOH2, new_aHOH_rad
-      real(DP) :: new_rij(nbeads, natom)
-      
+      real(DP) :: new_rij(1, 3)
+
       ! Schwenke calculated peterbed geometry energy
       real(DP) :: Epot_delta(1)
-      
+
       real(DP) :: Eclas_orig, Eclas_plus
       real(DP) :: delta = 5.0E-5_DP
       integer :: i, j, k
@@ -134,47 +134,47 @@ contains
 
          ! Save the original energy
          Eclas_orig = Epot(j)
-         
+
          do i = 1, natom
 
             do k = 1, 3 ! x, y, z
-               
+
                ! Copy the original atom coordinates
-               x_new_forward(:,:) = x(:,:)
-               y_new_forward(:,:) = y(:,:)
-               z_new_forward(:,:) = z(:,:)
+               x_new_forward(:, :) = x(:, :)
+               y_new_forward(:, :) = y(:, :)
+               z_new_forward(:, :) = z(:, :)
 
                ! Move the atom forwards
                select case (k)
-                  case (1)
-                     x_new_forward(i,j) = x_new_forward(i,j) + delta
-                  case (2)
-                     y_new_forward(i,j) = y_new_forward(i,j) + delta
-                  case (3)
-                     z_new_forward(i,j) = z_new_forward(i,j) + delta
+               case (1)
+                  x_new_forward(i, j) = x_new_forward(i, j) + delta
+               case (2)
+                  y_new_forward(i, j) = y_new_forward(i, j) + delta
+               case (3)
+                  z_new_forward(i, j) = z_new_forward(i, j) + delta
                end select
 
                ! Calculate the energy for the forward perturbed geometry
                call get_internal_coords(x_new_forward, y_new_forward, z_new_forward, j, new_rOH1, new_rOH2, new_aHOH_rad)
-               
+
                new_rij(1, :) = [new_rOH1, new_rOH2, new_aHOH_rad]
-               
+
                call h2o_pot_schwenke(new_rij, Epot_delta(1), nbeads)
 
                Eclas_plus = Epot_delta(1)
 
                ! Calculate the numerical force
                select case (k)
-                  case (1)
-                     fx(i,j) = -(Eclas_plus - Eclas_orig) / delta
-                  case (2)
-                     fy(i,j) = -(Eclas_plus - Eclas_orig) / delta
-                  case (3)
-                     fz(i,j) = -(Eclas_plus - Eclas_orig) / delta
+               case (1)
+                  fx(i, j) = -(Eclas_plus - Eclas_orig) / delta
+               case (2)
+                  fy(i, j) = -(Eclas_plus - Eclas_orig) / delta
+               case (3)
+                  fz(i, j) = -(Eclas_plus - Eclas_orig) / delta
                end select
             end do
          end do
       end do
    end subroutine numerical_forces
-   
+
 end module mod_force_h2o
