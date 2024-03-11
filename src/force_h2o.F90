@@ -70,7 +70,7 @@ contains
       integer, intent(in) :: natom, nbeads
       ! Internal water coordinates
       real(DP) :: rOH1, rOH2, aHOH_rad
-      real(DP) :: rij(1, 3)
+      real(DP) :: rij(nbeads, 3)
       real(DP) :: Epot(nbeads)
       integer :: iw
 
@@ -125,7 +125,7 @@ contains
       ! Schwenke calculated peterbed geometry energy
       real(DP) :: Epot_delta(1)
 
-      real(DP) :: Eclas_orig, Eclas_plus
+      real(DP) :: Eclas_orig
       real(DP) :: delta = 5.0E-5_DP
       integer :: i, j, k
 
@@ -159,18 +159,16 @@ contains
 
                new_rij(1, :) = [new_rOH1, new_rOH2, new_aHOH_rad]
 
-               call h2o_pot_schwenke(new_rij, Epot_delta(1), nbeads)
-
-               Eclas_plus = Epot_delta(1)
+               call h2o_pot_schwenke(new_rij, Epot_delta(1), 1)
 
                ! Calculate the numerical force
                select case (k)
                case (1)
-                  fx(i, j) = -(Eclas_plus - Eclas_orig) / delta
+                  fx(i, j) = -(Epot_delta(1) - Eclas_orig) / delta
                case (2)
-                  fy(i, j) = -(Eclas_plus - Eclas_orig) / delta
+                  fy(i, j) = -(Epot_delta(1) - Eclas_orig) / delta
                case (3)
-                  fz(i, j) = -(Eclas_plus - Eclas_orig) / delta
+                  fz(i, j) = -(Epot_delta(1) - Eclas_orig) / delta
                end select
             end do
          end do
