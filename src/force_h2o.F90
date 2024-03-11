@@ -1,4 +1,3 @@
-
 ! Interface to analytical H2O (single water molecule) potentials.
 ! This is invoked via pot='_h2o_', and the potential is selected via
 ! h2opot='schwenke' in namelist General in ABIN input file.
@@ -88,7 +87,6 @@ contains
 
       ! For Path Integrals, the final energy of the PI necklace
       ! is an average over all beads.
-      ! TODO: Forces need to be appropriately scaled as well!
       do iw = 1, nbeads
          Eclas = Eclas + Epot(iw)
       end do
@@ -100,7 +98,6 @@ contains
 
    ! TODO: Implement numerical forces generally for all potentials
    ! For now, they can be implemented here and hardcoded for a specific H2O potential
-
    subroutine numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
       real(DP), intent(in) :: x(natom, nbeads)
       real(DP), intent(in) :: y(natom, nbeads)
