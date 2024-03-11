@@ -57,6 +57,9 @@ contains
       ! TODO: Use function pointers to select the potential and pass it down
       if (h2opot == 'schwenke') then
          call force_h2o_schwenke(x, y, z, fx, fy, fz, eclas, natom, nbeads)
+      else if (h2opot == 'cvrqd') then
+         call force_h2o_cvrqd(x, y, z, fx, fy, fz, eclas, natom, nbeads)
+         call fatal_error(__FILE__, __LINE__, 'Numerical forces not yet implemented!')
       else
          call fatal_error(__FILE__, __LINE__, 'Potential '//trim(h2opot)//' not implemented')
       end if
@@ -95,6 +98,39 @@ contains
       call numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
 
    end subroutine force_h2o_schwenke
+
+   subroutine force_h2o_cvrqd(x, y, z, fx, fy, fz, Eclas, natom, nbeads)
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
+      real(DP), intent(inout) :: Eclas
+      integer, intent(in) :: natom, nbeads
+      ! Internal water coordinates
+      real(DP) :: rOH1, rOH2, aHOH_rad
+      real(DP) :: E
+      integer :: iw
+      real(DP) :: mH, mO
+
+      ! TODO: Pass in the actual masses
+      ! What should be these set to? Should we set pure isotopes?
+      mH = 1.008D0
+      mO = 15.999D0
+
+      Eclas = 0.0D0
+      ! The H2O potentials are evaluated in internal coordinates, but ABIN works in cartesians
+      do iw = 1, nbeads
+         call get_internal_coords(x, y, z, iw, rOH1, rOH2, aHOH_rad)
+
+         call h2o_pot_cvrqd(E, rOH1, rOH2, aHOH_rad, mO, mH)
+
+         Eclas = Eclas + E
+      end do
+      Eclas = Eclas / nbeads
+
+      ! TODO: Given the small difference between the Schwenke potential,
+      ! we might not need to implement numerical forces here.
+      ! call numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
+
+   end subroutine force_h2o_cvrqd
 
    ! TODO: Implement numerical forces generally for all potentials
    ! For now, they can be implemented here and hardcoded for a specific H2O potential

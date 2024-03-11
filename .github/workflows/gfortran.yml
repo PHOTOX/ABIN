@@ -14,10 +14,6 @@ env:
   ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
-  # Even for public builds, it is apparently useful to use CODECOV_TOKEN
-  # to minimize failed uploads, see:
-  # https://community.codecov.com/t/upload-issues-unable-to-locate-build-via-github-actions-api/3954
-  # NOTE: This breaks CI on PRs from forks. We might need to change this if it becomes an issue.
   # NOTE: It would be safer to only pass the secret token to the codecov-upload action,
   # but the impact of this token leaking is small anyway.
   # NOTE: It appears that even with this token there are issues,
@@ -85,11 +81,12 @@ jobs:
     # pFUnit library is used to build and run unit tests
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/pfunit/build/installed
         # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
         key: ${{ runner.os }}-ubuntu20.04-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
+        save-always: true
 
     - name: Download and build pFUnit
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
@@ -105,23 +102,21 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
-        gcov: true
-        fail_ci_if_error: false
+        fail_ci_if_error: true
 
     - name: Run End-to-End tests
       if: always()
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
-        gcov: true
+        fail_ci_if_error: true
 
   intel_build:
     name: Intel OneAPI build
@@ -181,7 +176,7 @@ jobs:
 
     - name: TCBP build cache
       id: tcpb-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/tcpb-cpp/lib
         # To force a rebuild (bust the cache), make a change to install_tcpb.sh
@@ -201,11 +196,10 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: tcpb
-        fail_ci_if_error: false
-        gcov: true
+        fail_ci_if_error: true
 
 
   optimized_build:
@@ -233,10 +227,11 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
+        save-always: true
 
     - name: Download and build pFUnit
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
@@ -271,10 +266,11 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
+        save-always: true
 
     - name: Download and build pFUnit
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
@@ -290,21 +286,19 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
-        gcov: true
 
     - name: Run End-to-End tests
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
-        gcov: true
+        fail_ci_if_error: true
 
   mpich_build:
     name: MPICH build
@@ -341,10 +335,11 @@ jobs:
         --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_V}
     - name: MPICH build Cache
       id: mpich-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/mpich/${{ env.MPICH_V }}/install
         key: ${{runner.os}}-ubuntu20.04-mpich${{ env.MPICH_V }}-gfortran${{ env.GCC_V }}-${{hashFiles('dev_scripts/install_mpich.sh')}}
+        save-always: true
 
     - name: Build and Install MPICH
       if: steps.mpich-cache.outputs.cache-hit != 'true'
@@ -369,11 +364,10 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
-        gcov: true
+        fail_ci_if_error: true
 
   openmpi_build:
     name: OpenMPI build
@@ -395,10 +389,11 @@ jobs:
         fetch-depth: 2
     - name: OpenMPI build cache
       id: openmpi-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/openmpi/${{ env.OPENMPI_V }}/install
         key: ${{runner.os}}-ubuntu20.04-openmpi${{ env.OPENMPI_V }}-gfortran-default-${{hashFiles('dev_scripts/install_openmpi.sh')}}
+        save-always: true
 
     - name: Build and Install OpenMPI
       if: steps.openmpi-cache.outputs.cache-hit != 'true'
@@ -412,11 +407,10 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
-        gcov: true
+        fail_ci_if_error: true
 
   plumed_build:
     name: PLUMED build
@@ -440,10 +434,11 @@ jobs:
         fetch-depth: 2
     - name: Plumed build cache
       id: plumed-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/plumed/${{ env.PLUMED_V }}/install
         key: ${{runner.os}}-ubuntu20.04-plumed${{env.PLUMED_V}}-gcc-default-${{hashFiles('dev_scripts/install_plumed.sh')}}
+        save-always: true
 
     - name: Build and Install PLUMED
       if: steps.plumed-cache.outputs.cache-hit != 'true'
@@ -451,7 +446,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu20.04-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
@@ -473,18 +468,16 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
-        gcov: true
 
     - name: Run End-to-End tests
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         name: ${{env.CODECOV_NAME}}
-        fail_ci_if_error: false
-        gcov: true
+        fail_ci_if_error: true

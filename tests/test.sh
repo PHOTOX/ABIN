@@ -120,6 +120,8 @@ restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.
 
 # Run all tests
 if [[ $TESTS = "all" ]];then
+   # TODO: Automaticall select all folders except for the special cases
+   # that depend on optional features.
    folders=(INIT CMD NHC-GLOBAL SHAKE \
             SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
             SH_IGNORE SH_NACM_FAIL SH_S0S1 SH_ENERGY_DIFF SH_ENERGY_DRIFT \
@@ -127,7 +129,7 @@ if [[ $TESTS = "all" ]];then
             LZ_SS LZ_ST LZ_ENE \
             PIMD ABINITIO ABINITIO-FAIL MTS \
             LANGEVIN QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
-            H2O_SCHWENKE H2O_SCHWENKE_PIMD HARMON MORSE DOUBLEWELL SPLINE MM MINI QMMM \
+            H2O_SCHWENKE H2O_SCHWENKE_PIMD H2O_CVRQD HARMON MORSE DOUBLEWELL SPLINE MM MINI QMMM \
             ANALYZE_EXT CMDLINE WATER_FAIL ERMD)
 
    if [[ $MPI = "TRUE" ]];then
