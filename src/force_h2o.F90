@@ -90,7 +90,6 @@ contains
 
       ! For Path Integrals, the final energy of the PI necklace
       ! is an average over all beads.
-      ! TODO: Forces need to be appropriately scaled as well!
       do iw = 1, nbeads
          Eclas = Eclas + Epot(iw)
       end do
@@ -135,19 +134,78 @@ contains
 
    ! TODO: Implement numerical forces generally for all potentials
    ! For now, they can be implemented here and hardcoded for a specific H2O potential
-   subroutine numerical_forces(x, y, z, Epot, fx, fy, fz, natom, nbeads)
+   subroutine numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
       real(DP), intent(in) :: x(natom, nbeads)
       real(DP), intent(in) :: y(natom, nbeads)
       real(DP), intent(in) :: z(natom, nbeads)
       real(DP), intent(inout) :: fx(natom, nbeads)
       real(DP), intent(inout) :: fy(natom, nbeads)
       real(DP), intent(inout) :: fz(natom, nbeads)
-      ! This is the energy for the currrent geometry that has already been calculated
-      real(DP), intent(in) :: Epot(nbeads)
       integer, intent(in) :: natom, nbeads
 
-      ! Need to implement numerical forces first
-      call fatal_error(__FILE__, __LINE__, 'Numerical forces not yet implemented!')
+      ! Create new copies of arrays
+      real(DP) :: x_new_forward(natom, nbeads)
+      real(DP) :: y_new_forward(natom, nbeads)
+      real(DP) :: z_new_forward(natom, nbeads)
+
+      ! This is the energy for the currrent geometry that has already been calculated
+      real(DP), intent(in) :: Epot(nbeads)
+
+      ! Internal water coordinates
+      real(DP) :: new_rOH1, new_rOH2, new_aHOH_rad
+      real(DP) :: new_rij(1, 3)
+
+      ! Schwenke calculated peterbed geometry energy
+      real(DP) :: Epot_delta(1)
+
+      real(DP) :: Eclas_orig
+      real(DP) :: delta = 5.0E-5_DP
+      integer :: i, j, k
+
+      ! Calculate forces numerically using central differences
+      do j = 1, nbeads
+
+         ! Save the original energy
+         Eclas_orig = Epot(j)
+
+         do i = 1, natom
+
+            do k = 1, 3 ! x, y, z
+
+               ! Copy the original atom coordinates
+               x_new_forward(:, :) = x(:, :)
+               y_new_forward(:, :) = y(:, :)
+               z_new_forward(:, :) = z(:, :)
+
+               ! Move the atom forwards
+               select case (k)
+               case (1)
+                  x_new_forward(i, j) = x_new_forward(i, j) + delta
+               case (2)
+                  y_new_forward(i, j) = y_new_forward(i, j) + delta
+               case (3)
+                  z_new_forward(i, j) = z_new_forward(i, j) + delta
+               end select
+
+               ! Calculate the energy for the forward perturbed geometry
+               call get_internal_coords(x_new_forward, y_new_forward, z_new_forward, j, new_rOH1, new_rOH2, new_aHOH_rad)
+
+               new_rij(1, :) = [new_rOH1, new_rOH2, new_aHOH_rad]
+
+               call h2o_pot_schwenke(new_rij, Epot_delta(1), 1)
+
+               ! Calculate the numerical force
+               select case (k)
+               case (1)
+                  fx(i, j) = -(Epot_delta(1) - Eclas_orig) / delta
+               case (2)
+                  fy(i, j) = -(Epot_delta(1) - Eclas_orig) / delta
+               case (3)
+                  fz(i, j) = -(Epot_delta(1) - Eclas_orig) / delta
+               end select
+            end do
+         end do
+      end do
    end subroutine numerical_forces
 
 end module mod_force_h2o
