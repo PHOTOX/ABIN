@@ -25,10 +25,14 @@ folder=MP2-NH4      # Name of the folder with trajectories
 inputdir=TEMPLATE-$folder   # Directory with input files for ABIN
 abin_input=$inputdir/input.in   # main input file for ABIN
 launch_script=$inputdir/r.abin	# this is the file that is submitted by qsub
-submit="qsub -cwd -V -q nq -cwd  " # comment this line if you don't want to submit to queue yet
-jobs=20              # number of batch jobs to submit. Trajectories will be distributed accordingly.
 
-molname=$folder      # Name of the job in the queue
+# Comment out this line if you don't want to run calculations yet
+# submit_command="qsub -cwd -V -q nq -cwd "
+# If you don't use queing system (like SLURM), use the following line
+# submit_command=bash
+
+# Number of batch jobs to submit, set only if you have more trajectories than jobs
+# jobs=20
 ########## END OF SETUP ##########
 
 
@@ -139,26 +143,26 @@ while [[ $i -le "$nsample" ]];do
    # TODO: Validate this step
    sed -r "s/irandom *= *[0-9]+/irandom=$irandom/" $abin_input > $folder/TRAJ.$i/input.in 
 
-   cat > $folder/TRAJ.$i/r.$molname.$i << EOF
+   cat > $folder/TRAJ.$i/r.$folder.$i << EOF
 #!/bin/bash
-JOBNAME=ABIN.$molname.${i}_$$_\${JOB_ID}
+JOBNAME=ABIN.$folder.${i}_$$_\${JOB_ID}
 INPUTPARAM=input.in
 INPUTGEOM=initial.xyz
 OUTPUT=abin.out
 EOF
 
    if [[ -n ${veloc-} ]];then
-      echo "INPUTVELOC=veloc.in" >> $folder/TRAJ.$i/r.$molname.$i
+      echo "INPUTVELOC=veloc.in" >> $folder/TRAJ.$i/r.$folder.$i
    fi
 
-   grep -v -e '/bin/bash' -e "JOBNAME=" -e "INPUTPARAM=" -e "INPUTGEOM=" -e "INPUTVELOC=" $launch_script >> $folder/TRAJ.$i/r.$molname.$i
+   grep -v -e '/bin/bash' -e "JOBNAME=" -e "INPUTPARAM=" -e "INPUTGEOM=" -e "INPUTVELOC=" $launch_script >> $folder/TRAJ.$i/r.$folder.$i
 
-   chmod 755 $folder/TRAJ.$i/r.$molname.$i
+   chmod 755 $folder/TRAJ.$i/r.$folder.$i
 
 
-   echo "cd TRAJ.$i || exit" >> $folder/$molname.$isample.$j.sh
-   echo "./r.$molname.$i" >> $folder/$molname.$isample.$j.sh
-   echo "cd $PWD/$folder || exit" >> $folder/$molname.$isample.$j.sh
+   echo "cd TRAJ.$i || exit" >> $folder/$folder.$isample.$j.sh
+   echo "./r.$folder.$i" >> $folder/$folder.$isample.$j.sh
+   echo "cd $PWD/$folder || exit" >> $folder/$folder.$isample.$j.sh
 
    # Distribute calculations evenly between jobs for queue
    if [[ $remainder -le 0 ]];then
@@ -179,12 +183,12 @@ done
 
 # Submit jobs
 k=1
-if [[ -n "${submit-}" ]];then
+if [[ -n "${submit_command-}" ]];then
    cd $folder || exit 1
    while [[ $k -le $j ]]
    do
-      if [[ -f $molname.$isample.$k.sh ]];then
-         $submit $molname.$isample.$k.sh
+      if [[ -f $folder.$isample.$k.sh ]];then
+         $submit_command $folder.$isample.$k.sh
       fi
       (( k++ ))
    done
