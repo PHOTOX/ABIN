@@ -12,6 +12,9 @@
 # 	abin-randomint PRNG program for generating random seeds, should be in your $PATH.
 #---------------------------------------------------------------------------------
 
+# Exit if undefined variable is used
+set -u
+
 #######-----SETUP---#############
 irandom0=156863189  # random seed, set negative for random seed based on time
 movie=coords.xyz    # PATH TO a XYZ movie with initial geometries
@@ -22,8 +25,7 @@ folder=MP2-NH4      # Name of the folder with trajectories
 inputdir=TEMPLATE-$folder   # Directory with input files for ABIN
 abin_input=$inputdir/input.in   # main input file for ABIN
 launch_script=$inputdir/r.abin	# this is the file that is submitted by qsub
-submit="qsub -q nq -cwd  " # comment this line if you don't want to submit to queue yet
-rewrite=0            # if =1 -> rewrite trajectories that already exist
+submit="qsub -cwd -V -q nq -cwd  " # comment this line if you don't want to submit to queue yet
 jobs=20              # number of batch jobs to submit. Trajectories will be distributed accordingly.
 
 molname=$folder      # Name of the job in the queue
@@ -31,7 +33,7 @@ molname=$folder      # Name of the job in the queue
 
 
 function files_exist {
-  for f in $*;do
+  for f in "$@";do
     if [[ ! -f $f ]];then
       echo "ERROR: File '$f' does not exist!"
       exit 1
@@ -40,7 +42,7 @@ function files_exist {
 }
 
 function folders_exist {
-  for d in $*;do
+  for d in "$@";do
     if [[ ! -d $d ]];then
       echo "ERROR: Directory '$d' does not exist!"
       exit 1
@@ -62,9 +64,9 @@ fi
 echo "Number of atoms = $natom"
 
 # TODO: Verify number of atoms and lines in the velocity file
-let natom2=natom+2
-lines=$(cat $movie | wc -l)
-geoms=$(expr $lines / $natom2)
+(( natom2=natom+2 ))
+lines=$(wc -l < $movie)
+(( geoms=lines/natom2 ))
 if [[ $nsample -gt $geoms ]];then
    echo "ERROR: Number of geometries ($geoms) is smaller than number of samples($nsample)."
    echo "Change parameter \"nsample\"."
@@ -72,17 +74,20 @@ if [[ $nsample -gt $geoms ]];then
 fi
 
 # determine number of ABIN simulations per job
-let nsimul=nsample-isample+1
+(( nsimul=nsample-isample+1 ))
+if [[ -z ${jobs-} ]]; then
+   jobs=$nsimul
+fi
+
 if [[ $nsimul -le $jobs ]];then
    remainder=0
    injob=1
    jobs=$nsimul
 else
-   let injob=nsimul/jobs  #number of simulations per job
+   (( injob=nsimul/jobs ))  #number of simulations per job
    # determine the remainder and distribute it evenly between jobs
-   let remainder=nsimul-injob*jobs
+   (( remainder=nsimul-injob*jobs ))
 fi
-
 
 j=1
 i=$isample
@@ -100,29 +105,18 @@ fi
 mkdir -p $folder
 cp iseed0 "$abin_input" $folder
 
-let offset=natom2*isample-natom2
-
-if [[ "$rewrite" -eq "1" ]];then
-    rm -f $folder/$molname.$isample.*.sh
-fi
-
+(( offset=natom2*isample-natom2 ))
 
 while [[ $i -le "$nsample" ]];do
 
-   let offset=offset+natom2     
+   (( offset=offset+natom2 ))
 
    if [[ -d "$folder/TRAJ.$i" ]];then
-      if [[ "$rewrite" -eq "1" ]];then
-
-         rm -r $folder/TRAJ.$i ; mkdir $folder/TRAJ.$i
-
-      else
 
          echo "Trajectory number $i already exists!"
-         echo "Exiting..."
+         echo "If you want to overwrite it, first remove it:"
+         echo "'rm -r $folder/TRAJ.$i'"
          exit 1
-
-      fi
 
    else
 
@@ -130,25 +124,17 @@ while [[ $i -le "$nsample" ]];do
 
    fi
 
+   # Copy all the files from the template directory
    cp -r $inputdir/* $folder/TRAJ.$i
 
-
    # Prepare input geometry and velocities
-
-   head -$offset $movie | tail -$natom2 > geom
-   if [[ ! -z "$veloc" ]];then
-      head -$offset $veloc | tail -$natom2 > veloc.in
+   head -$offset $movie | tail -$natom2 > initial.xyz
+   if [[ -n "${veloc-}" ]];then
+      head -$offset $veloc | tail -$natom2 > $folder/TRAJ.$i/veloc.in
    fi
 
-   mv geom $folder/TRAJ.$i/mini.dat
-
-   if [[ ! -z "$veloc" ]];then
-      mv veloc.in $folder/TRAJ.$i/
-   fi
-
-
-## Now prepare input.in and r.abin
-   irandom=`head -$i iran.dat |tail -1`
+   ## Now prepare input.in and r.abin
+   irandom=$(head -$i iran.dat |tail -1)
 
    # TODO: Validate this step
    sed -r "s/irandom *= *[0-9]+/irandom=$irandom/" $abin_input > $folder/TRAJ.$i/input.in 
@@ -157,11 +143,11 @@ while [[ $i -le "$nsample" ]];do
 #!/bin/bash
 JOBNAME=ABIN.$molname.${i}_$$_\${JOB_ID}
 INPUTPARAM=input.in
-INPUTGEOM=mini.dat
-OUTPUT=output
+INPUTGEOM=initial.xyz
+OUTPUT=abin.out
 EOF
 
-   if [[ ! -z $veloc ]];then
+   if [[ -n ${veloc-} ]];then
       echo "INPUTVELOC=veloc.in" >> $folder/TRAJ.$i/r.$molname.$i
    fi
 
@@ -170,37 +156,36 @@ EOF
    chmod 755 $folder/TRAJ.$i/r.$molname.$i
 
 
-   echo "cd TRAJ.$i" >> $folder/$molname.$isample.$j.sh
+   echo "cd TRAJ.$i || exit" >> $folder/$molname.$isample.$j.sh
    echo "./r.$molname.$i" >> $folder/$molname.$isample.$j.sh
-   echo "cd $PWD/$folder" >> $folder/$molname.$isample.$j.sh
+   echo "cd $PWD/$folder || exit" >> $folder/$molname.$isample.$j.sh
 
-#--Distribute calculations evenly between jobs for queue
+   # Distribute calculations evenly between jobs for queue
    if [[ $remainder -le 0 ]];then
-      let ncalc=injob
+      ncalc=injob
    else
-      let ncalc=injob+1 
+      (( ncalc=injob+1 ))
    fi
-   let w++
+   (( w++ ))
    if [[ $w -eq $ncalc ]] && [[ $j -lt $jobs ]]; then
-      let j++
-      let remainder--
-      let w=0
+      w=0
+      (( j++ ))
+      (( remainder-- ))
    fi
-#---------------------------------------------------------------------------
 
-   let i++
+   (( i++ ))
 
 done
 
 # Submit jobs
 k=1
-if [[ ! -z "$submit" ]];then
-   cd $folder
+if [[ -n "${submit-}" ]];then
+   cd $folder || exit 1
    while [[ $k -le $j ]]
    do
       if [[ -f $molname.$isample.$k.sh ]];then
-         $submit -V -cwd $molname.$isample.$k.sh
+         $submit $molname.$isample.$k.sh
       fi
-      let k++
+      (( k++ ))
    done
 fi
