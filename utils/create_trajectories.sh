@@ -200,12 +200,22 @@ done
 # Submit jobs
 k=1
 if [[ -n "${submit_command-}" ]];then
-   cd $folder || exit 1
-   while [[ $k -le $j ]]
-   do
-      if [[ -f $folder.$isample.$k.sh ]];then
-         $submit_command $folder.$isample.$k.sh
-      fi
-      (( k++ ))
-   done
+    cd $folder || exit 1
+    if [[ $submit_command = "bash" ]];then
+        echo "Launching $j calculations locally"
+        submit_command="nohup $submit_command"
+    else
+        echo "Submitting $j calculations with: $submit_command"
+    fi
+    while [[ $k -le $j ]]
+    do
+        if [[ -f $folder.$isample.$k.sh ]];then
+            $submit_command $folder.$isample.$k.sh &
+        fi
+        (( k++ ))
+    done
+    # Wait for submit commands to finish (they should be fast!)
+    if [[ $submit_command != "bash" ]]; then
+        wait
+    fi
 fi
