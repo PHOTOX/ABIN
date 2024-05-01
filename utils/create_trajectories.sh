@@ -32,7 +32,8 @@ folder=MY_MOLECULE_TRAJS
 # Directory with the input files for ABIN (input.in et al)
 inputdir=TEMPLATE-$folder
 
-# File with ABIN input parameters
+# File with ABIN input parameters, we need this path
+# so we can inject random number seed into it.
 abin_input=$inputdir/input.in
 
 # Random seed to generate random seeds for individual trajectories
@@ -175,17 +176,13 @@ EOF
       grep -v -e '/bin/bash' -e "INPUTPARAM=" -e "INPUTGEOM=" -e "INPUTVELOC=" $launch_script >> $folder/TRAJ.$i/r.$folder.$i
    else
       if [[ -n ${veloc-} ]]; then
-         echo "$abin_exe -i input.in -x initial.xyz -v veloc.in > abin.out 2>&1"
+         echo "$abin_exe -i input.in -x initial.xyz -v veloc.in > abin.out 2>&1" > $folder/TRAJ.$i/r.$folder.$i
       else
-         echo "$abin_exe -i input.in -x initial.xyz > abin.out 2>&1"
+         echo "$abin_exe -i input.in -x initial.xyz > abin.out 2>&1" > $folder/TRAJ.$i/r.$folder.$i
       fi
    fi
 
-   chmod 755 $folder/TRAJ.$i/r.$folder.$i
-
-   echo "cd TRAJ.$i || exit" >> $folder/$folder.$isample.$j.sh
-   echo "./r.$folder.$i" >> $folder/$folder.$isample.$j.sh
-   echo "cd $PWD/$folder || exit" >> $folder/$folder.$isample.$j.sh
+   echo "(cd TRAJ.$i && bash r.$folder.$i)" >> $folder/$folder.$isample.$j.sh
 
    # Distribute calculations evenly between jobs for queue
    if [[ $remainder -le 0 ]];then
