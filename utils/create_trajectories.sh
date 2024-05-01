@@ -42,6 +42,9 @@ irandom0=156863189
 # Specify path to launch script that is normally submitted to the queuing system.
 # Comment out this line if you're running locally.
 launch_script=$inputdir/r.abin
+# If you don't provide a launch script,
+# we need a (preferably absolute) path to abin executable
+# abin_exe=/path/to/abin
 
 # Comment out this line if you don't want to run calculations yet
 # submit_command="qsub -cwd -V -q nq -cwd "
@@ -160,10 +163,8 @@ while [[ $i -le "$nsample" ]];do
 
    cat > $folder/TRAJ.$i/r.$folder.$i << EOF
 #!/bin/bash
-JOBNAME=ABIN.$folder.${i}_$$_\${JOB_ID}
 INPUTPARAM=input.in
 INPUTGEOM=initial.xyz
-OUTPUT=abin.out
 EOF
 
    if [[ -n ${veloc-} ]];then
@@ -171,7 +172,13 @@ EOF
    fi
 
    if [[ -n ${launch_script-} ]];then
-      grep -v -e '/bin/bash' -e "JOBNAME=" -e "INPUTPARAM=" -e "INPUTGEOM=" -e "INPUTVELOC=" $launch_script >> $folder/TRAJ.$i/r.$folder.$i
+      grep -v -e '/bin/bash' -e "INPUTPARAM=" -e "INPUTGEOM=" -e "INPUTVELOC=" $launch_script >> $folder/TRAJ.$i/r.$folder.$i
+   else
+      if [[ -n ${veloc-} ]]; then
+         echo "$abin_exe -x -i input.in initial.xyz -v veloc.in > abin.out 2>&1"
+      else
+         echo "$abin_exe -x -i input.in initial.xyz > abin.out 2>&1"
+      fi
    fi
 
    chmod 755 $folder/TRAJ.$i/r.$folder.$i
