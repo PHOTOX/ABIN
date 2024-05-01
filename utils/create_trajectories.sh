@@ -150,7 +150,7 @@ while [[ $i -le "$nsample" ]];do
    cp -r $inputdir/* $folder/TRAJ.$i
 
    # Prepare input geometry and velocities
-   head -$offset $movie | tail -$natom2 > initial.xyz
+   head -$offset $movie | tail -$natom2 > $folder/TRAJ.$i/initial.xyz
    if [[ -n "${veloc-}" ]];then
       head -$offset "$veloc" | tail -$natom2 > $folder/TRAJ.$i/veloc.in
    fi
@@ -175,9 +175,9 @@ EOF
       grep -v -e '/bin/bash' -e "INPUTPARAM=" -e "INPUTGEOM=" -e "INPUTVELOC=" $launch_script >> $folder/TRAJ.$i/r.$folder.$i
    else
       if [[ -n ${veloc-} ]]; then
-         echo "$abin_exe -x -i input.in initial.xyz -v veloc.in > abin.out 2>&1"
+         echo "$abin_exe -i input.in -x initial.xyz -v veloc.in > abin.out 2>&1"
       else
-         echo "$abin_exe -x -i input.in initial.xyz > abin.out 2>&1"
+         echo "$abin_exe -i input.in -x initial.xyz > abin.out 2>&1"
       fi
    fi
 
