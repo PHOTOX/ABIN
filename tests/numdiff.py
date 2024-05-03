@@ -89,7 +89,8 @@ def parse_diff(fname, absolute_tolerance):
       # If the file is empty something is wrong
       # (e.g. file for comparison was not even generated)
       if len(f.read()) == 0:
-         print(f"File '{fname}' is empty!")
+         # print(f"File '{fname}' is empty!") # this doesn't work
+         print("File '%s' is empty!"%fname)
          exit(1)
       f.seek(0)
 
