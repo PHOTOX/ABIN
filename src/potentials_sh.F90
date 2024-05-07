@@ -1,6 +1,8 @@
 ! Various analytical potentials for surface hopping:
 ! - NaI potential and couplings in adiabatic basis
 
+! Created by Jiri Janos
+
 ! User-definer parameters are set input section 'system'
 module mod_potentials_sh
    use mod_const, only: DP
@@ -46,9 +48,9 @@ contains
 
       ! The NaI model is done in a mode of one particle with reduced mass
       ! We don't make approach of using two atoms and transforming to reduced coordinates.
-      if (natom /= 1) then
+      if (natom /= 2) then 
          call fatal_error(__FILE__, __LINE__, &
-            & 'NaI potential is only for 1 particle with reduced mass of NaI.')
+            & 'NaI potential is only for 2 particles.')
       end if
 
       if (nwalk /= 1) then
@@ -63,7 +65,7 @@ contains
 
       if (nstate /= 2) then
          call fatal_error(__FILE__, __LINE__, &
-            & 'NaI model is implemented for 2 states.')
+            & 'NaI model is implemented for 2 states only.')
       end if
 
    end subroutine nai_init
@@ -76,8 +78,7 @@ contains
       real(DP), intent(out) :: eclas
       real(DP) :: VX, VA, VXA, dVX, dVA, dVXA ! diabatic hamiltonian and its derivatived
       real(DP) :: E1, E2, d12, dE1, dE2 ! adiabatic hamiltonian and derivatives of energies
-      real(DP) :: r, fr 
-      !real(DP) :: dx, dy, dz, r, fac
+      real(DP) :: r, fr, dx, dy, dz 
 
       ! NOTE: The original potential is defined in diabatic basis. For ABIN's purposes, we need to transfer to adiabatic basis,
       ! which can be easily done for two states. However, the Adiabatic formulas are very long and complicated to both code and
@@ -85,25 +86,20 @@ contains
       ! couplings from diabatic ones. It should be easier to read and also more efficient. Note that the diabatic potential is in eV
       ! and Angstrom so conversions are necessary.
 
-      ! currently, we work only with 1D in x (in the reduced system)
-      ! the following commented lines are in case we extend to Cartesian coordinates
       ! distance between atoms
-      !dx = x(2, 1) - x(1, 1)
-      !dy = y(2, 1) - y(1, 1)
-      !dz = z(2, 1) - z(1, 1)
-      !r = dx**2 + dy**2 + dz**2
-      !r = dsqrt(r)
+      dx = x(2, 1) - x(1, 1)
+      dy = y(2, 1) - y(1, 1)
+      dz = z(2, 1) - z(1, 1)
+      r = dx**2 + dy**2 + dz**2
+      r = dsqrt(r)
 
       ! normalized distance
-      !dx = dx/r
-      !dy = dy/r
-      !dz = dz/r
+      dx = dx/r
+      dy = dy/r
+      dz = dz/r
 
       ! converting distance to Angstrom as the potential was done
-      !r = r/ANG
-
-      ! for 1D
-      r = x(1, 1)/ANG
+      r = r/ANG
 
       ! calculating diabatic hamiltonian 
       VX = (nai%a2 + (nai%b2/r)**8)*dexp(-r/nai%rho) - nai%e2/r - nai%e2*(nai%lp + nai%lm)/2/r**4 - &
@@ -128,8 +124,8 @@ contains
       ! adiabatic potentials
       E1 = (VA + VX)/2.0d0 - dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0)/2.0d0
       E2 = (VA + VX)/2.0d0 + dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0)/2.0d0
-      ! nonadiabatic coupling vector
-      d12 = (VXA*(dVA - dVX) + (-VA + VX)*dVXA)/(VA**2.0d0 - 2.0d0*VA*VX + VX**2.0d0 + 4.0d0*VXA**2.0d0)
+      ! nonadiabatic coupling vector in the reduced system
+      d12 = -(VXA*(dVA - dVX) + (-VA + VX)*dVXA)/(VA**2.0d0 - 2.0d0*VA*VX + VX**2.0d0 + 4.0d0*VXA**2.0d0)
       ! derivatives of energies
       dE1 = (dVA + dVX)/2.0d0 - (2.0d0*(VA - VX)*(dVA - dVX) + 8.0d0*VXA*dVXA)/(4.0d0*dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0))
       dE2 = (dVA + dVX)/2.0d0 + (2.0d0*(VA - VX)*(dVA - dVX) + 8.0d0*VXA*dVXA)/(4.0d0*dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0))
@@ -142,28 +138,41 @@ contains
       ! saving classical energy for Verlet
       eclas = en_array(istate)
 
-      ! calculate forces
+      ! calculate forces in the reduced system
       if (istate == 1) fr = -dE1
       if (istate == 2) fr = -dE2
 
-      ! save data
-      fx(1, 1) = fr
-      fy(1, 1) = 0
-      fz(1, 1) = 0
+      ! old for the case when it was all done in the reduced system 
+      !fx(1, 1) = fr
+      !fy(1, 1) = 0
+      !fz(1, 1) = 0
 
-      nacx(1, 1, 2) = d12
-      nacy(1, 1, 2) = 0
-      nacz(1, 1, 2) = 0
+      !nacx(1, 1, 2) = d12
+      !nacy(1, 1, 2) = 0
+      !nacz(1, 1, 2) = 0
+      !nacx(1, 2, 1) = -nacx(1, 1, 2)
+      !nacy(1, 2, 1) = -nacy(1, 1, 2)
+      !nacz(1, 2, 1) = -nacz(1, 1, 2)
+
+      nacx(1, 1, 2) = -d12 * dx
+      nacy(1, 1, 2) = -d12 * dy
+      nacz(1, 1, 2) = -d12 * dz
       nacx(1, 2, 1) = -nacx(1, 1, 2)
       nacy(1, 2, 1) = -nacy(1, 1, 2)
       nacz(1, 2, 1) = -nacz(1, 1, 2)
+      nacx(2, 1, 2) = d12 * dx
+      nacy(2, 1, 2) = d12 * dy
+      nacz(2, 1, 2) = d12 * dz
+      nacx(2, 2, 1) = -nacx(2, 1, 2)
+      nacy(2, 2, 1) = -nacy(2, 1, 2)
+      nacz(2, 2, 1) = -nacz(2, 1, 2)
 
-      !fx(1, 1) = fac * dx
-      !fx(2, 1) = -fx(1, 1)
-      !fy(1, 1) = fac * dy
-      !fy(2, 1) = -fy(1, 1)
-      !fz(1, 1) = fac * dz
-      !fz(2, 1) = -fz(1, 1)
+      fx(1, 1) = -fr * dx
+      fx(2, 1) = -fx(1, 1)
+      fy(1, 1) = -fr * dy
+      fy(2, 1) = -fy(1, 1)
+      fz(1, 1) = -fr * dz
+      fz(2, 1) = -fz(1, 1)
 
    end subroutine force_nai
 

@@ -612,16 +612,14 @@ contains
 
       ! First, calculate NACME
       if (inac == 0) then
-
          ! For TeraChem MPI / FMS interface, NAC are already computed!
-         if (pot /= '_tera_') then
+         if (pot /= '_tera_' .and. pot /= '_nai_') then
             nacx = 0.0D0
             nacy = 0.0D0
             nacz = 0.0D0
             ! Compute and read NACME (MOLPRO-SH interface)
             call get_nacm(pot)
          end if
-
          ! TODO: Should we call this with TeraChem?
          ! I think TC already phases the couplings internally.
          call phase_nacme(nacx_old, nacy_old, nacz_old, nacx, nacy, nacz)
