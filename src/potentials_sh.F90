@@ -46,8 +46,6 @@ contains
       use mod_utils, only: real_positive
       integer, intent(in) :: natom, nwalk, ipimd, nstate
 
-      ! The NaI model is done in a mode of one particle with reduced mass
-      ! We don't make approach of using two atoms and transforming to reduced coordinates.
       if (natom /= 2) then 
          call fatal_error(__FILE__, __LINE__, &
             & 'NaI potential is only for 2 particles.')
@@ -76,12 +74,12 @@ contains
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(out) :: eclas
-      real(DP) :: VX, VA, VXA, dVX, dVA, dVXA ! diabatic hamiltonian and its derivatived
+      real(DP) :: VX, VA, VXA, dVX, dVA, dVXA ! diabatic hamiltonian and its derivatives
       real(DP) :: E1, E2, d12, dE1, dE2 ! adiabatic hamiltonian and derivatives of energies
       real(DP) :: r, fr, dx, dy, dz 
 
       ! NOTE: The original potential is defined in diabatic basis. For ABIN's purposes, we need to transfer to adiabatic basis,
-      ! which can be easily done for two states. However, the Adiabatic formulas are very long and complicated to both code and
+      ! which can be easily done for two states. However, the adiabatic formulas are very long and complicated to both code and
       ! read. Therefore, we calculate the diabatic quantities and their derivatives and then construct the adiabatic states and
       ! couplings from diabatic ones. It should be easier to read and also more efficient. Note that the diabatic potential is in eV
       ! and Angstrom so conversions are necessary.
@@ -126,7 +124,7 @@ contains
       E2 = (VA + VX)/2.0d0 + dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0)/2.0d0
       ! nonadiabatic coupling vector in the reduced system
       d12 = -(VXA*(dVA - dVX) + (-VA + VX)*dVXA)/(VA**2.0d0 - 2.0d0*VA*VX + VX**2.0d0 + 4.0d0*VXA**2.0d0)
-      d12 = d12/ANG
+      d12 = d12/ANG ! one more conversion necessary
       ! derivatives of energies
       dE1 = (dVA + dVX)/2.0d0 - (2.0d0*(VA - VX)*(dVA - dVX) + 8.0d0*VXA*dVXA)/(4.0d0*dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0))
       dE2 = (dVA + dVX)/2.0d0 + (2.0d0*(VA - VX)*(dVA - dVX) + 8.0d0*VXA*dVXA)/(4.0d0*dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0))
@@ -139,22 +137,19 @@ contains
       ! saving classical energy for Verlet
       eclas = en_array(istate)
 
-      ! calculate forces in the reduced system
+      ! calculate force (-dE/dr) on the propagated state
       if (istate == 1) fr = -dE1
       if (istate == 2) fr = -dE2
 
-      ! old for the case when it was all done in the reduced system 
-      !fx(1, 1) = fr
-      !fy(1, 1) = 0
-      !fz(1, 1) = 0
+      ! projecting the force on the cartesian coordinates
+      fx(1, 1) = -fr * dx
+      fx(2, 1) = -fx(1, 1)
+      fy(1, 1) = -fr * dy
+      fy(2, 1) = -fy(1, 1)
+      fz(1, 1) = -fr * dz
+      fz(2, 1) = -fz(1, 1)
 
-      !nacx(1, 1, 2) = d12
-      !nacy(1, 1, 2) = 0
-      !nacz(1, 1, 2) = 0
-      !nacx(1, 2, 1) = -nacx(1, 1, 2)
-      !nacy(1, 2, 1) = -nacy(1, 1, 2)
-      !nacz(1, 2, 1) = -nacz(1, 1, 2)
-
+      ! projecting coupling to the cartesian coordinates
       nacx(1, 1, 2) = -d12 * dx
       nacy(1, 1, 2) = -d12 * dy
       nacz(1, 1, 2) = -d12 * dz
@@ -167,13 +162,6 @@ contains
       nacx(2, 2, 1) = -nacx(2, 1, 2)
       nacy(2, 2, 1) = -nacy(2, 1, 2)
       nacz(2, 2, 1) = -nacz(2, 1, 2)
-
-      fx(1, 1) = -fr * dx
-      fx(2, 1) = -fx(1, 1)
-      fy(1, 1) = -fr * dy
-      fy(2, 1) = -fy(1, 1)
-      fz(1, 1) = -fr * dz
-      fz(2, 1) = -fz(1, 1)
 
    end subroutine force_nai
 
