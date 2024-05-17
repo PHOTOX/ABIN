@@ -1,6 +1,15 @@
 #!/bin/bash
+# File interface to DFTB+ program, tested for version 24.1
 cd $(dirname $0)
-source ../SetEnvironment.sh DFTB
+set -u
+
+if [[ -f ../SetEnvironment.sh ]];then
+  # This is specific to Prague clusters
+  source ../SetEnvironment.sh DFTB
+else
+  # We assume dftb+ is in PATH already
+  DFTBEXE=dftb+
+fi
 
 timestep=$1
 ibead=$2
@@ -8,13 +17,15 @@ input=input$ibead
 geom=../geom.dat.$ibead
 
 natom=$(wc -l < $geom)
-WRKDIR=OUT$ibead.$natom
-rm -rf ${WRKDIR}.old
-if [[ -d $WRKDIR ]];then
-  mv $WRKDIR ${WRKDIR}.old
+CHARGES_FILE="charges.bin"
+
+# Working directory for the DFTB calculation
+WORKDIR=OUT$ibead.$natom
+rm -rf ${WORKDIR}.previous
+if [[ -d $WORKDIR ]];then
+    mv $WORKDIR ${WORKDIR}.previous
 fi
-mkdir -p $WRKDIR
-cd $WRKDIR
+mkdir -p $WORKDIR
 
 # You have to specify, which elements are present in your system
 # i.e. define array id[x]="element"
@@ -39,16 +50,17 @@ awk -v natom="$natom" 'BEGIN{
          print NR, i, $2, $3, $4
       }
    }
-}'  ../$geom > geom_in.gen
+}' $geom > $WORKDIR/geom_in.gen
 
 # Read initial charge distribution
-if [ -e charges.bin ];then
-   sed 's/#ReadInitialCharges/ReadInitialCharges/' ../dftb_in.hsd > dftb_in.hsd
+if [[ -f $CHARGES_FILE ]]; then
+   cp $CHARGES_FILE $WORKDIR/
+   sed 's/#ReadInitialCharges/ReadInitialCharges/' dftb_in.hsd > $WORKDIR/dftb_in.hsd
 else
-   cp ../dftb_in.hsd .
+   cp dftb_in.hsd $WORKDIR/
 fi
 
-rm -f detailed.out
+cd $WORKDIR || exit 2
 
 $DFTBEXE &> $input.out
 if [[ $? -eq 0 ]];then
@@ -60,7 +72,20 @@ else
    exit 2
 fi
 
-# Extract energy and gradients
+# Extract energy
 grep 'Total energy:' detailed.out | awk '{print $3}' > ../../engrad.dat.$ibead
-awk -v natom=$natom '{if ($2=="Forces"){for (i=1;i<=natom;i++){getline;printf"%3.15e %3.15e %3.15e \n",-$1,-$2,-$3}}}' \
- detailed.out >> ../../engrad.dat.$ibead
+
+# Extract gradients (note the conversion from forces to gradients)
+awk -v natom=$natom '{
+  if ($2 == "Forces") {
+    for (i=0; i < natom; i++) {
+      getline;
+      printf("%3.15e %3.15e %3.15e\n", -$2, -$3, -$4)
+    }
+  }
+}' detailed.out >> ../../engrad.dat.$ibead
+
+# Copy the charges for next step
+if [[ -f $CHARGES_FILE ]];then
+  cp $CHARGES_FILE ../
+fi
