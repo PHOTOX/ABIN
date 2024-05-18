@@ -1,9 +1,11 @@
 #!/bin/bash
-# File interface to DFTB+ program, tested for version 24.1
-cd $(dirname $0)
+# File interface to DFTB+ program, tested with version 24.1
+# NOTE: You need to tweak the awk routine for converting XYZ geometries
+# from ABIN to dftb+ compatible input file.
+cd "$(dirname "$0")" || exit 2
 set -u
 
-if [[ -f ../SetEnvironment.sh ]];then
+if [[ -f ../SetEnvironment.sh ]]; then
   # This is specific to Prague clusters
   source ../SetEnvironment.sh DFTB
 else
@@ -11,81 +13,78 @@ else
   DFTBEXE=dftb+
 fi
 
-timestep=$1
-ibead=$2
-input=input$ibead
-geom=../geom.dat.$ibead
+timestep="$1"
+ibead="$2"
+geom=../geom.dat."$ibead"
 
-natom=$(wc -l < $geom)
+natom=$(wc -l < "$geom")
 CHARGES_FILE="charges.bin"
 
 # Working directory for the DFTB calculation
-WORKDIR=OUT$ibead.$natom
-rm -rf ${WORKDIR}.previous
-if [[ -d $WORKDIR ]];then
-    mv $WORKDIR ${WORKDIR}.previous
+WORKDIR=CALC."$ibead"
+rm -rf "${WORKDIR}".previous
+if [[ -d "$WORKDIR" ]];then
+    mv "$WORKDIR" "${WORKDIR}".previous
 fi
-mkdir -p $WORKDIR
+mkdir -p "$WORKDIR"
 
-# You have to specify, which elements are present in your system
-# i.e. define array id[x]="element"
+# You have to specify, which (unique) elements are present in your system
+# i.e. define array el[i]="element"
 # No extra elements are allowed.
 awk -v natom="$natom" 'BEGIN{
-   id[1]="O"
-   id[2]="H"
-   nid=2    # number of different elements
+   el[1]="O"
+   el[2]="H"
+   num_el=2    # number of unique elements
 
-# END OF USER INPUT
-   print natom,"C"
-   for (i=1;i<=nid;i++) {
-      printf"%s ",id[i]
+   # END OF USER INPUT
+   print natom, "C"
+   for (i = 0; i < num_el; i++) {
+      printf"%s ", el[i]
    }
    print ""
    print ""
 }
 #conversion of xyz input to dftb geom
 {
-   for (i=1;i<=nid;i++) {
-      if ( $1 == id[i] ) {
+   for (i = 0; i < num_el; i++) {
+      if ( $1 == el[i] ) {
          print NR, i, $2, $3, $4
       }
    }
-}' $geom > $WORKDIR/geom_in.gen
+}' "$geom" > "$WORKDIR"/geom_in.gen
 
 # Read initial charge distribution
-if [[ -f $CHARGES_FILE ]]; then
-   cp $CHARGES_FILE $WORKDIR/
-   sed 's/#ReadInitialCharges/ReadInitialCharges/' dftb_in.hsd > $WORKDIR/dftb_in.hsd
+if [[ -f "$CHARGES_FILE" ]]; then
+   cp "$CHARGES_FILE" "$WORKDIR"/
+   sed 's/#ReadInitialCharges/ReadInitialCharges/' dftb_in.hsd > "$WORKDIR"/dftb_in.hsd
 else
-   cp dftb_in.hsd $WORKDIR/
+   cp dftb_in.hsd "$WORKDIR"/
 fi
 
-cd $WORKDIR || exit 2
+cd "$WORKDIR" || exit 2
 
-$DFTBEXE &> $input.out
-if [[ $? -eq 0 ]];then
-   cp $input.out $input.out.old
-else
-   echo "ERROR: DFTB calculation probably failed."
-   echo "See $input.out.error" 
-   cp $input.out $input.out.error
+# Everything is ready, run dftb+!
+$DFTBEXE &> dftb.out
+if [[ $? -ne 0 ]]; then
+   echo "ERROR: DFTB calculation failed."
+   echo "See $PWD/dftb.out" 
    exit 2
 fi
 
-# Extract energy
-grep 'Total energy:' detailed.out | awk '{print $3}' > ../../engrad.dat.$ibead
+# Extract energy from dftb+ output
+grep 'Total energy:' detailed.out | awk '{print $3}' > ../../engrad.dat."$ibead"
 
 # Extract gradients (note the conversion from forces to gradients)
-awk -v natom=$natom '{
+awk -v natom="$natom" '{
   if ($2 == "Forces") {
-    for (i=0; i < natom; i++) {
+    for (i = 0; i < natom; i++) {
       getline;
       printf("%3.15e %3.15e %3.15e\n", -$2, -$3, -$4)
     }
   }
-}' detailed.out >> ../../engrad.dat.$ibead
+}' detailed.out >> ../../engrad.dat."$ibead"
 
-# Copy the charges for next step
-if [[ -f $CHARGES_FILE ]];then
-  cp $CHARGES_FILE ../
+# Copy the charges for the next step
+if [[ -f "$CHARGES_FILE" ]]; then
+  cp "$CHARGES_FILE" ../
 fi
