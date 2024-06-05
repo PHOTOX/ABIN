@@ -19,24 +19,24 @@ module mod_potentials_sh
    ! These articles contain diabatic basis while here we use adiabatic
    type :: nai_params
       ! Diabatic state VX parameters
-      real(DP) :: a2 = 2760d0
-      real(DP) :: b2 = 2.398d0
-      real(DP) :: c2 = 11.3d0
-      real(DP) :: lp = 0.408d0
-      real(DP) :: lm = 6.431d0
-      real(DP) :: rho = 0.3489d0
-      real(DP) :: de0 = 2.075d0
-      real(DP) :: e2 = 14.399613877582553d0 ! elementary charge in eV/angs units
+      real(DP) :: a2 = 2760D0
+      real(DP) :: b2 = 2.398D0
+      real(DP) :: c2 = 11.3D0
+      real(DP) :: lp = 0.408D0
+      real(DP) :: lm = 6.431D0
+      real(DP) :: rho = 0.3489D0
+      real(DP) :: de0 = 2.075D0
+      real(DP) :: e2 = 14.399613877582553D0 ! elementary charge in eV/angs units
       ! Diabatic state VA parameters
-      real(DP) :: a1 = 0.813d0
-      real(DP) :: beta1 = 4.08d0
-      real(DP) :: r0 = 2.67d0
+      real(DP) :: a1 = 0.813D0
+      real(DP) :: beta1 = 4.08D0
+      real(DP) :: r0 = 2.67D0
       ! Diabatic coupling VXA parameters
-      real(DP) :: a12 = 0.055d0
-      real(DP) :: beta12 = 0.6931d0
-      real(DP) :: rx = 6.93d0
+      real(DP) :: a12 = 0.055D0
+      real(DP) :: beta12 = 0.6931D0
+      real(DP) :: rx = 6.93D0
    end type
-   type(nai_params) :: nai 
+   type(nai_params) :: nai
    save
 contains
 
@@ -46,7 +46,7 @@ contains
       use mod_utils, only: real_positive
       integer, intent(in) :: natom, nwalk, ipimd, nstate
 
-      if (natom /= 2) then 
+      if (natom /= 2) then
          call fatal_error(__FILE__, __LINE__, &
             & 'NaI potential is only for 2 particles.')
       end if
@@ -76,13 +76,13 @@ contains
       real(DP), intent(out) :: eclas
       real(DP) :: VX, VA, VXA, dVX, dVA, dVXA ! diabatic hamiltonian and its derivatives
       real(DP) :: E1, E2, d12, dE1, dE2 ! adiabatic hamiltonian and derivatives of energies
-      real(DP) :: r, fr, dx, dy, dz 
+      real(DP) :: r, fr, dx, dy, dz
 
       ! NOTE: The original potential is defined in diabatic basis. For ABIN's purposes, we need to transfer to adiabatic basis,
       ! which can be easily done for two states. However, the adiabatic formulas are very long and complicated to both code and
       ! read. Therefore, we calculate the diabatic quantities and their derivatives and then construct the adiabatic states and
-      ! couplings from diabatic ones. It should be easier to read and also more efficient. Note that the diabatic potential is in eV
-      ! and Angstrom so conversions are necessary.
+      ! couplings from diabatic ones. It should be easier to read and also more efficient. Note that the diabatic potential is
+      ! in eV and Angstrom so conversions are necessary.
 
       ! distance between atoms
       dx = x(2, 1) - x(1, 1)
@@ -92,43 +92,44 @@ contains
       r = dsqrt(r)
 
       ! normalized distance
-      dx = dx/r
-      dy = dy/r
-      dz = dz/r
+      dx = dx / r
+      dy = dy / r
+      dz = dz / r
 
       ! converting distance to Angstrom as the potential was done
-      r = r/ANG
+      r = r / ANG
 
-      ! calculating diabatic hamiltonian 
-      VX = (nai%a2 + (nai%b2/r)**8)*dexp(-r/nai%rho) - nai%e2/r - nai%e2*(nai%lp + nai%lm)/2/r**4 - &
-              nai%c2/r**6 - 2*nai%e2*nai%lm*nai%lp/r**7 + nai%de0
-      VA = nai%a1*dexp(-nai%beta1*(r - nai%r0))
-      VXA = nai%a12*dexp(-nai%beta12*(r - nai%rx)**2)
+      ! calculating diabatic hamiltonian
+      VX = (nai%a2 + (nai%b2 / r)**8) * dexp(-r / nai%rho) - nai%e2 / r - nai%e2 * (nai%lp + nai%lm) / 2 / r**4 - &
+           nai%c2 / r**6 - 2 * nai%e2 * nai%lm * nai%lp / r**7 + nai%de0
+      VA = nai%a1 * dexp(-nai%beta1 * (r - nai%r0))
+      VXA = nai%a12 * dexp(-nai%beta12 * (r - nai%rx)**2)
       ! calculating derivatives of diabatic hamiltonian
-      dVX = -(nai%a2 + (nai%b2/r)**8)*dexp(-r/nai%rho)/nai%rho - 8.0d0*nai%b2**8/r**9*dexp(-r/nai%rho) + &
-              14.0d0*nai%e2*nai%lm*nai%lp/r**8 + 6.0d0*nai%c2/r**7 + 2.0d0*nai%e2*(nai%lp + nai%lm)/r**5 + nai%e2/r**2
-      dVA = -nai%beta1*VA
-      dVXA = -2.0d0*nai%beta12*(r - nai%rx)*VXA
+      dVX = -(nai%a2 + (nai%b2 / r)**8) * dexp(-r / nai%rho) / nai%rho - 8.0D0 * nai%b2**8 / r**9 * dexp(-r / nai%rho) + &
+            14.0D0 * nai%e2 * nai%lm * nai%lp / r**8 + 6.0D0 * nai%c2 / r**7 + 2.0D0 * nai%e2 * (nai%lp + nai%lm) / r**5 + &
+            nai%e2 / r**2
+      dVA = -nai%beta1 * VA
+      dVXA = -2.0D0 * nai%beta12 * (r - nai%rx) * VXA
       ! converting them to a.u. as they are in eV or eV/Angstrom
-      VX = VX/AUTOEV
-      VA = VA/AUTOEV
-      VXA = VXA/AUTOEV
-      dVX = dVX/AUTOEV/ANG
-      dVA = dVA/AUTOEV/ANG
-      dVXA = dVXA/AUTOEV/ANG
-
+      VX = VX / AUTOEV
+      VA = VA / AUTOEV
+      VXA = VXA / AUTOEV
+      dVX = dVX / AUTOEV / ANG
+      dVA = dVA / AUTOEV / ANG
+      dVXA = dVXA / AUTOEV / ANG
 
       ! calculating derivatives of diabatic quantities
       ! adiabatic potentials
-      E1 = (VA + VX)/2.0d0 - dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0)/2.0d0
-      E2 = (VA + VX)/2.0d0 + dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0)/2.0d0
+      E1 = (VA + VX) / 2.0D0 - dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0) / 2.0D0
+      E2 = (VA + VX) / 2.0D0 + dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0) / 2.0D0
       ! nonadiabatic coupling vector in the reduced system
-      d12 = -(VXA*(dVA - dVX) + (-VA + VX)*dVXA)/(VA**2.0d0 - 2.0d0*VA*VX + VX**2.0d0 + 4.0d0*VXA**2.0d0)
-      d12 = d12/ANG ! one more conversion necessary
+      d12 = -(VXA * (dVA - dVX) + (-VA + VX) * dVXA) / (VA**2.0D0 - 2.0D0 * VA * VX + VX**2.0D0 + 4.0D0 * VXA**2.0D0)
+      d12 = d12 / ANG ! one more conversion necessary
       ! derivatives of energies
-      dE1 = (dVA + dVX)/2.0d0 - (2.0d0*(VA - VX)*(dVA - dVX) + 8.0d0*VXA*dVXA)/(4.0d0*dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0))
-      dE2 = (dVA + dVX)/2.0d0 + (2.0d0*(VA - VX)*(dVA - dVX) + 8.0d0*VXA*dVXA)/(4.0d0*dsqrt((VA - VX)**2.0d0 + 4.0d0*VXA**2.0d0))
-
+      dE1 = (dVA + dVX) / 2.0D0 - (2.0D0 * (VA - VX) * (dVA - dVX) + 8.0D0 * VXA * dVXA) / &
+            (4.0D0 * dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0))
+      dE2 = (dVA + dVX) / 2.0D0 + (2.0D0 * (VA - VX) * (dVA - dVX) + 8.0D0 * VXA * dVXA) / &
+            (4.0D0 * dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0))
 
       ! saving electronic energies for SH
       en_array(1) = E1
