@@ -287,7 +287,7 @@ contains
 
       ! In TeraChem SH interface, we already got NACME
       if (pot == '_tera_') return
-      if (pot == '_nai_') return ! for NaI model, the couplings are calcualted with forces
+      if (pot == '_nai_') return ! for NaI model, the couplings are calcualted together with forces
 
       ! Check whether we need to compute any NACME
       num_nacme = 0

@@ -3,7 +3,6 @@
 
 ! Created by Jiri Janos
 
-! User-definer parameters are set input section 'system'
 module mod_potentials_sh
    use mod_const, only: DP
    implicit none
@@ -16,7 +15,10 @@ module mod_potentials_sh
    ! Parameters for the NaI model as defined in the following articles
    ! https://doi.org/10.1063/1.4919780
    ! https://doi.org/10.1063/1.456377
-   ! These articles contain diabatic basis while here we use adiabatic
+   ! These articles contain diabatic basis while here we use adiabatic. In this code, we first calculate the diabatic quantities and
+   ! then we convert them to adiabatic using a simple diagonalization of 2 states. The equations for diabatic quantites can be found
+   ! in the code or in appendix of this article: https://doi.org/10.1063/5.0071376 (sign is not correct) or equation 1 of this paper
+   ! https://doi.org/10.1063/1.1377030.
    type :: nai_params
       ! Diabatic state VX parameters
       real(DP) :: a2 = 2760D0
@@ -118,7 +120,6 @@ contains
       dVA = dVA / AUTOEV / ANG
       dVXA = dVXA / AUTOEV / ANG
 
-      ! calculating derivatives of diabatic quantities
       ! adiabatic potentials
       E1 = (VA + VX) / 2.0D0 - dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0) / 2.0D0
       E2 = (VA + VX) / 2.0D0 + dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0) / 2.0D0
