@@ -6,12 +6,12 @@ irest=0,		   ! should we restart from restart.xyz?
 irandom=347110445, ! random seed
 
 mdtype='sh',	! sh = Surface Hopping non adiabatic MD
-nstep=52000,	! number of steps, originally in QD 260000
+nstep=5,    	! number of steps, originally in QD 260000
 dt=2.5,			! timestep [au], originally in QD 0.25
 
-nwrite=20,		! how often some output should be printed (energies, surface hopping probabilities etc.)
-nwritex=20,		! how often to print coordinates?
-nwritev=0,		! how often to print coordinates?
+nwrite=1,		! how often some output should be printed (energies, surface hopping probabilities etc.)
+nwritex=1,		! how often to print coordinates?
+nwritev=1,		! how often to print coordinates?
 narchive=90000,	! how often to print coordinates?
 nrest=200,		! how often to print restart files?
 /
