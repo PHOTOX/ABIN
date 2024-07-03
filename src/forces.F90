@@ -133,6 +133,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_sbc, only: force_sbc, isbc
    use mod_plumed, only: iplumed, force_plumed
    use mod_potentials, only: force_harmonic_rotor, force_harmonic_oscillator, force_morse, force_doublewell
+   use mod_potentials_sh, only: force_nai
    use mod_splined_grid, only: force_splined_grid
    use mod_cp2k, only: force_cp2k
    use mod_shell_interface, only: force_abin
@@ -173,6 +174,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
       call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_tcpb_")
       call force_tcpb(x, y, z, fx, fy, fz, eclas, walkmax)
+   case ("_nai_")
+      call force_nai(x, y, z, fx, fy, fz, eclas)
    case ("_tera_")
       if (ipimd == 2 .or. ipimd == 5) then
          call force_terash(x, y, z, fx, fy, fz, eclas)
