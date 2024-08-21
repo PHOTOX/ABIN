@@ -1389,27 +1389,7 @@ c     $      0.15860145369897d0,-1.6351695982132d0,1d0/
       data ifirst/0/
       if(ifirst.eq.0)then
        ifirst=1
-c       write(6,1)
-    1  format(/1x,'pes for h2o',
-     $        /1x,'by Harry Partridge and David W. Schwenke',
-     $        /1x,'submitted to J. Chem. Phys. Nov. 8, 1996')
-c       write(6,56)
-   56  format(/1x,'parameters before adjustment')
-c       write(6,55)phh1,phh2,deoh,alphaoh,roh
-   55  format(/1x,'two body potential parameters:',
-     $        /1x,'hh: phh1 = ',f10.1,' phh2 = ',f5.2,
-     $        /1x,'oh: deoh = ',f10.1,' alpha = ',f7.4,
-     $        ' re = ',f7.4)
-c       write(6,4)reoh,thetae,b1
-    4  format(/1x,'three body parameters:',
-     $        /1x,'reoh = ',f10.4,' thetae = ',f10.4,
-     $        /1x,'betaoh = ',f10.4,
-     $        /1x,'    i    j    k',7x,'c5z',9x,'cbasis',10x,'ccore',
-     $        10x,'crest')
-       do 2 i=1,245
-c        write(6,5)(idx(i,j)-1,j=1,3),c5z(i),cbasis(i),ccore(i),crest(i)
-c    5   format(1x,3i5,1p4e15.7)
-    2  continue
+    1  format(/1x,'CVRQD PES for H2O molecule')
 c
 c     remove mass correction from vrest
 c

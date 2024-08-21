@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-###############################################################################
+
+
+# /// script
+# requires-python = ">=3.6"
+# dependencies = [
+#     "configargparse",
+# ]
+# ///
+#############################################################################
 #    This file is part of fprettify.
 #    Copyright (C) 2016-2019 Patrick Seewald, CP2K developers group
 #
