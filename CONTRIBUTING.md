@@ -1,6 +1,6 @@
 # How to contribute to ABIN
 
-Thanks for contributing to our code! 💜
+Thanks for contributing to our code!💜
 Here's a couple of guidelines that you should keep in mind.
 
 ## Setup your environment
@@ -32,15 +32,15 @@ Here's a quick summary of our code style that we try to adhere to:
  - variables and subroutines in modules should be private by default, use `private` attribute,e.g.
 ```fortran
 module mod_my_module
-  private
-  integer :: public_var
-  integer :: private_var
-  public :: public_var
-  public :: public_subroutine
+   private
+   integer :: public_var
+   integer :: private_var
+   public :: public_var
+   public :: public_subroutine
 contains
- subroutine public_subroutine
-    ...
- end subroutine public_subroutine
+   subroutine public_subroutine
+      ...
+   end subroutine public_subroutine
 end module mod_my_module
 ```
 
@@ -68,7 +68,7 @@ Here's a quick summary of our formatting style, as it is defined in `.fprettify.
 
 ### Inspecting Git history
 
-To ignore bulk whitespace changes in blame history, use:
+To ignore bulk whitespace changes in git blame history, use:
 ```sh
 git blame --ignore-revs-file .git-blame-ignore-revs
 ```
@@ -77,11 +77,6 @@ or to do it automatically:
 ```sh
 git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
-
-Unfortunately, this is not yet supported in
-[the GitHub UI](https://github.community/t/support-ignore-revs-file-in-githubs-blame-view/3256),
-but Github UI already allows to browse git blame a bit.
-
 
 ## Submitting code changes
 

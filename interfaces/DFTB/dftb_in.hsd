@@ -4,10 +4,11 @@ Geometry = GenFormat {
 
 Hamiltonian = DFTB {
   SCC = Yes
+  MaxSCCIterations = 100
   charge = 0.0
   #ReadInitialCharges = yes
   SlaterKosterFiles = Type2FileNames {
-   Prefix = "/home/hollas/3ob-2-1/"
+   Prefix = "/home/hollas/3ob-3-1/"
    Separator = "-"
    Suffix = ".skf"
   }
@@ -17,8 +18,8 @@ Hamiltonian = DFTB {
   }
 }
 
-Options {
-CalculateForces = Yes
+Analysis {
+  CalculateForces = Yes
 }
 
 ParserOptions {
