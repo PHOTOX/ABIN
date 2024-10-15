@@ -4,6 +4,9 @@
 # The input DFTB parameters are given in a file `dftb_in.hsd` in this directory,
 # which you need to modify for your needs.
 #
+# NOTE: This script assumes that the 'dftb+' executable is already in your PATH.
+# If that is not the case, modify the variable 'DFTBEXE' below accordingly.
+#
 # Tested with version 24.1. Other versions might work, but always test
 # by verifying energy conservation in a short NVE simulation.
 # Versions older than 20.1 will not work since they do not support XYZ geometry input.
