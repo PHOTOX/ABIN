@@ -21,22 +21,25 @@ else
   DFTBEXE=dftb+
 fi
 
-timestep="$1"
+# timestep var not used in this script
+# timestep="$1"
+# Bead index in PIMD, "001" for classical MD
 ibead="$2"
-geom=../geom.dat."$ibead"
+
+geom="../geom.dat.$ibead"
 natom=$(wc -l < "$geom")
+WORKDIR="CALC.$ibead"
 
 function prepare_dftb_inputs() {
     # Working directory for the DFTB calculation
-    WORKDIR="CALC.$ibead"
     rm -rf "${WORKDIR}".previous
     if [[ -d "$WORKDIR" ]];then
         mv "$WORKDIR" "${WORKDIR}".previous
     fi
     mkdir -p "$WORKDIR"
 
-    echo -e "$atom\n" > "$WORKDIR/geometry.xyz"
-    cat $geom >> "$WORKDIR/geometry.xyz"
+    echo -e "$natom\n" > "$WORKDIR/geometry.xyz"
+    cat "$geom" >> "$WORKDIR/geometry.xyz"
 
     cp dftb_in.hsd "$WORKDIR"
     # Read charge distribution from previous step if available
@@ -51,7 +54,7 @@ function extract_energy_and_gradients() {
     # Extract energy dftb+ output file
     dftb_out="detailed.out"
     engrad_file=$1
-    grep 'Total energy:' $dftb_out | awk '{print $3}' > $engrad_file
+    grep 'Total energy:' $dftb_out | awk '{print $3}' > "$engrad_file"
 
     # Extract gradients (note the conversion from forces to gradients)
     awk -v natom="$natom" '{
@@ -61,13 +64,13 @@ function extract_energy_and_gradients() {
           printf("%3.15e %3.15e %3.15e\n", -$2, -$3, -$4)
         }
       }
-    }' $dftb_out >> $engrad_file
+    }' $dftb_out >> "$engrad_file"
 }
 
 ##### LET'S GO! #####
-cd "$WORKDIR" || exit 2
-
 prepare_dftb_inputs
+
+cd "$WORKDIR" || exit 2
 
 $DFTBEXE &> dftb.out
 if [[ $? -ne 0 ]]; then
@@ -76,4 +79,4 @@ if [[ $? -ne 0 ]]; then
     exit 2
 fi
 
-extract_energy_and_gradients ../../engrad.dat."$ibead"
+extract_energy_and_gradients "../../engrad.dat.$ibead"

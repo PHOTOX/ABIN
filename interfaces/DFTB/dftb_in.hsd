@@ -3,19 +3,39 @@ Geometry = xyzFormat {
 }
 
 Hamiltonian = DFTB {
+  charge = 0.0
   SCC = Yes
   MaxSCCIterations = 100
-  charge = 0.0
-  #ReadInitialCharges = yes
+
+  # Slater-Koster files need to be downloaded separately from dftb.org
+  # https://dftb.org/parameters/download/
   SlaterKosterFiles = Type2FileNames {
-   Prefix = "/path/to/parameters/3ob-3-1/"
+   Prefix = "/path/to/slater_koster_params/3ob-3-1/"
    Separator = "-"
    Suffix = ".skf"
   }
+
+  # NOTE: These need to be defined for your system and depend on the SK parameters used,
+  # see documentation for the MaxAngularMomentum for more info.
   MaxAngularMomentum {
     O = "p"
     H = "s"
   }
+
+  # NOTE: The parameters below are specific for the 3ob-3-1 SK parameters!
+  # https://dftb.org/parameters/download/3ob/3ob-3-1-cc
+  ThirdOrderFull = Yes
+  HubbardDerivs = {
+    O = -0.1575
+    H = -0.1857
+  }
+  HCorrection = Damping {
+    Exponent = 4.00
+  }
+
+  # Keep the line below! It is needed to automatically
+  # load initial guess charges from previous time step, see r.dftb
+  #ReadInitialCharges = yes
 }
 
 Analysis {
