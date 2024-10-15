@@ -1,5 +1,5 @@
-Geometry = GenFormat {
- <<< "geom_in.gen"
+Geometry = xyzFormat {
+ <<< "geometry.xyz"
 }
 
 Hamiltonian = DFTB {
@@ -8,7 +8,7 @@ Hamiltonian = DFTB {
   charge = 0.0
   #ReadInitialCharges = yes
   SlaterKosterFiles = Type2FileNames {
-   Prefix = "/home/hollas/3ob-3-1/"
+   Prefix = "/path/to/parameters/3ob-3-1/"
    Separator = "-"
    Suffix = ".skf"
   }
