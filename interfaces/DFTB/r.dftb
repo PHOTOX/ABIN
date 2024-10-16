@@ -80,6 +80,11 @@ function extract_energy_and_gradients() {
       $1 == "Total" && $2 == "Forces" {
         for (i = 0; i < natom; i++) {
           getline;
+          if ($1 != i || NF != 4) {
+            print "ERROR: Unexpected line in the DFTB+ output file"
+            print $0
+            exit 2
+          }
           printf("%3.15e %3.15e %3.15e\n", -$2, -$3, -$4)
         }
       }
