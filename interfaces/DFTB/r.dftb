@@ -11,7 +11,7 @@
 # by verifying energy conservation in a short NVE simulation.
 # Versions older than 20.1 will not work since they do not support XYZ geometry input.
 cd "$(dirname "$0")" || exit 2
-set -u
+set -uo pipefail
 
 if [[ -f ../SetEnvironment.sh ]]; then
   # This is specific to Prague clusters
@@ -51,20 +51,39 @@ function prepare_dftb_inputs() {
 }
 
 function extract_energy_and_gradients() {
-    # Extract energy dftb+ output file
     dftb_out="detailed.out"
     engrad_file=$1
-    grep 'Total energy:' $dftb_out | awk '{print $3}' > "$engrad_file"
+
+    # Extract energy dftb+ output file
+    # We're matching the third column from this line:
+    # ```
+    # Total energy:  -4.0698318096 H     -110.7458 eV
+    # ```
+    match_regex="^Total energy"
+    # The matched line should appear only once in the DFTB+ output
+    match_count=$(grep -E -c "$match_regex" "$dftb_out")
+    if [[ $match_count -ne 1 ]]; then
+        echo "ERROR: Unexpected DFTB output in file '$dftb_out'"
+        echo "Regular expression '$match_regex' was matched $match_count times"
+        echo "This likely indicates a problem with the calculation or incompatible DFTB+ version"
+        exit 2
+    fi
+    grep -E "$match_regex" "$dftb_out" | awk '{print $3}' > "$engrad_file"
 
     # Extract gradients (note the conversion from forces to gradients)
-    awk -v natom="$natom" '{
-      if ($2 == "Forces") {
+    # ```
+    # Total Forces
+    #    1      0.009551273894      0.004605933524      0.000709843407
+    #    2      0.010527153681      0.006652360906      0.002907870190
+    # ```
+    awk -v natom="$natom" '
+      $1 == "Total" && $2 == "Forces" {
         for (i = 0; i < natom; i++) {
           getline;
           printf("%3.15e %3.15e %3.15e\n", -$2, -$3, -$4)
         }
       }
-    }' $dftb_out >> "$engrad_file"
+    ' "$dftb_out" >> "$engrad_file"
 }
 
 ##### LET'S GO! #####
