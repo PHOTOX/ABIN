@@ -5,9 +5,9 @@
 ## What is ABIN?
 
 ABIN is a program for performing ab initio molecular dynamics.
-It is a general purpose program that was initially designed to deal with nuclear quantum effects (NQE).
+It is a general purpose program that was initially designed to model nuclear quantum effects (NQE).
 NQE can be most rigirously captured with path integral MD (PIMD), but also within the Quantum Thermostat based on General Langevin Equation framework developed by Michele Cerriotti.
-ABIN can also simulate non-adiabatic events using Surface-hoping algorithm, using either the classical fewest-switches algorithm (FSSH) or simpler Landay-Zener approach which does not require non-adiabatic couplings. The LZ approach can also capture singlet-triplet transitions.
+ABIN can also simulate non-adiabatic events using Surface-hoping algorithm, using either the classical fewest-switches algorithm (FSSH) or simpler Landau-Zener approach which does not require non-adiabatic couplings. The LZ approach can also capture singlet-triplet transitions.
 
 The basic philosophy of ABIN program is simple — 
 while the program itself handles the propagation of the system according to the equations of motion,

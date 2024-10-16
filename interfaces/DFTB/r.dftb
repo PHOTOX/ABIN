@@ -1,66 +1,106 @@
 #!/bin/bash
-cd $(dirname $0)
-source ../SetEnvironment.sh DFTB
+# File interface to DFTB+ program, https://dftbplus.org/
+# This file typically does not need to be modified.
+# The input DFTB parameters are given in a file `dftb_in.hsd` in this directory,
+# which you need to modify for your needs.
+#
+# NOTE: This script assumes that the 'dftb+' executable is already in your PATH.
+# If that is not the case, modify the variable 'DFTBEXE' below accordingly.
+#
+# Tested with version 24.1. Other versions might work, but always test
+# by verifying energy conservation in a short NVE simulation.
+# Versions older than 20.1 will not work since they do not support XYZ geometry input.
+cd "$(dirname "$0")" || exit 2
+set -uo pipefail
 
-timestep=$1
-ibead=$2
-input=input$ibead
-geom=../geom.dat.$ibead
-
-natom=$(wc -l < $geom)
-WRKDIR=OUT$ibead.$natom
-rm -rf ${WRKDIR}.old
-if [[ -d $WRKDIR ]];then
-  mv $WRKDIR ${WRKDIR}.old
+if [[ -f ../SetEnvironment.sh ]]; then
+  # This is specific to Prague clusters
+  source ../SetEnvironment.sh DFTB
+else
+  # We assume dftb+ is in PATH already. If not, add it here.
+  DFTBEXE=dftb+
 fi
-mkdir -p $WRKDIR
-cd $WRKDIR
 
-# You have to specify, which elements are present in your system
-# i.e. define array id[x]="element"
-# No extra elements are allowed.
-awk -v natom="$natom" 'BEGIN{
-   id[1]="O"
-   id[2]="H"
-   nid=2    # number of different elements
+# timestep var not used in this script
+# timestep="$1"
+# Bead index in PIMD, "001" for classical MD
+ibead="$2"
 
-# END OF USER INPUT
-   print natom,"C"
-   for (i=1;i<=nid;i++) {
-      printf"%s ",id[i]
-   }
-   print ""
-   print ""
+geom="../geom.dat.$ibead"
+natom=$(wc -l < "$geom")
+WORKDIR="CALC.$ibead"
+
+function prepare_dftb_inputs() {
+    # Working directory for the DFTB calculation
+    rm -rf "${WORKDIR}".previous
+    if [[ -d "$WORKDIR" ]];then
+        mv "$WORKDIR" "${WORKDIR}".previous
+    fi
+    mkdir -p "$WORKDIR"
+
+    echo -e "$natom\n" > "$WORKDIR/geometry.xyz"
+    cat "$geom" >> "$WORKDIR/geometry.xyz"
+
+    cp dftb_in.hsd "$WORKDIR"
+    # Read charge distribution from previous step if available
+    charges_file="$WORKDIR.previous/charges.bin"
+    if [[ -f "$charges_file" ]]; then
+       cp "$charges_file" "$WORKDIR"
+       sed -i 's/#ReadInitialCharges/ReadInitialCharges/' "$WORKDIR/dftb_in.hsd"
+    fi
 }
-#conversion of xyz input to dftb geom
-{
-   for (i=1;i<=nid;i++) {
-      if ( $1 == id[i] ) {
-         print NR, i, $2, $3, $4
+
+function extract_energy_and_gradients() {
+    dftb_out="detailed.out"
+    engrad_file=$1
+
+    # Extract energy dftb+ output file
+    # We're matching the third column from this line:
+    # ```
+    # Total energy:  -4.0698318096 H     -110.7458 eV
+    # ```
+    match_regex="^Total energy"
+    # The matched line should appear only once in the DFTB+ output
+    match_count=$(grep -E -c "$match_regex" "$dftb_out")
+    if [[ $match_count -ne 1 ]]; then
+        echo "ERROR: Unexpected DFTB output in file '$dftb_out'"
+        echo "Regular expression '$match_regex' was matched $match_count times"
+        echo "This likely indicates a problem with the calculation or incompatible DFTB+ version"
+        exit 2
+    fi
+    grep -E "$match_regex" "$dftb_out" | awk '{print $3}' > "$engrad_file"
+
+    # Extract gradients (note the conversion from forces to gradients)
+    # ```
+    # Total Forces
+    #    1      0.009551273894      0.004605933524      0.000709843407
+    #    2      0.010527153681      0.006652360906      0.002907870190
+    # ```
+    awk -v natom="$natom" -v out="$engrad_file" '
+      $1 == "Total" && $2 == "Forces" {
+        for (i = 1; i <= natom; i++) {
+          getline
+          if ($1 != i || NF != 4) {
+            print "ERROR: Unexpected line in the DFTB+ output file"
+            print $0
+            exit 2
+          }
+          printf("%3.15e %3.15e %3.15e\n", -$2, -$3, -$4) >> out
+        }
       }
-   }
-}'  ../$geom > geom_in.gen
+    ' "$dftb_out"
+}
 
-# Read initial charge distribution
-if [ -e charges.bin ];then
-   sed 's/#ReadInitialCharges/ReadInitialCharges/' ../dftb_in.hsd > dftb_in.hsd
-else
-   cp ../dftb_in.hsd .
+##### LET'S GO! #####
+prepare_dftb_inputs
+
+cd "$WORKDIR" || exit 2
+
+$DFTBEXE &> dftb.out
+if [[ $? -ne 0 ]]; then
+    echo "ERROR: DFTB calculation failed."
+    echo "See file '$PWD/dftb.out' to find out why."
+    exit 2
 fi
 
-rm -f detailed.out
-
-$DFTBEXE &> $input.out
-if [[ $? -eq 0 ]];then
-   cp $input.out $input.out.old
-else
-   echo "ERROR: DFTB calculation probably failed."
-   echo "See $input.out.error" 
-   cp $input.out $input.out.error
-   exit 2
-fi
-
-# Extract energy and gradients
-grep 'Total energy:' detailed.out | awk '{print $3}' > ../../engrad.dat.$ibead
-awk -v natom=$natom '{if ($2=="Forces"){for (i=1;i<=natom;i++){getline;printf"%3.15e %3.15e %3.15e \n",-$1,-$2,-$3}}}' \
- detailed.out >> ../../engrad.dat.$ibead
+extract_energy_and_gradients "../../engrad.dat.$ibead"
