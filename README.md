@@ -5,47 +5,46 @@
 ## What is ABIN?
 
 ABIN is a program for performing ab initio molecular dynamics.
-It was designed specifically to deal with quantum nuclear effects.
-It can do path integral simulations and also utilizes quantum thermostat based on General Langevin equation.
-It can also simulate non-adiabatic events using Surface-hoping algorithm.
+It is a general purpose program that was initially designed to deal with nuclear quantum effects (NQE).
+NQE can be most rigirously captured with path integral MD (PIMD), but also within the Quantum Thermostat based on General Langevin Equation framework developed by Michele Cerriotti.
+ABIN can also simulate non-adiabatic events using Surface-hoping algorithm, using either the classical fewest-switches algorithm (FSSH) or simpler Landay-Zener approach which does not require non-adiabatic couplings. The LZ approach can also capture singlet-triplet transitions.
 
-The basic philosophy of ABIN program is simple.
-While the program itself handles the propagation of the system according to the equations of motion,
+The basic philosophy of ABIN program is simple — 
+while the program itself handles the propagation of the system according to the equations of motion,
 the forces and energies are taken from an external electronic structure program such as ORCA or TeraChem.
 The call to the chosen external program is handled via a simple shell script interface.
-Therefore, writing a new interface is rather straightforward
+Therefore, writing a new interface is straightforward
 and can be done without any changes to ABIN or the ab initio code.
 
 The code is provided under the GNU General Public License.
 A full text of the license can be found in the file LICENCE.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
-A full documentation can be found in the folder DOC.
+The documentation (work-in-progress) can be found in the folder `docs/`.
 
 ## Installation
 
 To compile the code, you'll need a Fortran and C++ compiler.
 GNU compilers are tested the most, GFortran and g++ compiler versions >=7.0.
-Versions >=5.4 likely work as well, but always run the test suite to verify.
 Intel compiler (ifort) is supported since version >=2018,
 including the newly open-sourced versions (Intel OneAPI).
 
 The compilation can be as easy as:
 
-`$ ./configure && make`
+```console
+$ ./configure && make
+```
 
 Always test the installation by running the test suite:
 
-`$ make test`
-
+```console
+$ make test
+```
 If you modify the source code and want to recompile,
 you should always clean up before the recompilation:
 
-`$ make clean && make`
+```console
+$ make clean && make
+```
 
 ## Running the code
 
@@ -83,8 +82,12 @@ The optional libraries are:
 |------------------|----------------------------------------------|
 | src/             | ABIN source code
 | sample\_inputs   | Sample input files.
-| interfaces/      | BASH interfaces to common _ab initio_ codes.
+| interfaces/      | BASH interfaces to common quantum chemistry codes.
 | utils/           | Handy scripts that might be useful in conjuction with the MD code.
 | unit\_tests/     | Unit tests; run by `make unittest` (needs pFUnit library installed)
 | tests/           | End-to-End tests; run by `make e2etest`
 | dev\_scripts/    | Setup for ABIN devs and install scripts for optional libraries.
+
+## For developers
+
+Contributions are very much welcome! Please see our [contribution guide](CONTRIBUTING.md).

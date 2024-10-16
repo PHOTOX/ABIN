@@ -40,7 +40,8 @@ contains
       use mod_nhc
       use mod_estimators
       use mod_potentials
-      use mod_sh_integ, only: phase
+      use mod_potentials_sh
+      use mod_sh_integ, only: phase, nstate
       use mod_sh, only: read_sh_input, print_sh_input
       use mod_lz
       use mod_qmmm, only: natqm, natmm
@@ -517,6 +518,9 @@ contains
       end if
       if (pot == '_mm_' .or. pot_ref == '_mm_') then
          call initialize_mm(natom, atnames, mm_types, q, LJ_rmin, LJ_eps)
+      end if
+      if (pot == '_nai_' .or. pot_ref == '_nai_') then
+         call nai_init(natom, nwalk, ipimd, nstate)
       end if
 
       if (my_rank == 0) then
