@@ -1,41 +1,78 @@
 #!/bin/bash
-cd $(dirname $0)
-source ../SetEnvironment.sh ORCA
+# File interface to ORCA program.
+#
+# Modify the `prepare_orca_input()` function to your needs.
+#
+# NOTE: This script assumes that the 'orca' executable is already in your PATH.
+# If that is not the case, modify the variable 'ORCAEXE' below accordingly.
+#
+# Tested with versions 5.0.x and 6.0.x. Other versions might work, but always test
+# by verifying energy conservation in a short NVE simulation.
+cd "$(dirname "$0")" || exit 2
+set -uo pipefail
+
+if [[ -f ../SetEnvironment.sh ]]; then
+  # This is specific to Prague clusters
+  source ../SetEnvironment.sh ORCA
+else
+  # We assume orca is in PATH already. If not, add it here.
+  ORCAEXE=orca
+fi
 
 timestep=$1
 ibead=$2
 input=input$ibead
 natom=$(wc -l < ../geom.dat.$ibead)
+WORKDIR="CALC.$ibead"
 
-rm -f *engrad
+function prepare_orca_input() {
+   # Working directory for the ORCA calculation
+   rm -rf "${WORKDIR}.previous"
+   if [[ -d "$WORKDIR" ]];then
+      mv "$WORKDIR" "${WORKDIR}".previous
+   fi
+   mkdir -p "$WORKDIR"
 
-#TODO: I'm not quite sure, whether we always get the correct energies,
-# but perhaps we do, check the format of $input.engrad
-cat > $input << EOF
-# in the following line, specify basis sets and method,
-# basis sets for RI approximations are basis/J
-! BP86 SVP
-! ENGRAD AUTOSTART TightSCF
-* xyz 0 1
+   cat > $input << EOF
+! PBE0 def2-SVP TightSCF
+
+# Do not modify this line, it ensures that both energies and
+# gradients are computed, and that wavefunction is read from previous step.
+! ENGRAD AUTOSTART
 EOF
-### END OF USER INPUT ###
 
-cat ../geom.dat.$ibead >> $input
-echo '*' >>$input
+   echo "* xyz 0 1" >> $input
+   cat ../geom.dat.$ibead >> $input
+   echo '*' >>$input
+}
 
-$ORCAEXE $input &> $input.out
-################################
-if [[ $? -eq 0 ]];then
-   cp $input.out $input.out.old
-else
-   echo "WARNING from r.orca: ORCA calculation probably failed."
-   echo "See $input.out.error" 
+function extract_energy_and_gradients() {
+    orca_out="$1"
+    engrad_file="$2"
+    awk -v natom="$natom" '
+    $5== "energy"  {getline; getline; print $1}
+
+    $4 == "gradient" {
+       getline
+       for (i = 1; i <= natom; i++) {
+          getline; gx=$1
+          getline; gy=$1
+          getline; gz=$1
+          print x,y,z
+       }
+    }
+    ' "$orca_out" > "$engrad_file"
+}
+
+#### LET'S GO! ####
+prepare_orca_inputs
+
+cd "$WORKDIR" || exit 2
+
+if ! $ORCAEXE $input &> $input.out; then
    cp $input.out $input.out.error
+   echo "ERROR: ORCA calculation failed. See Orca output file $WORKDIR/$input.out"
+   exit 2
 fi
 
-### EXTRACTING ENERGY AND FORCES
-awk -v natom="$natom" '{if ($5=="energy") {getline;getline;print $1}
-if ($4=="gradient") {getline;
-	for(i=1;i<=natom;i++) {
-		getline; x=$1;getline;y=$1;getline;print x,y,$1
- }}}' $input.engrad > ../engrad.dat.$ibead
+extract_energy_and_gradients "$input.egrad" "../../engrad.dat.$ibead"
