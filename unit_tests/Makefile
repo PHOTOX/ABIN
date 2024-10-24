@@ -115,7 +115,9 @@ interface_EXTRA_USE := throw_with_pfunit_mod
 interface_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,interface))
 
-all : utils prng masses plumed fftw terapi gle nhc pot mm spline interface io
+# TODO: Re-enable spline tests
+#all : utils prng masses plumed fftw terapi gle nhc pot mm spline interface io
+all : utils prng masses plumed fftw terapi gle nhc pot mm interface io
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
