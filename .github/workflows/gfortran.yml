@@ -21,6 +21,7 @@ env:
   # Reported by many people also at:
   # https://github.com/codecov/codecov-action/issues/926
   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  FORCE_COLOR: 1
 
 jobs:
 
@@ -107,10 +108,9 @@ jobs:
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
-        fail_ci_if_error: true
+        fail_ci_if_error: false
 
     - name: Run End-to-End tests
-      if: always()
       run: make e2etest
 
     - name: Codecov upload
