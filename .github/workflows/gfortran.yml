@@ -120,7 +120,7 @@ jobs:
         fail_ci_if_error: true
 
   intel_build:
-    name: Intel ifx build
+    name: Intel build
     runs-on: ubuntu-22.04
 
     steps:
