@@ -105,7 +105,8 @@ spline_OTHER_LIBRARIES := ${LDFLAGS} ${LDLIBS}
 spline_OTHER_SRCS := throw_with_pfunit.F90
 spline_EXTRA_USE := throw_with_pfunit_mod
 spline_EXTRA_INITIALIZE := initialize_throw
-$(eval $(call make_pfunit_test,spline))
+# TODO: Re-enable this when splines are re-implemented
+#$(eval $(call make_pfunit_test,spline))
 
 interface_TESTS := test_interface.pf
 interface_OTHER_LIBRARIES := ${LDFLAGS} ${LDLIBS}
