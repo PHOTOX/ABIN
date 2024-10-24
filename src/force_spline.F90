@@ -4,6 +4,7 @@
 ! TODO: This module is currently disabled until the cubic spline routines are re-implemented
 module mod_splined_grid
    use mod_const, only: DP
+   use mod_error, only: fatal_error
    implicit none
    private
    integer, parameter :: MAX_GRID_SIZE = 1000
@@ -26,7 +27,6 @@ contains
    end function potential_cubic_spline
 
    subroutine force_splined_grid(x, fx, eclas, walkmax)
-      use mod_error, only: fatal_error
       real(DP), intent(in) :: x(:, :)
       real(DP), intent(out) :: fx(:, :)
       real(DP), intent(out) :: eclas
@@ -59,7 +59,6 @@ contains
 
    subroutine initialize_spline(natom)
       use mod_system, only: dime, f
-      use mod_error, only: fatal_error
       integer, intent(in) :: natom
 
       call fatal_error(__FILE__, __LINE__, "Spline potential not implemented")
@@ -89,7 +88,6 @@ contains
    end subroutine
 
    subroutine read_grid(fname, x_grid, y_grid, grid_size)
-      use mod_error, only: fatal_error
       use mod_files, only: stdout
       character(len=*), intent(in) :: fname
       real(DP), dimension(:), intent(out) :: x_grid, y_grid
@@ -125,7 +123,6 @@ contains
    end subroutine
 
    subroutine validate_grid(x_grid, ngrid)
-      use mod_error, only: fatal_error
       real(DP), dimension(ngrid), intent(in) :: x_grid
       integer, intent(in) :: ngrid
       integer :: i
