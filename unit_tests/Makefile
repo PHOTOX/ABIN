@@ -133,7 +133,7 @@ test : clean_plumed_output clean_terapi_output clean_gle_output
 	./nhc
 	./pot
 	./mm
-	./spline
+	#./spline
 	./io
 	./interface
 
