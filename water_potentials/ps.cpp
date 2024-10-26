@@ -27,7 +27,7 @@ namespace {
 
 // two body parameters
 const double reoh = 0.958649;
-const double thetae = 104.3475;
+// const double thetae = 104.3475;
 const double b1 = 2.0;
 const double roh = 0.9519607159623009;
 const double alphaoh = 2.587949757553683;
