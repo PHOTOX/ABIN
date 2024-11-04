@@ -22,7 +22,7 @@ program abin
    use mod_arrays
    use mod_files, only: stdout
    use mod_general, only: sim_time, pot, pot_ref, iremd, ipimd, &
-      & nwrite, nstep, ncalc, it, inormalmodes, istage, irest
+      & nwrite, nstep, it, inormalmodes, istage, irest
    use mod_init, only: init
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind, nsinglet_lz, ntriplet_lz
@@ -210,11 +210,6 @@ program abin
       ! In order to analyze the output, we have to perform the back transformation
       ! Transformed (cartesian) coordinates are stored in trans matrices.
 
-      ! Enter this section only every ncalc step
-      if (modulo(it, ncalc) /= 0) then
-         cycle
-      end if
-
       call temperature(px, py, pz, amt, eclas)
 
       if (istage == 1) then
@@ -249,6 +244,7 @@ program abin
    ! Write restart file at the end of a run
    ! Because NCALC might be >1, we have to perform transformation to get the most
    ! recent coordinates and velocities
+   ! TODO: ncalc parameter has been removed so this is probably not necessary anymore.
    it = it - 1
 
    if (istage == 1) then

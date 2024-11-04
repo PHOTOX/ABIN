@@ -27,7 +27,6 @@ module mod_general
    integer :: nwrite = 1
    ! output for XYZ coordinates, velocities and forces (Molden format)
    integer :: nwritex = 1, nwritev = 0, nwritef = 0
-   integer :: ncalc = 1
    ! How often do we print restart file and how often do we archive it
    integer :: nrest = 1, narchive = 10000
    ! Restart switch, 1 = restart simulation
