@@ -1,24 +1,45 @@
-Geometry = GenFormat {
- <<< "geom_in.gen"
+Geometry = xyzFormat {
+ <<< "geometry.xyz"
 }
 
 Hamiltonian = DFTB {
-  SCC = Yes
   charge = 0.0
-  #ReadInitialCharges = yes
+  SCC = Yes
+  MaxSCCIterations = 100
+
+  # Slater-Koster files need to be downloaded separately from dftb.org
+  # https://dftb.org/parameters/download/
   SlaterKosterFiles = Type2FileNames {
-   Prefix = "/home/hollas/3ob-2-1/"
+   Prefix = "/path/to/slater_koster_params/3ob-3-1/"
    Separator = "-"
    Suffix = ".skf"
   }
+
+  # NOTE: These need to be defined for your system and depend on the SK parameters used,
+  # see documentation for the MaxAngularMomentum for more info.
   MaxAngularMomentum {
     O = "p"
     H = "s"
   }
+
+  # NOTE: The parameters below are specific for the 3ob-3-1 SK parameters!
+  # https://dftb.org/parameters/download/3ob/3ob-3-1-cc
+  ThirdOrderFull = Yes
+  HubbardDerivs = {
+    O = -0.1575
+    H = -0.1857
+  }
+  HCorrection = Damping {
+    Exponent = 4.00
+  }
+
+  # Keep the line below! It is needed to automatically
+  # load initial guess charges from previous time step, see r.dftb
+  #ReadInitialCharges = yes
 }
 
-Options {
-CalculateForces = Yes
+Analysis {
+  CalculateForces = Yes
 }
 
 ParserOptions {
