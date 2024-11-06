@@ -143,6 +143,8 @@ program abin
       inquire (file="EXIT", exist=file_exists)
       if (file_exists) then
          write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
+         ! TODO: Not sure why we are writing the restart file here, since it's being
+         ! written after the main loop as well.
          if (istage == 1) then
             call QtoX(vx, vy, vz, transxv, transyv, transzv)
             call QtoX(x, y, z, transx, transy, transz)
@@ -244,11 +246,12 @@ program abin
    end do
 
    ! Write restart file at the end of a run
+   ! TODO: This it variable manipulation is very brittle :-(
+   if (.not. STOP_SIMULATION) it = it - 1
+
    ! Because NCALC might be >1, we have to perform transformation to get the most
    ! recent coordinates and velocities
    ! TODO: ncalc parameter has been removed so this is probably not necessary anymore.
-   it = it - 1
-
    if (istage == 1) then
       call QtoX(vx, vy, vz, transxv, transyv, transzv)
       call QtoX(x, y, z, transx, transy, transz)
