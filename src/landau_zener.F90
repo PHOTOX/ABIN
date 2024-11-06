@@ -13,19 +13,21 @@ module mod_lz
    use mod_const, only: DP
    use mod_error, only: fatal_error
    use mod_files, only: stdout, stderr
-   ! TODO: Break coupling between LZ and SH modules
-   ! The following are needed for TERA-MPI interface
    use mod_sh, only: set_current_state
-   use mod_sh_integ, only: nstate
    implicit none
    private
-   public :: lz_init, lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize !Routines
-   public :: initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz !User defined variables, [deltaE_lz] = eV
-   public :: en_array_lz, tocalc_lz, istate_lz !Routine variables
-   !Caveat: Every time we call force_clas en_array_lz is updated
+   ! Public subroutines
+   public :: lz_init, print_lz_input, read_lz_input, write_lz_data
+   public :: lz_hop, lz_rewind, lz_restin, lz_restout, lz_finalize
+   ! Other variables that must be public (but perhaps shouldn't be!)
+   ! Caveat: Every time we call force_clas en_array_lz is updated
+   public :: nstate_lz
+   public :: en_array_lz, tocalc_lz, istate_lz
 
-   real(DP) :: deltaE_lz = 1.0D0 !Energy difference, up to which we consider possibility of LZ hops
-   real(DP) :: energydifthr_lz = 0.5D0 !Maximum energy difference (eV) between two consecutive steps, used in check_energy_lz()
+   ! Energy difference (eV), up to which we consider possibility of LZ hops
+   real(DP) :: deltaE_lz = 1.0D0
+   ! Maximum energy difference (eV) between two consecutive steps, used in check_energy_lz()
+   real(DP) :: energydifthr_lz = 0.5D0
    ! Initial electronic state
    integer :: initstate_lz = 1
    integer :: nstate_lz, nsinglet_lz = 0, ntriplet_lz = 0
@@ -41,9 +43,23 @@ module mod_lz
    real(DP), allocatable, dimension(:, :) :: px_temp, py_temp, pz_temp
    real(DP), allocatable, dimension(:, :) :: x_prev, y_prev, z_prev
    real(DP), allocatable, dimension(:, :) :: vx_prev, vy_prev, vz_prev
+
+   namelist /lz/ initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, ignore_state, deltaE_lz, energydifthr_lz
    save
 
 contains
+
+   subroutine read_lz_input(param_unit)
+      integer, intent(in) :: param_unit
+
+      rewind (param_unit)
+      read (param_unit, lz)
+      rewind (param_unit)
+   end subroutine read_lz_input
+
+   subroutine print_lz_input()
+      write (stdout, nml=lz, delim='APOSTROPHE')
+   end subroutine print_lz_input
 
    subroutine check_lz_parameters()
       use mod_utils, only: int_positive, int_nonnegative, real_nonnegative, real_positive
@@ -75,6 +91,11 @@ contains
 
       if (ignore_state /= 0) then
          write (stdout, '(A,I0,A)') 'Ignoring state ', ignore_state, ' for hopping'
+      end if
+
+      if (nsinglet_lz > 2 .or. ntriplet_lz > 2) then
+         write (*, *) 'WARNING: LZ was derived for a two-state problem. More states might cause unphysical behavior.'
+         write (stdout, *) ''
       end if
 
       call int_positive(initstate_lz, 'initstate_lz')
@@ -123,9 +144,17 @@ contains
 
    end subroutine lz_init
 
+   ! TODO: Break coupling between LZ and SH modules
+   ! The following function is needed for TERA-MPI interface
    subroutine lz_init_terash()
       use mod_general, only: natom
       use mod_sh, only: inac, en_array, tocalc, nacx, nacy, nacz
+      use mod_sh_integ, only: nstate
+
+      if (ntriplet_lz > 0) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'Landau-Zener with Singlet-Triplet transitions not implemented with TeraChem interface')
+      end if
 
       nstate = nstate_lz !Needed in init_terash
       inac = 2 !Turns off couplings calculation
@@ -142,6 +171,23 @@ contains
       tocalc(istate_lz, istate_lz) = 1
       call set_current_state(istate_lz)
    end subroutine lz_init_terash
+
+   ! This routine is used in the file interface defined in force_abin.F90
+   subroutine write_lz_data()
+      integer :: ist, u
+
+      open (newunit=u, file='state.dat')
+      write (u, '(I0)') nstate_lz
+
+      ! Print for which state we need gradient
+      ! First we have singlets, then triplets
+      do ist = 1, nstate_lz
+         if (tocalc_lz(ist) == 1) write (u, '(I0)') ist
+      end do
+      write (u, '(I0)') nsinglet_lz
+      write (u, '(I0)') ntriplet_lz
+      close (u)
+   end subroutine write_lz_data
 
    !LZ singlets hop
    subroutine lz_hop(x, y, z, vx, vy, vz, fxc, fyc, fzc, amt, dt, eclas, chpot)
