@@ -93,7 +93,7 @@ module mod_sh
    ! Useful e.g. for ethylene 2-state SA3 dynamics
    ! This is a bit of an ugly hack, it would be more general to have an array
    ! of states that are calculated but ignored.
-   integer, public, protected :: ignore_state = 0
+   integer :: ignore_state = 0
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
       nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
@@ -254,6 +254,10 @@ contains
       if (ignore_state == istate_init) then
          write (stderr, '(A)') 'ERROR: ignore_state == istate_init'
          write (stderr, '(A)') 'I cannot start on an ignored state'
+         error = .true.
+      end if
+      if (ignore_state > nstate) then
+         write (stderr, '(A)') 'Ignored state > number of computed states.'
          error = .true.
       end if
 

@@ -15,7 +15,7 @@ module mod_lz
    use mod_files, only: stdout, stderr
    ! TODO: Break coupling between LZ and SH modules
    ! The following are needed for TERA-MPI interface
-   use mod_sh, only: set_current_state, inac, ignore_state
+   use mod_sh, only: set_current_state
    use mod_sh_integ, only: nstate
    implicit none
    private
@@ -29,6 +29,9 @@ module mod_lz
    ! Initial electronic state
    integer :: initstate_lz = 1
    integer :: nstate_lz, nsinglet_lz = 0, ntriplet_lz = 0
+   ! Do not consider hopping into this state
+   ! Same meaning as in mod_sh
+   integer, public :: ignore_state = 0
 
    ! Module variables
    integer :: istate_lz
@@ -60,8 +63,23 @@ contains
             & '(LZ): Sum of singlet and triplet states must give total number of states.')
       end if
 
+      if (ignore_state == initstate_lz) then
+         call fatal_error(__FILE__, __LINE__, &
+            & 'ignore_state == initstate_lz, cannot start simulation on ignored state')
+      end if
+
+      if (ignore_state > nstate_lz) then
+         call fatal_error(__FILE__, __LINE__, &
+            & '(LZ): ignore_state > nstate_lz')
+      end if
+
+      if (ignore_state /= 0) then
+         write (stdout, '(A,I0,A)') 'Ignoring state ', ignore_state, ' for hopping'
+      end if
+
       call int_positive(initstate_lz, 'initstate_lz')
       call int_positive(nstate_lz, 'nstate_lz')
+      call int_nonnegative(ignore_state, 'ignore_state')
       call int_nonnegative(nsinglet_lz, 'nsinglet_lz')
       call int_nonnegative(ntriplet_lz, 'ntriplet_lz')
       call real_positive(deltaE_lz, 'deltaE_lz')
@@ -76,7 +94,7 @@ contains
 
       call check_lz_parameters()
 
-      !Initial state
+      ! Initial state
       istate_lz = initstate_lz
 
       allocate (tocalc_lz(nstate_lz))
@@ -107,7 +125,7 @@ contains
 
    subroutine lz_init_terash()
       use mod_general, only: natom
-      use mod_sh, only: en_array, tocalc, nacx, nacy, nacz
+      use mod_sh, only: inac, en_array, tocalc, nacx, nacy, nacz
 
       nstate = nstate_lz !Needed in init_terash
       inac = 2 !Turns off couplings calculation

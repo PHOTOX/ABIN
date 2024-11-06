@@ -142,7 +142,7 @@ contains
          k, r0, kx, ky, kz, r0_morse, d0_morse, k_morse, D0_dw, lambda_dw, k_dw, r0_dw, &
          Nshake, ishake1, ishake2, shake_tol, potential_file
 
-      namelist /lz/ initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz
+      namelist /lz/ initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, ignore_state, deltaE_lz, energydifthr_lz
 
       namelist /qmmm/ natqm, natmm, q, LJ_rmin, LJ_eps, mm_types
 
