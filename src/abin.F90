@@ -140,6 +140,8 @@ program abin
       ! if it is present (we delete it below before we stop the program).
       call mpi_barrier_wrapper()
 
+      if (STOP_SIMULATION) exit
+
       inquire (file="EXIT", exist=file_exists)
       if (file_exists) then
          write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
@@ -240,14 +242,12 @@ program abin
          call flush (OUTPUT_UNIT)
       end if
 
-      if (STOP_SIMULATION) exit
-
       ! Time step loop
    end do
 
    ! Write restart file at the end of a run
    ! TODO: This it variable manipulation is very brittle :-(
-   if (.not. STOP_SIMULATION) it = it - 1
+   it = it - 1
 
    ! Because NCALC might be >1, we have to perform transformation to get the most
    ! recent coordinates and velocities
