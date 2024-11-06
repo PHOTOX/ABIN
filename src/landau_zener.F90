@@ -15,7 +15,7 @@ module mod_lz
    use mod_files, only: stdout, stderr
    ! TODO: Break coupling between LZ and SH modules
    ! The following are needed for TERA-MPI interface
-   use mod_sh, only: set_current_state, inac
+   use mod_sh, only: set_current_state, inac, ignore_state
    use mod_sh_integ, only: nstate
    implicit none
    private
@@ -177,7 +177,8 @@ contains
 
       do ist1 = ibeg, iend
          if (ist1 == ist) cycle
-         ! only closest states are considered for hopping
+         if (ist1 == ignore_state) cycle
+         ! only closest upper and lower states are considered for hopping
          if (ist1 > (ist + 1) .or. ist1 < (ist - 1)) cycle
 
          do ihist = 1, 4

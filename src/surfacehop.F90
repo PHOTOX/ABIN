@@ -89,8 +89,11 @@ module mod_sh
    integer, allocatable :: tocalc(:, :)
    ! Current electronic state
    integer, public, protected :: istate
-   ! for ethylene 2-state SA3 dynamics
-   integer :: ignore_state = 0
+   ! Do not consider hopping into this state
+   ! Useful e.g. for ethylene 2-state SA3 dynamics
+   ! This is a bit of an ugly hack, it would be more general to have an array
+   ! of states that are calculated but ignored.
+   integer, public, protected :: ignore_state = 0
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
       nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
@@ -118,7 +121,7 @@ contains
       ! TODO: Write a print_sh_header()
       ! with all major parameters included and explained
       if (ignore_state /= 0) then
-         write (stdout, '(A,I0)') 'Ignoring state ', ignore_state
+         write (stdout, '(A,I0,A)') 'Ignoring state ', ignore_state, ' for hopping'
       end if
 
       ! Determining the initial state
