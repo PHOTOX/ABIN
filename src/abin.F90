@@ -22,7 +22,7 @@ program abin
    use mod_arrays
    use mod_files, only: stdout
    use mod_general, only: sim_time, pot, pot_ref, iremd, ipimd, &
-      & nwrite, nstep, it, inormalmodes, istage, irest
+      & nwrite, nstep, it, inormalmodes, istage, irest, STOP_SIMULATION
    use mod_init, only: init
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind, nsinglet_lz, ntriplet_lz
@@ -237,6 +237,8 @@ program abin
          write (stdout, '(I15,F15.2)') it, sim_time * AUtoFS
          call flush (OUTPUT_UNIT)
       end if
+
+      if (STOP_SIMULATION) exit
 
       ! Time step loop
    end do

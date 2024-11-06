@@ -48,6 +48,11 @@ module mod_general
    real(DP), protected :: sim_time = 0.0D0
    ! Energy restrain MD by Jiri Suchan
    integer :: en_restraint = 0
+   ! Global flag to stop the simulation, checked at the end of each time step.
+   ! The simulation will finish prematurely (before nstep is reached),
+   ! but otherwise successfully. For example, when reaching the dE_S0S1 threshold
+   ! in Surface Hopping simulations.
+   logical :: STOP_SIMULATION = .false.
    save
 contains
    subroutine set_natom(num_atom)

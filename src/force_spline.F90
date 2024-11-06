@@ -24,6 +24,8 @@ contains
    real(DP) function potential_cubic_spline(x) result(y)
       real(DP), intent(in) :: x
       call fatal_error(__FILE__, __LINE__, "Spline potential not implemented")
+      ! To squash compiler warnings
+      y = x
    end function potential_cubic_spline
 
    subroutine force_splined_grid(x, fx, eclas, walkmax)
