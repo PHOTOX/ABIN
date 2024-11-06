@@ -128,7 +128,7 @@ contains
       namelist /general/ pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
          nwrite, nwritex, nwritev, nwritef, dt, irandom, nabin, irest, nrest, anal_ext, &
          isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_milisleep, narchive, xyz_units, &
-         dime, ncalc, idebug, enmini, rho, iknow, watpot, h2opot, iremd, iplumed, plumedfile, &
+         dime, idebug, enmini, rho, iknow, watpot, h2opot, iremd, iplumed, plumedfile, &
          en_restraint, en_diff, en_kk, restrain_pot, &
          pot_ref, nstep_ref, nteraservers, max_mpi_wait_time, cp2k_mpi_beads
 
@@ -620,10 +620,6 @@ contains
             write (*, *) 'Cannot compute heat capacity for NVE simulation.'
             error = 1
          end if
-         if (ncalc > nwrite) then
-            write (*, *) 'Ncalc greater than nwrite.Setting nwrite=ncalc'
-            nwrite = ncalc
-         end if
 
          if (ipimd == 1 .and. inose <= 0) then
             write (*, *) 'You have to use thermostat with PIMD! (inose>=0)'
@@ -742,7 +738,6 @@ contains
          call int_nonnegative(narchive, 'narchive')
 
          call int_positive(nwalk, 'nwalk')
-         call int_positive(ncalc, 'ncalc')
 
          if (error == 1) then
             call fatal_error(__FILE__, __LINE__, 'Invalid input parameters')

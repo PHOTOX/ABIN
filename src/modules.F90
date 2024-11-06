@@ -27,7 +27,6 @@ module mod_general
    integer :: nwrite = 1
    ! output for XYZ coordinates, velocities and forces (Molden format)
    integer :: nwritex = 1, nwritev = 0, nwritef = 0
-   integer :: ncalc = 1
    ! How often do we print restart file and how often do we archive it
    integer :: nrest = 1, narchive = 10000
    ! Restart switch, 1 = restart simulation
@@ -49,6 +48,11 @@ module mod_general
    real(DP), protected :: sim_time = 0.0D0
    ! Energy restrain MD by Jiri Suchan
    integer :: en_restraint = 0
+   ! Global flag to stop the simulation, checked at the end of each time step.
+   ! The simulation will finish prematurely (before nstep is reached),
+   ! but otherwise successfully. For example, when reaching the dE_S0S1 threshold
+   ! in Surface Hopping simulations.
+   logical :: STOP_SIMULATION = .false.
    save
 contains
    subroutine set_natom(num_atom)

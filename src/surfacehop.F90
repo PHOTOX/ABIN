@@ -1097,7 +1097,7 @@ contains
    end subroutine check_energy
 
    subroutine check_S0S1_gap(en_S0, en_S1, threshold_ev)
-      use mod_interfaces, only: finish
+      use mod_general, only: STOP_SIMULATION
       use mod_const, only: AUtoEV
       real(DP), intent(in) :: en_S0, en_S1
       real(DP), intent(in) :: threshold_ev
@@ -1108,8 +1108,12 @@ contains
       if (dE_S0S1 < threshold_ev) then
          write (stdout, *) 'S1 - S0 gap dropped below threshold!'
          write (stdout, *) dE_S0S1, ' < ', threshold_ev
-         call finish(0)
-         stop 0
+         ! TODO: This is an unfortunate hack,
+         ! but we can't directly stop here since we need the last step
+         ! to be written to the output files.
+         write (stdout, *) 'Simulation will stop at the end of this step.'
+         ! This global flag is checked in the main loop in abin.F90
+         STOP_SIMULATION = .true.
       end if
    end subroutine check_S0S1_gap
 
