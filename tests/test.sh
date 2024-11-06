@@ -227,27 +227,31 @@ do
       continue
    fi
 
+   # Don't exit on errors in the rest of the script, since abin invocation can fail
+   # and this makes the code simpler.
+   set +e
    # For special cases such as REMD, we need a more complicated test setup.
    # If a file 'test.sh' is present in the test directory we will use it.
-   if [[ -f "test.sh" ]];then
+   # Otherwise, execute abin directly.
+   if [[ -f "test.sh" ]]; then
 
       # Redirection to dev/null apparently needed for CP2K tests.
       # Otherwise, STDIN is screwed up. I have no idea why.
       # http://stackoverflow.com/questions/1304600/read-error-0-resource-temporarily-unavailable
       # TODO: Figure out a different solution
       #./test.sh $ABINEXE 2> /dev/null
-      ./test.sh $ABINEXE || true
+      ./test.sh $ABINEXE
 
    else
       if [[ -f "velocities.in" ]];then
-         $ABINEXE -v "velocities.in" > $ABINOUT 2>&1 || true
+         $ABINEXE -v "velocities.in" > $ABINOUT 2>&1
       else
-         $ABINEXE > $ABINOUT 2>&1 || true
+         $ABINEXE > $ABINOUT 2>&1
       fi
 
-      #for testing restart
-      if [[ -e input.in2 ]];then
-         $ABINEXE -i input.in2 >> $ABINOUT 2>&1 || true
+      # for testing restart, only execute if previous run did not fail
+      if [[ -f input.in2 && $? -eq 0 ]]; then
+         $ABINEXE -i input.in2 >> $ABINOUT 2>&1
       fi
    fi
 
@@ -257,16 +261,11 @@ do
 
    else
 
-      # Since we're running in the -e mode,
-      # we need to "hide" this possibly failing command
-      # https://stackoverflow.com/a/11231970/3682277
-      current_error=0
-      diff_files || current_error=$?
-      if [[ $current_error -ne 0 ]];then
+      if diff_files; then
+        echo -e "\033[0;32mPASSED\033[0m"
+      else
         global_error=1
         echo -e "$dir \033[0;31mFAILED\033[0m"
-      else
-        echo -e "\033[0;32mPASSED\033[0m"
       fi
    fi
 
