@@ -33,10 +33,11 @@ module mod_sh
    integer :: substep = 100
 
    ! Controls calculations of Non-adiabatic Couplings (NAC)
-   ! 0 - Analytical NAC
-   ! 1 - Numerical Hammers-Schffer-Tully model (currently not implemented) TODO: change this for Baeck-An
-   ! 2 - Do not compute couplings
-   integer :: inac = 0
+   ! 0 = 'analytic' - Analytical NAC
+   ! 1 = 'baeck-an' - Baeck-An couplings
+   ! 2 = 'none' - Do not compute couplings
+   integer :: inac = 0 ! for working with the code
+   character(len=50) :: couplings = 'analytic' ! for reading the input file
 
    ! 1 - Turn OFF hopping
    integer :: nohop = 0
@@ -65,7 +66,7 @@ module mod_sh
    real(DP) :: deltaE = 5.0D0
    ! Compute NACME only if at least one of the two states has population > popthr
    real(DP) :: popthr = 0.001D0
-   
+
    ! Thresholds for energy conservations (in eV)
    ! The default values are too permisive
    ! you should definitely tighten them in production simulations!
@@ -82,7 +83,7 @@ module mod_sh
    real(DP), allocatable :: nacx_old(:, :, :), nacy_old(:, :, :), nacz_old(:, :, :)
    real(DP), allocatable :: en_array(:), en_array_old(:)
    ! energy history array necessary for Beack-An couplings
-   real(DP), allocatable :: en_hist_array(:,:)
+   real(DP), allocatable :: en_hist_array(:, :)
    ! Initial absolute electronic energy, needed for monitoring energy drift
    real(DP) :: entot0
    ! nstate x nstate matrix to determine which derivatives to compute
@@ -232,24 +233,36 @@ contains
          error = .true.
       end if
 
-      if (inac > 2 .or. inac < 0) then
-         write (stderr, '(A)') 'Parameter "inac" must be 0, 1 or 2.'
+      select case (couplings)
+      case ('analytic')
+         inac = 0
+      case ('baeck-an')
+         inac = 1
+      case ('none')
+         inac = 2
+      case default
+         write (stderr, '(A)') 'Parameter "couplings" must be "analytic", "baeck-an" or "none".'
          error = .true.
-      end if
+      end select
+
+!     if (inac > 2 .or. inac < 0) then
+!        write (stderr, '(A)') 'Parameter "inac" must be 0, 1 or 2.'
+!        error = .true.
+!     end if
 
       if (inac == 1) then
          write (stdout, '(A)') 'Using approximate Baeck-An couplings.'
       end if
 
       if (adjmom == 0 .and. inac == 1) then
-         write (stderr, '(A)') 'Combination of adjmom=0 and inac=1 is not possible.'
+         write (stderr, '(A)') 'Combination of adjmom=0 and couplings="baeck-an" is not possible.'
          write (stderr, '(A)') 'Velocity cannot be rescaled along NAC when using Baeck-An.'
          write (stderr, '(A)') 'Change adjmom=1 to rescale along momentum vector.'
          error = .true.
       end if
 
       if (inac == 2 .and. nohop == 0) then
-         write (stdout, '(A)') 'WARNING: For simulations without couplings, inac=2, hopping probability cannot be determined.'
+         write (stdout, '(A)') 'WARNING: For simulations without couplings(="none") hopping probability cannot be determined.'
          nohop = 1
       end if
 
