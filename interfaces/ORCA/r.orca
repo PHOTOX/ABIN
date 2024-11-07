@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2086,SC1091,SC2129
 # File interface to ORCA program.
 #
 # Modify the `prepare_orca_input()` function to your needs.
@@ -19,9 +20,10 @@ else
   ORCAEXE=orca
 fi
 
-timestep=$1
+# timestep is currently unused
+# timestep=$1
 ibead=$2
-input=input$ibead
+input="orca$ibead"
 natom=$(wc -l < ../geom.dat.$ibead)
 WORKDIR="CALC.$ibead"
 
@@ -32,47 +34,61 @@ function prepare_orca_input() {
       mv "$WORKDIR" "${WORKDIR}".previous
    fi
    mkdir -p "$WORKDIR"
+   inp="$WORKDIR/$input"
 
-   cat > $input << EOF
-! PBE0 def2-SVP TightSCF
+   cat > $inp << EOF
+! PBE def2-SVP TightSCF
 
 # Do not modify this line, it ensures that both energies and
 # gradients are computed, and that wavefunction is read from previous step.
 ! ENGRAD AUTOSTART
 EOF
 
-   echo "* xyz 0 1" >> $input
-   cat ../geom.dat.$ibead >> $input
-   echo '*' >>$input
+   echo "* xyz 0 1" >> $inp
+   cat ../geom.dat.$ibead >> $inp
+   echo '*' >> $inp
 }
 
 function extract_energy_and_gradients() {
-    orca_out="$1"
-    engrad_file="$2"
-    awk -v natom="$natom" '
-    $5== "energy"  {getline; getline; print $1}
+    # This is ABIN file with energies and forces
+    engrad_file="$1"
+    # This is the ORCA output where we extract energies/forces from
+    orca_out=$input.engrad
 
-    $4 == "gradient" {
+    match_energy="# The current total energy in Eh"
+    match_grad="# The current gradient in Eh/bohr"
+    match_count_energy=$(grep -E -c "$match_energy" "$orca_out")
+    match_count_grad=$(grep -E -c "$match_grad" "$orca_out")
+    if [[ $match_count_energy -ne 1 || $match_count_grad -ne 1 ]]; then
+        echo "ERROR: Unexpected ORCA output in file '$orca_out'"
+        echo "Expression '$match_energy' was matched $match_count_energy times"
+        echo "Expression '$match_grad' was matched $match_count_grad times"
+        echo "This likely indicates a problem with the calculation or incompatible Orca version"
+        exit 2
+    fi
+    grep -A2 "$match_energy" $orca_out | tail -1 > $engrad_file
+
+    awk -v natom="$natom" -v match_grad="$match_grad" '
+    $0 == match_grad {
        getline
        for (i = 1; i <= natom; i++) {
           getline; gx=$1
           getline; gy=$1
           getline; gz=$1
-          print x,y,z
+          print gx, gy, gz
        }
     }
-    ' "$orca_out" > "$engrad_file"
+    ' $orca_out >> "$engrad_file"
 }
 
 #### LET'S GO! ####
-prepare_orca_inputs
+prepare_orca_input
 
 cd "$WORKDIR" || exit 2
 
-if ! $ORCAEXE $input &> $input.out; then
-   cp $input.out $input.out.error
+if ! $ORCAEXE "$input" &> "$input.out"; then
    echo "ERROR: ORCA calculation failed. See Orca output file $WORKDIR/$input.out"
    exit 2
 fi
 
-extract_energy_and_gradients "$input.egrad" "../../engrad.dat.$ibead"
+extract_energy_and_gradients "../../engrad.dat.$ibead"
