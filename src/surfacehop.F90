@@ -65,6 +65,8 @@ module mod_sh
    real(DP) :: deltaE = 5.0D0
    ! Compute NACME only if at least one of the two states has population > popthr
    real(DP) :: popthr = 0.001D0
+   ! Beack-An couplings, 0 = false (default), 1 = true
+   integer :: baeckan = 0
 
    ! Thresholds for energy conservations (in eV)
    ! The default values are too permisive
@@ -94,7 +96,7 @@ module mod_sh
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
       nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
-      dE_S0S1_thr, correct_decoherence
+      dE_S0S1_thr, correct_decoherence, baeckan
    save
 
 contains
@@ -119,6 +121,13 @@ contains
       ! with all major parameters included and explained
       if (ignore_state /= 0) then
          write (stdout, '(A,I0)') 'Ignoring state ', ignore_state
+      end if
+
+      ! Checking if Baeck-An couplings are used
+      if (baeckan == 1) then
+         write (stdout, '(A)') 'Using approximate Baeck-An couplings.'
+      else if (baeckan /= 0) then
+         baeckan = 0 ! if not 1 or 0, turn of the feature
       end if
 
       ! Determining the initial state
