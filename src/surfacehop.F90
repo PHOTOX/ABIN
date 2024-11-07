@@ -34,7 +34,7 @@ module mod_sh
 
    ! Controls calculations of Non-adiabatic Couplings (NAC)
    ! 0 - Analytical NAC
-   ! 1 - Numerical Hammers-Schffer-Tully model (currently not implemented)
+   ! 1 - Numerical Hammers-Schffer-Tully model (currently not implemented) TODO: change this for Baeck-An
    ! 2 - Do not compute couplings
    integer :: inac = 0
 
@@ -65,9 +65,7 @@ module mod_sh
    real(DP) :: deltaE = 5.0D0
    ! Compute NACME only if at least one of the two states has population > popthr
    real(DP) :: popthr = 0.001D0
-   ! Beack-An couplings, 0 = false (default), 1 = true
-   integer :: baeckan = 0
-
+   
    ! Thresholds for energy conservations (in eV)
    ! The default values are too permisive
    ! you should definitely tighten them in production simulations!
@@ -83,6 +81,8 @@ module mod_sh
    ! *old variables holds data from the previous step
    real(DP), allocatable :: nacx_old(:, :, :), nacy_old(:, :, :), nacz_old(:, :, :)
    real(DP), allocatable :: en_array(:), en_array_old(:)
+   ! energy history array necessary for Beack-An couplings
+   real(DP), allocatable :: en_hist_array(:,:)
    ! Initial absolute electronic energy, needed for monitoring energy drift
    real(DP) :: entot0
    ! nstate x nstate matrix to determine which derivatives to compute
@@ -96,7 +96,7 @@ module mod_sh
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
       nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
-      dE_S0S1_thr, correct_decoherence, baeckan
+      dE_S0S1_thr, correct_decoherence
    save
 
 contains
@@ -121,13 +121,6 @@ contains
       ! with all major parameters included and explained
       if (ignore_state /= 0) then
          write (stdout, '(A,I0)') 'Ignoring state ', ignore_state
-      end if
-
-      ! Checking if Baeck-An couplings are used
-      if (baeckan == 1) then
-         write (stdout, '(A)') 'Using approximate Baeck-An couplings.'
-      else if (baeckan /= 0) then
-         baeckan = 0 ! if not 1 or 0, turn of the feature
       end if
 
       ! Determining the initial state
@@ -158,6 +151,12 @@ contains
       allocate (en_array_old(nstate))
       en_array = 0.0D0
       en_array_old = en_array
+
+      ! Initialize the history array we use to calculate the Baeck-An couplings
+      if (inac == 1) then
+         allocate (en_hist_array(nstate, 4)) !last 3 energies (1: current, 2: n-1, 3: n-2, 4: n-3)
+         en_hist_array = 0.0D0
+      end if
 
       allocate (tocalc(nstate, nstate))
       tocalc = 0
@@ -237,9 +236,15 @@ contains
          write (stderr, '(A)') 'Parameter "inac" must be 0, 1 or 2.'
          error = .true.
       end if
+
+      if (inac == 1) then
+         write (stdout, '(A)') 'Using approximate Baeck-An couplings.'
+      end if
+
       if (adjmom == 0 .and. inac == 1) then
          write (stderr, '(A)') 'Combination of adjmom=0 and inac=1 is not possible.'
-         write (stderr, '(A)') 'NAC vectors are not computed if inac=1.'
+         write (stderr, '(A)') 'Velocity cannot be rescaled along NAC when using Baeck-An.'
+         write (stderr, '(A)') 'Change adjmom=1 to rescale along momentum vector.'
          error = .true.
       end if
 
