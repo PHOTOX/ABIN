@@ -33,21 +33,22 @@ module mod_sh
    integer :: substep = 100
 
    ! Controls calculations of Non-adiabatic Couplings (NAC)
-   ! 0 = 'analytic' - Analytical NAC
-   ! 1 = 'baeck-an' - Baeck-An couplings
-   ! 2 = 'none' - Do not compute couplings
-   integer :: inac = 0 ! for working with the code
+   ! couplings = 'analytic'  (inac=0) - Analytical NAC (default)
+   ! couplings = 'baeck-an'  (inac=1) - Baeck-An couplings
+   ! couplings = 'none'      (inac=2) - Do not compute couplings
+   integer :: inac = 0 ! for working within the code
    character(len=50) :: couplings = 'analytic' ! for reading the input file
 
    ! 1 - Turn OFF hopping
    integer :: nohop = 0
 
    ! How to adjust velocity after hop:
-   ! 0 - Adjust velocity along the NAC vector (default)
-   ! 1 - Simple velocity rescale
+   ! mom_adjust = 'nac'       (adjmom=0) - Adjust velocity along the NAC vector (default)
+   ! mom_adjust = 'velocity'  (adjmom=1) - Simple velocity rescale
    ! NOTE: Simple v-rescale is invoked as a fallback
    ! if there is not enough momentum along the NAC vector.
-   integer :: adjmom = 0
+   integer :: adjmom = 0 ! for working within the code
+   character(len=50) :: mom_adjust = 'nac' ! for reading the input file
    ! 1 - Reverse momentum direction after frustrated hop
    integer :: revmom = 0
 
@@ -96,7 +97,7 @@ module mod_sh
    integer :: ignore_state = 0
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, couplings, nohop, phase, decoh_alpha, popthr, ignore_state, &
-      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
+      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, mom_adjust, revmom, &
       dE_S0S1_thr, correct_decoherence
    save
 
@@ -233,26 +234,34 @@ contains
          error = .true.
       end if
 
+      ! converting input 'couplings' into inac which is used in the code
       select case (couplings)
       case ('analytic')
          inac = 0
+         write (stdout, '(A)') 'Using analytic ab initio couplings.'
       case ('baeck-an')
          inac = 1
+         write (stdout, '(A)') 'Using approximate Baeck-An couplings.'
       case ('none')
          inac = 2
+         write (stdout, '(A)') 'Ignoring nonadaiabatic couplings.'
       case default
          write (stderr, '(A)') 'Parameter "couplings" must be "analytic", "baeck-an" or "none".'
          error = .true.
       end select
 
-!     if (inac > 2 .or. inac < 0) then
-!        write (stderr, '(A)') 'Parameter "inac" must be 0, 1 or 2.'
-!        error = .true.
-!     end if
-
-      if (inac == 1) then
-         write (stdout, '(A)') 'Using approximate Baeck-An couplings.'
-      end if
+      ! converting input 'mom_adjust' into inac which is used in the code
+      select case (mom_adjust)
+      case ('nac')
+         adjmom = 0
+         write (stdout, '(A)') 'Rescaling velocity along the NAC vector after hop.'
+      case ('velocity')
+         adjmom = 1
+         write (stdout, '(A)') 'Rescaling velocity along the momentum vector after hop.'
+      case default
+         write (stderr, '(A)') 'Parameter "mom_adjust" must be "nac" or "velocity".'
+         error = .true.
+      end select
 
       if (adjmom == 0 .and. inac == 1) then
          write (stderr, '(A)') 'Combination of adjmom=0 and couplings="baeck-an" is not possible.'
@@ -638,7 +647,8 @@ contains
       t_tot = 1.0D0
 
       ! First, calculate NACME
-      if (inac == 0) then
+      if (inac == 0) then ! Analytic ab initio couplings
+         write (stdout, '(A)') 'Analytic couplings calculated' !TODO JJ: remove later
          ! For TeraChem MPI / FMS interface, NAC are already computed!
          if (pot /= '_tera_' .and. pot /= '_nai_') then
             nacx = 0.0D0
@@ -650,6 +660,8 @@ contains
          ! TODO: Should we call this with TeraChem?
          ! I think TC already phases the couplings internally.
          call phase_nacme(nacx_old, nacy_old, nacz_old, nacx, nacy, nacz)
+      else if (inac == 1) then ! Baeck-An couplings
+         write (stdout, '(A)') 'Baeck-An couplings calculated' !TODO JJ: remove later
       end if
 
       ! smaller time step

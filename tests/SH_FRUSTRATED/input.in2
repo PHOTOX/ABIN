@@ -21,7 +21,7 @@ inose=0,
 /
 
 &sh
-adjmom=0,               ! Use rescaling along NAC vector
+mom_adjust='nac'
 istate_init=3,		! initial electronic state
 nstate=3,		! number of electronic states
 substep=100,		! number of substeps for solving ESCH

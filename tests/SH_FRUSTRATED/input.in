@@ -21,7 +21,7 @@ inose=0,
 /
 
 &sh
-adjmom=0,               ! Use rescaling along NAC vector
+mom_adjust='nac'
 revmom=1,               ! Reverse momentum after frustrated hop
 istate_init=2,		! initial electronic state
 nstate=3,		! number of electronic states
