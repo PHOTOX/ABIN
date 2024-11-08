@@ -580,8 +580,6 @@ contains
 
    ! calculate Baeck-An couplings
    subroutine calc_baeckan()
-   
-
 
    end subroutine calc_baeckan
 
@@ -604,8 +602,20 @@ contains
                end do
             end do
          end if
-
       end do
+
+      ! Shift the energy history for Baeck-An couplings
+      if (inac == 1) then
+         ! Move old energies by 1
+         en_hist_array(:, 4) = en_hist_array(:, 3)
+         en_hist_array(:, 3) = en_hist_array(:, 2)
+         en_hist_array(:, 2) = en_hist_array(:, 1)
+         ! new energy is stored before the couplings are calcualted
+         ! I avoided doing the same as with LZSH energy history tracking because then I need to modify force_abin, force_terash and
+         ! every potential in potentials_sh (and all possible future ones). This way it is kept private and does not depend on the
+         ! way energies are calcualted.
+         ! See commit: https://github.com/PHOTOX/ABIN/pull/186/commits/918f6837a76ec0f41b575d3ca948253eed2f30cc
+      end if
 
       vx_old = vx
       vy_old = vy
@@ -670,7 +680,9 @@ contains
          ! TODO JJ: once I make a function to calculate Baeck-An couplings, I need to add if condition that it calculates only if
          ! step is bigger than xx
          write (stdout, '(A)') 'Baeck-An couplings calculated' !TODO JJ: remove later
-         write (stdout, *) "when coups calc", en_hist_array(1, :)  !TODO JJ: remove later
+         ! saving the current energy to the energy history (shifting was already done in previous step in move_vars)
+         en_hist_array(:, 1) = en_array(:)
+         write (stdout, *) "when coups calc", en_hist_array(1, :) !TODO JJ: remove later
          write (stdout, *) "Current energy:", en_array(1) !TODO JJ: remove later
       end if
 

@@ -48,7 +48,7 @@ contains
       use mod_qmmm, only: natqm
       use mod_io, only: print_charges, print_dipoles, print_transdipoles
       use mod_sh_integ, only: nstate
-      use mod_sh, only: check_CIVector, en_array, istate, nacx, nacy, nacz, inac, en_hist_array
+      use mod_sh, only: check_CIVector, en_array, istate, nacx, nacy, nacz
       use mod_lz, only: en_array_lz
       use mpi
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
@@ -80,14 +80,6 @@ contains
          en_array_lz(:, 2) = en_array_lz(:, 1); 
          !Store the new one
          en_array_lz(:, 1) = en_array(:)
-      ! SH Baeck-An arrays
-      else if ((ipimd == 2) .and. (inac == 1)) then
-         ! Move old energies by 1
-         en_hist_array(:, 4) = en_hist_array(:, 3)
-         en_hist_array(:, 3) = en_hist_array(:, 2)
-         en_hist_array(:, 2) = en_hist_array(:, 1)
-         !Store the new one
-         en_hist_array(:, 1) = en_array(:)
       end if
 
       if (idebug > 0) write (*, '(a)') 'Receiving transition dipoles from TC.'
