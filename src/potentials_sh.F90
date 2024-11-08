@@ -71,7 +71,7 @@ contains
    end subroutine nai_init
 
    subroutine force_nai(x, y, z, fx, fy, fz, eclas)
-      use mod_sh, only: en_array, istate, nacx, nacy, nacz
+      use mod_sh, only: en_array, istate, nacx, nacy, nacz, inac, en_hist_array
       use mod_const, only: ANG, AUTOEV
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
@@ -135,6 +135,15 @@ contains
       ! saving electronic energies for SH
       en_array(1) = E1
       en_array(2) = E2
+      
+      ! store the energy history for Baeck-An couplings
+      if (inac == 1) then
+         ! Move old energies by 1 and storing the new energy
+         en_hist_array(:, 4) = en_hist_array(:, 3)
+         en_hist_array(:, 3) = en_hist_array(:, 2)
+         en_hist_array(:, 2) = en_hist_array(:, 1)
+         en_hist_array(:, 1) = en_array(:)
+      end if
 
       ! saving classical energy for Verlet
       eclas = en_array(istate)

@@ -20,7 +20,7 @@ module mod_sh
 
    ! Variables holding SH state
    ! TODO: Make these protected and write Set methods
-   public :: en_array, tocalc
+   public :: en_array, en_hist_array, tocalc
    public :: nacx, nacy, nacz
 
    ! Initial electronic state
@@ -578,12 +578,19 @@ contains
       end if
    end subroutine calc_nacm
 
+   ! calculate Baeck-An couplings
+   subroutine calc_baeckan()
+   
+
+
+   end subroutine calc_baeckan
+
    ! move arrays from new step to old step
    subroutine move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
       use mod_general, only: natom
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(out) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
-      integer :: ist1, ist2, iat
+      integer :: ist1, ist2, iat, ihist
 
       do ist1 = 1, nstate
          en_array_old(ist1) = en_array(ist1)
@@ -648,7 +655,6 @@ contains
 
       ! First, calculate NACME
       if (inac == 0) then ! Analytic ab initio couplings
-         write (stdout, '(A)') 'Analytic couplings calculated' !TODO JJ: remove later
          ! For TeraChem MPI / FMS interface, NAC are already computed!
          if (pot /= '_tera_' .and. pot /= '_nai_') then
             nacx = 0.0D0
@@ -661,7 +667,11 @@ contains
          ! I think TC already phases the couplings internally.
          call phase_nacme(nacx_old, nacy_old, nacz_old, nacx, nacy, nacz)
       else if (inac == 1) then ! Baeck-An couplings
+         ! TODO JJ: once I make a function to calculate Baeck-An couplings, I need to add if condition that it calculates only if
+         ! step is bigger than xx
          write (stdout, '(A)') 'Baeck-An couplings calculated' !TODO JJ: remove later
+         write (stdout, *) "when coups calc", en_hist_array(1, :)  !TODO JJ: remove later
+         write (stdout, *) "Current energy:", en_array(1) !TODO JJ: remove later
       end if
 
       ! smaller time step
@@ -676,6 +686,7 @@ contains
          ! pop0 is later used for Tully's fewest switches
          pop0 = get_elpop(ist)
 
+         ! TODO JJ: I guess this interpolation will go only for NAC.
          ! INTERPOLATION
          fr = real(itp, DP) / real(substep, DP)
          call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &

@@ -230,7 +230,7 @@ contains
       use mod_general, only: ipimd, iqmmm, it
       use mod_system, only: names
       use mod_sh_integ, only: nstate
-      use mod_sh, only: tocalc, en_array, istate
+      use mod_sh, only: tocalc, en_array, istate, inac, en_hist_array
       use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
       use mod_qmmm, only: natqm
       use mod_utils, only: toupper, append_rank
@@ -296,6 +296,15 @@ contains
                end do
                if (abort) cycle
                eclas = en_array(istate)
+
+               ! Store the energy history for Baeck-An couplings
+               if (inac == 1) then
+                  ! Move old energies by 1 and storing the new energy
+                  en_hist_array(:, 4) = en_hist_array(:, 3)
+                  en_hist_array(:, 3) = en_hist_array(:, 2)
+                  en_hist_array(:, 2) = en_hist_array(:, 1)
+                  en_hist_array(:, 1) = en_array(:)
+               end if
 
             else if (ipimd == 5) then
 
