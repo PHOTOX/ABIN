@@ -719,7 +719,7 @@ contains
          pop0 = get_elpop(ist)
 
          ! INTERPOLATION
-         if (inac == 0) then
+         if ((inac == 0) .or. (inac == 2)) then
             fr = real(itp, DP) / real(substep, DP)
             call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
                              nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
