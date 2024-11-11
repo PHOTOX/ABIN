@@ -597,14 +597,10 @@ contains
             de = en_hist_array(ist2, :) - en_hist_array(ist1, :)
             de2dt2 = (2.0D0 * de(1) - 5.0D0 * de(2) + 4.0D0 * de(3) - de(4)) / dt**2
             argument = de2dt2 / de(1)
-            write(stdout, *) !JJ
-            write(stdout, *) "DE:     ", de !JJ
-            write(stdout, *) "DE2DT2: ", de2dt2 !JJ
             if (argument > 0.0D0) then
                sigma_ba(ist2, ist1) = dsqrt(argument) / 2.0D0
             end if
             sigma_ba(ist1, ist2) = -sigma_ba(ist2, ist1)
-            write(stdout, *) !JJ
          end do
       end do
 
@@ -667,7 +663,7 @@ contains
       real(DP), dimension(nstate) :: en_array_int, en_array_newint
       real(DP), dimension(natom, nstate, nstate) :: nacx_int, nacy_int, nacz_int
       real(DP), dimension(natom, nstate, nstate) :: nacx_newint, nacy_newint, nacz_newint
-      real(DP), dimension(nstate, nstate) :: dotproduct_int, dotproduct_newint
+      real(DP), dimension(nstate, nstate) :: dotproduct_int, dotproduct_newint, sigma_ba_old
       ! Switching probabilities
       real(DP) :: t(nstate, nstate)
       ! Cumulative switching probabilities
@@ -704,20 +700,11 @@ contains
          ! I think TC already phases the couplings internally.
          call phase_nacme(nacx_old, nacy_old, nacz_old, nacx, nacy, nacz)
       else if (inac == 1) then ! Baeck-An couplings
-         ! TODO JJ: once I make a function to calculate Baeck-An couplings, I need to add if condition that it calculates only if
-         ! step is bigger than xx
-         write (stdout, '(A)') 'Baeck-An couplings calculated' !TODO JJ: remove later
          ! saving the current energy to the energy history (shifting was already done in previous step in move_vars)
          en_hist_array(:, 1) = en_array(:)
-         write (stdout, *) "Energy history: ", en_hist_array(1, :) !TODO JJ: remove later
-         write (stdout, *) "Current energy: ", en_array(1) !TODO JJ: remove later
-         write (stdout, *) "Energy history: ", en_hist_array(2, :) !TODO JJ: remove later
-         write (stdout, *) "Current energy: ", en_array(2) !TODO JJ: remove later
+         sigma_ba_old = sigma_ba ! saving old sigma_ba
          call calc_baeckan(dt)
       end if
-      write (stdout, *) !TODO JJ: remove later
-      write (stdout, *) "Sigma_BA: ", sigma_ba(:, :) !TODO JJ: remove later
-      write (stdout, *) !TODO JJ: remove later
 
       ! smaller time step
       dtp = dt / substep
@@ -731,17 +718,24 @@ contains
          ! pop0 is later used for Tully's fewest switches
          pop0 = get_elpop(ist)
 
-         ! TODO JJ: I guess this interpolation will go only for NAC.
          ! INTERPOLATION
-         fr = real(itp, DP) / real(substep, DP)
-         call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
-                          nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
-                          dotproduct_newint, fr)
+         if (inac == 0) then
+            fr = real(itp, DP) / real(substep, DP)
+            call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
+                             nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
+                             dotproduct_newint, fr)
 
-         fr = real(itp - 1, DP) / real(substep, DP)
-         call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
-                          nacx_int, nacy_int, nacz_int, en_array_int, &
-                          dotproduct_int, fr)
+            fr = real(itp - 1, DP) / real(substep, DP)
+            call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
+                             nacx_int, nacy_int, nacz_int, en_array_int, &
+                             dotproduct_int, fr)
+         else if (inac == 1) then
+            fr = real(itp, DP) / real(substep, DP)
+            call interpolate_ba(en_array_newint, dotproduct_newint, sigma_ba, sigma_ba_old, fr)
+
+            fr = real(itp - 1, DP) / real(substep, DP)
+            call interpolate_ba(en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
+         end if
 
          ! Integrate electronic wavefunction for one dtp time step
          call sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
@@ -816,8 +810,6 @@ contains
       if (modulo(it, nwrite) == 0) then
          call write_sh_output()
       end if
-
-      write (stdout, *) "dotproduct: ", dotproduct_newint !TODO JJ: remove later
 
    contains
 
@@ -1062,7 +1054,7 @@ contains
       real(DP), intent(out) :: dotproduct_int(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
-      real(DP), intent(out) :: vx_int(:, :), vy_int(:, :), vz_int(:, :)
+      real(DP), intent(out) :: vx_int(:, :), vy_int(:, :), vz_int(:, :) ! why all these go out? they are not used again..
       real(DP), intent(out) :: nacx_int(:, :, :)
       real(DP), intent(out) :: nacy_int(:, :, :)
       real(DP), intent(out) :: nacz_int(:, :, :)
@@ -1101,6 +1093,29 @@ contains
       end do
 
    end subroutine interpolate
+
+   ! interpolation of time-derivative coupling calculated via Baeck-An approximation
+   ! this routine interpolates sigma_ba between integration steps
+   subroutine interpolate_ba(en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
+      use mod_general, only: natom
+      real(DP), intent(in) :: sigma_ba(:, :), sigma_ba_old(:, :)
+      real(DP), intent(out) :: dotproduct_int(:, :)
+      real(DP), intent(out) :: en_array_int(:)
+      ! How far are we interpolating?
+      real(DP), intent(in) :: fr
+      real(DP) :: frd
+      integer :: ist1, ist2 !iteration counters
+
+      frd = 1.0D0 - fr
+
+      do ist1 = 1, nstate
+         en_array_int(ist1) = en_array(ist1) * fr + en_array_old(ist1) * frd
+         do ist2 = 1, nstate
+            dotproduct_int(ist1, ist2) = sigma_ba(ist1, ist2) * fr + sigma_ba_old(ist1, ist2) * frd
+         end do
+      end do
+
+   end subroutine interpolate_ba
 
    subroutine try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
       use mod_general, only: pot
