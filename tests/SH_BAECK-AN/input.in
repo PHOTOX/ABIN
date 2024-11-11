@@ -1,0 +1,39 @@
+This is a sample input file for Surface-Hopping simulation in ABIN 
+
+&general
+pot='_nai_'		   ! where do we obtain forces?
+irest=0,		   ! should we restart from restart.xyz?
+irandom=347110445, ! random seed
+
+mdtype='sh',	! sh = Surface Hopping non adiabatic MD
+nstep=10,    	! number of steps, originally in QD 260000
+dt=2.5,			! timestep [au], originally in QD 0.25
+
+nwrite=1,		! how often some output should be printed (energies, surface hopping probabilities etc.)
+nwritex=1,		! how often to print coordinates?
+nwritev=1,		! how often to print coordinates?
+narchive=90000,	! how often to print coordinates?
+nrest=200,		! how often to print restart files?
+/
+
+&nhcopt
+inose=0,		! NVE ensemble (thermostat turned OFF)
+!temp=0.00,		! Usually, you would read initial velocities from previous ground state sampling (-v option)
+/
+
+&sh
+istate_init=2,		! initial electronic state (1 is ground state)
+nstate=2,		! number of electronic states
+deltaE=2.0,		! maximum energy difference (eV) between states for which we calculate NA coupling
+PopThr=0.00001,         ! minimum population of either state, for which we compute NA coupling
+EnergyDifThr=0.01,      ! maximum energy difference between two consecutive steps
+EnergyDriftThr=0.01,    ! maximum energy drift from initial total energy
+couplings='baeck-an'
+mom_adjust='velocity'
+/
+
+&system
+ndist=1,
+dist1=1,
+dist2=2,
+/
