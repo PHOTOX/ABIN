@@ -20,7 +20,7 @@ module mod_sh
 
    ! Variables holding SH state
    ! TODO: Make these protected and write Set methods
-   public :: en_array, en_hist_array, tocalc
+   public :: en_array, tocalc
    public :: nacx, nacy, nacz
 
    ! Initial electronic state
@@ -38,6 +38,8 @@ module mod_sh
    ! couplings = 'none'      (inac=2) - Do not compute couplings
    integer :: inac = 0 ! for working within the code
    character(len=50) :: couplings = 'analytic' ! for reading the input file
+   ! energy history array and time-derivate couplings (sigma_ba) necessary for Beack-An couplings
+   real(DP), allocatable :: en_hist_array(:, :), sigma_ba(:, :) ! sigma_ba is actually the dotproduct
 
    ! 1 - Turn OFF hopping
    integer :: nohop = 0
@@ -83,8 +85,6 @@ module mod_sh
    ! *old variables holds data from the previous step
    real(DP), allocatable :: nacx_old(:, :, :), nacy_old(:, :, :), nacz_old(:, :, :)
    real(DP), allocatable :: en_array(:), en_array_old(:)
-   ! energy history array necessary for Beack-An couplings
-   real(DP), allocatable :: en_hist_array(:, :)
    ! Initial absolute electronic energy, needed for monitoring energy drift
    real(DP) :: entot0
    ! nstate x nstate matrix to determine which derivatives to compute
@@ -158,6 +158,8 @@ contains
       if (inac == 1) then
          allocate (en_hist_array(nstate, 4)) !last 3 energies (1: current, 2: n-1, 3: n-2, 4: n-3)
          en_hist_array = 0.0D0
+         allocate (sigma_ba(nstate, nstate)) !this is equivalent to dotproduct, but I will need to store old and new values
+         sigma_ba = 0.0D0
       end if
 
       allocate (tocalc(nstate, nstate))
@@ -579,7 +581,32 @@ contains
    end subroutine calc_nacm
 
    ! calculate Baeck-An couplings
-   subroutine calc_baeckan()
+   subroutine calc_baeckan(dt)
+      use mod_general, only: it
+      integer :: ist1, ist2
+      real(DP), intent(in) :: dt
+      real(DP) :: de(4), de2dt2, argument
+
+      sigma_ba = 0.0D0
+
+      ! we don't have sufficient history until step 4
+      if (it < 4) return
+
+      do ist1 = 1, nstate
+         do ist2 = ist1 + 1, nstate
+            de = en_hist_array(ist2, :) - en_hist_array(ist1, :)
+            de2dt2 = (2.0D0 * de(1) - 5.0D0 * de(2) + 4.0D0 * de(3) - de(4)) / dt**2
+            argument = de2dt2 / de(1)
+            write(stdout, *) !JJ
+            write(stdout, *) "DE:     ", de !JJ
+            write(stdout, *) "DE2DT2: ", de2dt2 !JJ
+            if (argument > 0.0D0) then
+               sigma_ba(ist2, ist1) = dsqrt(argument) / 2.0D0
+            end if
+            sigma_ba(ist1, ist2) = -sigma_ba(ist2, ist1)
+            write(stdout, *) !JJ
+         end do
+      end do
 
    end subroutine calc_baeckan
 
@@ -588,7 +615,7 @@ contains
       use mod_general, only: natom
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(out) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
-      integer :: ist1, ist2, iat, ihist
+      integer :: ist1, ist2, iat
 
       do ist1 = 1, nstate
          en_array_old(ist1) = en_array(ist1)
@@ -682,9 +709,15 @@ contains
          write (stdout, '(A)') 'Baeck-An couplings calculated' !TODO JJ: remove later
          ! saving the current energy to the energy history (shifting was already done in previous step in move_vars)
          en_hist_array(:, 1) = en_array(:)
-         write (stdout, *) "when coups calc", en_hist_array(1, :) !TODO JJ: remove later
-         write (stdout, *) "Current energy:", en_array(1) !TODO JJ: remove later
+         write (stdout, *) "Energy history: ", en_hist_array(1, :) !TODO JJ: remove later
+         write (stdout, *) "Current energy: ", en_array(1) !TODO JJ: remove later
+         write (stdout, *) "Energy history: ", en_hist_array(2, :) !TODO JJ: remove later
+         write (stdout, *) "Current energy: ", en_array(2) !TODO JJ: remove later
+         call calc_baeckan(dt)
       end if
+      write (stdout, *) !TODO JJ: remove later
+      write (stdout, *) "Sigma_BA: ", sigma_ba(:, :) !TODO JJ: remove later
+      write (stdout, *) !TODO JJ: remove later
 
       ! smaller time step
       dtp = dt / substep
@@ -783,6 +816,8 @@ contains
       if (modulo(it, nwrite) == 0) then
          call write_sh_output()
       end if
+
+      write (stdout, *) "dotproduct: ", dotproduct_newint !TODO JJ: remove later
 
    contains
 
