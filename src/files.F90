@@ -173,7 +173,7 @@ contains
          open (UPOP, file=chfiles(UPOP), access=chaccess, action='write')
          open (UPROB, file=chfiles(UPROB), access=chaccess, action='write')
          open (UPES, file=chfiles(UPES), access=chaccess, action='write')
-         open (UNACME, file=chfiles(UNACME), access=chaccess, action='write')
+         !note, UNACME is now opened in mod_sh since we don't use it for inac==1
          open (UDOTPROD, file=chfiles(UDOTPROD), access=chaccess, action='write')
 
          if (idebug > 1) then
@@ -229,6 +229,22 @@ contains
       end if
 
    end subroutine files_init
+
+   subroutine nacmefile_init()
+      use mod_general, only: irest
+      character(len=10) :: chaccess
+
+      ! Here we ensure, that previous files are deleted
+      if (irest == 0) then
+         chaccess = 'SEQUENTIAL'
+      else
+         chaccess = 'APPEND'
+      end if
+
+      ! open file
+      open (UNACME, file=chfiles(UNACME), access=chaccess, action='write')
+
+   end subroutine nacmefile_init
 
    subroutine print_file_headers()
       use mod_general, only: ipimd, natom

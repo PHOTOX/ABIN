@@ -109,6 +109,7 @@ contains
       use mod_general, only: irest, natom, pot
       use mod_interfaces, only: force_clas
       use mod_kinetic, only: ekin_v
+      use mod_files, only: nacmefile_init
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP) :: dum_fx(size(x, 1), size(x, 2))
@@ -173,6 +174,9 @@ contains
       dum_eclas = 0.0D0
       dum_fx = 0.0D0; dum_fy = 0.0D0; dum_fz = 0.0D0
       call force_clas(dum_fx, dum_fy, dum_fz, x, y, z, dum_eclas, pot)
+
+      ! open nacme_all.dat for all but baeck-an couplings
+      if (inac /= 1) call nacmefile_init() 
 
       ! When restarting, initial SH WF was already read from the restart file
       if (irest == 0) then
