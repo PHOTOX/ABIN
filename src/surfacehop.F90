@@ -736,11 +736,11 @@ contains
          else if (inac == 1) then
             fr = real(itp, DP) / real(substep, DP)
             call interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
-                             en_array_newint, dotproduct_newint, sigma_ba, sigma_ba_old, fr)
+                                en_array_newint, dotproduct_newint, sigma_ba, sigma_ba_old, fr)
 
             fr = real(itp - 1, DP) / real(substep, DP)
             call interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
-                             en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
+                                en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
          end if
 
          ! Integrate electronic wavefunction for one dtp time step
@@ -1103,7 +1103,7 @@ contains
    ! interpolation of time-derivative coupling calculated via Baeck-An approximation
    ! this routine interpolates sigma_ba between integration steps
    subroutine interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
-                          en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
+                             en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
       use mod_general, only: natom
       real(DP), intent(in) :: sigma_ba(:, :), sigma_ba_old(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :) ! for velocity interpolation
