@@ -735,10 +735,12 @@ contains
                              dotproduct_int, fr)
          else if (inac == 1) then
             fr = real(itp, DP) / real(substep, DP)
-            call interpolate_ba(en_array_newint, dotproduct_newint, sigma_ba, sigma_ba_old, fr)
+            call interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
+                             en_array_newint, dotproduct_newint, sigma_ba, sigma_ba_old, fr)
 
             fr = real(itp - 1, DP) / real(substep, DP)
-            call interpolate_ba(en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
+            call interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
+                             en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
          end if
 
          ! Integrate electronic wavefunction for one dtp time step
@@ -1058,7 +1060,7 @@ contains
       real(DP), intent(out) :: dotproduct_int(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(in) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
-      real(DP), intent(out) :: vx_int(:, :), vy_int(:, :), vz_int(:, :) ! why all these go out? they are not used again..
+      real(DP), intent(out) :: vx_int(:, :), vy_int(:, :), vz_int(:, :)
       real(DP), intent(out) :: nacx_int(:, :, :)
       real(DP), intent(out) :: nacy_int(:, :, :)
       real(DP), intent(out) :: nacz_int(:, :, :)
@@ -1100,23 +1102,36 @@ contains
 
    ! interpolation of time-derivative coupling calculated via Baeck-An approximation
    ! this routine interpolates sigma_ba between integration steps
-   subroutine interpolate_ba(en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
+   subroutine interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
+                          en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
       use mod_general, only: natom
       real(DP), intent(in) :: sigma_ba(:, :), sigma_ba_old(:, :)
+      real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :) ! for velocity interpolation
+      real(DP), intent(in) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
       real(DP), intent(out) :: dotproduct_int(:, :)
       real(DP), intent(out) :: en_array_int(:)
+      real(DP), intent(out) :: vx_int(:, :), vy_int(:, :), vz_int(:, :) ! interpolated velocities
       ! How far are we interpolating?
       real(DP), intent(in) :: fr
       real(DP) :: frd
-      integer :: ist1, ist2 !iteration counters
+      integer :: ist1, ist2, iw, iat !iteration counters
 
       frd = 1.0D0 - fr
+      iw = 1
 
       do ist1 = 1, nstate
          en_array_int(ist1) = en_array(ist1) * fr + en_array_old(ist1) * frd
          do ist2 = 1, nstate
+            ! interpolating dot product
             dotproduct_int(ist1, ist2) = sigma_ba(ist1, ist2) * fr + sigma_ba_old(ist1, ist2) * frd
          end do
+      end do
+
+      ! interpolating velocity which is necessary for Ekin in the decoherence correction
+      do iat = 1, natom
+         vx_int(iat, iw) = vx(iat, iw) * fr + vx_old(iat, iw) * frd
+         vy_int(iat, iw) = vy(iat, iw) * fr + vy_old(iat, iw) * frd
+         vz_int(iat, iw) = vz(iat, iw) * fr + vz_old(iat, iw) * frd
       end do
 
    end subroutine interpolate_ba

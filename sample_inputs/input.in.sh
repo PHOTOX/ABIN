@@ -22,6 +22,8 @@ inose=0,		! NVE ensemble (thermostat turned OFF)
 &sh
 istate_init=2,		! initial electronic state (1 is ground state)
 nstate=3,		! number of electronic states
+couplings='analytic',	! non-adiabatic coupling terms 'analytic', 'baeck-an', 'none'
+mom_adjust='nac'        ! momentum adjustment along either 'nac' or 'velocity'
 deltaE=2.0,		! maximum energy difference (eV) between states for which we calculate NA coupling
 PopThr=0.001,           ! minimum population of either state, for which we compute NA coupling
 EnergyDifThr=0.50,      ! maximum energy difference between two consecutive steps
