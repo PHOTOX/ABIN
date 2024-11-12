@@ -43,7 +43,7 @@ contains
       use mod_potentials_sh
       use mod_sh_integ, only: phase, nstate
       use mod_sh, only: read_sh_input, print_sh_input
-      use mod_lz
+      use mod_lz, only: read_lz_input, print_lz_input, lz_init
       use mod_qmmm, only: natqm, natmm
       use mod_force_mm, only: initialize_mm
       use mod_force_h2o, only: initialize_h2o_pot, h2opot
@@ -120,7 +120,6 @@ contains
       ! - remd:    parameters for Replica Exchange MD
       ! - sh:      parameters for Surface Hopping, moved to mod_sh module
       ! - system:  system-specific parameters for model potentials, masses, SHAKE constraints...
-      ! - lz:      parameters for Landau-Zener excited state dynamics.
       ! - qmmm:    parameters for internal QMMM (not really tested).
       !
       ! All namelists need to be in a single input file, and the code
@@ -141,8 +140,6 @@ contains
          nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &
          k, r0, kx, ky, kz, r0_morse, d0_morse, k_morse, D0_dw, lambda_dw, k_dw, r0_dw, &
          Nshake, ishake1, ishake2, shake_tol, potential_file
-
-      namelist /lz/ initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz
 
       namelist /qmmm/ natqm, natmm, q, LJ_rmin, LJ_eps, mm_types
 
@@ -370,9 +367,8 @@ contains
       end if
 
       if (ipimd == 5) then
-         read (uinput, lz)
-         rewind (uinput)
-         call lz_init(pot) !Init arrays for possible restart
+         call read_lz_input(uinput)
+         call lz_init(pot)
       end if
 
       if (iremd == 1) then
@@ -630,10 +626,6 @@ contains
             write (*, *) 'Invalid ipimd value'
             error = 1
          end if
-         if (ipimd == 5 .and. pot == '_tera_' .and. ntriplet_lz > 0) then
-            write (*, *) 'ERROR: Landau-Zener with Singlet-Triplet transitions not implemented with TeraChem over MPI.'
-            error = 1
-         end if
          if (ipimd == 5 .and. nwalk /= 1) then
             write (*, *) 'ERROR: LZ not implemented with multiple walkers.'
             error = 1
@@ -794,7 +786,7 @@ contains
             write (stdout, *)
          end if
          if (ipimd == 5) then
-            write (stdout, nml=lz, delim='APOSTROPHE')
+            call print_lz_input()
             write (stdout, *)
          end if
          if (iqmmm > 0 .or. pot == '_mm_') then
