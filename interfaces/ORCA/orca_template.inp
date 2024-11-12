@@ -1,0 +1,9 @@
+! PBE def2-SVP TightSCF
+
+# Do not modify this line, it ensures that both energies and
+# gradients are computed, and that wavefunction is read from previous step.
+! ENGRAD AUTOSTART
+
+# Modify the charge and spin multiplicity of the system, but nothing else,
+# geometry will be generated automatically at each time step
+* xyzfile 0 1 input_geometry.xyz

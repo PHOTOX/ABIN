@@ -1,8 +1,10 @@
 #!/bin/bash
 # shellcheck disable=SC2086,SC1091,SC2129
+#
 # File interface to ORCA program.
 #
-# Modify the `prepare_orca_input()` function to your needs.
+# The Orca input file is specified in "orca_template.inp"
+# You generally don't need to modify this script.
 #
 # NOTE: This script assumes that the 'orca' executable is already in your PATH.
 # If that is not the case, modify the variable 'ORCAEXE' below accordingly.
@@ -31,22 +33,19 @@ function prepare_orca_input() {
    # Working directory for the ORCA calculation
    rm -rf "${WORKDIR}.previous"
    if [[ -d "$WORKDIR" ]];then
-      mv "$WORKDIR" "${WORKDIR}".previous
+      mv "$WORKDIR" "${WORKDIR}.previous"
    fi
    mkdir -p "$WORKDIR"
-   inp="$WORKDIR/$input"
+   # Copy wavefunction from previous time step
+   if [[ -f ${WORKDIR}.previous/$input.gbw ]]; then
+      cp "${WORKDIR}.previous/$input.gbw" "${WORKDIR}"
+   fi
+   # Copy Orca input file
+   cp orca_template.inp "$WORKDIR/$input"
 
-   cat > $inp << EOF
-! PBE def2-SVP TightSCF
-
-# Do not modify this line, it ensures that both energies and
-# gradients are computed, and that wavefunction is read from previous step.
-! ENGRAD AUTOSTART
-EOF
-
-   echo "* xyz 0 1" >> $inp
-   cat ../geom.dat.$ibead >> $inp
-   echo '*' >> $inp
+   # Prepare input geometry
+   echo -e "$natom\n" > $WORKDIR/input_geometry.xyz
+   cat ../geom.dat.$ibead >> $WORKDIR/input_geometry.xyz
 }
 
 function extract_energy_and_gradients() {
