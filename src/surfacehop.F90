@@ -741,6 +741,7 @@ contains
             fr = real(itp - 1, DP) / real(substep, DP)
             call interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
                                 en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
+
          end if
 
          ! Integrate electronic wavefunction for one dtp time step
@@ -1117,7 +1118,6 @@ contains
       integer :: ist1, ist2, iw, iat !iteration counters
 
       frd = 1.0D0 - fr
-      iw = 1
 
       do ist1 = 1, nstate
          en_array_int(ist1) = en_array(ist1) * fr + en_array_old(ist1) * frd
@@ -1128,6 +1128,7 @@ contains
       end do
 
       ! interpolating velocity which is necessary for Ekin in the decoherence correction
+      iw = 1
       do iat = 1, natom
          vx_int(iat, iw) = vx(iat, iw) * fr + vx_old(iat, iw) * frd
          vy_int(iat, iw) = vy(iat, iw) * fr + vy_old(iat, iw) * frd

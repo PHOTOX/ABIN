@@ -125,7 +125,6 @@ contains
       E2 = (VA + VX) / 2.0D0 + dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0) / 2.0D0
       ! nonadiabatic coupling vector in the reduced system
       d12 = -(VXA * (dVA - dVX) + (-VA + VX) * dVXA) / (VA**2.0D0 - 2.0D0 * VA * VX + VX**2.0D0 + 4.0D0 * VXA**2.0D0)
-      d12 = d12 / ANG ! one more conversion necessary
       ! derivatives of energies
       dE1 = (dVA + dVX) / 2.0D0 - (2.0D0 * (VA - VX) * (dVA - dVX) + 8.0D0 * VXA * dVXA) / &
             (4.0D0 * dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0))
