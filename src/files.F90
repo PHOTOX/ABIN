@@ -170,26 +170,7 @@ contains
       end if
 
       if (ipimd == 2) then
-         open (UPOP, file=chfiles(UPOP), access=chaccess, action='write')
-         open (UPROB, file=chfiles(UPROB), access=chaccess, action='write')
-         open (UPES, file=chfiles(UPES), access=chaccess, action='write')
-         !note, UNACME is now opened in mod_sh since we don't use it for inac==1
-         open (UDOTPROD, file=chfiles(UDOTPROD), access=chaccess, action='write')
-
-         if (idebug > 1) then
-            open (UBKL, file=chfiles(UBKL), access=chaccess, action='write')
-            open (UWFCOEF, file=chfiles(UWFCOEF), access=chaccess, action='write', recl=250)
-            if (phase == 1) then
-               open (UPHASE, file=chfiles(UPHASE), access=chaccess, action='write')
-            end if
-         end if
-
-         if (pot == '_tera_') then
-            open (UCHARGES, file=chfiles(UCHARGES), access=chaccess, action='write')
-            open (UDOTPRODCI, file=chfiles(UDOTPRODCI), access=chaccess, action='write')
-            open (UDIP, file=chfiles(UDIP), access=chaccess, action='write')
-            open (UTDIP, file=chfiles(UTDIP), access=chaccess, action='write')
-         end if
+         call sh_files_init(phase, chaccess)
       end if
 
       if (ipimd /= 2 .and. pot == '_tera_') then
@@ -230,6 +211,33 @@ contains
 
    end subroutine files_init
 
+   subroutine sh_files_init(phase, chaccess)
+      use mod_general, only: idebug, pot
+      integer, intent(in) :: phase
+      character(len=10), intent(in) :: chaccess
+
+      open (UPOP, file=chfiles(UPOP), access=chaccess, action='write')
+      open (UPROB, file=chfiles(UPROB), access=chaccess, action='write')
+      open (UPES, file=chfiles(UPES), access=chaccess, action='write')
+      open (UDOTPROD, file=chfiles(UDOTPROD), access=chaccess, action='write')
+
+      if (idebug > 1) then
+         open (UBKL, file=chfiles(UBKL), access=chaccess, action='write')
+         open (UWFCOEF, file=chfiles(UWFCOEF), access=chaccess, action='write', recl=250)
+         if (phase == 1) then
+            open (UPHASE, file=chfiles(UPHASE), access=chaccess, action='write')
+         end if
+      end if
+
+      if (pot == '_tera_') then
+         open (UCHARGES, file=chfiles(UCHARGES), access=chaccess, action='write')
+         open (UDOTPRODCI, file=chfiles(UDOTPRODCI), access=chaccess, action='write')
+         open (UDIP, file=chfiles(UDIP), access=chaccess, action='write')
+         open (UTDIP, file=chfiles(UTDIP), access=chaccess, action='write')
+      end if
+
+   end subroutine sh_files_init
+      
    subroutine nacmefile_init()
       use mod_general, only: irest
       character(len=10) :: chaccess
