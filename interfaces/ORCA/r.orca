@@ -1,41 +1,93 @@
 #!/bin/bash
-cd $(dirname $0)
-source ../SetEnvironment.sh ORCA
+# shellcheck disable=SC2086,SC1091,SC2129
+#
+# File interface to ORCA program.
+#
+# The Orca input file is specified in "orca_template.inp"
+# You generally don't need to modify this script.
+#
+# NOTE: This script assumes that the 'orca' executable is already in your PATH.
+# If that is not the case, modify the variable 'ORCAEXE' below accordingly.
+#
+# Tested with versions 5.0.x and 6.0.x. Other versions might work, but always test
+# by verifying energy conservation in a short NVE simulation.
+cd "$(dirname "$0")" || exit 2
+set -uo pipefail
 
-timestep=$1
-ibead=$2
-input=input$ibead
-natom=$(wc -l < ../geom.dat.$ibead)
-
-rm -f *engrad
-
-#TODO: I'm not quite sure, whether we always get the correct energies,
-# but perhaps we do, check the format of $input.engrad
-cat > $input << EOF
-# in the following line, specify basis sets and method,
-# basis sets for RI approximations are basis/J
-! BP86 SVP
-! ENGRAD AUTOSTART TightSCF
-* xyz 0 1
-EOF
-### END OF USER INPUT ###
-
-cat ../geom.dat.$ibead >> $input
-echo '*' >>$input
-
-$ORCAEXE $input &> $input.out
-################################
-if [[ $? -eq 0 ]];then
-   cp $input.out $input.out.old
+if [[ -f ../SetEnvironment.sh ]]; then
+  # This is specific to Prague clusters
+  source ../SetEnvironment.sh ORCA
 else
-   echo "WARNING from r.orca: ORCA calculation probably failed."
-   echo "See $input.out.error" 
-   cp $input.out $input.out.error
+  # We assume orca is in PATH already. If not, add it here.
+  ORCAEXE=orca
 fi
 
-### EXTRACTING ENERGY AND FORCES
-awk -v natom="$natom" '{if ($5=="energy") {getline;getline;print $1}
-if ($4=="gradient") {getline;
-	for(i=1;i<=natom;i++) {
-		getline; x=$1;getline;y=$1;getline;print x,y,$1
- }}}' $input.engrad > ../engrad.dat.$ibead
+# timestep is currently unused
+# timestep=$1
+ibead=$2
+input="orca$ibead"
+natom=$(wc -l < ../geom.dat.$ibead)
+WORKDIR="CALC.$ibead"
+
+function prepare_orca_input() {
+   # Working directory for the ORCA calculation
+   rm -rf "${WORKDIR}.previous"
+   if [[ -d "$WORKDIR" ]];then
+      mv "$WORKDIR" "${WORKDIR}.previous"
+   fi
+   mkdir -p "$WORKDIR"
+   # Copy wavefunction from previous time step
+   if [[ -f ${WORKDIR}.previous/$input.gbw ]]; then
+      cp "${WORKDIR}.previous/$input.gbw" "${WORKDIR}"
+   fi
+   # Copy Orca input file
+   cp orca_template.inp "$WORKDIR/$input"
+
+   # Prepare input geometry
+   echo -e "$natom\n" > $WORKDIR/input_geometry.xyz
+   cat ../geom.dat.$ibead >> $WORKDIR/input_geometry.xyz
+}
+
+function extract_energy_and_gradients() {
+    # This is ABIN file with energies and forces
+    engrad_file="$1"
+    # This is the ORCA output where we extract energies/forces from
+    orca_out=$input.engrad
+
+    match_energy="# The current total energy in Eh"
+    match_grad="# The current gradient in Eh/bohr"
+    match_count_energy=$(grep -E -c "$match_energy" "$orca_out")
+    match_count_grad=$(grep -E -c "$match_grad" "$orca_out")
+    if [[ $match_count_energy -ne 1 || $match_count_grad -ne 1 ]]; then
+        echo "ERROR: Unexpected ORCA output in file '$orca_out'"
+        echo "Expression '$match_energy' was matched $match_count_energy times"
+        echo "Expression '$match_grad' was matched $match_count_grad times"
+        echo "This likely indicates a problem with the calculation or incompatible Orca version"
+        exit 2
+    fi
+    grep -A2 "$match_energy" $orca_out | tail -1 > $engrad_file
+
+    awk -v natom="$natom" -v match_grad="$match_grad" '
+    $0 == match_grad {
+       getline
+       for (i = 1; i <= natom; i++) {
+          getline; gx=$1
+          getline; gy=$1
+          getline; gz=$1
+          print gx, gy, gz
+       }
+    }
+    ' $orca_out >> "$engrad_file"
+}
+
+#### LET'S GO! ####
+prepare_orca_input
+
+cd "$WORKDIR" || exit 2
+
+if ! $ORCAEXE "$input" &> "$input.out"; then
+   echo "ERROR: ORCA calculation failed. See Orca output file $WORKDIR/$input.out"
+   exit 2
+fi
+
+extract_energy_and_gradients "../../engrad.dat.$ibead"
