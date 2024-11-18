@@ -25,7 +25,7 @@ program abin
       & nwrite, nstep, it, inormalmodes, istage, irest, STOP_SIMULATION
    use mod_init, only: init
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
-   use mod_lz, only: lz_hop, en_array_lz, lz_rewind, nsinglet_lz, ntriplet_lz
+   use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
    use mod_utils, only: del_file, archive_file
    use mod_transform, only: initialize_pi_transforms, &
@@ -67,12 +67,6 @@ program abin
 
    write (stdout, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
    write (stdout, *) ''
-
-   ! LZ warning for too many states
-   if (ipimd == 5 .and. (nsinglet_lz > 2 .or. ntriplet_lz > 2)) then
-      write (*, *) 'WARNING: LZ was derived for a two-state problem. More states might cause unphysical behavior.'
-      write (stdout, *) ''
-   end if
 
    ! Transform coordinates and velocities for Path Integral MD
    ! (staging or normal modes)

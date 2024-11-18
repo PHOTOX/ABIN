@@ -68,13 +68,6 @@ jobs:
         sudo apt install gcc-7 gfortran-7 g++-7
         echo "ABIN_FFLAGS=${ABIN_FFLAGS/-fprofile-abs-path/}" >> $GITHUB_ENV
 
-    - name: Enable runtime checks
-      # It looks like this messes up the code coverage, so enabling only some builds
-      if: matrix.gcc_v != 7
-      run: |
-        echo "ABIN_FFLAGS=${ABIN_FFLAGS} -fcheck=all -fsanitize=address,undefined,leak" >> $GITHUB_ENV
-        echo "ABIN_LDLIBS=${ABIN_LDLIBS} -fsanitize=address,undefined,leak" >> $GITHUB_ENV
-
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
@@ -119,14 +112,34 @@ jobs:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
 
+  debug_build:
+    name: Debug build
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: fortran-lang/setup-fortran@v1
+      id: setup-fortran
+      with:
+        compiler: gcc
+        version: '13'
+
+    - name: Build ABIN
+      run: ./configure && make
+      env:
+        FFLAGS: ${{ env.ABIN_FFLAGS }} -fcheck=all -fsanitize=address,undefined,leak
+        LDLIBS: ${{ env.ABIN_LDLIBS }} -fsanitize=address,undefined,leak
+
+    - name: Run End-to-End tests
+      run: make e2etest
+
   intel_build:
     name: Intel build
     runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 2
 
     - uses: fortran-lang/setup-fortran@v1
       id: setup-fortran

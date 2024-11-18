@@ -68,31 +68,6 @@ contains
       close (u)
    end subroutine write_sh_data
 
-   subroutine write_lz_data(nstate, nsinglet, ntriplet, tocalc)
-      integer, intent(in) :: nstate
-      integer, intent(in) :: nsinglet, ntriplet
-      integer, dimension(:), intent(in) :: tocalc
-      integer :: ist
-      integer :: u
-
-      if (nstate /= nsinglet + ntriplet) then
-         call fatal_error(__FILE__, __LINE__, &
-            & 'LZ: nstate /= nsinglet + ntriplet')
-      end if
-
-      open (newunit=u, file='state.dat')
-      write (u, '(I0)') nstate
-
-      ! Print for which state we need gradient
-      ! First we have singlets, then triplets
-      do ist = 1, nstate
-         if (tocalc(ist) == 1) write (u, '(I0)') ist
-      end do
-      write (u, '(I0)') nsinglet
-      write (u, '(I0)') ntriplet
-      close (u)
-   end subroutine write_lz_data
-
    function get_shellscript(potential) result(shellscript)
       use mod_utils, only: toupper
       character(len=*), intent(in) :: potential
@@ -231,7 +206,7 @@ contains
       use mod_system, only: names
       use mod_sh_integ, only: nstate
       use mod_sh, only: tocalc, en_array, istate
-      use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
+      use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, write_lz_data
       use mod_qmmm, only: natqm
       use mod_utils, only: toupper, append_rank
       implicit none
@@ -276,7 +251,7 @@ contains
 
             ! Landau-Zener
             if (ipimd == 5) then
-               call write_lz_data(nstate_lz, nsinglet_lz, ntriplet_lz, tocalc_lz)
+               call write_lz_data()
             end if
 
             ! Call the external program
