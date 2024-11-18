@@ -237,7 +237,7 @@ contains
       end if
 
    end subroutine sh_files_init
-      
+
    subroutine nacmefile_init()
       use mod_general, only: irest
       character(len=10) :: chaccess
