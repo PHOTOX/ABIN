@@ -25,7 +25,7 @@ contains
 
       ! DH fixed threshold for now, we should make it a parameter
       ! Or determine bonds in a better way
-      hbond_len_thr = 2.0 * ANG
+      hbond_len_thr = 2.0_DP * ANG
       ! Here we assume that each H atom has a single bond
       num_shake = count_atoms_by_name(names, 'H', natom)
       ! TODO: Not sure about this, but shake does not
@@ -76,8 +76,8 @@ contains
 
    subroutine shake_init(x, y, z)
       use mod_files, only: stdout
-      real(DP) x(:, :), y(:, :), z(:, :)
-      real(DP) xi, yi, zi, xj, yj, zj
+      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+      real(DP) :: xi, yi, zi, xj, yj, zj
       integer :: ixshake, i, j
 
       write (stdout, *) 'Setting distances for SHAKE from XYZ coordinates'
