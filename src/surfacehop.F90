@@ -201,7 +201,7 @@ contains
    subroutine set_current_state(current_state)
       integer, intent(in) :: current_state
       istate = current_state
-   end subroutine
+   end subroutine set_current_state
 
    subroutine check_sh_parameters()
       use mod_utils, only: int_positive, int_nonnegative, int_switch, real_nonnegative

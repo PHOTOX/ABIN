@@ -38,6 +38,7 @@ module mod_sh_integ
    abstract interface
       subroutine sh_integrator(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
          import :: DP
+         implicit none
          ! Interpolated potential energies
          real(DP), intent(in), dimension(:) :: en_array_int, en_array_newint
          ! Interpolated dotproduct = nacm x velocity

@@ -37,13 +37,14 @@ contains
 ! Adapted (real(DP), no angular velocities, mass)   B. Schmidt, Apr 6, 1995
 !
 !------------------------------------------------------------------------
-   subroutine vinit(TEMP, MASS, vx, vy, vz)
+   subroutine vinit(temp, mass, vx, vy, vz)
       use mod_general, only: natom, nwalk
       use mod_random, only: gautrg
-      real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
+      real(DP), intent(in) :: temp
       real(DP), intent(in) :: mass(:)
+      real(DP), intent(out) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP) :: rans(3 * size(mass))
-      real(DP) :: TEMP, SIGMA
+      real(DP) :: sigma
       integer :: iw, iat, pom
 
       do iw = 1, nwalk
@@ -264,7 +265,7 @@ contains
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: masses(:)
       integer, intent(in) :: iw ! Bead index
-      real(DP) :: I(0:8)
+      real(DP), intent(out) :: I(0:8)
       real(DP) :: xx, xy, xz, yy, yz, zz
       integer :: iat
 

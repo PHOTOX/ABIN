@@ -48,11 +48,14 @@ contains
       real(DP), intent(inout) :: fxc(:, :), fyc(:, :), fzc(:, :)
       real(DP), intent(inout) :: eclas
       real(DP) :: eclas_new, prob, probs(MAX_REPLICA), ran(MAX_REPLICA), rn
-      integer :: source, ierr, tag_en = 10, tag_swap = 1
+      integer, parameter :: tag_en = 10, tag_swap = 1
+      integer :: source, ierr
       integer :: status(MPI_STATUS_SIZE), i
       integer :: my_rank
-      logical :: lswap = .false., lswaps(MAX_REPLICA)
+      logical :: lswap, lswaps(MAX_REPLICA)
       character(len=100) :: formt
+
+      lswap = .false.
 
       ! Broadcast array of random numbers from rank 0
       my_rank = get_mpi_rank()
@@ -147,9 +150,9 @@ contains
       integer :: status(MPI_STATUS_SIZE)
       integer :: my_rank
 
-      integer :: tag_x = 11, tag_y = 12, tag_z = 13
-      integer :: tag_px = 114, tag_py = 115, tag_pz = 116
-      integer :: tag_fx = 17, tag_fy = 18, tag_fz = 19
+      integer, parameter :: tag_x = 11, tag_y = 12, tag_z = 13
+      integer, parameter :: tag_px = 114, tag_py = 115, tag_pz = 116
+      integer, parameter :: tag_fx = 17, tag_fy = 18, tag_fz = 19
       integer :: ierr, dest, size1, size2, irank
 
       my_rank = get_mpi_rank()

@@ -10,7 +10,7 @@ contains
       use mod_error, only: fatal_error
       use mod_utils, only: count_atoms_by_name
       integer, intent(in) :: natom
-      character(len=2) :: names(:)
+      character(len=2), intent(in) :: names(:)
       integer :: nH, nO
       integer :: error, iat
 
