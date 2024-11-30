@@ -29,7 +29,7 @@ PopThr=0.00001,         ! minimum population of either state, for which we compu
 EnergyDifThr=0.01,      ! maximum energy difference between two consecutive steps
 EnergyDriftThr=0.01,    ! maximum energy drift from initial total energy
 couplings='baeck-an'
-mom_adjust='velocity'
+velocity_rescaling='velocity'
 /
 
 &system

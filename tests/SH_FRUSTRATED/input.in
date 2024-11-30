@@ -21,7 +21,7 @@ inose=0,
 /
 
 &sh
-mom_adjust='nac'
+velocity_rescaling='nac_then_velocity'        ! momentum adjustment along either 'nac_then_velocity' or 'velocity'
 revmom=1,               ! Reverse momentum after frustrated hop
 istate_init=2,		! initial electronic state
 nstate=3,		! number of electronic states

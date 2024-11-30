@@ -45,12 +45,11 @@ module mod_sh
    integer :: nohop = 0
 
    ! How to adjust velocity after hop:
-   ! mom_adjust = 'nac'       (adjmom=0) - Adjust velocity along the NAC vector (default)
-   ! mom_adjust = 'velocity'  (adjmom=1) - Simple velocity rescale
-   ! NOTE: Simple v-rescale is invoked as a fallback
-   ! if there is not enough momentum along the NAC vector.
+   ! velocity_rescaling = 'nac_then_velocity' (adjmom=0) - Adjust velocity along the NAC vector, if not possible,
+   ! try the velocity vector (default)
+   ! velocity_rescaling = 'velocity'  (adjmom=1) - Rescale along the velocity vector
    integer :: adjmom = 0 ! for working within the code
-   character(len=50) :: mom_adjust = 'nac' ! for reading the input file
+   character(len=50) :: velocity_rescaling = 'nac_then_velocity' ! for reading the input file
    ! 1 - Reverse momentum direction after frustrated hop
    integer :: revmom = 0
 
@@ -100,7 +99,7 @@ module mod_sh
    integer :: ignore_state = 0
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, couplings, nohop, phase, decoh_alpha, popthr, ignore_state, &
-      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, mom_adjust, revmom, &
+      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, velocity_rescaling, revmom, &
       dE_S0S1_thr, correct_decoherence
    save
 
@@ -259,23 +258,24 @@ contains
          error = .true.
       end select
 
-      ! converting input 'mom_adjust' into inac which is used in the code
-      select case (mom_adjust)
-      case ('nac')
+      ! converting input 'velocity_rescaling' into inac which is used in the code
+      select case (velocity_rescaling)
+      case ('nac_then_velocity')
          adjmom = 0
          write (stdout, '(A)') 'Rescaling velocity along the NAC vector after hop.'
+         write (stdout, '(A)') 'If there is not enough energy, try rescaling along the velocity vector.'
       case ('velocity')
          adjmom = 1
          write (stdout, '(A)') 'Rescaling velocity along the momentum vector after hop.'
       case default
-         write (stderr, '(A)') 'Parameter "mom_adjust" must be "nac" or "velocity".'
+         write (stderr, '(A)') 'Parameter "velocity_rescaling" must be "nac_then_velocity" or "velocity".'
          error = .true.
       end select
 
       if (adjmom == 0 .and. inac == 1) then
-         write (stderr, '(A)') 'Combination of adjmom=0 and couplings="baeck-an" is not possible.'
+         write (stderr, '(A)') 'Combination of velocity_rescaling="nac_then_velocity" and couplings="baeck-an" is not possible.'
          write (stderr, '(A)') 'Velocity cannot be rescaled along NAC when using Baeck-An.'
-         write (stderr, '(A)') 'Change adjmom=1 to rescale along momentum vector.'
+         write (stderr, '(A)') 'Change velocity_rescaling="velocity" to rescale along the velocity vector.'
          error = .true.
       end if
 
