@@ -21,13 +21,13 @@ inose=0,
 /
 
 &sh
-adjmom=0,               ! Use rescaling along NAC vector
+velocity_rescaling='nac_then_velocity'        ! momentum adjustment along either 'nac_then_velocity' or 'velocity'
 istate_init=3,		! initial electronic state
 nstate=3,		! number of electronic states
 substep=100,		! number of substeps for solving ESCH
 deltae=100.,		! maximum energy difference [eV], for which we calculate NA coupling
 integ='butcher',	! integrator for ESCHE: euler, rk4, butcher
-inac=0,
+couplings='analytic',	! non-adiabatic coupling terms 'analytic', 'baeck-an', 'none'
 nohop=0,		! 1 - hopping not allowed (default=0)
 decoh_alpha=0.1		! parameter for decoherence correction
 popthr=0.01

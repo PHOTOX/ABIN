@@ -39,6 +39,6 @@ PopThr=0.001,           ! minimum population of either state, for which we compu
 EnergyDifThr=0.50,      ! maximum energy difference between two consecutive steps
 EnergyDriftThr=0.50,    ! maximum energy drift from initial total energy
 substep=100,		! number of substeps for solving ESCH
-inac=2        ! Don't calculate NACME
+couplings='none',	! non-adiabatic coupling terms 'analytic', 'baeck-an', 'none'
 nohop=0       ! Turn off surface hopping
 /
