@@ -591,7 +591,11 @@ contains
       end if
    end subroutine calc_nacm
 
-   ! calculate Baeck-An couplings
+   ! Calculate Baeck-An couplings
+   ! Implementation was based on these two articles:
+   ! original by Barbatti: https://doi.org/10.12688/openreseurope.13624.2
+   ! another implementation by Truhlar: https://doi.org/10.1021/acs.jctc.1c01080
+   ! In the numeric implementation, we follow Barbatti and use a higher order formula.
    subroutine calc_baeckan(dt)
       use mod_general, only: it
       integer :: ist1, ist2
@@ -606,6 +610,7 @@ contains
       do ist1 = 1, nstate
          do ist2 = ist1 + 1, nstate
             de = en_hist_array(ist2, :) - en_hist_array(ist1, :)
+            ! Second derivative (de2dt2) comes from Eq. 16 from https://doi.org/10.12688/openreseurope.13624.2
             de2dt2 = (2.0D0 * de(1) - 5.0D0 * de(2) + 4.0D0 * de(3) - de(4)) / dt**2
             argument = de2dt2 / de(1)
             if (argument > 0.0D0) then
@@ -644,10 +649,10 @@ contains
          en_hist_array(:, 4) = en_hist_array(:, 3)
          en_hist_array(:, 3) = en_hist_array(:, 2)
          en_hist_array(:, 2) = en_hist_array(:, 1)
-         ! new energy is stored before the couplings are calcualted
+         ! new energy is stored before the couplings are calculated
          ! I avoided doing the same as with LZSH energy history tracking because then I need to modify force_abin, force_terash and
          ! every potential in potentials_sh (and all possible future ones). This way it is kept private and does not depend on the
-         ! way energies are calcualted.
+         ! way energies are calculated.
          ! See commit: https://github.com/PHOTOX/ABIN/pull/186/commits/918f6837a76ec0f41b575d3ca948253eed2f30cc
       end if
 
