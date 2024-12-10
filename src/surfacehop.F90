@@ -609,6 +609,8 @@ contains
 
       do ist1 = 1, nstate
          do ist2 = ist1 + 1, nstate
+            ! If ignore_state is set, we do not calculate sigma (dotproduct) for this state
+            if (ignore_state == ist1 .or. ignore_state == ist2) cycle
             de = en_hist_array(ist2, :) - en_hist_array(ist1, :)
             ! Second derivative (de2dt2) comes from Eq. 16 from https://doi.org/10.12688/openreseurope.13624.2
             de2dt2 = (2.0D0 * de(1) - 5.0D0 * de(2) + 4.0D0 * de(3) - de(4)) / dt**2
