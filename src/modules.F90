@@ -65,7 +65,7 @@ contains
       real(DP) :: dt
       sim_time = sim_time + dt
    end subroutine update_simtime
-end module
+end module mod_general
 
 ! TODO: Move this to a separate file, and think hard what should be inside this module.
 module mod_system
@@ -91,7 +91,7 @@ contains
 
       allocate (names(num_atom))
       names = atnames
-   end subroutine
+   end subroutine set_atom_names
 end module mod_system
 
 module mod_chars

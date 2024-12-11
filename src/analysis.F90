@@ -28,7 +28,6 @@ contains
       use mod_analyze_geometry
       use mod_io
       use mod_system, only: am
-      implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: fxc(:, :), fyc(:, :), fzc(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
@@ -102,7 +101,6 @@ contains
       use mod_general, only: nwalk, natom, sim_time
       use mod_mpi, only: get_mpi_rank
       use mod_system, only: names
-      implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       integer, intent(in) :: time_step
       integer :: iat, iw

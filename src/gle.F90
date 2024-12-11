@@ -48,7 +48,7 @@ contains
    ! Used both by white-noise and GLE thermostats.
    real(DP) function get_langham()
       get_langham = langham
-   end function
+   end function get_langham
 
    ! Initialize white-noise PILE thermostat,
    ! which can be used both for classical MD and PIMD.
@@ -93,7 +93,7 @@ contains
          c1(iw) = exp(-dt * gam)
          c2(iw) = dsqrt(1 - c1(iw)**2) * dsqrt(temp * nwalk)
       end do
-   end subroutine
+   end subroutine pile_init
 
    ! White-noise propagator. time-step has been set in pile_init
    subroutine pile_step(px, py, pz, m)
@@ -124,7 +124,7 @@ contains
       end do
 
       langham = langham - ekin_p(px, py, pz, m, natom, nwalk)
-   end subroutine
+   end subroutine pile_step
 
    subroutine finalize_pile()
       if (allocated(c1)) deallocate (c1, c2)
@@ -222,7 +222,6 @@ contains
       use mod_mpi, only: get_mpi_rank
       use mod_general, only: natom, nwalk, ipimd, inormalmodes
       use mod_nhc, only: temp, inose
-      implicit none
       real(DP), intent(in) :: dt
       real(DP), allocatable :: gA(:, :), gC(:, :)
       character(len=100) :: glea, glec, glea_centroid, glec_centroid
@@ -351,12 +350,12 @@ contains
       ! Restart file unit
       integer, intent(in) :: u
       read (u, *) langham
-   end subroutine
+   end subroutine pile_restin
 
    subroutine pile_restout(u)
       integer, intent(in) :: u
       write (u, '(ES24.16E3)') langham
-   end subroutine
+   end subroutine pile_restout
 
    subroutine gle_restin(u)
       use mod_general, only: natom, nwalk
@@ -373,7 +372,7 @@ contains
          end do
       end do
       read (u, *) langham
-   end subroutine
+   end subroutine gle_restin
 
    subroutine gle_restout(u)
       use mod_general, only: natom, nwalk
@@ -389,7 +388,7 @@ contains
          end do
       end do
       write (u, *) langham
-   end subroutine
+   end subroutine gle_restout
 
    subroutine finalize_gle()
       if (allocated(gS)) then
@@ -549,7 +548,7 @@ contains
       real(DP), intent(out) :: EM(n, n)
 
       real(DP) :: tc(j + 1), SM(n, n)
-      integer p, i
+      integer :: p, i
       tc(1) = 1
       do i = 1, j
          tc(i + 1) = tc(i) / dble(i)
@@ -586,7 +585,7 @@ contains
       real(DP), intent(in) :: SST(n, n)
       real(DP), intent(out) :: S(n, n)
       real(DP) :: L(n, n), D(n, n)
-      integer i, j, k
+      integer :: i, j, k
       S = 0.D0
       L = 0.D0
       D = 0.D0

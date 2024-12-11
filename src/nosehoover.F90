@@ -57,7 +57,7 @@ contains
    real(DP) function get_nhcham(natom, nwalk) result(nhcham)
       use mod_system, only: dime
       integer, intent(in) :: natom, nwalk
-      integer iat, inh, iw
+      integer :: iat, inh, iw
 
       nhcham = 0.0D0
       if (imasst == 1) then
@@ -256,7 +256,7 @@ contains
          end do
 
       end if
-   end subroutine
+   end subroutine set_nhc_massive_masses
 
    subroutine set_nhc_global_masses(mass)
       use mod_system, only: dime
@@ -272,7 +272,7 @@ contains
             ms(imol, inh) = mass
          end do
       end do
-   end subroutine
+   end subroutine set_nhc_global_masses
 
    subroutine initialize_nhc_momenta(temp)
       use mod_general, only: natom, nwalk

@@ -73,7 +73,7 @@ contains
 
       write (*, *) 'rb_sbc[A]=', rb_sbc / ang
 
-   end subroutine
+   end subroutine sbc_init
 
    subroutine force_sbc(x, y, z, fx, fy, fz, walkmax)
       use mod_const, only: ANG
@@ -118,7 +118,7 @@ contains
       end if
 
       return
-   end subroutine
+   end subroutine force_sbc
 
    ! TODO: This could be a general purpose routine,
    ! move to utils

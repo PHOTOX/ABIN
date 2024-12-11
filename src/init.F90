@@ -67,7 +67,6 @@ contains
       use mod_terampi
       use mod_terampi_sh
       use mod_mdstep, only: initialize_integrator, nabin, nstep_ref
-      implicit none
       real(DP), intent(out) :: dt
       ! Input parameters for analytical potentials
       real(DP) :: lambda_dw = -1.0D0, D0_dw = -1.0D0, k_dw = -1.0D0, r0_dw = -1.D0

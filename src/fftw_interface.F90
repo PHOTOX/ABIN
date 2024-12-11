@@ -38,7 +38,7 @@ contains
 
       deallocate (x_tmp)
       deallocate (cx_tmp)
-   end subroutine
+   end subroutine fftw_normalmodes_init
 
    ! Simple wrapper functions around the FFTW interface.
    subroutine dft_normalmode2cart(nm, cart)

@@ -165,7 +165,7 @@ contains
 !$OMP FLUSH(abort)
          return
       end if
-   end function
+   end function read_energy
 
    subroutine read_forces(fx, fy, fz, num_atom, iw, engrad_unit, abort)
       use mod_files, only: stderr
@@ -209,7 +209,6 @@ contains
       use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, write_lz_data
       use mod_qmmm, only: natqm
       use mod_utils, only: toupper, append_rank
-      implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(out) :: eclas
@@ -325,7 +324,6 @@ contains
       use mod_qmmm, only: natqm
       use mod_sh_integ, only: nstate
       use mod_sh, only: en_array, istate
-      implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
