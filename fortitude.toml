@@ -1,7 +1,11 @@
 [check]
 ignore = [
-  "S001", # trailing-whitespace
+  "S001", # line-too-long
+  "S101", # trailing-whitespace
   "S102", # incorrect-space-before-comment, we should enable this, autofix enable
   "M011", # use-all (should use "only:")
+  "T031", # missing-intent
+  "S051", # deprecated-relational-operator (fix available)
 ]
 line-length = 132
+show-fixes = true

@@ -54,6 +54,7 @@ module mod_random
       use mod_const, only: DP
       use mod_error, only: fatal_error
       use mod_files, only: stdout, stderr
+      implicit none
       private
       public :: gautrg, vranf
       public :: write_prng_state, read_prng_state
@@ -99,7 +100,6 @@ module mod_random
 !      subroutines called: vranf, r1mach
 !      m. lewerenz 6/may/90, modified 17/jun/91, mar/95
  
-      implicit none
       integer, intent(in) :: nran
       integer, intent(in), optional :: iseed
       real(DP), intent(inout) :: gran(nran)
@@ -253,7 +253,6 @@ module mod_random
 !----------------------------------------------------------------------
 !      subroutines called: xuinit            m. lewerenz may/91 & nov/93
 
-      implicit none
       real(DP), intent(out) :: ranv(nran)
       integer, intent(in) :: nran
       integer, intent(in), optional :: iseed
@@ -351,7 +350,6 @@ module mod_random
 !      last  : pointer to the last used number in the table; output
 !      subroutines called : none             m. lewerenz mar/93, mar/98
 
-      implicit none
       real(DP), intent(inout) :: y(np)
       integer, intent(in) :: np, nq, mode, nexec, iseed
       integer, intent(inout) :: init, last
@@ -424,7 +422,6 @@ module mod_random
 !              random numbers are generated and discarded; input
 !      subroutines called: x                         m. lewerenz mar/98
 
-      implicit none
       ! DHmod, renamed x to y to prevent collision with module
       real(DP), intent(inout) :: y(np)
       real(DP), parameter :: zero = 0.d0, one = 1.d0
