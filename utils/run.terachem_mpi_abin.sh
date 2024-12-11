@@ -4,17 +4,8 @@
 
 set -euo pipefail
 
-# Sample SGE Params on PHOTOX clusters
+# SGE Params on PHOTOX clusters
 #$ -V -cwd -notify
-#$ -l num_gpu=1
-#$ -pe shm 1 -q nq-gpu
-
-# Sample SLURM parameters
-#SBATCH --mem=10000
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=1
-#SBATCH --gres=gpu:1
 
 # ABIN SETUP 
 ABIN_OUT=abin.out
