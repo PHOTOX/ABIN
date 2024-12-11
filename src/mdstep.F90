@@ -20,6 +20,7 @@ module mod_mdstep
    abstract interface
       subroutine integrator(x, y, z, px, py, pz, amt, dt, E_pot, fx, fy, fz)
          import :: DP
+         implicit none
          real(DP), dimension(:, :), intent(inout) :: x, y, z, px, py, pz
          real(DP), dimension(:, :), intent(in) :: amt
          real(DP), intent(in) :: dt
@@ -44,7 +45,7 @@ contains
       use mod_files, only: stdout
       real(DP), intent(in) :: dt
       integer, intent(in) :: ipimd, inormalmodes, nshake
-      character(len=*) :: pot, pot_ref
+      character(len=*), intent(in) :: pot, pot_ref
 
       call check_input()
 

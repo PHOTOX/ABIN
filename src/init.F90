@@ -69,10 +69,11 @@ contains
       use mod_mdstep, only: initialize_integrator, nabin, nstep_ref
       real(DP), intent(out) :: dt
       ! Input parameters for analytical potentials
-      real(DP) :: lambda_dw = -1.0D0, D0_dw = -1.0D0, k_dw = -1.0D0, r0_dw = -1.D0
-      real(DP) :: r0_morse = -1, d0_morse = -1, k_morse = -1
-      real(DP) :: k = -1, r0 = -1
-      real(DP) :: kx = -1, ky = -1, kz = -1
+      ! TODO: Initialize these variable in the code not here
+      real(DP), save :: lambda_dw = -1.0D0, D0_dw = -1.0D0, k_dw = -1.0D0, r0_dw = -1.D0
+      real(DP), save :: r0_morse = -1, d0_morse = -1, k_morse = -1
+      real(DP), save :: k = -1, r0 = -1
+      real(DP), save :: kx = -1, ky = -1, kz = -1
       ! Lennard-Jones parameteres and Coulomb charges (pot=_mm_)
       ! All input parameters are expected to be in atomic units,
       ! except LJ_rmin which should be in angstroms.
@@ -83,14 +84,14 @@ contains
       ! L-J parameters
       real(DP), allocatable :: LJ_rmin(:), LJ_eps(:)
       ! Initial temperature (read from namelist nhcopt)
-      real(DP) :: temp0 = -1
+      real(DP), save :: temp0 = -1
       ! User-defined masses in relative atomic units
       real(DP), allocatable :: masses(:)
       integer :: iw, iat, natom_xyz, iost
       integer :: shiftdihed
       ! Random number seed
       ! Negative value means we get the seed from /dev/urandom
-      integer :: irandom = -1
+      integer, save :: irandom = -1
       ! Number of OpenMP processes, read from ABIN input
       ! WARNING: We do NOT use OMP_NUM_THREADS environment variable!
       integer :: nproc
@@ -432,11 +433,11 @@ contains
       if (inose == 1) then
          call nhc_init()
       else if (inose == 2) then
-         call gle_init(dt * 0.5 / nabin / nstep_ref) !nabin is set to 1 unless ipimd=1
+         call gle_init(dt * 0.5D0 / nabin / nstep_ref) !nabin is set to 1 unless ipimd=1
       else if (inose == 3) then
-         call pile_init(dt * 0.5, tau0_langevin)
+         call pile_init(dt * 0.5D0, tau0_langevin)
       else if (inose == 4) then
-         call gle_init(dt * 0.5 / nstep_ref)
+         call gle_init(dt * 0.5D0 / nstep_ref)
       else if (inose == 0) then
          write (stdout, '(A)') 'No thermostat. NVE ensemble.'
       else

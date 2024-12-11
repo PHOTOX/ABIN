@@ -109,7 +109,7 @@ contains
 
             !Iterative procedure
             convercrit = 100
-            do while (convercrit > 0.00001)
+            do while (convercrit > 0.00001D0)
                ! deltaE(t+dt) prediction - improves the accuracy
                deltaEnext = 0
                do iat = 1, natom

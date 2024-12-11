@@ -129,6 +129,13 @@ contains
       ! TODO: Given the small difference between the Schwenke potential,
       ! we might not need to implement numerical forces here.
       ! call numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
+      ! Just to squash compiler warnings
+      if (.FALSE.) then
+         print*, natom
+         fx = 0.0D0
+         fy = 0.0D0
+         fz = 0.0D0
+      end if
 
    end subroutine force_h2o_cvrqd
 
@@ -159,7 +166,7 @@ contains
       real(DP) :: Epot_delta(1)
 
       real(DP) :: Eclas_orig
-      real(DP) :: delta = 5.0E-5_DP
+      real(DP), parameter :: DELTA = 5.0E-5_DP
       integer :: i, j, k
 
       ! Calculate forces numerically using central differences
@@ -180,11 +187,11 @@ contains
                ! Move the atom forwards
                select case (k)
                case (1)
-                  x_new_forward(i, j) = x_new_forward(i, j) + delta
+                  x_new_forward(i, j) = x_new_forward(i, j) + DELTA
                case (2)
-                  y_new_forward(i, j) = y_new_forward(i, j) + delta
+                  y_new_forward(i, j) = y_new_forward(i, j) + DELTA
                case (3)
-                  z_new_forward(i, j) = z_new_forward(i, j) + delta
+                  z_new_forward(i, j) = z_new_forward(i, j) + DELTA
                end select
 
                ! Calculate the energy for the forward perturbed geometry
@@ -197,11 +204,11 @@ contains
                ! Calculate the numerical force
                select case (k)
                case (1)
-                  fx(i, j) = -(Epot_delta(1) - Eclas_orig) / delta
+                  fx(i, j) = -(Epot_delta(1) - Eclas_orig) / DELTA
                case (2)
-                  fy(i, j) = -(Epot_delta(1) - Eclas_orig) / delta
+                  fy(i, j) = -(Epot_delta(1) - Eclas_orig) / DELTA
                case (3)
-                  fz(i, j) = -(Epot_delta(1) - Eclas_orig) / delta
+                  fz(i, j) = -(Epot_delta(1) - Eclas_orig) / DELTA
                end select
             end do
          end do

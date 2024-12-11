@@ -61,7 +61,7 @@ contains
          write (*, *) 'Calculating cluster radius from given densty.'
          rho = rho * fact !conversion from g/L to atomic units
          rb_sbc = mass_total / rho * 3 / 4 / PI
-         rb_sbc = rb_sbc**(1 / 3.)
+         rb_sbc = rb_sbc**(1 / 3.0D0)
       end if
 
       if (rmax > rb_sbc) then

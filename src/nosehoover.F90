@@ -66,13 +66,13 @@ contains
             do iw = 1, nwalk
                do iat = 1, natom
                   nhcham = nhcham + &
-                         & pnhx(iat, iw, inh) * pnhx(iat, iw, inh) * 0.5 / Qm(iw) + &
+                         & pnhx(iat, iw, inh) * pnhx(iat, iw, inh) * 0.5D0 / Qm(iw) + &
                          & temp * xi_x(iat, iw, inh)
                   if (dime > 1) nhcham = nhcham + &
-                                       & pnhy(iat, iw, inh) * pnhy(iat, iw, inh) * 0.5 / Qm(iw) + &
+                                       & pnhy(iat, iw, inh) * pnhy(iat, iw, inh) * 0.5D0 / Qm(iw) + &
                                        & temp * xi_y(iat, iw, inh)
                   if (dime > 2) nhcham = nhcham + &
-                                       & pnhz(iat, iw, inh) * pnhz(iat, iw, inh) * 0.5 / Qm(iw) + &
+                                       & pnhz(iat, iw, inh) * pnhz(iat, iw, inh) * 0.5D0 / Qm(iw) + &
                                        & temp * xi_z(iat, iw, inh)
                end do
             end do
@@ -80,14 +80,14 @@ contains
 
       else
 
-         iw = 1 !TODO: az bude shake+pimd,tak je tohle treba vyresit
+         iw = 1 !TODO: This needs solving if we ever have SHAKE+PIMD
          do iat = 1, nmolt
             nhcham = nhcham + &
                      & 0.5D0 * pnhx(iat, iw, 1) * pnhx(iat, iw, 1) / ms(iat, 1) + &
                      & dime * natmolt(iat) * temp * xi_x(iat, iw, 1)
             do inh = 2, nchain
                nhcham = nhcham + &
-                        pnhx(iat, iw, inh) * pnhx(iat, iw, inh) * 0.5 / ms(iat, inh) + &
+                        pnhx(iat, iw, inh) * pnhx(iat, iw, inh) * 0.5D0 / ms(iat, inh) + &
                         temp * xi_x(iat, iw, inh)
             end do
          end do
