@@ -130,8 +130,8 @@ contains
       ! we might not need to implement numerical forces here.
       ! call numerical_forces(x, y, z, fx, fy, fz, Epot, natom, nbeads)
       ! Just to squash compiler warnings
-      if (.FALSE.) then
-         print*, natom
+      if (.false.) then
+         print*,natom
          fx = 0.0D0
          fy = 0.0D0
          fz = 0.0D0
