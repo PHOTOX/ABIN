@@ -57,7 +57,7 @@ contains
    real(DP) function get_nhcham(natom, nwalk) result(nhcham)
       use mod_system, only: dime
       integer, intent(in) :: natom, nwalk
-      integer iat, inh, iw
+      integer :: iat, inh, iw
 
       nhcham = 0.0D0
       if (imasst == 1) then
@@ -66,13 +66,13 @@ contains
             do iw = 1, nwalk
                do iat = 1, natom
                   nhcham = nhcham + &
-                         & pnhx(iat, iw, inh) * pnhx(iat, iw, inh) * 0.5 / Qm(iw) + &
+                         & pnhx(iat, iw, inh) * pnhx(iat, iw, inh) * 0.5D0 / Qm(iw) + &
                          & temp * xi_x(iat, iw, inh)
                   if (dime > 1) nhcham = nhcham + &
-                                       & pnhy(iat, iw, inh) * pnhy(iat, iw, inh) * 0.5 / Qm(iw) + &
+                                       & pnhy(iat, iw, inh) * pnhy(iat, iw, inh) * 0.5D0 / Qm(iw) + &
                                        & temp * xi_y(iat, iw, inh)
                   if (dime > 2) nhcham = nhcham + &
-                                       & pnhz(iat, iw, inh) * pnhz(iat, iw, inh) * 0.5 / Qm(iw) + &
+                                       & pnhz(iat, iw, inh) * pnhz(iat, iw, inh) * 0.5D0 / Qm(iw) + &
                                        & temp * xi_z(iat, iw, inh)
                end do
             end do
@@ -80,14 +80,14 @@ contains
 
       else
 
-         iw = 1 !TODO: az bude shake+pimd,tak je tohle treba vyresit
+         iw = 1 !TODO: This needs solving if we ever have SHAKE+PIMD
          do iat = 1, nmolt
             nhcham = nhcham + &
                      & 0.5D0 * pnhx(iat, iw, 1) * pnhx(iat, iw, 1) / ms(iat, 1) + &
                      & dime * natmolt(iat) * temp * xi_x(iat, iw, 1)
             do inh = 2, nchain
                nhcham = nhcham + &
-                        pnhx(iat, iw, inh) * pnhx(iat, iw, inh) * 0.5 / ms(iat, inh) + &
+                        pnhx(iat, iw, inh) * pnhx(iat, iw, inh) * 0.5D0 / ms(iat, inh) + &
                         temp * xi_x(iat, iw, inh)
             end do
          end do
@@ -256,7 +256,7 @@ contains
          end do
 
       end if
-   end subroutine
+   end subroutine set_nhc_massive_masses
 
    subroutine set_nhc_global_masses(mass)
       use mod_system, only: dime
@@ -272,7 +272,7 @@ contains
             ms(imol, inh) = mass
          end do
       end do
-   end subroutine
+   end subroutine set_nhc_global_masses
 
    subroutine initialize_nhc_momenta(temp)
       use mod_general, only: natom, nwalk
@@ -445,9 +445,10 @@ contains
    ! Suzuki-Yoshida split-operator integrator for global NHC
    subroutine shiftNHC_yosh(px, py, pz, amt, dt)
       use mod_system, only: dime
-      real(DP) :: px(:, :), py(:, :), pz(:, :)
-      real(DP) :: amt(:, :), G(MAXCHAIN)
-      real(DP) :: dt, ekin2, AA
+      real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
+      real(DP), intent(in) :: amt(:, :), dt
+      real(DP) :: G(MAXCHAIN)
+      real(DP) :: ekin2, AA
       real(DP) :: wdt, wdt2, wdt4, pscale
       integer :: iw, iat, inh
       integer :: nf, iresp, iyosh
@@ -528,11 +529,10 @@ contains
    subroutine shiftNHC_yosh_mass(px, py, pz, amt, dt)
       use mod_general
       use mod_shake, only: nshake
-      real(DP) :: px(:, :), py(:, :), pz(:, :)
-      real(DP) :: amt(:, :)
+      real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
+      real(DP), intent(in) :: amt(:, :), dt
       real(DP) :: Gx(MAXCHAIN), Gy(MAXCHAIN), Gz(MAXCHAIN)
-      real(DP) :: dt, AA
-      real(DP) :: wdt, wdt2, wdt4
+      real(DP) :: AA, wdt, wdt2, wdt4
       integer :: iw, iat, inh, istart
       integer :: iresp, iyosh
 

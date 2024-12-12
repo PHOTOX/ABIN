@@ -20,6 +20,7 @@ module mod_mdstep
    abstract interface
       subroutine integrator(x, y, z, px, py, pz, amt, dt, E_pot, fx, fy, fz)
          import :: DP
+         implicit none
          real(DP), dimension(:, :), intent(inout) :: x, y, z, px, py, pz
          real(DP), dimension(:, :), intent(in) :: amt
          real(DP), intent(in) :: dt
@@ -44,7 +45,7 @@ contains
       use mod_files, only: stdout
       real(DP), intent(in) :: dt
       integer, intent(in) :: ipimd, inormalmodes, nshake
-      character(len=*) :: pot, pot_ref
+      character(len=*), intent(in) :: pot, pot_ref
 
       call check_input()
 
@@ -92,7 +93,7 @@ contains
       if (.not. associated(mdstep) .and. ipimd /= 3) then
          call fatal_error(__FILE__, __LINE__, 'invalid integrator')
       end if
-   end subroutine
+   end subroutine initialize_integrator
 
    subroutine shiftX(rx, ry, rz, px, py, pz, mass, dt)
       real(DP), intent(inout) :: rx(:, :), ry(:, :), rz(:, :)
@@ -128,7 +129,6 @@ contains
       use mod_const, only: DP, PI
       use mod_general, only: nwalk, natom
       use mod_nhc, only: temp
-      implicit none
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
       real(DP), intent(in) :: m(:, :)

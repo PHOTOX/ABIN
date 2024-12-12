@@ -29,7 +29,7 @@ module mod_potentials
       real(DP) :: d0
       real(DP) :: k
       real(DP) :: r0
-   end type
+   end type dw_params
    type(dw_params) :: dw
 
    ! Parameters for two particles bound by Morse potential
@@ -39,21 +39,21 @@ module mod_potentials
       real(DP) :: d0
       real(DP) :: a
       real(DP) :: r0
-   end type
+   end type morse_params
    type(morse_params) :: morse
 
    ! 3D harmonic oscillator
    ! E = 1/2 * (kx * x^2 + ky * y^2 + kz * z^2)
    type :: harm_osc_params
       real(DP) :: kx, ky, kz
-   end type
+   end type harm_osc_params
    type(harm_osc_params) :: ho
 
    ! Two particles bound by harmonic potential
    ! E = 1/2 * k * (r - r0)^2
    type :: harm_rotor_params
       real(DP) :: k, r0
-   end type
+   end type harm_rotor_params
    type(harm_rotor_params) :: hrot
    save
 contains

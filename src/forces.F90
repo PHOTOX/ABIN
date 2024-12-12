@@ -260,9 +260,9 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, quantum_energy)
             fz(j, i) = (z(j, i) - z(j, kplus))
             fz(j, i) = fz(j, i) + (z(j, i) - z(j, kminus))
             fz(j, i) = -fz(j, i) * ak(j, i)
-            equant = equant + 0.5 * ak(j, i) * (x(j, i) - x(j, kplus))**2
-            equant = equant + 0.5 * ak(j, i) * (y(j, i) - y(j, kplus))**2
-            equant = equant + 0.5 * ak(j, i) * (z(j, i) - z(j, kplus))**2
+            equant = equant + 0.5D0 * ak(j, i) * (x(j, i) - x(j, kplus))**2
+            equant = equant + 0.5D0 * ak(j, i) * (y(j, i) - y(j, kplus))**2
+            equant = equant + 0.5D0 * ak(j, i) * (z(j, i) - z(j, kplus))**2
          end do
       end do
    end if

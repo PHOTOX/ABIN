@@ -128,7 +128,6 @@ contains
       use mod_general, only: natom, it, nwalk
       use mod_system, only: am
       use mod_utils, only: c_string
-      implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: eclas
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)

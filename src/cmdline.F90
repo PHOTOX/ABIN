@@ -1,12 +1,12 @@
 module mod_cmdline
    use mod_interfaces, only: print_compile_info
+   implicit none
    private
    public :: get_cmdline
 
 contains
 
    subroutine print_help()
-      implicit none
       integer, dimension(8) :: time_data
 
       call date_and_time(values=time_data)

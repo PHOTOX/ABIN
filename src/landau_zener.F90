@@ -213,7 +213,7 @@ contains
       integer :: S_to_T !itest, iost
       integer :: ist ! =istate_lz
       real(DP) :: Ekin, Epot, Epot2, dE, hop_rdnum, hop_rdnum2, vel_rescale, stepfs, molveloc, grad_diff
-      real(DP) :: one = 1.0D0
+      real(DP), parameter :: one = 1.0D0
       character(len=100) :: formt, fmt_in, fmt_out
 
       !TODO: energy drift
@@ -268,7 +268,7 @@ contains
             ! Adding check for false 3P-minima
             ! only for significant probabilities, for tiny probabilities this does not make sense
             ! e.g. for parallel states (the whole LZ does not make sense for this case)
-            if (prob(ist1) > 0.01) then
+            if (prob(ist1) > 0.01D0) then
                ! Calculating backward second derivative formula. We are not using the newest energy
                ! but the previous three. Discontinuity would not affect this formula.
                second_der_back = ((en_diff(2) - 2 * en_diff(3) + en_diff(4)) / dt**2)
@@ -276,14 +276,14 @@ contains
                ! If the change is too large, we either almost hit the CI or we have discontinuity.
                der_check = abs((second_der - second_der_back) / second_der)
                ! If they differ by more then 130%, we have aa unphysical change of curvature --> certain discontinuity.
-               if (der_check > 1.3) then
+               if (der_check > 1.3D0) then
                   write (stdout, *) "ERROR: Change of curvature --> discontinuity in PES!"
                   write (stdout, *) "Probability set to 0!"
                   prob(ist1) = 0.0D0
                   ! 30% threshold was set empirically and should capture most discontinuities
                   ! yet it can also be a conical intersection. Thus, we just issue an warning
                   ! and let the user to evaluate on his own.
-               else if (der_check > 0.3) then
+               else if (der_check > 0.3D0) then
                   write (stdout, *) "WARNING: Possible discontinuity in PES! Check PES.dat!"
                end if
             end if
@@ -605,8 +605,10 @@ contains
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(inout) :: fxc(:, :), fyc(:, :), fzc(:, :)
-      real(DP) :: eclas = 0.0D0
+      real(DP) :: eclas
       integer :: i, iat
+
+      eclas = 0.0D0
 
       !Gradient to compute
       do i = 1, nstate_lz

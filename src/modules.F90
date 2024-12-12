@@ -62,10 +62,10 @@ contains
 
    subroutine update_simtime(dt)
       use mod_const, only: DP
-      real(DP) :: dt
+      real(DP), intent(in) :: dt
       sim_time = sim_time + dt
    end subroutine update_simtime
-end module
+end module mod_general
 
 ! TODO: Move this to a separate file, and think hard what should be inside this module.
 module mod_system
@@ -91,10 +91,11 @@ contains
 
       allocate (names(num_atom))
       names = atnames
-   end subroutine
+   end subroutine set_atom_names
 end module mod_system
 
 module mod_chars
+   implicit none
    character(len=*), parameter :: CHKNOW = 'If you know what you are doing, &
     &set iknow=1 (namelist general) to proceed.'
 end module mod_chars

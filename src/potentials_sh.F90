@@ -37,7 +37,7 @@ module mod_potentials_sh
       real(DP) :: a12 = 0.055D0
       real(DP) :: beta12 = 0.6931D0
       real(DP) :: rx = 6.93D0
-   end type
+   end type nai_params
    type(nai_params) :: nai
    save
 contains

@@ -1,0 +1,12 @@
+[check]
+ignore = [
+  "S001", # line-too-long
+  "S051", # deprecated-relational-operator (fix available)
+  "S101", # trailing-whitespace
+  "S102", # incorrect-space-before-comment, we should enable this, autofix enable
+  "M011", # use-all (should use "only:")
+  "M001", # procedure-not-in-module (need a per-file ignore for init.F90)
+  "T042", # assumed-size-character-intent TODO: We should fix all instances!
+]
+line-length = 132
+show-fixes = true

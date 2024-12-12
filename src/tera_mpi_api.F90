@@ -47,7 +47,7 @@ contains
    subroutine initialize_terachem_interface(tc_server_name)
       use mod_general, only: nwalk, iremd
       use mod_mpi, only: get_mpi_rank
-      character(len=*) :: tc_server_name
+      character(len=*), intent(in) :: tc_server_name
       integer :: i, ierr
 
       if (nwalk > 1) then

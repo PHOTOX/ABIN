@@ -87,7 +87,7 @@ contains
       if (allocated(second_derivatives)) then
          deallocate (second_derivatives)
       end if
-   end subroutine
+   end subroutine finalize_spline
 
    subroutine read_grid(fname, x_grid, y_grid, grid_size)
       use mod_files, only: stdout
@@ -122,7 +122,7 @@ contains
       end do
       close (u)
 
-   end subroutine
+   end subroutine read_grid
 
    subroutine validate_grid(x_grid, ngrid)
       real(DP), dimension(ngrid), intent(in) :: x_grid
@@ -141,7 +141,7 @@ contains
             return
          end if
       end do
-   end subroutine
+   end subroutine validate_grid
 
    subroutine print_splined_potential(fname, x_grid, grid_size)
       character(len=*), intent(in) :: fname
@@ -158,6 +158,6 @@ contains
          x = x + dx
       end do
       close (u)
-   end subroutine
+   end subroutine print_splined_potential
 
-end module
+end module mod_splined_grid

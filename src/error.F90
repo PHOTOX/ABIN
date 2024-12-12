@@ -28,6 +28,7 @@ module mod_error
 
    abstract interface
       subroutine error(filename, line_number, message)
+         implicit none
          character(len=*), intent(in) :: filename
          integer, intent(in) :: line_number
          character(len=*), intent(in) :: message

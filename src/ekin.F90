@@ -15,7 +15,6 @@ contains
       use mod_nhc, only: inose, get_nhcham
       use mod_gle, only: get_langham
       use mod_shake, only: nshake
-      implicit none
       integer :: iw, iat
       real(DP), intent(in) :: px(:, :), py(:, :), pz(:, :)
       real(DP), intent(in) :: amt(:, :)
@@ -68,7 +67,6 @@ contains
    real(DP) function ekin_v(vx, vy, vz)
       use mod_general, only: nwalk, natom
       use mod_system, only: am
-      implicit none
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP) :: temp1, ekin_mom
       integer :: iw, iat
