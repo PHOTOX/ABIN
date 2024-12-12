@@ -9,14 +9,8 @@
 
 set -euo pipefail
 
-# Example SGE params for PHOTOX clusters
+# SGE params for PHOTOX clusters
 #$ -cwd -notify
-#$ -q aq -pe shm 1
-
-# Example SLURM parameters
-#SBATCH --mem=1000
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
 
 ### SETUP ###
 JOBNAME=ABIN_${JOB_ID}_$$
