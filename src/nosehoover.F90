@@ -445,9 +445,10 @@ contains
    ! Suzuki-Yoshida split-operator integrator for global NHC
    subroutine shiftNHC_yosh(px, py, pz, amt, dt)
       use mod_system, only: dime
-      real(DP) :: px(:, :), py(:, :), pz(:, :)
-      real(DP) :: amt(:, :), G(MAXCHAIN)
-      real(DP) :: dt, ekin2, AA
+      real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
+      real(DP), intent(in) :: amt(:, :), dt
+      real(DP) :: G(MAXCHAIN)
+      real(DP) :: ekin2, AA
       real(DP) :: wdt, wdt2, wdt4, pscale
       integer :: iw, iat, inh
       integer :: nf, iresp, iyosh
@@ -528,11 +529,10 @@ contains
    subroutine shiftNHC_yosh_mass(px, py, pz, amt, dt)
       use mod_general
       use mod_shake, only: nshake
-      real(DP) :: px(:, :), py(:, :), pz(:, :)
-      real(DP) :: amt(:, :)
+      real(DP), intent(inout) :: px(:, :), py(:, :), pz(:, :)
+      real(DP), intent(in) :: amt(:, :), dt
       real(DP) :: Gx(MAXCHAIN), Gy(MAXCHAIN), Gz(MAXCHAIN)
-      real(DP) :: dt, AA
-      real(DP) :: wdt, wdt2, wdt4
+      real(DP) :: AA, wdt, wdt2, wdt4
       integer :: iw, iat, inh, istart
       integer :: iresp, iyosh
 

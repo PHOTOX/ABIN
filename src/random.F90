@@ -705,7 +705,7 @@ contains
    ! Taken from:
    ! https://gcc.gnu.org/onlinedocs/gcc-4.9.1/gfortran/RANDOM_005fSEED.html
    integer function lcg(s)
-      integer(INT64) :: s
+      integer(INT64), intent(inout) :: s
 
       if (s == 0) then
          s = 104729

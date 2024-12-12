@@ -68,7 +68,7 @@ module mod_interfaces
       function usleep(useconds) bind(c, name='usleep')
          import :: C_INT, C_INT32_T
          implicit none
-         integer(kind=C_INT32_T), value :: useconds
+         integer(kind=C_INT32_T), intent(in), value :: useconds
          integer(kind=C_INT) :: usleep
       end function usleep
 

@@ -14,7 +14,7 @@ contains
 
    subroutine wrap(x, y, z)
       use mod_general, only: nwalk
-      real(DP) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       integer :: i, iat, iat2, iw, iww, iwrap
 
       iwrap = 0

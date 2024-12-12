@@ -62,7 +62,7 @@ contains
 
    subroutine update_simtime(dt)
       use mod_const, only: DP
-      real(DP) :: dt
+      real(DP), intent(in) :: dt
       sim_time = sim_time + dt
    end subroutine update_simtime
 end module mod_general
