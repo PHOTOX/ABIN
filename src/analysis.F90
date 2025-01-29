@@ -116,7 +116,7 @@ contains
       do iw = 1, nwalk
          write (UMOVIE, *) natom
          ! In the future, we should get rid of the time step?
-         write (UMOVIE, '(A30,I12,A20,F15.2)') 'Units: angs.;  Time step:', time_step, ' ;  Sim. Time [au]:', sim_time
+         write (UMOVIE, '(A25,I12,A20,F15.2)') 'Units: angs.;  Time step:', time_step, ' ;  Sim. Time [au]:', sim_time
 
          do iat = 1, natom
             ! printing with slightly lower precision for saving space
