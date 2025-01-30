@@ -116,7 +116,8 @@ contains
       do iw = 1, nwalk
          write (UMOVIE, *) natom
          ! In the future, we should get rid of the time step?
-         write (UMOVIE, '(A10,I20,A15,F15.2)') 'Time step:', time_step, ' Sim. Time [au]', sim_time
+         write (UMOVIE, '(A25,I12,A20,F15.2)') 'Units: angs.;  Time step:', time_step, ' ;  Sim. Time [au]:', sim_time
+
          do iat = 1, natom
             ! printing with slightly lower precision for saving space
             write (UMOVIE, '(A2,3E18.8E2)') names(iat), x(iat, iw) / ANG, y(iat, iw) / ANG, z(iat, iw) / ANG
@@ -178,7 +179,7 @@ contains
       integer :: iat, iw
 
       write (UVELOC, '(I0)') natom
-      write (UVELOC, '(A,I0)') 'Time step: ', time_step
+      write (UVELOC, '(A25,I0)') 'Units: a.u.;  Time step: ', time_step
 
       do iw = 1, nwalk
          do iat = 1, natom
