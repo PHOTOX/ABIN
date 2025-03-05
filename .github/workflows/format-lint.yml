@@ -1,0 +1,53 @@
+name: Format and lint
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+
+  format:
+    name: Code format check
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Set up uv
+      # Install a specific uv version using the installer
+      run: curl -LsSf https://astral.sh/uv/0.6.4/install.sh | sh
+
+    - name: Run formatter
+      # uv ensures automatically that python dependencies are installed
+      run: |
+        uv run autoformat.py
+        f=`git ls-files -m`; if [[ -n $f ]]; then echo -e "ERROR: Detected unformatted files:\n$f"; exit 1; fi
+
+    - name: Install fortitude linter
+      # Install a specific uv version using the installer
+      run: curl -LsSf https://astral.sh/uv/0.6.4/install.sh | sh
+
+  lint:
+    name: Lint check
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up uv
+      # Install a specific uv version using the installer
+      run: curl -LsSf https://astral.sh/uv/0.6.4/install.sh | sh
+
+    - name: Install fortitude linter
+      # Install a specific uv version using the installer
+      run: uv tool install fortitude-lint==0.7.0
+
+    - name: Lint check
+      # Install a specific uv version using the installer
+      run: fortitude check src/
