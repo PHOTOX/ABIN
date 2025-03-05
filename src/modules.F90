@@ -96,6 +96,7 @@ end module mod_system
 
 module mod_chars
    implicit none
+   public
    character(len=*), parameter :: CHKNOW = 'If you know what you are doing, &
     &set iknow=1 (namelist general) to proceed.'
 end module mod_chars

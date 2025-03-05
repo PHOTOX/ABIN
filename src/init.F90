@@ -1206,6 +1206,7 @@ end module mod_init
 
 ! We cannot include finish in the module, since it would
 ! result in circular dependencies.
+! allow(procedure-not-in-module) ! fortitude linter
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general, only: pot, pot_ref, ipimd, inormalmodes, en_restraint

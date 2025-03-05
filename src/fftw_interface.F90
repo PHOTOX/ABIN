@@ -4,8 +4,8 @@ module mod_fftw3
    use, intrinsic :: iso_c_binding
 #ifndef USE_FFTW
    use mod_error, only: not_compiled_with
-   implicit none
 #endif
+   implicit none
    private
    public :: fftw_normalmodes_init, fftw_normalmodes_finalize
    public :: dft_normalmode2cart, dft_cart2normalmode
