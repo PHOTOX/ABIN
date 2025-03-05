@@ -1,0 +1,36 @@
+name: Format and lint
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+
+  format:
+    name: Code format check
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: astral-sh/setup-uv@v6
+
+    - name: Run formatter
+      run: |
+        uv run autoformat.py
+        f=`git ls-files -m`; if [[ -n $f ]]; then echo -e "ERROR: Detected unformatted files:\n$f"; exit 1; fi
+
+  lint:
+    name: Lint check
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install fortitude linter
+      run: pip install fortitude-lint==0.7.1
+
+    - name: Lint check
+      run: fortitude check src/

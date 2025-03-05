@@ -25,26 +25,6 @@ env:
 
 jobs:
 
-  format:
-    name: Code format check
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Set up uv
-      # Install a specific uv version using the installer
-      run: curl -LsSf https://astral.sh/uv/0.3.0/install.sh | sh
-
-    - name: Run formatter (using uv)
-      # uv ensures automatically that python dependencies are installed
-      run: |
-        uv run autoformat.py
-        f=`git ls-files -m`; if [[ -n $f ]]; then echo -e "ERROR: Detected unformatted files:\n$f"; exit 1; fi
-
   basic_build:
     name: Basic build
     runs-on: ubuntu-22.04
