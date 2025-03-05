@@ -68,7 +68,7 @@ contains
 
    subroutine files_init(isbc, phase, ndist, nang, ndih)
       use mod_general, only: ipimd, irest, iremd, pot, &
-                           & icv, ihess, idebug, nwritev, nwritef, en_restraint
+                           & icv, ihess, nwritev, nwritef, en_restraint
       use mod_mpi, only: get_mpi_rank
       integer, intent(in) :: isbc, phase, ndist, nang, ndih
       character(len=10) :: chaccess

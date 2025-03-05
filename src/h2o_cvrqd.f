@@ -369,7 +369,7 @@ C     SCALE AND SHIFT THE ZERO
       SUBROUTINE rel(V,R1,R2,THETA)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION FT(82), cv(82)
-      integer :: nv, ZERO, i, i5, idx
+      integer :: nv, ZERO, i, i5
 
       data nv/82/
       DATA ZERO/0.0D0/
@@ -1389,7 +1389,7 @@ c     $      0.15860145369897d0,-1.6351695982132d0,1d0/
       data ifirst/0/
       if(ifirst.eq.0)then
        ifirst=1
-    1  format(/1x,'CVRQD PES for H2O molecule')
+c   1  format(/1x,'CVRQD PES for H2O molecule')
 c
 c     remove mass correction from vrest
 c
@@ -1398,8 +1398,8 @@ c
        xmd=3670.483031d0
        fact=1.d0/((1.d0/xmd)-(1.d0/xmh))
 c       write(6,65)
-   65  format(/1x,'parameters for delta v hdo ',
-     $       /1x,'    i    j    k')
+c  65  format(/1x,'parameters for delta v hdo ',
+c    $       /1x,'    i    j    k')
        do 60 i=1,9
 c        write(6,5)(idxm(i,j)-1,j=1,3),cmass(i)
         cmass(i)=cmass(i)*fact
@@ -1430,11 +1430,11 @@ c
 c     adjust parameters using scale factors
 c
 c       write(6,57)f5z,fbasis,fcore,frest
-   57  format(/1x,'adjusting parameters using scale factors ',
-     $        /1x,'f5z =    ',f11.8,
-     $        /1x,'fbasis = ',f11.8,
-     $        /1x,'fcore =  ',f11.8,
-     $        /1x,'frest =  ',f11.8)
+c  57  format(/1x,'adjusting parameters using scale factors ',
+c    $        /1x,'f5z =    ',f11.8,
+c    $        /1x,'fbasis = ',f11.8,
+c    $        /1x,'fcore =  ',f11.8,
+c    $        /1x,'frest =  ',f11.8)
        phh1=phh1*f5z
        deoh=deoh*f5z
        do 59 i=1,245
@@ -1443,18 +1443,18 @@ c       write(6,57)f5z,fbasis,fcore,frest
    59  continue
 c       write(6,55)phh1,phh2,deoh,alphaoh,roh
 c       write(6,58)reoh,thetae,b1,((idx(i,j)-1,j=1,3),c5z(i),i=1,245)
-   58  format(/1x,'three body parameters:',
-     $        /1x,'reoh = ',f10.4,' thetae = ',f10.4,
-     $        /1x,'betaoh = ',f10.4,
-     $        /1x,'    i    j    k   cijk',
-     $        /(1x,3i5,1pe15.7))
+c  58  format(/1x,'three body parameters:',
+c    $        /1x,'reoh = ',f10.4,' thetae = ',f10.4,
+c    $        /1x,'betaoh = ',f10.4,
+c    $        /1x,'    i    j    k   cijk',
+c    $        /(1x,3i5,1pe15.7))
        do 66 i=1,9
         cmass(i)=cmass(i)*frest
    66  continue
 c       write(6,76)((idxm(i,j),j=1,3),cmass(i),i=1,9)
-   76  format(/1x,'mass correction factors ',
-     $        /1x,'    i    j    k   cijk',
-     $        /(1x,3i5,1pe15.7))
+c  76  format(/1x,'mass correction factors ',
+c    $        /1x,'    i    j    k   cijk',
+c    $        /(1x,3i5,1pe15.7))
 c
 c     convert parameters from 1/cm, angstrom to a.u.
 c

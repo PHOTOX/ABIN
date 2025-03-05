@@ -3,6 +3,8 @@ module mod_estimators
    use mod_const, only: DP, AUtoFS
    use mod_files, only: UCV, UCVDCV, UESTENERGY
    implicit none
+   public
+   ! TODO: Make all of the *_cumul variables private
    real(DP) :: est_prim_cumul = 0.0D0, est_vir_cumul = 0.0D0
    real(DP) :: est_prim2_cumul = 0.0D0, est_prim_vir = 0.0D0, est_vir2_cumul = 0.0D0
    real(DP) :: cv_prim_cumul = 0.0D0, cv_vir_cumul = 0.0D0, cv_dcv_cumul = 0.0D0

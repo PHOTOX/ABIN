@@ -4,6 +4,7 @@
 module PBC
    use mod_const, only: DP
    implicit none
+   private
    real(DP) :: boxx, boxy, boxz
    integer, allocatable :: natmol(:) ! used for wrapping, independent of nmolt
    integer :: nmol = 1 !used for wraping, independent of nmolt
