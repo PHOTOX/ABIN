@@ -9,6 +9,12 @@ on:
     branches: [ master ]
   pull_request:
 
+# Cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   # FFLAGS for building ABIN, applicable for most jobs
   ABIN_FFLAGS: -O0 -fopenmp --coverage -fprofile-abs-path -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
