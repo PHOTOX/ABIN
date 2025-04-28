@@ -1,8 +1,9 @@
 name: GFortran CI
 
-# WARNING: When updating the OS version of the Github Actions runner,
+# WARNING: When updating the OS version of Github Actions runner,
 # e.g. from Ubuntu 20.04 to 22.04, you need to manually update the cache keys!
 # This is because there's no easy way to get the OS version from within this workflow file.
+# See https://github.com/PHOTOX/ABIN/issues/205
 
 on:
   push:
