@@ -156,6 +156,8 @@ if [[ $PLUMED = "TRUE" ]];then
       echo "File $PLUMED_INC does not exist!"
       exit 1
    fi
+   # https://stackoverflow.com/a/71338499/3682277
+   FFLAGS="$FFLAGS -fallow-argument-mismatch"
 fi
 
 echo "Generating local build configuration for ABIN"
