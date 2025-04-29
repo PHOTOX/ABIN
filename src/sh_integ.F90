@@ -10,6 +10,7 @@ module mod_sh_integ
    public :: sh_set_initialwf, sh_set_energy_shift
    public :: sh_select_integrator, sh_integrate_wf
    public :: sh_decoherence_correction, check_popsum, sh_TFS_transmat
+   public :: shwit_switch
 
    ! Restart functionality
    public :: sh_write_phase_bin, sh_read_phase_bin
@@ -444,6 +445,20 @@ contains
 
       cel_re(initial_state) = 1.0D0
    end subroutine sh_set_initialwf
+
+   ! A horrible hack for SHwIT, we just switch
+   ! switch the coefficients between S1-S0
+   ! TODO: Do something less gross
+   subroutine shwit_switch()
+      real(DP) :: tmp
+      tmp = cel_re(1)
+      cel_re(1) = cel_re(2)
+      cel_re(2) = tmp
+
+      tmp = cel_im(1)
+      cel_im(1) = cel_im(2)
+      cel_im(2) = tmp
+   end subroutine shwit_switch
 
    subroutine sh_set_energy_shift(potential_energy)
       real(DP), intent(in) :: potential_energy
