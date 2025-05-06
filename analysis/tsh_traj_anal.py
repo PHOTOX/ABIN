@@ -1,0 +1,113 @@
+"""Code for analyzing potential energy surfaces, energies and electronic populations along trajectories
+from ABIN's Fewest Switches or Landau-Zener surface hopping simulations.
+The script should be launched within the ABIN trajectory folder as 'python3 tsh_traj_analysis.py'
+Jiri Janos 2025"""
+
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+from os.path import exists
+
+# parsing input
+parser = argparse.ArgumentParser(description="Parser for this code", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("-p", "--print", action="store_true", help="Save png figure")	# this flag makes variable 'verbose' True
+parser.add_argument("-c", "--convert", action="store_false", help="Convert a.u. to eV")	# this flag makes variable 'verbose' True
+parser.add_argument("-s", "--shift", action="store_false", help="Shift curves so that the lowest state minimum has 0 energy")	# this flag makes variable 'verbose' True
+parser.add_argument("-n", "--nstates", type=int, help="Number of the lowest states to plot")	# this flag stores to 'block_size' value behind flag
+parser.add_argument("-pop", "--population", default='pop.dat',  help="File with populations from simulations")	# this flag stores to 'block_size' value behind flag
+parser.add_argument("-pes", "--pes", default='PES.dat', help="File with PES from simulations")	# this flag stores to 'block_size' value behind flag
+parser.add_argument("-en", "--energy", default='energies.dat', help="File with energies from simulations - used to get running PES")	# this flag stores to 'block_size' value behind flag
+#parser.add_argument("file", nargs='+', help="File name to plot PES")
+args = parser.parse_args()
+config = vars(args)	# creating variables from parser
+
+# number of files stored
+if exists(config['population']):
+  print(config['population'] + ' exists!')
+else:
+  print(config['population'] + ' does not exist!')
+  exit()
+
+if exists(config['pes']):
+  print(config['pes'] + ' exists!')
+else:
+  print(config['pes'] + ' does not exist!')
+  exit()
+
+if exists(config['energy']):
+  print(config['energy'] + ' exists!')
+else:
+  print(config['energy'] + ' does not exist!')
+  exit()
+
+# generating data from file
+data = np.genfromtxt(config['pes'])
+energies = np.genfromtxt(config['energy'])
+pop = np.genfromtxt(config['population'])
+
+# setting states to maximum if nothing specified
+if config['nstates'] == None:
+    config['nstates'] = len(data.T) - 1
+
+# converting data to eV
+if config['convert']:
+    data.T[1:, :] = data.T[1:, :] * 27.2114
+    energies.T[1:, :] = energies.T[1:, :] * 27.2114
+    enunits = 'eV'
+else:
+    enunits = 'a.u.'
+
+# shifting data
+if config['shift']:
+    minE = np.min(data.T[1:, :])
+    data.T[1:, :] = data.T[1:, :] - minE
+    #energies.T[1:, :] = energies.T[1:, :] - minE
+    energies.T[1, :] = energies.T[1, :] - minE
+    energies.T[-1, :] = energies.T[-1, :] - minE
+
+# printing configurations (changes made before)
+print(config)
+
+# plotting
+colors=plt.cm.viridis(np.linspace(0, 0.8, config['nstates']))
+fig, axs = plt.subplots(4,1,figsize=(8,7.5), gridspec_kw={'height_ratios': [1, 2, 1, 1]}, sharex=True)
+
+for i in range(0, config['nstates']):
+    axs[1].plot(data.T[0, :], data.T[i + 1, :], color=colors[i], label=r'$S_%d$' % (i))
+axs[1].scatter(energies.T[0, 0:-1:5], energies.T[1, 0:-1:5], s=5, alpha=0.5, color='black')
+axs[1].plot(energies.T[0, :], energies.T[1, :], linewidth=8, alpha=0.2, color='black',  label='active')
+axs[1].plot(energies.T[0, :], energies.T[-1, :], color='black', alpha=0.5, linestyle='dotted', label=r'$E_{tot}$')
+
+axs[1].set_ylabel('Energy' + ' (' + enunits + ')')
+axs[1].legend(labelspacing=0)
+
+
+for i in range(0, config['nstates']):
+    axs[0].plot(pop.T[0, :], pop.T[i + 2, :], color=colors[i], label=r'$S_%d$' % (i))
+    #axs[0].plot(pop.T[0, :], pop.T[i + 2, :], color='C%d' % (i), label=r'$S_%d$' % (i))
+axs[0].plot(pop.T[0, :], pop.T[1, :] - 1, color='black', linestyle='dashed', label='act. state\nindex')
+
+axs[0].set_ylabel('El. populations')
+axs[0].legend(labelspacing=0)
+
+axs[2].plot(energies.T[0, :], energies.T[2, :], color='black', alpha=1, label=r'$E_k$')
+axs[2].set_ylabel('Kin. energy' + ' (' + enunits + ')')
+
+for i in range(0, config['nstates']):
+     axs[3].scatter(energies.T[0, pop.T[1, :]==(i+1)], energies.T[-1, pop.T[1, :]==(i+1)] - energies.T[-1, 0], color=colors[i], s=10)
+axs[3].plot(energies.T[0, :], energies.T[-1, :] - energies.T[-1, 0], color='black', alpha=0.5)
+axs[3].plot([energies.T[0, 0], energies.T[0, -1]], [0, 0], color='black', linestyle='dashed')
+axs[3].set_ylabel('Total energy' + ' (' + enunits + ')')
+axs[3].set_xlabel('Time (fs)')
+
+# setting minor ticks
+for j in range(4):
+    axs[j].minorticks_on()
+    axs[j].tick_params('both', direction='in', which='both', top=True, right=True)
+
+# save figure
+if config['print']:
+    plt.savefig('PES_pop', dpi=300)
+plt.tight_layout()
+plt.subplots_adjust(hspace=0)
+plt.show()
