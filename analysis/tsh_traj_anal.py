@@ -32,28 +32,15 @@ def parse_cmd():
         description="Analyze Surface Hopping trajectories",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("-p", "--print", action="store_true", help="Save png figure")
-    parser.add_argument("-c", "--convert", action="store_false", help="Convert a.u. to eV")
+    parser.add_argument("-s", "--save-fig", action="store_true", help="Save png figure")
+    parser.add_argument("-eu", "--energy-units", choices=["eV", "au"], default="eV", help="Energy units")
     parser.add_argument(
-        "-s",
-        "--shift",
+        "-es",
+        "--energy-shift",
         action="store_false",
         help="Shift curves so that the lowest state minimum has 0 energy",
     )
     parser.add_argument("-n", "--nstates", type=int, help="Number of states to plot (default: all)")
-    parser.add_argument(
-        "-pop",
-        "--population",
-        default="pop.dat",
-        help="File with populations from simulations",
-    )
-    parser.add_argument("-pes", "--pes", default="PES.dat", help="File with PES from simulations")
-    parser.add_argument(
-        "-en",
-        "--energy",
-        default="energies.dat",
-        help="Energy fileFile with energies from simulations - used to get running PES",
-    )
     args = parser.parse_args()
     return vars(args)
 
@@ -66,26 +53,37 @@ def file_exists(fname: str):
 
 
 config = parse_cmd()
-file_exists(config["population"])
-file_exists(config["pes"])
-file_exists(config["energy"])
+
+# input files
+popfile = "pop.dat"
+pesfile = "PES.dat"
+enfile = "energies.dat"
+
+# check if files exist
+file_exists(popfile)
+file_exists(pesfile)
+file_exists(enfile)
 
 # Lazy imports to speed up help printing
 import numpy as np  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
 # reading data from files
-data = np.genfromtxt(config["pes"])
-energies = np.genfromtxt(config["energy"])
-pop = np.genfromtxt(config["population"])
+pop = np.genfromtxt(popfile)
+data = np.genfromtxt(pesfile)
+energies = np.genfromtxt(enfile)
 
-# Set nstates to all unless specified otherwise
+# Set nstates to all unless specified otherwise, or check if nstates is valid
 nstates = config["nstates"]
 if nstates is None:
     nstates = len(data.T) - 1
+elif nstates > len(data.T) - 1:
+    exit(f"ERROR: nstates ({nstates}) is larger than the number of states in the data ({len(data.T) - 1})")
+elif nstates < 1:
+    exit(f"ERROR: nstates ({nstates}) must be at least 1")
 
 # converting data to eV
-if config["convert"]:
+if config["energy_units"] == "eV":
     data.T[1:, :] = data.T[1:, :] * 27.2114
     energies.T[1:, :] = energies.T[1:, :] * 27.2114
     enunits = "eV"
@@ -93,16 +91,32 @@ else:
     enunits = "a.u."
 
 # shifting data
-if config["shift"]:
+if config["energy_shift"]:
     minE = np.min(data.T[1:, :])
     data.T[1:, :] = data.T[1:, :] - minE
     energies.T[1, :] = energies.T[1, :] - minE
     energies.T[-1, :] = energies.T[-1, :] - minE
 
-# plotting
+### plotting
 colors = plt.cm.viridis(np.linspace(0, 0.8, nstates))
 fig, axs = plt.subplots(4, 1, figsize=(8, 7.5), gridspec_kw={"height_ratios": [1, 2, 1, 1]}, sharex=True)
 
+# plotting populations
+for i in range(nstates):
+    axs[0].plot(pop.T[0, :], pop.T[i + 2, :], color=colors[i], label=rf"$S_{i}$")
+
+axs[0].plot(
+    pop.T[0, :],
+    pop.T[1, :] - 1,
+    color="black",
+    linestyle="dashed",
+    label="act. state\nindex",
+)
+
+axs[0].set_ylabel("El. populations")
+axs[0].legend(labelspacing=0)
+
+# plotting PES
 for i in range(0, nstates):
     axs[1].plot(data.T[0, :], data.T[i + 1, :], color=colors[i], label=rf"$S_{i}$")
 
@@ -127,24 +141,11 @@ axs[1].plot(
 axs[1].set_ylabel(f"Energy ({enunits})")
 axs[1].legend(labelspacing=0)
 
-
-for i in range(nstates):
-    axs[0].plot(pop.T[0, :], pop.T[i + 2, :], color=colors[i], label=rf"$S_{i}$")
-
-axs[0].plot(
-    pop.T[0, :],
-    pop.T[1, :] - 1,
-    color="black",
-    linestyle="dashed",
-    label="act. state\nindex",
-)
-
-axs[0].set_ylabel("El. populations")
-axs[0].legend(labelspacing=0)
-
+# plotting kinetic energy
 axs[2].plot(energies.T[0, :], energies.T[2, :], color="black", alpha=1, label=r"$E_k$")
 axs[2].set_ylabel(f"Kin. energy ({enunits})")
 
+# plotting total energy
 for i in range(0, nstates):
     axs[3].scatter(
         energies.T[0, pop.T[1, :] == (i + 1)],
@@ -165,7 +166,8 @@ for axis in axs:
 
 plt.tight_layout()
 plt.subplots_adjust(hspace=0)
+
 # save figure
-if config["print"]:
+if config["save_fig"]:
     plt.savefig("PES_pop", dpi=300)
 plt.show()
