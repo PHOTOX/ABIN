@@ -23,6 +23,14 @@ or:
 
 Author: Jiri Janos 2025
 """
+import os.path
+
+# ABIN output files that we need
+POPULATION_FILE = "pop.dat"
+PES_FILE = "PES.dat"
+ENERGY_FILE = "energies.dat"
+
+AUtoEV = 27.2114
 
 def parse_cmd():
     """Parse command-line arguments"""
@@ -41,57 +49,44 @@ def parse_cmd():
         help="Shift curves so that the lowest state minimum has 0 energy",
     )
     parser.add_argument("-n", "--nstates", type=int, help="Number of states to plot (default: all)")
-    args = parser.parse_args()
-    return vars(args)
-
-
-def file_exists(fname: str):
-    from os.path import exists
-
-    if not exists(fname):
-        exit(f"ERROR: file '{fname}' does not exist")
+    return parser.parse_args()
 
 
 config = parse_cmd()
 
-# input files
-popfile = "pop.dat"
-pesfile = "PES.dat"
-enfile = "energies.dat"
+for fname in (POPULATION_FILE, PES_FILE, ENERGY_FILE):
+    if not os.path.exists(fname):
+        exit(f"ERROR: file '{fname}' does not exist")
 
-# check if files exist
-file_exists(popfile)
-file_exists(pesfile)
-file_exists(enfile)
-
-# Lazy imports to speed up help printing
+# Lazy imports to speed up CLI help printing
 import numpy as np  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
 # reading data from files
-pop = np.genfromtxt(popfile)
-data = np.genfromtxt(pesfile)
-energies = np.genfromtxt(enfile)
+pop = np.genfromtxt(POPULATION_FILE)
+data = np.genfromtxt(PES_FILE)
+energies = np.genfromtxt(ENERGY_FILE)
 
 # Set nstates to all unless specified otherwise, or check if nstates is valid
-nstates = config["nstates"]
+nstates_all = len(data.T) - 1
+nstates = config.nstates
 if nstates is None:
-    nstates = len(data.T) - 1
-elif nstates > len(data.T) - 1:
-    exit(f"ERROR: nstates ({nstates}) is larger than the number of states in the data ({len(data.T) - 1})")
+    nstates = nstates_all
+elif nstates > nstates_all:
+    exit(f"ERROR: nstates ({nstates}) is larger than the number of states in the data ({nstates_all})")
 elif nstates < 1:
     exit(f"ERROR: nstates ({nstates}) must be at least 1")
 
-# converting data to eV
-if config["energy_units"] == "eV":
-    data.T[1:, :] = data.T[1:, :] * 27.2114
-    energies.T[1:, :] = energies.T[1:, :] * 27.2114
+# convert energy units
+if config.energy_units == "eV":
+    data.T[1:, :] = data.T[1:, :] * AUtoEV
+    energies.T[1:, :] = energies.T[1:, :] * AUtoEV
     enunits = "eV"
 else:
     enunits = "a.u."
 
-# shifting data
-if config["energy_shift"]:
+# Shift energies
+if config.energy_shift:
     minE = np.min(data.T[1:, :])
     data.T[1:, :] = data.T[1:, :] - minE
     energies.T[1, :] = energies.T[1, :] - minE
@@ -168,6 +163,6 @@ plt.tight_layout()
 plt.subplots_adjust(hspace=0)
 
 # save figure
-if config["save_fig"]:
+if config.save_fig:
     plt.savefig("PES_pop", dpi=300)
 plt.show()
