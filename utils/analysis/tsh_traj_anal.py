@@ -1,6 +1,8 @@
 #!/bin/env python3
 # /// script
 # requires-python = ">=3.9"
+# NOTE: PyQT6 dependency is a workaround for:
+# https://github.com/astral-sh/uv/issues/6893
 # dependencies = [
 #     "matplotlib",
 #     "numpy",
@@ -20,6 +22,12 @@ or:
 
     ./tsh_traj_analysis.py
 
+
+You can also launch the script via 'uv' (https://github.com/astral-sh/uv)
+which will automatically install all needed dependencies (numpy, matplotlib)
+in a separate virtual environment:
+
+    uv run tsh_traj_analysis.py
 
 Author: Jiri Janos 2025
 """
