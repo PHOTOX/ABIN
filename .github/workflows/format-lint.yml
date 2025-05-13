@@ -42,4 +42,5 @@ jobs:
     - uses: actions/checkout@v4
     - uses: astral-sh/setup-uv@v6
     - name: Run scripts
-      run: uv run -p 3.9 analysis/tsh_traj_anal.py -h
+      # TODO: Test the script on actual TSH trajectory
+      run: uv run -p 3.9 utils/analysis/tsh_traj_anal.py -h
