@@ -1,8 +1,8 @@
 #!/bin/env python3
 # /// script
 # requires-python = ">=3.9"
-# NOTE: PyQT6 dependency is a workaround for:
-# https://github.com/astral-sh/uv/issues/6893
+# # NOTE: PyQT6 dependency is a workaround for:
+# # https://github.com/astral-sh/uv/issues/6893
 # dependencies = [
 #     "matplotlib",
 #     "numpy",
@@ -31,6 +31,7 @@ in a separate virtual environment:
 
 Author: Jiri Janos 2025
 """
+
 import os.path
 
 # ABIN output files that we need
@@ -39,6 +40,7 @@ PES_FILE = "PES.dat"
 ENERGY_FILE = "energies.dat"
 
 AUtoEV = 27.2114
+
 
 def parse_cmd():
     """Parse command-line arguments"""
