@@ -53,10 +53,11 @@ def parse_cmd():
     parser.add_argument("-s", "--save-fig", action="store_true", help="Save png figure")
     parser.add_argument("-eu", "--energy-units", choices=["eV", "au"], default="eV", help="Energy units")
     parser.add_argument(
-        "-es",
+        "-es", 
         "--energy-shift",
-        action="store_false",
-        help="Shift curves so that the lowest state minimum has 0 energy",
+        type=float,
+        default=None,
+        help="Energy shift parameter in energy-units. All energy curves will be shifted by this energy shift parameter. If the option is not specified, the ground-state energy at time zero will be set to 0.",
     )
     parser.add_argument("-n", "--nstates", type=int, help="Number of states to plot (default: all)")
     return parser.parse_args()
@@ -96,11 +97,13 @@ else:
     enunits = "a.u."
 
 # Shift energies
-if config.energy_shift:
-    minE = np.min(data.T[1:, :])
-    data.T[1:, :] = data.T[1:, :] - minE
-    energies.T[1, :] = energies.T[1, :] - minE
-    energies.T[-1, :] = energies.T[-1, :] - minE
+if config.energy_shift is None:
+    minE = -np.min(data.T[1:, 0])
+else:
+    minE = config.energy_shift
+data.T[1:, :] = data.T[1:, :] + minE # shifting PES
+energies.T[1, :] = energies.T[1, :] + minE # shifting kinetic energy
+energies.T[-1, :] = energies.T[-1, :] + minE # shifting total energy
 
 ### plotting
 colors = plt.cm.viridis(np.linspace(0, 0.8, nstates))
