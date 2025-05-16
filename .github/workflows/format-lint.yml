@@ -41,6 +41,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: astral-sh/setup-uv@v6
-    - name: Run scripts
-      # TODO: Test the script on actual TSH trajectory
+    - name: Run scripts explicitly calling python 
       run: uv run -p 3.9 utils/analysis/tsh_traj_anal.py -h
+    - name: Run scripts directly relying on shebang
+      run: ./utils/analysis/tsh_traj_anal.py -h
+      # TODO: Test the script on actual TSH trajectory
+
+
