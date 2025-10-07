@@ -48,7 +48,7 @@ if [[ $? -eq 0 ]];then
    cp $input.log $input.log.old
 else
    cp $input.log $input.log.error
-   echo "ERROR from G09/r.g09: G09 job probably failed."
+   echo "ERROR from GAUSSIAN/r.gaussian: Gaussian job probably failed."
    echo " See $input.log.error"
    exit 2
 fi
