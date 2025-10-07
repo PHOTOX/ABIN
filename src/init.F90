@@ -806,7 +806,10 @@ contains
          write (stdout, *) '  /_/        \_\ |_____/   |_|  |_|    \_|'
          write (stdout, *) ' '
          write (stdout, *)
-         write (stdout, *) ' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek'
+         write (stdout, *) ' D. Hollas, J. Suchan, J. Janos, M. Oncak and P. Slavicek'
+         write (stdout, *) ' '
+         write (stdout, *) ' with contributions by O. Svoboda, S. Srsen, Jan Postulka,'
+         write (stdout, *) '      V. Juraskova, M. Barnfield, J. Chalabala and others'
          write (stdout, *) ' '
       end subroutine print_logo
 
