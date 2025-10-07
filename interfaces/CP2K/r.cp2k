@@ -6,6 +6,7 @@ input=input$ibead.inp
 natom=$(wc -l < ../geom.dat.$ibead)
 let lines=natom+2
 
+# Developed for SW versions: 3.0-4.1
 source ../SetEnvironment.sh CP2K
 
 echo "$natom" > input$ibead.xyz

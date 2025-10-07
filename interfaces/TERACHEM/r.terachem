@@ -2,6 +2,7 @@
 # This script is called by ABIN as:
 # TERACHEM/r.terachem <timestep> <ibead>
 
+# Developed for SW version: v1.9
 # SETUP the TeraChem environment
 # $TERAEXE (used below) should hold the path to the terachem binary
 # The SetEnvironment.sh script that handles this is specific to PHOTOX clusters.

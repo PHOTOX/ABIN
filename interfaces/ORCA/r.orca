@@ -14,6 +14,7 @@
 cd "$(dirname "$0")" || exit 2
 set -uo pipefail
 
+# Developed for SW versions: 3.0.0-6.0.0
 if [[ -f ../SetEnvironment.sh ]]; then
   # This is specific to Prague clusters
   source ../SetEnvironment.sh ORCA

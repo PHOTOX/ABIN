@@ -1,5 +1,6 @@
 #! /bin/bash
 cd MOPAC
+# Developed for SW version: 2016
 source ../SetEnvironment.sh MOPAC
 
 timestep=$1
