@@ -3,12 +3,6 @@
 #This script is used to run QM/MM calculations with ChemShell with Landau-Zener surface hopping.
 #Requred qm programs like MOLPRO have to be source to run it in chemshell environment.
 
-#ChemShell
-source SetEnvironment.sh CHEMSHELL
-
-#QM progam
-source SetEnvironment.sh MOLPRO 2024
-
 cd CHEMSH-LZ
 timestep=$1
 ibead=$2
@@ -17,9 +11,9 @@ natom=$(wc -l ../geom.dat.$ibead) && natom=$(echo "${natom%% *}")
 geometry=../geom.dat.$ibead
 read -t 2 -a nstate
 read -t 2 -a tocalc
-qm_theory="molpro: {executable={$MOLPROEXE -s -I /tmp/$USER/${JOB_ID} -d /tmp/$USER/${JOB_ID} -W $PWD/scratch --no-xml-output}  read_control=yes}"
+source chemsh-lz.inp
 
-source chemshell.inp
+qm_theory="molpro: {executable={$MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead}  read_control=yes}"
 
 # Get unique types for both sets
 readarray -t unique_qm_types < <(echo "$types_qm_atoms" | tr ' ' '\n' | awk '!x[$0]++')
@@ -82,7 +76,7 @@ for qm_type in "${unique_qm_types[@]}"; do
    echo "declare $qm_type" >> ff_pom.dat
 done
 
-cat ff.dat >> ff_pom.dat
+cat init_ff.dat >> ff_pom.dat
 mv ff_pom.dat ff.dat
 
 # Transform non-bonded parameters to dl_poly format
@@ -145,7 +139,7 @@ EOF
 
 ############ END OF DL_POLY INPUT #####################
 
-$CHEMSHELLEXE -s --no-xml-output  >& geom.com.out <geom.com
+$CHEMSHELLEXE  >& geom.com.out <geom.com
 
 # test if unit_conn.dat exists and conn.dat does not: create the conn.dat in that case from it
 if [ ! -f conn.dat ] && [ -f unit_conn.dat ]; then

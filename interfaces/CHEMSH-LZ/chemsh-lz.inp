@@ -34,7 +34,7 @@ hx 0.527184 0.1852
 EOF
 
 ##################### FORCE FIELD PARAMETERS FOR MM ATOMS ######################
-cat >> ff.dat << EOF
+cat > init_ff.dat << EOF
 charge o -.82
 charge h +.41
 vdw  o o  625.502 629327.0 
@@ -49,5 +49,5 @@ EOF
 #ChemShell
 source SetEnvironment.sh CHEMSHELL
 #Molpro
-source SetEnvironment.sh MOLPRO 2024
+source SetEnvironment.sh MOLPRO
 

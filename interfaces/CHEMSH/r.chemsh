@@ -10,27 +10,15 @@ input=input$ibead
 natom=$(wc -l ../geom.dat.$ibead) && natom=$(echo "${natom%% *}")
 geometry=../geom.dat.$ibead
 
-source chemshell.inp
+source chemsh.inp
 #################### USER INPUT #######################
 #test which qm_code is used, mndo or orca
 if [ "$qm_code" == "mndo" ]; then
-    source SetEnvironment.sh MNDO
     qm_theory="mndo: { executable=$MNDOEXE hamiltonian=$hamiltonian charge=$charge mult=$mult }"
 elif [ "$qm_code" == "orca" ]; then
-    source SetEnvironment.sh ORCA 5.0.3
-    qm_theory="orca: { executable=$ORCAEXE version=5.0 hamiltonian=dft functional=$hamiltonian charge=$charge mult=$mult }"
+    qm_theory="orca: { executable=$ORCAEXE version=5.0 hamiltonian=dft functional=$hamiltonian basis=$basis charge=$charge mult=$mult maxcyc=1000 }"
 fi
 
-##################### NON-BONDED PARAMETERS FOR QM ATOMS ######################
-# Every row represents one atom type and its epsilon and sigma parameters.
-# Here units of kJ/mol and nm are expected.
-# These parameters will be transformed and added to dl_poly input file ff.dat. Pair rules will be applied on them and on those found in ff.dat.
-# THIS INTERFACE USES AN EXAMPLE OF AZOBENZENE IN METHANOL FROM OPLS-FF
-cat > non_bonded.dat << EOF
-nx 0.71128  0.325
-cx 0.276144 0.35
-hx 0.12552  0.25
-EOF
 #################### END OF USER INPUT ################
 
 # Get unique types for both sets
@@ -51,10 +39,10 @@ nresidue=$(echo $MMatom / $length_residue | bc)
 if [ ! -f ff.dat ]; then                                                                                           
 for qm_type in "${unique_qm_types[@]}"; do                                                                         
    echo "declare $qm_type" >> ff_pom.dat                                                                                                                                               
-done                                                                                                               
-                                                                                          
-cat ff.dat >> ff_pom.dat                                                                      
-mv ff_pom.dat ff.dat                                                                          
+done
+
+cat init_ff.dat >> ff_pom.dat
+mv ff_pom.dat ff.dat
 
 # Transform non-bonded parameters to dl_poly format
 while read -r line; do
@@ -117,7 +105,7 @@ EOF
 
 ############ END OF DL_POLY INPUT #####################
 
-$CHEMSHELLEXE -s --no-xml-output  >& geom.com.out <geom.com
+$CHEMSHELLEXE  >& geom.com.out <geom.com
 
 # test if unit_conn.dat exists and conn.dat does not: create the conn.dat in that case from it
 if [ ! -f conn.dat ] && [ -f unit_conn.dat ]; then

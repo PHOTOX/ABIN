@@ -33,7 +33,7 @@ hx 0.12552  0.25
 EOF
 
 ##################### FORCE FIELD PARAMETERS FOR MM ATOMS ######################
-cat >> ff.dat << EOF
+cat > init_ff.dat << EOF
 declare ho
 charge  c   +.145
 charge  h   +.04
@@ -53,5 +53,5 @@ source SetEnvironment.sh CHEMSHELL
 if [ "$qm_code" == "mndo" ]; then
     source SetEnvironment.sh MNDO
 elif [ "$qm_code" == "orca" ]; then    
-    source SetEnvironment.sh ORCA 5.0.3
+    source SetEnvironment.sh ORCA
 fi
