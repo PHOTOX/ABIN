@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: astral-sh/setup-uv@v6
 
     - name: Run formatter
@@ -27,7 +27,7 @@ jobs:
     name: Lint check
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install fortitude linter
       run: pip install fortitude-lint==0.7.1
@@ -39,7 +39,7 @@ jobs:
     name: Test and lint utililities and analysis scripts
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: astral-sh/setup-uv@v6
     - name: Run scripts via uv run 
       run: uv run -p 3.9 utils/analysis/tsh_traj_anal.py -h
