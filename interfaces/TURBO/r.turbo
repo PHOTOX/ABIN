@@ -11,6 +11,7 @@ TYPE="RI-MP2" # RI-DFT|DFT|RI-MP2
 TURBO_INPUTS="INITIAL_RIMP2"
 TURBO_CONTROL=$TURBO_INPUTS/control
 
+# Developed for SW version: 7.6.1
 source ../SetEnvironment.sh TURBOMOLE
 
 SCRATCH="scratch.$ibead"
