@@ -45,7 +45,7 @@ jobs:
       CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 2
 
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - uses: fortran-lang/setup-fortran@v1
       id: setup-fortran
@@ -120,7 +120,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - uses: fortran-lang/setup-fortran@v1
       id: setup-fortran
@@ -144,7 +144,7 @@ jobs:
       FC: gfortran
       CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 2
 
@@ -192,7 +192,7 @@ jobs:
       GCC_V: ${{ matrix.gcc_v}}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 2
     - name: Set GFortran version
@@ -231,7 +231,7 @@ jobs:
     env:
       CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 2
 
@@ -291,7 +291,7 @@ jobs:
       CODECOV_NAME: ${{format('{0} GCC-{1} MPICH-{2}', github.job, matrix.gcc_v, matrix.mpich_v)}}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 2
 
@@ -351,7 +351,7 @@ jobs:
       OPENMPI_PATCH: "2"
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 2
     - name: OpenMPI build cache
@@ -395,7 +395,7 @@ jobs:
       CODECOV_NAME: ${{format('{0} PLUMED-{1}', github.job, matrix.plumed_v)}}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 2
     - name: Plumed build cache
