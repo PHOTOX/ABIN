@@ -170,11 +170,13 @@ fi
 
 $CHEMSHELLEXE $input.com > $input.com.out
 
-if [[ $? -eq 1 ]];then
-   echo "Error in ChemShell. Check $input.com.out"
-elif $( grep -q grep 'error code 1' $input.com.out ) ;then
-   echo "Error in QM code."
-else
+
+if [[ $? -ne 0 ]]; then
+    echo "Error in ChemShell. Check $input.com.out"
+    exit 2
+    elif $( grep -q grep 'error code 1' $input.com.out ) ;then
+echo "Error in QM code."
+    exit 2
    cp $input.com.out $input.com.out.old
    cp g g.old
    cp e e.old
