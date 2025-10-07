@@ -35,7 +35,7 @@ module mod_error
       end subroutine error
    end interface
 
-   ! This is the defailt error handle, which gets
+   ! This is the default error handler, which gets
    ! overriden in pFUnit unit tests.
    procedure(error), pointer :: error_method => print_error_and_stop
 
