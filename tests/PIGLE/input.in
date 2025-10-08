@@ -17,8 +17,8 @@ nwritef=1,
 nrest=1,
 /
 
-&nhcopt
-inose=2,
+&thermostat 
+therm='gle',
 temp=200,
 rem_comrot=.false.
 gle_test=.true.

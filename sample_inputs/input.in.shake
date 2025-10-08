@@ -19,12 +19,12 @@ ishake1=1,1,4,4,8,8,11,11,  ! list of bond constraints
 ishake2=2,3,5,6,9,10,12,13,
 /
 
-&nhcopt
+&thermostat
 nmolt=53,               ! number of separate systems(partitions) to couple NHC thermostat
 natmolt=53*3            ! number of atoms in each partition
 nshakemol=2,2,0,2,2,3*0,  ! number of constraints in each partition
 imasst=0,               ! DO NOT use massive thermostat when using SHAKE
-inose=1,		! Only global Nose-Hoover is available for SHAKE
+therm='nhc',		! Only global Nose-Hoover is available for SHAKE
 temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
 tau0=0.001
-/
+

@@ -18,9 +18,9 @@ nwritev=0,		! how often we print velocities? (by default ABIN does not print vel
 /
 
 
-&nhcopt
+&thermostat
 temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
-inose=1,		! Thermostat options: 
+therm='nhc',		! Thermostat options: 
                         ! 0 = NVE( microcanonical)
                         ! 1 = Nose-Hoover
                         ! 2 = Generalized Langevin Equation (GLE)

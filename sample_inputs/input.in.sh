@@ -14,8 +14,8 @@ nrest=1,		! how often to print restart files?
 nwritev=0,		! how often to print velocities?
 /
 
-&nhcopt
-inose=0,		! NVE ensemble (thermostat turned OFF)
+&thermostat
+therm='none',		! NVE ensemble (thermostat turned OFF)
 !temp=0.00,		! Usually, you would read initial velocities from previous ground state sampling (-v option)
 /
 

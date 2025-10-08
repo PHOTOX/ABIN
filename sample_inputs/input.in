@@ -31,9 +31,9 @@ nwritef=0,		! how often we print forces?
 /
 
 ! Thermostat options
-&nhcopt
+&thermostat
 temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
-inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, Langevin 3
+therm='none',		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, Langevin 3
 nchain=4,		! number of nose-hoover chains
 tau0=0.0015,		! relaxation time of NHC thermostat
 /

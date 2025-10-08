@@ -21,8 +21,8 @@ nrest=5,		! how often to print restart files?
 nwritev=0,		! how often to print velocities?
 /
 
-&nhcopt
+&thermostat
 temp=298.15,		! temperature (Kelvins) for initial Maxwell-Boltzmann sampling of velocities
                         ! WARNING: The actual temperature of the simulation is determined via the GLE parameters!
-inose=2,		! GLE thermostat for QT or PI+GLE, needs additional parameters in "GLE-A" and "GLE-C" files
+therm='gle',		! GLE thermostam for QT or PI+GLE, needs additional parameters in "GLE-A" and "GLE-C" files
 /
