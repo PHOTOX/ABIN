@@ -133,7 +133,7 @@ module mod_random
                -0.2017619095413939D-06, 0.2948964053761139D-05, &
                -0.1051448397925916D-06/
 
-      if(isave.lt.0) then
+      if(isave<0) then
         isave=0
         tiny = r1mach()**2
         pi4=atan(one)
@@ -149,9 +149,9 @@ module mod_random
          call vranf(gran, 0, iseed)
       end if
 
-      if(nran.gt.0) then
+      if(nran>0) then
         newran=nran-isave
-        if(isave.eq.1) gran(1)=gsave
+        if(isave==1) gran(1)=gsave
         call vranf(gran(isave+1), newran)
         do 100 i=1,newran-1,2
         fac = sqrt(twom*log(gran(isave+i)+tiny))
@@ -174,7 +174,7 @@ module mod_random
         gran(isave+i+1)=fac*cxi
   100   continue
 
-        if(mod(newran,2).eq.1) then
+        if(mod(newran,2)==1) then
           call vranf(xran, 1)
           fac=sqrt(twom*log(gran(nran)+tiny))
           trig=twopi*xran(1)
@@ -368,7 +368,7 @@ module mod_random
 
       ! set table to zero and exercise the bit generator a little
 
-      ix = iabs(iseed)
+      ix = abs(iseed)
 
       do i = 1, np
          x(i) = zero
@@ -428,7 +428,7 @@ module mod_random
       integer, intent(in) :: mode, nexec, np, nq
       integer :: i, k
 
-      if (nq.ge.np.or.np.eq.0.or.nq.eq.0) then
+      if (nq>=np.or.np==0.or.nq==0) then
          call fatal_error(__FILE__, __LINE__, &
             & 'Illegal table parameter(s) in xuwarm')
          return
@@ -437,26 +437,26 @@ module mod_random
 !      exercise the generator for nexec rounds of np prn's
 !      separate sections for subtractive or additive version
 
-          if(mode.le.0) then
+          if(mode<=0) then
             do k=1,nexec
               do i=1,nq
                 y(i)=y(i)-y(i+np-nq)
-                if(y(i).lt.zero) y(i)=y(i)+one
+                if(y(i)<zero) y(i)=y(i)+one
               end do
               do i=nq+1,np
                 y(i)=y(i)-y(i-nq)
-                if(y(i).lt.zero) y(i)=y(i)+one
+                if(y(i)<zero) y(i)=y(i)+one
               end do
             end do
           else
             do k=1,nexec
               do i=1,nq
                 y(i)=y(i)+y(i+np-nq)
-                if(y(i).ge.one) y(i)=y(i)-one
+                if(y(i)>=one) y(i)=y(i)-one
               end do
               do i=nq+1,np
                 y(i)=y(i)+y(i-nq)
-                if(y(i).ge.one) y(i)=y(i)-one
+                if(y(i)>=one) y(i)=y(i)-one
               end do
             end do
           end if
@@ -478,12 +478,12 @@ module mod_random
 ! THIS IS DEFINED AS THE SMALLEST POSITIVE MACHINE NUMBER
 ! U SUCH THAT 1.0 + U .NE. 1.0E0
 ! ---------------------------------------------------------------------
-      IF(ICALL.EQ.0) THEN
+      IF(ICALL==0) THEN
         ICALL=1
         U = ONE
   10    U = U*HALF
         COMP = ONE + U
-        IF(COMP .NE. ONE) GO TO 10
+        IF(COMP /= ONE) GOTO 10
         EPS = U*TWO
       END IF
       R1MACH = EPS
@@ -640,7 +640,7 @@ contains
          write (stdout, *) 'Getting random seed from /dev/urandom'
          read (un) seed
          close (un)
-         seed = iabs(seed)
+         seed = abs(seed)
       else
          ! Fallback to XOR:ing the current time and pid. The PID is
          ! useful in case one launches multiple instances of the same

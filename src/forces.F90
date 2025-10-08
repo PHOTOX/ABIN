@@ -234,7 +234,7 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, quantum_energy)
    ! Tuckerman normal modes Hamiltonian
    ! Not tested
    if (inormalmodes == 2) then
-      ak = NWALK * TEMP**2 * amg / dsqrt(nwalk * 1.0D0)
+      ak = NWALK * TEMP**2 * amg / sqrt(nwalk * 1.0D0)
    end if
 
    ! This is the energy coming from the Path Integral harmonic forces

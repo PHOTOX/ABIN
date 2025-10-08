@@ -616,7 +616,7 @@ contains
             de2dt2 = (2.0D0 * de(1) - 5.0D0 * de(2) + 4.0D0 * de(3) - de(4)) / dt**2
             argument = de2dt2 / de(1)
             if (argument > 0.0D0) then
-               sigma_ba(ist2, ist1) = dsqrt(argument) / 2.0D0
+               sigma_ba(ist2, ist1) = sqrt(argument) / 2.0D0
             end if
             sigma_ba(ist1, ist2) = -sigma_ba(ist2, ist1)
          end do
@@ -1044,11 +1044,11 @@ contains
       ! Rescaling the velocities
 
       if (b_temp < 0) then
-         g_temp = (b_temp + dsqrt(c_temp)) / 2.0D0 / a_temp
+         g_temp = (b_temp + sqrt(c_temp)) / 2.0D0 / a_temp
       end if
 
       if (b_temp >= 0) then
-         g_temp = (b_temp - dsqrt(c_temp)) / 2.0D0 / a_temp
+         g_temp = (b_temp - sqrt(c_temp)) / 2.0D0 / a_temp
       end if
 
       iw = 1
@@ -1169,7 +1169,7 @@ contains
 
       if (ekin >= de) then
 
-         alfa = dsqrt(1 - de / ekin)
+         alfa = sqrt(1 - de / ekin)
 
          vx = alfa * vx
          vy = alfa * vy
@@ -1296,7 +1296,7 @@ contains
          do i = 1, ci_len
             cidotprod(ist1) = cidotprod(ist1) + CIvecs(i, ist1) * CIvecs_old(i, ist1)
          end do
-         if (cidotprod(ist1) < 1 / dsqrt(2.0D0)) then
+         if (cidotprod(ist1) < 1 / sqrt(2.0D0)) then
             write (*, *) "Warning: cidotprod too low."
          end if
       end do

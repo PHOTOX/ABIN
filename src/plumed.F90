@@ -5,7 +5,7 @@
 ! PLUMED is statically linked with ABIN, see Makefile.
 ! To install PLUMED libraries, see 'dev_scripts/install_plumed.sh'
 module mod_plumed
-   use iso_c_binding, only: C_NULL_PTR
+   use, intrinsic :: iso_c_binding, only: C_NULL_PTR
    use mod_const, only: DP
 #ifndef USE_PLUMED
    use mod_error, only: not_compiled_with

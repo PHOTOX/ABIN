@@ -30,7 +30,7 @@ jobs:
     - uses: actions/checkout@v5
 
     - name: Install fortitude linter
-      run: pip install fortitude-lint==0.7.1
+      run: pip install fortitude-lint==0.7.5
 
     - name: Lint check
       run: fortitude check src/

@@ -22,7 +22,7 @@ contains
       r = (x(at1, iw) - x(at2, iw))**2
       r = r + (y(at1, iw) - y(at2, iw))**2
       r = r + (z(at1, iw) - z(at2, iw))**2
-      r = dsqrt(r)
+      r = sqrt(r)
    end function get_distance
 
    real(DP) function get_angle(x, y, z, at1, at2, at3, iw) result(angle)
@@ -46,7 +46,7 @@ contains
       vec2y = y(at3, iw) - y(at2, iw)
       vec2z = z(at3, iw) - z(at2, iw)
       angle = 180.0D0 / PI * acos((vec1x * vec2x + vec1y * vec2y + vec1z * vec2z) / &
-               & (dsqrt(vec1x**2 + vec1y**2 + vec1z**2) * dsqrt(vec2x**2 + vec2y**2 + vec2z**2)))
+               & (sqrt(vec1x**2 + vec1y**2 + vec1z**2) * sqrt(vec2x**2 + vec2y**2 + vec2z**2)))
    end function get_angle
 
    real(DP) function get_dihedral(x, y, z, at1, at2, at3, at4, iw, shiftdih)
@@ -81,7 +81,7 @@ contains
       ! TODO: Add error handling for malformed dihedral angles to prevent division by zero
       get_dihedral = 180.0D0 / PI * acos( &
              & (norm1x * norm2x + norm1y * norm2y + norm1z * norm2z) / &
-             & (dsqrt(norm1x**2 + norm1y**2 + norm1z**2) * dsqrt(norm2x**2 + norm2y**2 + norm2z**2)) &
+             & (sqrt(norm1x**2 + norm1y**2 + norm1z**2) * sqrt(norm2x**2 + norm2y**2 + norm2z**2)) &
              & )
 
       if (sign > 0) get_dihedral = shiftdih - get_dihedral
@@ -109,7 +109,7 @@ contains
    ! Convert FORTRAN string to zero-terminated C string
    ! and remove any leading and trailing spaces.
    function c_string(string)
-      use iso_c_binding, only: C_CHAR, C_NULL_CHAR
+      use, intrinsic :: iso_c_binding, only: C_CHAR, C_NULL_CHAR
       character(kind=C_CHAR, len=*), intent(in) :: string
       character(kind=C_CHAR, len=len(string) + 1) :: c_string
       c_string = trim(adjustl(string))//C_NULL_CHAR

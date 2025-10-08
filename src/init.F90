@@ -762,6 +762,8 @@ contains
             write (stdout, *) '              Minimization                    '
          case (5)
             write (stdout, *) '             Landau Zener MD                  '
+         case default
+            call fatal_error(__FILE__, __LINE__, 'invalid ipimd in '//trim(chinput))
          end select
 
          write (stdout, *) '    using potential: '//toupper(trim(pot))

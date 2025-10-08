@@ -45,7 +45,7 @@ contains
       ! Most QM program print Dx, Dy, Dz components first.
       do ind = 1, 3 * nstates, 3
          total_dip = dipoles(ind)**2 + dipoles(ind + 1)**2 + dipoles(ind + 2)**2
-         total_dip = dsqrt(total_dip)
+         total_dip = sqrt(total_dip)
          write (UDIP, format2, advance="no") total_dip
       end do
 
@@ -67,7 +67,7 @@ contains
 
       do ind = 1, 3 * ntdip, 3
          total_tdip = tdipoles(ind)**2 + tdipoles(ind + 1)**2 + tdipoles(ind + 2)**2
-         total_tdip = dsqrt(total_tdip)
+         total_tdip = sqrt(total_tdip)
          write (UTDIP, format2, advance="no") total_tdip
       end do
 

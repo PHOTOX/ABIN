@@ -231,7 +231,7 @@ contains
          dy = y(2, i) - y(1, i)
          dz = z(2, i) - z(1, i)
          r = dx**2 + dy**2 + dz**2
-         r = dsqrt(r)
+         r = sqrt(r)
          fac = hrot%k * (r - hrot%r0) / r
          fx(1, i) = fac * dx
          fx(2, i) = -fx(1, i)
@@ -258,7 +258,7 @@ contains
          dy = y(2, i) - y(1, i)
          dz = z(2, i) - z(1, i)
          r = dx**2 + dy**2 + dz**2
-         r = dsqrt(r)
+         r = sqrt(r)
          fac = hrot%k * (r - hrot%r0) / r
          hess(1, 1, i) = (hrot%k * dx**2 / r**2 - fac * dx**2 / r**2 + fac) / nwalk
          hess(2, 2, i) = (hrot%k * dy**2 / r**2 - fac * dy**2 / r**2 + fac) / nwalk
@@ -313,7 +313,7 @@ contains
       call real_positive(d0, 'd0_morse')
       call real_positive(r0, 'r0_morse')
 
-      a = dsqrt(k_morse / 2.0D0 / d0)
+      a = sqrt(k_morse / 2.0D0 / d0)
       morse = morse_params(d0=d0, a=a, r0=r0)
    end subroutine morse_init
 
@@ -332,7 +332,7 @@ contains
          dy = y(2, i) - y(1, i)
          dz = z(2, i) - z(1, i)
          r = dx**2 + dy**2 + dz**2
-         r = dsqrt(r)
+         r = sqrt(r)
          ex = exp(-morse%a * (r - morse%r0))
          fac = 2 * morse%a * ex * morse%d0 * (1 - ex) / r
          fx(1, i) = fac * dx
@@ -364,7 +364,7 @@ contains
          dy = y(2, i) - y(1, i)
          dz = z(2, i) - z(1, i)
          r = dx**2 + dy**2 + dz**2
-         r = dsqrt(r)
+         r = sqrt(r)
          ex = exp(-a * (r - morse%r0))
          fac = 2 * a * ex * morse%d0 * (1 - ex) / r
          fac2 = 2 * morse%d0 * a**2 * ex**2 / r**2

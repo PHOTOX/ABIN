@@ -371,14 +371,14 @@ contains
 
          delta_e = abs(potential_energies(ist1) - potential_energies(current_state))
          tau = (1.0D0 + alpha / kinetic_energy) / delta_e
-         scaling_factor = dexp(-dtp / tau)
+         scaling_factor = exp(-dtp / tau)
 
          ! WARNING: The Eq. 17 in the Persico paper is wrong,
          ! the scaling factor should be damping populations, NOT the WF coefficients.
          ! In previous ABIN versions (and in some other SH packages), this was incorrect.
          ! To reproduce older data, the user can set correct_decoherence=.false. in namelist sh.
          if (correct_decoherence) then
-            scaling_factor = dsqrt(scaling_factor)
+            scaling_factor = sqrt(scaling_factor)
          end if
 
          cel_re(ist1) = cel_re(ist1) * scaling_factor
@@ -403,7 +403,7 @@ contains
          call fatal_error(__FILE__, __LINE__, 'Invalid decoherence renormalization.')
       end if
 
-      renormalization_factor = dsqrt(renormalization_factor)
+      renormalization_factor = sqrt(renormalization_factor)
 
       cel_re(current_state) = cel_re(current_state) * renormalization_factor
       cel_im(current_state) = cel_im(current_state) * renormalization_factor
