@@ -3,6 +3,8 @@ module mod_estimators
    use mod_const, only: DP, AUtoFS
    use mod_files, only: UCV, UCVDCV, UESTENERGY
    implicit none
+   public
+   ! TODO: Make all of the *_cumul variables private
    real(DP) :: est_prim_cumul = 0.0D0, est_vir_cumul = 0.0D0
    real(DP) :: est_prim2_cumul = 0.0D0, est_prim_vir = 0.0D0, est_vir2_cumul = 0.0D0
    real(DP) :: cv_prim_cumul = 0.0D0, cv_vir_cumul = 0.0D0, cv_dcv_cumul = 0.0D0
@@ -13,7 +15,7 @@ contains
    ! Expecting cartesian coordinates and forces!
    subroutine estimators(x, y, z, fxab, fyab, fzab, eclas)
       use mod_general, only: ipimd, pot, natom, nwalk, it, sim_time, &
-                           & ncalc, nwrite, inormalmodes, imini, ihess, icv
+                           & nwrite, inormalmodes, imini, ihess, icv
       use mod_nhc, only: temp, inose
       use mod_system, only: am, dime
       use mod_potentials, only: hessian_harmonic_oscillator, hessian_morse, hessian_harmonic_rotor
@@ -34,15 +36,14 @@ contains
          temp = temp / nwalk
       end if
 
-      ! We calculate all quantities only every ncalc steps
-      ! also we begin to accumulate energies only after first enmini steps to avoid
+      ! We begin to accumulate energies only after first enmini steps to avoid
       ! large initial oscilations
-      itnc = (it - enmini) / ncalc
+      itnc = it - enmini
       nf = dime * natom - nshake !degrees of freedom
 
       ! We begin to accumulate averages of heat capacities only after it > imini
       ! This auxiliary variable is for cumulative averaging if imini > 0
-      it2 = (it - imini) / ncalc
+      it2 = it - imini
 
       ! We cannot accumulate heat capacity without accumulating energy first
       if (enmini > imini .and. icv == 1) then

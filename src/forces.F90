@@ -128,10 +128,12 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_const, only: DP
    use mod_general, only: natom, ipimd
    use mod_water, only: watpot
+   use mod_force_h2o, only: force_h2o
    use mod_force_mm, only: force_mm
    use mod_sbc, only: force_sbc, isbc
    use mod_plumed, only: iplumed, force_plumed
    use mod_potentials, only: force_harmonic_rotor, force_harmonic_oscillator, force_morse, force_doublewell
+   use mod_potentials_sh, only: force_nai
    use mod_splined_grid, only: force_splined_grid
    use mod_cp2k, only: force_cp2k
    use mod_shell_interface, only: force_abin
@@ -139,6 +141,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_force_tera, only: force_tera
    use mod_terampi_sh, only: force_terash
    implicit none
+   ! allow(external-procedure) ! fortitude linter
    external :: force_water
    real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
    real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
@@ -155,6 +158,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
       call force_mm(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_mmwater_")
       call force_water(x, y, z, fx, fy, fz, eclas, natom, walkmax, watpot)
+   case ("_h2o_")
+      call force_h2o(x, y, z, fx, fy, fz, eclas, natom, walkmax)
    case ("_splined_grid_")
       ! Only 1D spline grid supported at the moment
       call force_splined_grid(x, fx, eclas, walkmax)
@@ -170,6 +175,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
       call force_cp2k(x, y, z, fx, fy, fz, eclas, walkmax)
    case ("_tcpb_")
       call force_tcpb(x, y, z, fx, fy, fz, eclas, walkmax)
+   case ("_nai_")
+      call force_nai(x, y, z, fx, fy, fz, eclas)
    case ("_tera_")
       if (ipimd == 2 .or. ipimd == 5) then
          call force_terash(x, y, z, fx, fy, fz, eclas)
@@ -254,9 +261,9 @@ subroutine force_quantum(fx, fy, fz, x, y, z, amg, quantum_energy)
             fz(j, i) = (z(j, i) - z(j, kplus))
             fz(j, i) = fz(j, i) + (z(j, i) - z(j, kminus))
             fz(j, i) = -fz(j, i) * ak(j, i)
-            equant = equant + 0.5 * ak(j, i) * (x(j, i) - x(j, kplus))**2
-            equant = equant + 0.5 * ak(j, i) * (y(j, i) - y(j, kplus))**2
-            equant = equant + 0.5 * ak(j, i) * (z(j, i) - z(j, kplus))**2
+            equant = equant + 0.5D0 * ak(j, i) * (x(j, i) - x(j, kplus))**2
+            equant = equant + 0.5D0 * ak(j, i) * (y(j, i) - y(j, kplus))**2
+            equant = equant + 0.5D0 * ak(j, i) * (z(j, i) - z(j, kplus))**2
          end do
       end do
    end if

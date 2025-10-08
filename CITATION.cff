@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Hollas
+    given-names: Daniel
+    orcid: https://orcid.org/0000-0003-4075-6438
+  - family-names: Suchan
+    given-names: Jiří
+    orcid: https://orcid.org/0000-0003-0637-4022
+  - family-names: Janoš
+    given-names: Jiří
+    orcid: https://orcid.org/0000-0001-5903-8538
+  - family-names: Ončák
+    given-names: Milan
+    orcid: https://orcid.org/0000-0002-4801-3068
+  - family-names: Slavíček
+    given-names: Petr
+    orcid: https://orcid.org/0000-0002-5358-5538
+title: "ABIN"
+version: 1.2.0
+doi: 10.5281/zenodo.1228462
+date-released: 2025-10-07
+url: "https://github.com/PHOTOX/ABIN"
+# preferred citation for later if publication

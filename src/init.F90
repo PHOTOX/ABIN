@@ -40,11 +40,13 @@ contains
       use mod_nhc
       use mod_estimators
       use mod_potentials
-      use mod_sh_integ, only: phase
+      use mod_potentials_sh
+      use mod_sh_integ, only: phase, nstate
       use mod_sh, only: read_sh_input, print_sh_input
-      use mod_lz
+      use mod_lz, only: read_lz_input, print_lz_input, lz_init
       use mod_qmmm, only: natqm, natmm
       use mod_force_mm, only: initialize_mm
+      use mod_force_h2o, only: initialize_h2o_pot, h2opot
       use mod_gle
       use mod_sbc, only: sbc_init, rb_sbc, kb_sbc, isbc, rho
       use mod_prng_init, only: initialize_prng
@@ -65,13 +67,13 @@ contains
       use mod_terampi
       use mod_terampi_sh
       use mod_mdstep, only: initialize_integrator, nabin, nstep_ref
-      implicit none
       real(DP), intent(out) :: dt
       ! Input parameters for analytical potentials
-      real(DP) :: lambda_dw = -1.0D0, D0_dw = -1.0D0, k_dw = -1.0D0, r0_dw = -1.D0
-      real(DP) :: r0_morse = -1, d0_morse = -1, k_morse = -1
-      real(DP) :: k = -1, r0 = -1
-      real(DP) :: kx = -1, ky = -1, kz = -1
+      ! TODO: Initialize these variable in the code not here
+      real(DP), save :: lambda_dw = -1.0D0, D0_dw = -1.0D0, k_dw = -1.0D0, r0_dw = -1.D0
+      real(DP), save :: r0_morse = -1, d0_morse = -1, k_morse = -1
+      real(DP), save :: k = -1, r0 = -1
+      real(DP), save :: kx = -1, ky = -1, kz = -1
       ! Lennard-Jones parameteres and Coulomb charges (pot=_mm_)
       ! All input parameters are expected to be in atomic units,
       ! except LJ_rmin which should be in angstroms.
@@ -82,14 +84,14 @@ contains
       ! L-J parameters
       real(DP), allocatable :: LJ_rmin(:), LJ_eps(:)
       ! Initial temperature (read from namelist nhcopt)
-      real(DP) :: temp0 = -1
+      real(DP), save :: temp0 = -1
       ! User-defined masses in relative atomic units
       real(DP), allocatable :: masses(:)
       integer :: iw, iat, natom_xyz, iost
       integer :: shiftdihed
       ! Random number seed
       ! Negative value means we get the seed from /dev/urandom
-      integer :: irandom = -1
+      integer, save :: irandom = -1
       ! Number of OpenMP processes, read from ABIN input
       ! WARNING: We do NOT use OMP_NUM_THREADS environment variable!
       integer :: nproc
@@ -116,9 +118,8 @@ contains
       ! - general: Most basic MD settings + misc
       ! - nhcopt:  parameters for thermostats
       ! - remd:    parameters for Replica Exchange MD
-      ! - sh:      parameters for Surface Hopping
+      ! - sh:      parameters for Surface Hopping, moved to mod_sh module
       ! - system:  system-specific parameters for model potentials, masses, SHAKE constraints...
-      ! - lz:      parameters for Landau-Zener excited state dynamics.
       ! - qmmm:    parameters for internal QMMM (not really tested).
       !
       ! All namelists need to be in a single input file, and the code
@@ -126,7 +127,7 @@ contains
       namelist /general/ pot, ipimd, mdtype, istage, inormalmodes, nwalk, nstep, icv, ihess, imini, nproc, iqmmm, &
          nwrite, nwritex, nwritev, nwritef, dt, irandom, nabin, irest, nrest, anal_ext, &
          isbc, rb_sbc, kb_sbc, gamm, gammthr, conatom, mpi_milisleep, narchive, xyz_units, &
-         dime, ncalc, idebug, enmini, rho, iknow, watpot, iremd, iplumed, plumedfile, &
+         dime, idebug, enmini, rho, iknow, watpot, h2opot, iremd, iplumed, plumedfile, &
          en_restraint, en_diff, en_kk, restrain_pot, &
          pot_ref, nstep_ref, nteraservers, max_mpi_wait_time, cp2k_mpi_beads
 
@@ -139,8 +140,6 @@ contains
          nang, ang1, ang2, ang3, ndih, dih1, dih2, dih3, dih4, shiftdihed, &
          k, r0, kx, ky, kz, r0_morse, d0_morse, k_morse, D0_dw, lambda_dw, k_dw, r0_dw, &
          Nshake, ishake1, ishake2, shake_tol, potential_file
-
-      namelist /lz/ initstate_lz, nstate_lz, nsinglet_lz, ntriplet_lz, deltaE_lz, energydifthr_lz
 
       namelist /qmmm/ natqm, natmm, q, LJ_rmin, LJ_eps, mm_types
 
@@ -368,9 +367,8 @@ contains
       end if
 
       if (ipimd == 5) then
-         read (uinput, lz)
-         rewind (uinput)
-         call lz_init(pot) !Init arrays for possible restart
+         call read_lz_input(uinput)
+         call lz_init(pot)
       end if
 
       if (iremd == 1) then
@@ -435,11 +433,11 @@ contains
       if (inose == 1) then
          call nhc_init()
       else if (inose == 2) then
-         call gle_init(dt * 0.5 / nabin / nstep_ref) !nabin is set to 1 unless ipimd=1
+         call gle_init(dt * 0.5D0 / nabin / nstep_ref) !nabin is set to 1 unless ipimd=1
       else if (inose == 3) then
-         call pile_init(dt * 0.5, tau0_langevin)
+         call pile_init(dt * 0.5D0, tau0_langevin)
       else if (inose == 4) then
-         call gle_init(dt * 0.5 / nstep_ref)
+         call gle_init(dt * 0.5D0 / nstep_ref)
       else if (inose == 0) then
          write (stdout, '(A)') 'No thermostat. NVE ensemble.'
       else
@@ -511,8 +509,14 @@ contains
       if (pot == '_splined_grid_' .or. pot_ref == '_splined_grid_') then
          call initialize_spline(natom)
       end if
+      if (pot == '_h2o_' .or. pot_ref == '_h2o_') then
+         call initialize_h2o_pot(natom, atnames)
+      end if
       if (pot == '_mm_' .or. pot_ref == '_mm_') then
          call initialize_mm(natom, atnames, mm_types, q, LJ_rmin, LJ_eps)
+      end if
+      if (pot == '_nai_' .or. pot_ref == '_nai_') then
+         call nai_init(natom, nwalk, ipimd, nstate)
       end if
 
       if (my_rank == 0) then
@@ -612,10 +616,6 @@ contains
             write (*, *) 'Cannot compute heat capacity for NVE simulation.'
             error = 1
          end if
-         if (ncalc > nwrite) then
-            write (*, *) 'Ncalc greater than nwrite.Setting nwrite=ncalc'
-            nwrite = ncalc
-         end if
 
          if (ipimd == 1 .and. inose <= 0) then
             write (*, *) 'You have to use thermostat with PIMD! (inose>=0)'
@@ -624,10 +624,6 @@ contains
          end if
          if (ipimd < 0 .or. ipimd > 5) then
             write (*, *) 'Invalid ipimd value'
-            error = 1
-         end if
-         if (ipimd == 5 .and. pot == '_tera_' .and. ntriplet_lz > 0) then
-            write (*, *) 'ERROR: Landau-Zener with Singlet-Triplet transitions not implemented with TeraChem over MPI.'
             error = 1
          end if
          if (ipimd == 5 .and. nwalk /= 1) then
@@ -734,7 +730,6 @@ contains
          call int_nonnegative(narchive, 'narchive')
 
          call int_positive(nwalk, 'nwalk')
-         call int_positive(ncalc, 'ncalc')
 
          if (error == 1) then
             call fatal_error(__FILE__, __LINE__, 'Invalid input parameters')
@@ -791,7 +786,7 @@ contains
             write (stdout, *)
          end if
          if (ipimd == 5) then
-            write (stdout, nml=lz, delim='APOSTROPHE')
+            call print_lz_input()
             write (stdout, *)
          end if
          if (iqmmm > 0 .or. pot == '_mm_') then
@@ -811,7 +806,10 @@ contains
          write (stdout, *) '  /_/        \_\ |_____/   |_|  |_|    \_|'
          write (stdout, *) ' '
          write (stdout, *)
-         write (stdout, *) ' D. Hollas, J. Suchan, O. Svoboda, M. Oncak, P. Slavicek'
+         write (stdout, *) ' D. Hollas, J. Suchan, J. Janos, M. Oncak and P. Slavicek'
+         write (stdout, *) ' '
+         write (stdout, *) ' with contributions by O. Svoboda, S. Srsen, Jan Postulka,'
+         write (stdout, *) '      V. Juraskova, M. Barnfield, J. Chalabala and others'
          write (stdout, *) ' '
       end subroutine print_logo
 
@@ -1211,6 +1209,7 @@ end module mod_init
 
 ! We cannot include finish in the module, since it would
 ! result in circular dependencies.
+! allow(procedure-not-in-module) ! fortitude linter
 subroutine finish(error_code)
    use mod_arrays, only: deallocate_arrays
    use mod_general, only: pot, pot_ref, ipimd, inormalmodes, en_restraint

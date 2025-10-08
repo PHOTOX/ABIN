@@ -4,6 +4,7 @@
 module PBC
    use mod_const, only: DP
    implicit none
+   private
    real(DP) :: boxx, boxy, boxz
    integer, allocatable :: natmol(:) ! used for wrapping, independent of nmolt
    integer :: nmol = 1 !used for wraping, independent of nmolt
@@ -14,7 +15,7 @@ contains
 
    subroutine wrap(x, y, z)
       use mod_general, only: nwalk
-      real(DP) :: x(:, :), y(:, :), z(:, :)
+      real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       integer :: i, iat, iat2, iw, iww, iwrap
 
       iwrap = 0
@@ -81,6 +82,6 @@ contains
 
       end do
 
-   end subroutine
+   end subroutine wrap
 
 end module PBC

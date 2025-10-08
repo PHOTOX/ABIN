@@ -1,0 +1,18 @@
+[check]
+ignore = [
+  "line-too-long",
+  "trailing-whitespace", # we should enable this, autofix available 
+  "incorrect-space-before-comment", # we should enable this, autofix available 
+  "use-all", # should use "only:"
+  "assumed-size-character-intent", # TODO: We should fix all instances!
+  "implicit-external-procedures", # requires Fortran 2018
+]
+exclude = [
+  "src/fftw3.F90",
+  "src/force_cp2k.F90",
+]
+line-length = 132
+show-fixes = true
+[check.per-file-ignores]
+"src/forces.F90" = ["procedure-not-in-module"]
+"src/random.F90" = ["deprecated-relational-operator"]

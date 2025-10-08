@@ -28,13 +28,14 @@ module mod_error
 
    abstract interface
       subroutine error(filename, line_number, message)
+         implicit none
          character(len=*), intent(in) :: filename
          integer, intent(in) :: line_number
          character(len=*), intent(in) :: message
       end subroutine error
    end interface
 
-   ! This is the defailt error handle, which gets
+   ! This is the default error handler, which gets
    ! overriden in pFUnit unit tests.
    procedure(error), pointer :: error_method => print_error_and_stop
 

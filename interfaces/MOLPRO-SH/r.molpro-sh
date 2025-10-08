@@ -42,7 +42,7 @@ let natom2=natom+2
 
 # reading from state.dat
 # Number of states,state we are on and which NACM to compute
-read -t 2 -a nstate
+read -t 2 nstate
 read -t 2 -a tocalc
 
 # MOLPRO-CASSCF
@@ -234,7 +234,5 @@ echo "TIMESTEP = $timestep" >> $input.com.out.all
 echo "####################" >> $input.com.out.all
 cat $input.com.out >> $input.com.out.all
 
-
 # TODO: Handle charges inside ABIN
 # grep 'Unique atom' $input.com.out -A$natom | awk -F " " '{print $2 "  " $9 $10}'>>../charges.all
-

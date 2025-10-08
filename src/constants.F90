@@ -8,6 +8,7 @@
 ! ABIN uses atomic units internally
 module mod_const
    implicit none
+   public
    ! TODO; Separate DP to its own module, mod_kinds
    ! and rename mod_const to mod_phys_const
    integer, parameter :: DP = kind(1.0D0)

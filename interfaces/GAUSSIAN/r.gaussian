@@ -1,6 +1,7 @@
 #!/bin/bash
 cd $(dirname $0)
 
+# Developed for SW versions: G09, G16
 source ../SetEnvironment.sh GAUSSIAN
 
 timestep=$1
@@ -48,7 +49,7 @@ if [[ $? -eq 0 ]];then
    cp $input.log $input.log.old
 else
    cp $input.log $input.log.error
-   echo "ERROR from G09/r.g09: G09 job probably failed."
+   echo "ERROR from GAUSSIAN/r.gaussian: Gaussian job probably failed."
    echo " See $input.log.error"
    exit 2
 fi

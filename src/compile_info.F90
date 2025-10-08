@@ -2,10 +2,11 @@
 ! to get the current date and time,
 ! which are taken from preprocessor constants,
 ! and the current Git commit, which is passed in from Makefile.
+! allow(procedure-not-in-module) ! fortitude linter
 subroutine print_compile_info()
    use iso_fortran_env, only: compiler_version, compiler_options
    use mod_files, only: stdout
-   character(len=*), parameter :: ABIN_VERSION = '1.1'
+   character(len=*), parameter :: ABIN_VERSION = '1.2.0'
 
    write (stdout, *) ''
    write (stdout, *) '          COMPILATION INFO'

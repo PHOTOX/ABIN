@@ -26,4 +26,4 @@ enable-decl=True
 disable-fypp=True
 
 case=[1,1,1,2]
-exclude=[random.F90,fftw3.F90,force_cp2k.F90]
+exclude=[random.F90,fftw3.F90,force_cp2k.F90, h2o_schwenke.f, h2o_cvrqd.f]

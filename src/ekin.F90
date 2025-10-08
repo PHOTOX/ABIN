@@ -9,21 +9,18 @@ module mod_kinetic
 contains
    subroutine temperature(px, py, pz, amt, eclas)
       use mod_const, only: AUtoFS, AUtoK
-      use mod_general, only: it, ncalc, sim_time, natom, nwalk, nwrite, inormalmodes, ipimd
+      use mod_general, only: it, sim_time, natom, nwalk, nwrite, inormalmodes, ipimd
       use mod_system, only: dime, f, conatom
       use mod_files, only: UTEMPER, UENERGY
       use mod_nhc, only: inose, get_nhcham
       use mod_gle, only: get_langham
       use mod_shake, only: nshake
-      implicit none
       integer :: iw, iat
       real(DP), intent(in) :: px(:, :), py(:, :), pz(:, :)
       real(DP), intent(in) :: amt(:, :)
       real(DP), intent(in) :: eclas
       real(DP) :: est_temp, temp1, ekin_mom
-      real(DP) :: it2
 
-      it2 = it / ncalc
       ekin_mom = 0.0D0
       do iw = 1, nwalk
          do iat = 1, natom
@@ -45,7 +42,7 @@ contains
 
          ! Temperature and conserved quantities of thermostats
          write (UTEMPER, '(F15.2,F10.2)', advance="no") sim_time * AUtoFS, est_temp * autok
-         if (ipimd /= 2) write (UTEMPER, '(F10.2)', advance="no") est_temp_cumul * autok / it2
+         if (ipimd /= 2) write (UTEMPER, '(F10.2)', advance="no") est_temp_cumul * autok / it
 
          if (inose == 1) then
             write (UTEMPER, '(E20.10)', advance="no") get_nhcham(natom, nwalk) + ekin_mom + eclas
@@ -59,7 +56,7 @@ contains
             ! Printing to file energies.dat
             write (UENERGY, '(F15.2,3E20.10)', advance='no') sim_time * AUtoFS, &
                                                            & eclas, ekin_mom, eclas + ekin_mom
-            if (ipimd == 0) write (UENERGY, '(E20.10)', advance="no") entot_cumul / it2
+            if (ipimd == 0) write (UENERGY, '(E20.10)', advance="no") entot_cumul / it
             write (UENERGY, *)
          end if
 
@@ -70,7 +67,6 @@ contains
    real(DP) function ekin_v(vx, vy, vz)
       use mod_general, only: nwalk, natom
       use mod_system, only: am
-      implicit none
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP) :: temp1, ekin_mom
       integer :: iw, iat

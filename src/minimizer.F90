@@ -6,6 +6,7 @@
 ! DON'T USE THIS!
 module mod_minimize
    use mod_const, only: DP
+   implicit none
    private
    public :: minimize, gamm, gammthr
    real(DP) :: gamm = 20.D0, gammthr = 1D-10 !minthr=1e-15
@@ -19,7 +20,6 @@ contains
       use mod_system, only: names, conatom
       use mod_analysis, only: trajout
       use mod_interfaces, only: force_clas
-      implicit none
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas

@@ -28,10 +28,9 @@ contains
    real(DP) function get_angle(x, y, z, at1, at2, at3, iw) result(angle)
       use mod_const, only: PI
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-      integer, intent(in) :: iw
+      integer, intent(in) :: at1, at2, at3, iw
       real(DP) :: vec1x, vec1y, vec1z
       real(DP) :: vec2x, vec2y, vec2z
-      integer :: at1, at2, at3
 
       if (at1 == at2 .or. at1 == at3 .or. at2 == at3) then
          angle = 0
@@ -46,19 +45,18 @@ contains
       vec2x = x(at3, iw) - x(at2, iw)
       vec2y = y(at3, iw) - y(at2, iw)
       vec2z = z(at3, iw) - z(at2, iw)
-      angle = 180 / pi * acos((vec1x * vec2x + vec1y * vec2y + vec1z * vec2z) / &
+      angle = 180.0D0 / PI * acos((vec1x * vec2x + vec1y * vec2y + vec1z * vec2z) / &
                & (dsqrt(vec1x**2 + vec1y**2 + vec1z**2) * dsqrt(vec2x**2 + vec2y**2 + vec2z**2)))
    end function get_angle
 
    real(DP) function get_dihedral(x, y, z, at1, at2, at3, at4, iw, shiftdih)
       use mod_const, only: PI
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :), shiftdih
-      integer, intent(in) :: iw
+      integer, intent(in) :: at1, at2, at3, at4, iw
       real(DP) :: vec1x, vec1y, vec1z
       real(DP) :: vec2x, vec2y, vec2z
       real(DP) :: vec3x, vec3y, vec3z, sign
       real(DP) :: norm1x, norm1y, norm1z, norm2x, norm2y, norm2z
-      integer :: at1, at2, at3, at4
 
       vec1x = x(at1, iw) - x(at2, iw)
       vec1y = y(at1, iw) - y(at2, iw)
@@ -81,7 +79,7 @@ contains
       ! TODO: Refactor, make more intermediate results, e.g.
       ! norms of the normal vectors.
       ! TODO: Add error handling for malformed dihedral angles to prevent division by zero
-      get_dihedral = 180 / pi * acos( &
+      get_dihedral = 180.0D0 / PI * acos( &
              & (norm1x * norm2x + norm1y * norm2y + norm1z * norm2z) / &
              & (dsqrt(norm1x**2 + norm1y**2 + norm1z**2) * dsqrt(norm2x**2 + norm2y**2 + norm2z**2)) &
              & )
@@ -269,7 +267,7 @@ contains
    end subroutine file_exists_or_exit
 
    integer function open_file_for_reading(fname) result(un)
-      character(len=*) :: fname
+      character(len=*), intent(in) :: fname
       character(300) :: errmsg
       integer :: iost
 
@@ -281,7 +279,6 @@ contains
    end function open_file_for_reading
 
    real(DP) function ekin_p(px, py, pz, mass, natom, nwalk)
-      implicit none
       real(DP), dimension(:, :), intent(in) :: px, py, pz
       real(DP), dimension(:, :), intent(in) :: mass
       integer, intent(in) :: natom, nwalk
@@ -349,7 +346,7 @@ contains
    subroutine milisleep(milisec)
       use, intrinsic :: iso_c_binding, only: C_INT, C_INT32_T
       use mod_interfaces, only: usleep
-      integer :: milisec
+      integer, intent(in) :: milisec
       integer(kind=C_INT32_T) :: usec
       integer(kind=C_INT) :: c_err
 

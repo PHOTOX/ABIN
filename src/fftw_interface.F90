@@ -4,8 +4,8 @@ module mod_fftw3
    use, intrinsic :: iso_c_binding
 #ifndef USE_FFTW
    use mod_error, only: not_compiled_with
-   implicit none
 #endif
+   implicit none
    private
    public :: fftw_normalmodes_init, fftw_normalmodes_finalize
    public :: dft_normalmode2cart, dft_cart2normalmode
@@ -38,7 +38,7 @@ contains
 
       deallocate (x_tmp)
       deallocate (cx_tmp)
-   end subroutine
+   end subroutine fftw_normalmodes_init
 
    ! Simple wrapper functions around the FFTW interface.
    subroutine dft_normalmode2cart(nm, cart)
@@ -72,16 +72,16 @@ contains
    end subroutine fftw_normalmodes_init
 
    subroutine dft_normalmode2cart(nm, cart)
-      complex(C_DOUBLE_COMPLEX), dimension(:) :: nm
-      real(C_DOUBLE), dimension(:) :: cart
+      complex(C_DOUBLE_COMPLEX), dimension(:), intent(inout) :: nm
+      real(C_DOUBLE), dimension(:), intent(inout) :: cart
       cart = 0.0D0
       nm = (0.0D0, 0.0D0)
       call not_compiled_with('FFTW library')
    end subroutine dft_normalmode2cart
 
    subroutine dft_cart2normalmode(cart, nm)
-      complex(C_DOUBLE_COMPLEX), dimension(:) :: nm
-      real(C_DOUBLE), dimension(:) :: cart
+      complex(C_DOUBLE_COMPLEX), dimension(:), intent(inout) :: nm
+      real(C_DOUBLE), dimension(:), intent(inout) :: cart
       cart = 0.0D0
       nm = (0.0D0, 0.0D0)
       call not_compiled_with('FFTW library')

@@ -51,6 +51,9 @@ cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MP
 # Use the two rows below for a debug build/
 # export CFLAGS='-g -O0'
 # --disable-fast --enable-g-option=all \
+# These are needed for newer compilers
+# export FFLAGS=-fallow-argument-mismatch
+# export FCFLAGS=-fallow-argument-mismatch
 ./configure FC=gfortran CC=gcc \
   --enable-fortran=all \
   --with-pm=hydra --with-device=ch3:nemesis \

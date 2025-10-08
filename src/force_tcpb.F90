@@ -33,7 +33,7 @@ module mod_force_tcpb
       character(len=1024) :: input_file = ''
       ! This make TC reuse WF from previous step.
       integer :: globaltreatment = 0
-   end type
+   end type tcpb_params
    type(tcpb_params) :: tcpb
    character(len=5), allocatable :: qmattypes(:)
    save

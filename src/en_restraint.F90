@@ -109,7 +109,7 @@ contains
 
             !Iterative procedure
             convercrit = 100
-            do while (convercrit > 0.00001)
+            do while (convercrit > 0.00001D0)
                ! deltaE(t+dt) prediction - improves the accuracy
                deltaEnext = 0
                do iat = 1, natom
@@ -166,7 +166,7 @@ contains
             eclas = eclas ! + quadratic_restraint_energy
 
             !Output to en_restraint.dat
-            write (UERMD, '(I8,F16.8,E20.10,E20.10,F16.8)') it, excE * AUTOEV, deltaE, 0.0, 0.0
+            write (UERMD, '(I8,F16.8,E20.10,E20.10,F16.8)') it, excE * AUTOEV, deltaE, 0.0D0, 0.0D0
 
          end if
 

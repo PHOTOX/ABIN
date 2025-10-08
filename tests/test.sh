@@ -120,14 +120,16 @@ restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.
 
 # Run all tests
 if [[ $TESTS = "all" ]];then
+   # TODO: Automaticall select all folders except for the special cases
+   # that depend on optional features.
    folders=(INIT CMD NHC-GLOBAL SHAKE \
             SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
             SH_IGNORE SH_NACM_FAIL SH_S0S1 SH_ENERGY_DIFF SH_ENERGY_DRIFT \
-            SH_BUTCHER_PHASE SH_SIMPLE_RESCALE SH_FRUSTRATED \
+            SH_BUTCHER_PHASE SH_SIMPLE_RESCALE SH_FRUSTRATED SH_NaI SH_BAECK-AN\
             LZ_SS LZ_ST LZ_ENE \
             PIMD ABINITIO ABINITIO-FAIL MTS \
             LANGEVIN QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
-            HARMON MORSE DOUBLEWELL SPLINE MM MINI QMMM \
+            H2O_SCHWENKE H2O_SCHWENKE_PIMD H2O_CVRQD HARMON MORSE DOUBLEWELL MM MINI QMMM \
             ANALYZE_EXT CMDLINE WATER_FAIL ERMD)
 
    if [[ $MPI = "TRUE" ]];then
@@ -225,27 +227,31 @@ do
       continue
    fi
 
+   # Don't exit on errors in the rest of the script, since abin invocation can fail
+   # and this makes the code simpler.
+   set +e
    # For special cases such as REMD, we need a more complicated test setup.
    # If a file 'test.sh' is present in the test directory we will use it.
-   if [[ -f "test.sh" ]];then
+   # Otherwise, execute abin directly.
+   if [[ -f "test.sh" ]]; then
 
       # Redirection to dev/null apparently needed for CP2K tests.
       # Otherwise, STDIN is screwed up. I have no idea why.
       # http://stackoverflow.com/questions/1304600/read-error-0-resource-temporarily-unavailable
       # TODO: Figure out a different solution
       #./test.sh $ABINEXE 2> /dev/null
-      ./test.sh $ABINEXE || true
+      ./test.sh $ABINEXE
 
    else
       if [[ -f "velocities.in" ]];then
-         $ABINEXE -v "velocities.in" > $ABINOUT 2>&1 || true
+         $ABINEXE -v "velocities.in" > $ABINOUT 2>&1
       else
-         $ABINEXE > $ABINOUT 2>&1 || true
+         $ABINEXE > $ABINOUT 2>&1
       fi
 
-      #for testing restart
-      if [[ -e input.in2 ]];then
-         $ABINEXE -i input.in2 >> $ABINOUT 2>&1 || true
+      # for testing restart, only execute if previous run did not fail
+      if [[ -f input.in2 && $? -eq 0 ]]; then
+         $ABINEXE -i input.in2 >> $ABINOUT 2>&1
       fi
    fi
 
@@ -255,16 +261,11 @@ do
 
    else
 
-      # Since we're running in the -e mode,
-      # we need to "hide" this possibly failing command
-      # https://stackoverflow.com/a/11231970/3682277
-      current_error=0
-      diff_files || current_error=$?
-      if [[ $current_error -ne 0 ]];then
+      if diff_files; then
+        echo -e "\033[0;32mPASSED\033[0m"
+      else
         global_error=1
         echo -e "$dir \033[0;31mFAILED\033[0m"
-      else
-        echo -e "\033[0;32mPASSED\033[0m"
       fi
    fi
 

@@ -5,7 +5,7 @@
 ! The basic workflow is very simple:
 ! 1. ABIN writes current geometry into file geom.dat
 !   in a XYZ format without the header.
-! 2. ABIN launches the shell script POT/r.pot
+! 2. ABIN launches the shell script <POT>/r.<pot>
 ! 3. The shellscript does a few things:
 !    i) Takes the input geometry and prepares the input file
 !    ii) Launches the QM program
@@ -15,7 +15,7 @@
 !
 ! NOTE: We append bead index to every file name so that we can
 ! call the interface in parallel in PIMD simulations.
-! NOTE: Interface for Surface Hopping is a bit more complicated,
+! NOTE: The interface for Surface Hopping is a bit more complicated,
 ! see interfaces/MOLPRO-SH/r.molpro-sh
 module mod_shell_interface_private
    use mod_const, only: DP, ANG
@@ -68,31 +68,6 @@ contains
       close (u)
    end subroutine write_sh_data
 
-   subroutine write_lz_data(nstate, nsinglet, ntriplet, tocalc)
-      integer, intent(in) :: nstate
-      integer, intent(in) :: nsinglet, ntriplet
-      integer, dimension(:), intent(in) :: tocalc
-      integer :: ist
-      integer :: u
-
-      if (nstate /= nsinglet + ntriplet) then
-         call fatal_error(__FILE__, __LINE__, &
-            & 'LZ: nstate /= nsinglet + ntriplet')
-      end if
-
-      open (newunit=u, file='state.dat')
-      write (u, '(I0)') nstate
-
-      ! Print for which state we need gradient
-      ! First we have singlets, then triplets
-      do ist = 1, nstate
-         if (tocalc(ist) == 1) write (u, '(I0)') ist
-      end do
-      write (u, '(I0)') nsinglet
-      write (u, '(I0)') ntriplet
-      close (u)
-   end subroutine write_lz_data
-
    function get_shellscript(potential) result(shellscript)
       use mod_utils, only: toupper
       character(len=*), intent(in) :: potential
@@ -122,7 +97,7 @@ contains
       ! Passing arguments to bash script
       ! First argument is time step
       ! Second argument is the bead index, neccessary for parallel calculations
-      write (call_cmd, '(A,I0,I4.3)') './'//trim(shellscript)//' ', it, iw
+      write (call_cmd, '(A,I0,I4.3)') trim(shellscript)//' ', it, iw
       call_cmd = append_rank(call_cmd)
 
       ! For SH, pass the 4th parameter: precision of forces as 10^(-force_accu1)
@@ -190,7 +165,7 @@ contains
 !$OMP FLUSH(abort)
          return
       end if
-   end function
+   end function read_energy
 
    subroutine read_forces(fx, fy, fz, num_atom, iw, engrad_unit, abort)
       use mod_files, only: stderr
@@ -231,10 +206,9 @@ contains
       use mod_system, only: names
       use mod_sh_integ, only: nstate
       use mod_sh, only: tocalc, en_array, istate
-      use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, nsinglet_lz, ntriplet_lz
+      use mod_lz, only: nstate_lz, tocalc_lz, en_array_lz, istate_lz, write_lz_data
       use mod_qmmm, only: natqm
       use mod_utils, only: toupper, append_rank
-      implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(out) :: eclas
@@ -276,7 +250,7 @@ contains
 
             ! Landau-Zener
             if (ipimd == 5) then
-               call write_lz_data(nstate_lz, nsinglet_lz, ntriplet_lz, tocalc_lz)
+               call write_lz_data()
             end if
 
             ! Call the external program
@@ -350,7 +324,6 @@ contains
       use mod_qmmm, only: natqm
       use mod_sh_integ, only: nstate
       use mod_sh, only: en_array, istate
-      implicit none
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas

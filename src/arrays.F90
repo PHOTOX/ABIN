@@ -3,6 +3,7 @@
 module mod_arrays
    use mod_const, only: DP
    implicit none
+   public
 
    ! TODO: Stop this madness, put everything into Traj_Data derived type
    ! and then create type(Traj_Data) :: trajectory. trajectory_prev

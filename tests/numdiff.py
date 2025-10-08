@@ -89,7 +89,7 @@ def parse_diff(fname, absolute_tolerance):
       # If the file is empty something is wrong
       # (e.g. file for comparison was not even generated)
       if len(f.read()) == 0:
-         print("Blank file encountered.")
+         print(f"File '{fname}' is empty!")
          exit(1)
       f.seek(0)
 
@@ -109,6 +109,10 @@ def parse_diff(fname, absolute_tolerance):
          diff2 = split[1].split()
          if len(diff1) != len(diff2):
              print("Number of columns differ!")
+             print("Expected:")
+             print(split[1])
+             print("Test:")
+             print(split[0])
              exit(1)
          compare_lines(diff1, diff2, absolute_tolerance)
 

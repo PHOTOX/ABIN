@@ -33,20 +33,23 @@ module mod_sh
    integer :: substep = 100
 
    ! Controls calculations of Non-adiabatic Couplings (NAC)
-   ! 0 - Analytical NAC
-   ! 1 - Numerical Hammers-Schffer-Tully model (currently not implemented)
-   ! 2 - Do not compute couplings
-   integer :: inac = 0
+   ! couplings = 'analytic'  (inac=0) - Analytical NAC (default)
+   ! couplings = 'baeck-an'  (inac=1) - Baeck-An couplings
+   ! couplings = 'none'      (inac=2) - Do not compute couplings
+   integer :: inac = 0 ! for working within the code
+   character(len=50) :: couplings = 'analytic' ! for reading the input file
+   ! energy history array and time-derivate couplings (sigma_ba) necessary for Beack-An couplings
+   real(DP), allocatable :: en_hist_array(:, :), sigma_ba(:, :) ! sigma_ba is actually the dotproduct
 
    ! 1 - Turn OFF hopping
    integer :: nohop = 0
 
    ! How to adjust velocity after hop:
-   ! 0 - Adjust velocity along the NAC vector (default)
-   ! 1 - Simple velocity rescale
-   ! NOTE: Simple v-rescale is invoked as a fallback
-   ! if there is not enough momentum along the NAC vector.
-   integer :: adjmom = 0
+   ! velocity_rescaling = 'nac_then_velocity' (adjmom=0) - Adjust velocity along the NAC vector, if not possible,
+   ! try the velocity vector (default)
+   ! velocity_rescaling = 'velocity'  (adjmom=1) - Rescale along the velocity vector
+   integer :: adjmom = 0 ! for working within the code
+   character(len=50) :: velocity_rescaling = 'nac_then_velocity' ! for reading the input file
    ! 1 - Reverse momentum direction after frustrated hop
    integer :: revmom = 0
 
@@ -89,11 +92,14 @@ module mod_sh
    integer, allocatable :: tocalc(:, :)
    ! Current electronic state
    integer, public, protected :: istate
-   ! for ethylene 2-state SA3 dynamics
+   ! Do not consider hopping into this state
+   ! Useful e.g. for ethylene 2-state SA3 dynamics
+   ! This is a bit of an ugly hack, it would be more general to have an array
+   ! of states that are calculated but ignored.
    integer :: ignore_state = 0
 
-   namelist /sh/ istate_init, nstate, substep, deltae, integ, inac, nohop, phase, decoh_alpha, popthr, ignore_state, &
-      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, adjmom, revmom, &
+   namelist /sh/ istate_init, nstate, substep, deltae, integ, couplings, nohop, phase, decoh_alpha, popthr, ignore_state, &
+      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, velocity_rescaling, revmom, &
       dE_S0S1_thr, correct_decoherence
    save
 
@@ -105,6 +111,7 @@ contains
       use mod_general, only: irest, natom, pot
       use mod_interfaces, only: force_clas
       use mod_kinetic, only: ekin_v
+      use mod_files, only: nacmefile_init
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP) :: dum_fx(size(x, 1), size(x, 2))
@@ -118,7 +125,7 @@ contains
       ! TODO: Write a print_sh_header()
       ! with all major parameters included and explained
       if (ignore_state /= 0) then
-         write (stdout, '(A,I0)') 'Ignoring state ', ignore_state
+         write (stdout, '(A,I0,A)') 'Ignoring state ', ignore_state, ' for hopping'
       end if
 
       ! Determining the initial state
@@ -150,6 +157,14 @@ contains
       en_array = 0.0D0
       en_array_old = en_array
 
+      ! Initialize the history array we use to calculate the Baeck-An couplings
+      if (inac == 1) then
+         allocate (en_hist_array(nstate, 4)) !last 3 energies (1: current, 2: n-1, 3: n-2, 4: n-3)
+         en_hist_array = 0.0D0
+         allocate (sigma_ba(nstate, nstate)) !this is equivalent to dotproduct, but I will need to store old and new values
+         sigma_ba = 0.0D0
+      end if
+
       allocate (tocalc(nstate, nstate))
       tocalc = 0
       tocalc(istate, istate) = 1
@@ -161,6 +176,9 @@ contains
       dum_eclas = 0.0D0
       dum_fx = 0.0D0; dum_fy = 0.0D0; dum_fz = 0.0D0
       call force_clas(dum_fx, dum_fy, dum_fz, x, y, z, dum_eclas, pot)
+
+      ! open nacme_all.dat if NACME is calculated
+      if (inac == 0) call nacmefile_init()
 
       ! When restarting, initial SH WF was already read from the restart file
       if (irest == 0) then
@@ -198,7 +216,7 @@ contains
    subroutine set_current_state(current_state)
       integer, intent(in) :: current_state
       istate = current_state
-   end subroutine
+   end subroutine set_current_state
 
    subroutine check_sh_parameters()
       use mod_utils, only: int_positive, int_nonnegative, int_switch, real_nonnegative
@@ -224,18 +242,45 @@ contains
          error = .true.
       end if
 
-      if (inac > 2 .or. inac < 0) then
-         write (stderr, '(A)') 'Parameter "inac" must be 0, 1 or 2.'
+      ! converting input 'couplings' into inac which is used in the code
+      select case (couplings)
+      case ('analytic')
+         inac = 0
+         write (stdout, '(A)') 'Using analytic ab initio couplings.'
+      case ('baeck-an')
+         inac = 1
+         write (stdout, '(A)') 'Using approximate Baeck-An couplings.'
+      case ('none')
+         inac = 2
+         write (stdout, '(A)') 'Ignoring nonadaiabatic couplings.'
+      case default
+         write (stderr, '(A)') 'Parameter "couplings" must be "analytic", "baeck-an" or "none".'
          error = .true.
-      end if
+      end select
+
+      ! converting input 'velocity_rescaling' into inac which is used in the code
+      select case (velocity_rescaling)
+      case ('nac_then_velocity')
+         adjmom = 0
+         write (stdout, '(A)') 'Rescaling velocity along the NAC vector after hop.'
+         write (stdout, '(A)') 'If there is not enough energy, try rescaling along the velocity vector.'
+      case ('velocity')
+         adjmom = 1
+         write (stdout, '(A)') 'Rescaling velocity along the momentum vector after hop.'
+      case default
+         write (stderr, '(A)') 'Parameter "velocity_rescaling" must be "nac_then_velocity" or "velocity".'
+         error = .true.
+      end select
+
       if (adjmom == 0 .and. inac == 1) then
-         write (stderr, '(A)') 'Combination of adjmom=0 and inac=1 is not possible.'
-         write (stderr, '(A)') 'NAC vectors are not computed if inac=1.'
+         write (stderr, '(A)') 'Combination of velocity_rescaling="nac_then_velocity" and couplings="baeck-an" is not possible.'
+         write (stderr, '(A)') 'Velocity cannot be rescaled along NAC when using Baeck-An.'
+         write (stderr, '(A)') 'Change velocity_rescaling="velocity" to rescale along the velocity vector.'
          error = .true.
       end if
 
       if (inac == 2 .and. nohop == 0) then
-         write (stdout, '(A)') 'WARNING: For simulations without couplings, inac=2, hopping probability cannot be determined.'
+         write (stdout, '(A)') 'WARNING: For simulations without couplings(="none") hopping probability cannot be determined.'
          nohop = 1
       end if
 
@@ -251,6 +296,10 @@ contains
       if (ignore_state == istate_init) then
          write (stderr, '(A)') 'ERROR: ignore_state == istate_init'
          write (stderr, '(A)') 'I cannot start on an ignored state'
+         error = .true.
+      end if
+      if (ignore_state > nstate) then
+         write (stderr, '(A)') 'Ignored state > number of computed states.'
          error = .true.
       end if
 
@@ -287,6 +336,7 @@ contains
 
       ! In TeraChem SH interface, we already got NACME
       if (pot == '_tera_') return
+      if (pot == '_nai_') return ! for NaI model, the couplings are calcualted together with forces
 
       ! Check whether we need to compute any NACME
       num_nacme = 0
@@ -541,6 +591,39 @@ contains
       end if
    end subroutine calc_nacm
 
+   ! Calculate Baeck-An couplings
+   ! Implementation was based on these two articles:
+   ! original by Barbatti: https://doi.org/10.12688/openreseurope.13624.2
+   ! another implementation by Truhlar: https://doi.org/10.1021/acs.jctc.1c01080
+   ! In the numeric implementation, we follow Barbatti and use a higher order formula.
+   subroutine calc_baeckan(dt)
+      use mod_general, only: it
+      integer :: ist1, ist2
+      real(DP), intent(in) :: dt
+      real(DP) :: de(4), de2dt2, argument
+
+      sigma_ba = 0.0D0
+
+      ! we don't have sufficient history until step 4
+      if (it < 4) return
+
+      do ist1 = 1, nstate
+         do ist2 = ist1 + 1, nstate
+            ! If ignore_state is set, we do not calculate sigma (dotproduct) for this state
+            if (ignore_state == ist1 .or. ignore_state == ist2) cycle
+            de = en_hist_array(ist2, :) - en_hist_array(ist1, :)
+            ! Second derivative (de2dt2) comes from Eq. 16 from https://doi.org/10.12688/openreseurope.13624.2
+            de2dt2 = (2.0D0 * de(1) - 5.0D0 * de(2) + 4.0D0 * de(3) - de(4)) / dt**2
+            argument = de2dt2 / de(1)
+            if (argument > 0.0D0) then
+               sigma_ba(ist2, ist1) = dsqrt(argument) / 2.0D0
+            end if
+            sigma_ba(ist1, ist2) = -sigma_ba(ist2, ist1)
+         end do
+      end do
+
+   end subroutine calc_baeckan
+
    ! move arrays from new step to old step
    subroutine move_vars(vx, vy, vz, vx_old, vy_old, vz_old)
       use mod_general, only: natom
@@ -560,8 +643,20 @@ contains
                end do
             end do
          end if
-
       end do
+
+      ! Shift the energy history for Baeck-An couplings
+      if (inac == 1) then
+         ! Move old energies by 1
+         en_hist_array(:, 4) = en_hist_array(:, 3)
+         en_hist_array(:, 3) = en_hist_array(:, 2)
+         en_hist_array(:, 2) = en_hist_array(:, 1)
+         ! new energy is stored before the couplings are calculated
+         ! I avoided doing the same as with LZSH energy history tracking because then I need to modify force_abin, force_terash and
+         ! every potential in potentials_sh (and all possible future ones). This way it is kept private and does not depend on the
+         ! way energies are calculated.
+         ! See commit: https://github.com/PHOTOX/ABIN/pull/186/commits/918f6837a76ec0f41b575d3ca948253eed2f30cc
+      end if
 
       vx_old = vx
       vy_old = vy
@@ -586,7 +681,7 @@ contains
       real(DP), dimension(nstate) :: en_array_int, en_array_newint
       real(DP), dimension(natom, nstate, nstate) :: nacx_int, nacy_int, nacz_int
       real(DP), dimension(natom, nstate, nstate) :: nacx_newint, nacy_newint, nacz_newint
-      real(DP), dimension(nstate, nstate) :: dotproduct_int, dotproduct_newint
+      real(DP), dimension(nstate, nstate) :: dotproduct_int, dotproduct_newint, sigma_ba_old
       ! Switching probabilities
       real(DP) :: t(nstate, nstate)
       ! Cumulative switching probabilities
@@ -610,20 +705,23 @@ contains
       t_tot = 1.0D0
 
       ! First, calculate NACME
-      if (inac == 0) then
-
+      if (inac == 0) then ! Analytic ab initio couplings
          ! For TeraChem MPI / FMS interface, NAC are already computed!
-         if (pot /= '_tera_') then
+         if (pot /= '_tera_' .and. pot /= '_nai_') then
             nacx = 0.0D0
             nacy = 0.0D0
             nacz = 0.0D0
             ! Compute and read NACME (MOLPRO-SH interface)
             call get_nacm(pot)
          end if
-
          ! TODO: Should we call this with TeraChem?
          ! I think TC already phases the couplings internally.
          call phase_nacme(nacx_old, nacy_old, nacz_old, nacx, nacy, nacz)
+      else if (inac == 1) then ! Baeck-An couplings
+         ! saving the current energy to the energy history (shifting was already done in previous step in move_vars)
+         en_hist_array(:, 1) = en_array(:)
+         sigma_ba_old = sigma_ba ! saving old sigma_ba
+         call calc_baeckan(dt)
       end if
 
       ! smaller time step
@@ -639,15 +737,26 @@ contains
          pop0 = get_elpop(ist)
 
          ! INTERPOLATION
-         fr = real(itp, DP) / real(substep, DP)
-         call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
-                          nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
-                          dotproduct_newint, fr)
+         if ((inac == 0) .or. (inac == 2)) then
+            fr = real(itp, DP) / real(substep, DP)
+            call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
+                             nacx_newint, nacy_newint, nacz_newint, en_array_newint, &
+                             dotproduct_newint, fr)
 
-         fr = real(itp - 1, DP) / real(substep, DP)
-         call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
-                          nacx_int, nacy_int, nacz_int, en_array_int, &
-                          dotproduct_int, fr)
+            fr = real(itp - 1, DP) / real(substep, DP)
+            call interpolate(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
+                             nacx_int, nacy_int, nacz_int, en_array_int, &
+                             dotproduct_int, fr)
+         else if (inac == 1) then
+            fr = real(itp, DP) / real(substep, DP)
+            call interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_newint, vy_newint, vz_newint, &
+                                en_array_newint, dotproduct_newint, sigma_ba, sigma_ba_old, fr)
+
+            fr = real(itp - 1, DP) / real(substep, DP)
+            call interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
+                                en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
+
+         end if
 
          ! Integrate electronic wavefunction for one dtp time step
          call sh_integrate_wf(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
@@ -1006,6 +1115,42 @@ contains
 
    end subroutine interpolate
 
+   ! interpolation of time-derivative coupling calculated via Baeck-An approximation
+   ! this routine interpolates sigma_ba between integration steps
+   subroutine interpolate_ba(vx, vy, vz, vx_old, vy_old, vz_old, vx_int, vy_int, vz_int, &
+                             en_array_int, dotproduct_int, sigma_ba, sigma_ba_old, fr)
+      use mod_general, only: natom
+      real(DP), intent(in) :: sigma_ba(:, :), sigma_ba_old(:, :)
+      real(DP), intent(in) :: vx(:, :), vy(:, :), vz(:, :) ! for velocity interpolation
+      real(DP), intent(in) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
+      real(DP), intent(out) :: dotproduct_int(:, :)
+      real(DP), intent(out) :: en_array_int(:)
+      real(DP), intent(out) :: vx_int(:, :), vy_int(:, :), vz_int(:, :) ! interpolated velocities
+      ! How far are we interpolating?
+      real(DP), intent(in) :: fr
+      real(DP) :: frd
+      integer :: ist1, ist2, iw, iat !iteration counters
+
+      frd = 1.0D0 - fr
+
+      do ist1 = 1, nstate
+         en_array_int(ist1) = en_array(ist1) * fr + en_array_old(ist1) * frd
+         do ist2 = 1, nstate
+            ! interpolating dot product
+            dotproduct_int(ist1, ist2) = sigma_ba(ist1, ist2) * fr + sigma_ba_old(ist1, ist2) * frd
+         end do
+      end do
+
+      ! interpolating velocity which is necessary for Ekin in the decoherence correction
+      iw = 1
+      do iat = 1, natom
+         vx_int(iat, iw) = vx(iat, iw) * fr + vx_old(iat, iw) * frd
+         vy_int(iat, iw) = vy(iat, iw) * fr + vy_old(iat, iw) * frd
+         vz_int(iat, iw) = vz(iat, iw) * fr + vz_old(iat, iw) * frd
+      end do
+
+   end subroutine interpolate_ba
+
    subroutine try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
       use mod_general, only: pot
       use mod_kinetic, only: ekin_v
@@ -1098,7 +1243,7 @@ contains
    end subroutine check_energy
 
    subroutine check_S0S1_gap(en_S0, en_S1, threshold_ev)
-      use mod_interfaces, only: finish
+      use mod_general, only: STOP_SIMULATION
       use mod_const, only: AUtoEV
       real(DP), intent(in) :: en_S0, en_S1
       real(DP), intent(in) :: threshold_ev
@@ -1109,8 +1254,12 @@ contains
       if (dE_S0S1 < threshold_ev) then
          write (stdout, *) 'S1 - S0 gap dropped below threshold!'
          write (stdout, *) dE_S0S1, ' < ', threshold_ev
-         call finish(0)
-         stop 0
+         ! TODO: This is an unfortunate hack,
+         ! but we can't directly stop here since we need the last step
+         ! to be written to the output files.
+         write (stdout, *) 'Simulation will stop at the end of this step.'
+         ! This global flag is checked in the main loop in abin.F90
+         STOP_SIMULATION = .true.
       end if
    end subroutine check_S0S1_gap
 

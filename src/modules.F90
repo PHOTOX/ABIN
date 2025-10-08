@@ -27,7 +27,6 @@ module mod_general
    integer :: nwrite = 1
    ! output for XYZ coordinates, velocities and forces (Molden format)
    integer :: nwritex = 1, nwritev = 0, nwritef = 0
-   integer :: ncalc = 1
    ! How often do we print restart file and how often do we archive it
    integer :: nrest = 1, narchive = 10000
    ! Restart switch, 1 = restart simulation
@@ -49,6 +48,11 @@ module mod_general
    real(DP), protected :: sim_time = 0.0D0
    ! Energy restrain MD by Jiri Suchan
    integer :: en_restraint = 0
+   ! Global flag to stop the simulation, checked at the end of each time step.
+   ! The simulation will finish prematurely (before nstep is reached),
+   ! but otherwise successfully. For example, when reaching the dE_S0S1 threshold
+   ! in Surface Hopping simulations.
+   logical :: STOP_SIMULATION = .false.
    save
 contains
    subroutine set_natom(num_atom)
@@ -58,10 +62,10 @@ contains
 
    subroutine update_simtime(dt)
       use mod_const, only: DP
-      real(DP) :: dt
+      real(DP), intent(in) :: dt
       sim_time = sim_time + dt
    end subroutine update_simtime
-end module
+end module mod_general
 
 ! TODO: Move this to a separate file, and think hard what should be inside this module.
 module mod_system
@@ -87,10 +91,12 @@ contains
 
       allocate (names(num_atom))
       names = atnames
-   end subroutine
+   end subroutine set_atom_names
 end module mod_system
 
 module mod_chars
+   implicit none
+   public
    character(len=*), parameter :: CHKNOW = 'If you know what you are doing, &
     &set iknow=1 (namelist general) to proceed.'
 end module mod_chars

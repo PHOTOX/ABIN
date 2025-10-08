@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-###############################################################################
+
+
+# /// script
+# requires-python = ">=3.6"
+# dependencies = [
+#     "configargparse",
+# ]
+# ///
+#############################################################################
 #    This file is part of fprettify.
 #    Copyright (C) 2016-2019 Patrick Seewald, CP2K developers group
 #
@@ -31,8 +38,8 @@ from fprettify import run
 try:
     import configargparse
 except ImportError:
-    print("Could not find configargparse package")
-    print("Please install it e.g. via 'pip install --user configargparse")
+    print("ERROR: Could not find configargparse package")
+    print("Please install the package, e.g. 'pip install --user configargparse'")
     sys.exit(1)
 
 if len(sys.argv) == 1:

@@ -22,10 +22,10 @@ program abin
    use mod_arrays
    use mod_files, only: stdout
    use mod_general, only: sim_time, pot, pot_ref, iremd, ipimd, &
-      & nwrite, nstep, ncalc, it, inormalmodes, istage, irest
+      & nwrite, nstep, it, inormalmodes, istage, irest, STOP_SIMULATION
    use mod_init, only: init
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
-   use mod_lz, only: lz_hop, en_array_lz, lz_rewind, nsinglet_lz, ntriplet_lz
+   use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
    use mod_utils, only: del_file, archive_file
    use mod_transform, only: initialize_pi_transforms, &
@@ -67,12 +67,6 @@ program abin
 
    write (stdout, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
    write (stdout, *) ''
-
-   ! LZ warning for too many states
-   if (ipimd == 5 .and. (nsinglet_lz > 2 .or. ntriplet_lz > 2)) then
-      write (*, *) 'WARNING: LZ was derived for a two-state problem. More states might cause unphysical behavior.'
-      write (stdout, *) ''
-   end if
 
    ! Transform coordinates and velocities for Path Integral MD
    ! (staging or normal modes)
@@ -140,9 +134,13 @@ program abin
       ! if it is present (we delete it below before we stop the program).
       call mpi_barrier_wrapper()
 
+      if (STOP_SIMULATION) exit
+
       inquire (file="EXIT", exist=file_exists)
       if (file_exists) then
          write (stdout, *) 'Found file EXIT. Writing restart file and exiting.'
+         ! TODO: Not sure why we are writing the restart file here, since it's being
+         ! written after the main loop as well.
          if (istage == 1) then
             call QtoX(vx, vy, vz, transxv, transyv, transzv)
             call QtoX(x, y, z, transx, transy, transz)
@@ -210,11 +208,6 @@ program abin
       ! In order to analyze the output, we have to perform the back transformation
       ! Transformed (cartesian) coordinates are stored in trans matrices.
 
-      ! Enter this section only every ncalc step
-      if (modulo(it, ncalc) /= 0) then
-         cycle
-      end if
-
       call temperature(px, py, pz, amt, eclas)
 
       if (istage == 1) then
@@ -247,10 +240,12 @@ program abin
    end do
 
    ! Write restart file at the end of a run
-   ! Because NCALC might be >1, we have to perform transformation to get the most
-   ! recent coordinates and velocities
+   ! TODO: This it variable manipulation is very brittle :-(
    it = it - 1
 
+   ! Because NCALC might be >1, we have to perform transformation to get the most
+   ! recent coordinates and velocities
+   ! TODO: ncalc parameter has been removed so this is probably not necessary anymore.
    if (istage == 1) then
       call QtoX(vx, vy, vz, transxv, transyv, transzv)
       call QtoX(x, y, z, transx, transy, transz)

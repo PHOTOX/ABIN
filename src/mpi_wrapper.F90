@@ -6,6 +6,7 @@ module mod_mpi
 #ifdef USE_MPI
    use mpi
 #endif
+   implicit none
    private
    public :: initialize_mpi, finalize_mpi
    public :: mpi_barrier_wrapper
@@ -78,7 +79,7 @@ contains
             call MPI_Finalize(ierr)
          end if
       end if
-   end subroutine
+   end subroutine finalize_mpi
 
    function get_mpi_error_string(mpi_err) result(error_string)
       integer, intent(in) :: mpi_err

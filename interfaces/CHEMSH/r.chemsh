@@ -1,0 +1,194 @@
+#!/bin/bash
+
+#This script is used to run QM/MM calculations with ChemShell.
+#Requred qm programs like MNDO or ORCA have to be source to run it in chemshell environment.
+
+cd CHEMSH
+timestep=$1
+ibead=$2
+input=input$ibead
+natom=$(wc -l ../geom.dat.$ibead) && natom=$(echo "${natom%% *}")
+geometry=../geom.dat.$ibead
+
+source chemsh.inp
+#################### USER INPUT #######################
+#test which qm_code is used, mndo or orca
+if [ "$qm_code" == "mndo" ]; then
+    qm_theory="mndo: { executable=$MNDOEXE hamiltonian=$hamiltonian charge=$charge mult=$mult }"
+elif [ "$qm_code" == "orca" ]; then
+    qm_theory="orca: { executable=$ORCAEXE version=5.0 hamiltonian=dft functional=$hamiltonian basis=$basis charge=$charge mult=$mult maxcyc=1000 }"
+fi
+
+#################### END OF USER INPUT ################
+
+# Get unique types for both sets
+readarray -t unique_qm_types < <(echo "$types_qm_atoms" | tr ' ' '\n' | awk '!x[$0]++')
+readarray -t unique_mm_types < <(echo "$types_mm_atoms" | tr ' ' '\n' | awk '!x[$0]++')
+
+
+echo $natom > input.xyz
+echo '' >> input.xyz
+cat $geometry >> input.xyz
+geometry=input.xyz
+MMatom=$( echo "$natom-$QMatom" | bc )
+length_residue=$(echo $types_mm_atoms | wc -w)
+nresidue=$(echo $MMatom / $length_residue | bc)
+
+############ DL_POLY INPUT  ###################
+
+if [ ! -f ff.dat ]; then                                                                                           
+for qm_type in "${unique_qm_types[@]}"; do                                                                         
+   echo "declare $qm_type" >> ff_pom.dat                                                                                                                                               
+done
+
+cat init_ff.dat >> ff_pom.dat
+mv ff_pom.dat ff.dat
+
+# Transform non-bonded parameters to dl_poly format
+while read -r line; do
+   atom_type=$(echo $line | awk '{print $1}')
+   epsilon=$(echo $line | awk '{print $2}')
+   sigma=$(echo $line | awk '{print $3}')
+   sigma_angstrom=$(echo "$sigma * 10" | bc)
+   epsilon_kcal=$(echo "$epsilon / 4.184" | bc -l)
+   c6=$(echo "$epsilon_kcal * 4 * $sigma_angstrom^6" | bc -l)
+   c12=$(echo "$c6 * $sigma_angstrom^6" | bc -l)
+   echo "vdw $atom_type $atom_type $c6 $c12" >> qm_non-bonded.dat
+done < non_bonded.dat
+
+
+for mm_type in "${unique_mm_types[@]}"; do
+   for qm_type in "${unique_qm_types[@]}"; do
+      # Example: retrieve c6 and c12 for each type (replace with your actual code/logic)
+      c6_mm=$(awk -v type="$mm_type" '$1 == "vdw" && $2 == type && $3 == type {print $4}' ff.dat)
+      c12_mm=$(awk -v type="$mm_type" '$1 == "vdw" && $2 == type && $3 == type {print $5}' ff.dat)
+      c6_qm=$(awk -v type="$qm_type" '$1 == "vdw" && $2 == type && $3 == type {print $4}' qm_non-bonded.dat)
+      c12_qm=$(awk -v type="$qm_type" '$1 == "vdw" && $2 == type && $3 == type {print $5}' qm_non-bonded.dat)
+      if [[ -n "$c6_mm" && -n "$c6_qm" && -n "$c12_mm" && -n "$c12_qm" ]]; then
+         c6=$(echo "scale=10; sqrt($c6_mm * $c6_qm)" | bc -l)
+         c12=$(echo "scale=10; sqrt($c12_mm * $c12_qm)" | bc -l)
+         LC_NUMERIC=C printf "vdw %s %s %.4f %.4f\n" "$mm_type" "$qm_type" "$c6" "$c12" >> ff.dat
+      fi
+   done
+done
+
+fi
+
+# This defines parameters for MM calculation and most importantly atom types as combination types_qm_atoms and types from geometry file.
+# Alternatively atom types can be defined as types_qm_atoms and a multiplication of types_mm_atoms.
+if [ -n "$types_mm_atoms" ]; then
+   # Create types_mm_atoms_all as a repetition of types_mm_atoms_all
+   types_mm_atoms_all=$(for i in $(seq 1 $nresidue); do echo -n "$types_mm_atoms "; done)
+else
+   types_mm_atoms_all=$(for atom in $(tail -$MMatom $geometry | awk '{print $1}'); do echo -n "${atom,     ,} "; done)
+fi
+
+dl_defs="{ mm_defs=ff.dat mxlist=100000 use_pairlist=no conn=geom.c atom_types= { $types_qm_atoms $types_mm_atoms_all } } " 
+
+
+cat > geom.com << EOF
+
+read_xyz file=$geometry coords=geom.c
+
+EOF
+
+cat > $input.com << EOF
+eandg energy=e gradient=g coords=geom.c \
+   theory= hybrid : { coupling=$embedding
+   qm_region= { $(seq  -s " " 1 $QMatom) }
+   qm_theory=$qm_theory
+   mm_theory=dl_poly : {$dl_defs}
+   }
+
+EOF
+
+
+############ END OF DL_POLY INPUT #####################
+
+$CHEMSHELLEXE  >& geom.com.out <geom.com
+
+# test if unit_conn.dat exists and conn.dat does not: create the conn.dat in that case from it
+if [ ! -f conn.dat ] && [ -f unit_conn.dat ]; then
+   #number of connections in unit_conn
+   nconn=$(wc -l < unit_conn.dat)
+   #total number of connections in system
+   total_nconn=$(echo $nresidue \* $nconn | bc)                                       
+   #create conn.dat
+   echo "block = connectivity records = $total_nconn" >> conn.dat
+   #add the connections from unit_conn.dat, starting from an ofset based on number of atoms in QM region
+   offset=$(echo $QMatom | bc)
+   for i in $(seq 1 $nresidue); do
+      awk -v i=$i -v l_res=$length_residue -v offset=$offset '{print $1 + offset + (i-1)*l_res , $2 + offset + (i-1)*l_res}' unit_conn.dat >> conn.dat
+   done
+fi
+
+natom4=`expr $natom + 4`
+mv geom.c pom.dat
+head -n $natom4 pom.dat >> geom.c
+rm pom.dat
+if [ ! -f conn.dat ]; then
+tail -n+$(echo "$natom+1" | bc) geom.c >> conn.dat
+cat conn.dat >> geom.c
+else
+cat conn.dat >> geom.c
+fi
+#################### Launch ChemShell ####################
+
+$CHEMSHELLEXE $input.com > $input.com.out
+if [[ $? -ne 0 ]]; then
+    echo "Error in ChemShell. Check $input.com.out"
+    exit 2
+    elif $( grep -q grep 'error code 1' $input.com.out ) ;then
+echo "Error in QM code."
+    exit 2
+   cp $input.com.out $input.com.out.old
+   cp g g.old
+   cp e e.old
+fi
+
+##########################################################
+
+#################### get energies and gradient ###############
+nwrite=$(awk -F"[! ,=\"']+" '{if($1=="nwrite")print $2}' ../input.in)
+pom=$(echo $timestep % $nwrite | bc)
+if [ $timestep -eq 1 ] && [ $nwrite -ne 1 ]; then
+      printf "Step \t Potential \t  Kinetic \t Total\n" >> ../energiesQMMM.dat
+elif [ $nwrite -eq 1 ]; then
+   if [ $timestep -eq 0 ]; then
+         printf "#Step \t PotentialQMMM \t PotentialMM \t PotentialQM \t  Kinetic \t Total\n" >> ../energiesQMMM.dat
+   elif [ $timestep -eq 1 ]; then
+      grep 'QM/MM Energy' $input.com.out | awk '{ print $3 }' > QMMMenergy.dat
+      grep 'energy from' $input.com.out | head -2 | tail -1 | awk '{ print $6 }' > MMenergy.dat
+      grep 'energy from' $input.com.out | head -1 | awk '{ print $6 }' > QMenergy.dat
+   else
+      QMMM_pot_energy=$(cat QMMMenergy.dat)
+      MM_pot_energy=$(cat MMenergy.dat)
+      QM_pot_energy=$(cat QMenergy.dat)
+      Ekin=$(awk '{ print $3}' ../energies.dat | tail -1)
+      QMMM_tot_energy=$(echo $QMMM_pot_energy + $Ekin | bc)
+      laststep=$(echo $timestep - 1 | bc)
+      printf " $laststep \t $QMMM_pot_energy \t $MM_pot_energy \t $QM_pot_energy \t $Ekin \t $QMMM_tot_energy\n" >> ../energiesQMMM.dat
+      grep 'QM/MM Energy' $input.com.out | awk '{ print $3 }' > QMMMenergy.dat
+      grep 'energy from' $input.com.out | head -2 | tail -1 | awk '{ print $6 }' > MMenergy.dat
+      grep 'energy from' $input.com.out | head -1 | awk '{ print $6 }' > QMenergy.dat
+   fi
+else
+   if [ $pom -eq 1 ]; then
+      QMMM_pot_energy=$(cat QMMMenergy.dat)
+      MM_pot_energy=$(cat MMenergy.dat)
+      QM_pot_energy=$(cat QMenergy.dat)
+      Ekin=$(awk '{ print $3}' ../energies.dat | tail -1)
+      QMMM_tot_energy=$(echo $QMMM_pot_energy + $Ekin | bc)
+      laststep=$(echo $timestep - 1 | bc)
+      printf " $laststep \t $QMMM_pot_energy \t $MM_pot_energy \t $QM_pot_energy \t  $Ekin \t $QMMM_tot_energy\n" >> ../energiesQMMM.dat
+   elif [ $pom -eq 0 ]; then
+      grep 'QM/MM Energy' $input.com.out | awk '{ print $3 }' > QMMMenergy.dat
+      grep 'energy from' $input.com.out | head -2 | tail -1 | awk '{ print $6 }' > MMenergy.dat
+      grep 'energy from' $input.com.out | head -1 | awk '{ print $6 }' > QMenergy.dat
+   fi
+fi
+
+
+tail -1 e >> ../engrad.dat.$ibead
+paste <(sed -n '5~3p' g) <(sed -n '6~3p' g) <(sed -n '7~3p' g) >> ../engrad.dat.$ibead
+

@@ -5,7 +5,10 @@ codecov:
     # are completed, otherwise we'll temporarily receive
     # incomplete coverage reports.
     # Note that unit test coverage builds count towards the build count!
-    after_n_builds: 18
+    # NOTE: Due to Codecov upload issues, we've decreased the number of builds
+    # from 18 to 6 (hopefully temporarily). Perhaps we can revisit
+    # when codecov-action@v4 is released.
+    after_n_builds: 6
     wait_for_ci: yes
 
 coverage:

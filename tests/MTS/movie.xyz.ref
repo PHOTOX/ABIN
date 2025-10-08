@@ -1,8 +1,8 @@
            2
-Time step:                   1 Sim. Time [au]          80.00
+Units: angs.;  Time step:           1  ;  Sim. Time [au]:          80.00
 Ne   -0.17742196E-02    0.97181047E-02   -0.29080375E-02
 B     0.32717180E-02    0.11873272E+01    0.51425156E-02
            2
-Time step:                   2 Sim. Time [au]         160.00
+Units: angs.;  Time step:           2  ;  Sim. Time [au]:         160.00
 Ne   -0.89942531E-02    0.16499564E-01   -0.10781854E-01
 B     0.13879264E-01    0.11757620E+01    0.17045400E-01

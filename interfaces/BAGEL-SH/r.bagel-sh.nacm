@@ -1,0 +1,117 @@
+#!/bin/bash
+
+# This script is called by ABIN as:
+# $ BAGEL-SH/r.bagel-sh.nacm [timestep] 001 [nac_accu] < state.dat
+
+# You should't need to modify this file!
+# Specification of CAS wavefunction is in file "bagel.inp"
+
+# Print errors for undefined variables
+set -u
+
+cd "$(dirname "$0")" || exit 1
+
+source bagel_common.sh
+file_exists bagel.inp
+
+### READ INPUT PARAMETERS ###
+source bagel.inp
+timestep=$1
+ibead=$2
+input=input$ibead.nacm
+geom="../geom.dat.$ibead"
+ORBITAL_FILE=orbitals
+
+# default thresholda in BAGEL is 10^-8, whereas ABIN passes uses 1.0e-7 as default, therefore "+1"
+(( nac_accu=$3+1 ))
+# NOTE: BAGEL does not seem to have a threshold for NACM specifically,
+# so we will use this to specify CASSCF threshold.
+thresh_CASSCF="1.0e-$nac_accu"
+thresh_CASPT2="1.0e-8"
+
+# reading from file state.dat created by ABIN
+# Number of states
+read -r -t 2 nstate
+# Which NACME to compute?
+read -r -t 2 -a tocalc
+
+file_exists "$geom"
+rm -f ../nacm.dat NACME_*.out
+
+### CREATE BAGEL INPUT ###
+specify_molecule "$geom" "$basis" "$df_basis" "$input.json"
+load_orbitals "$ORBITAL_FILE" "$input.json"
+
+cat >> "$input.json" << EOF
+  {
+    "title" : "forces",
+    "export" : true,
+    "grads" : [
+EOF
+
+istate=0
+jstate=1
+tocalc_idx=0
+for ((ist1=istate; ist1<nstate-1; ist1++)); do
+    for ((ist2=jstate; ist2<nstate; ist2++)); do
+        if [[ ${tocalc[$tocalc_idx]} -eq 1 ]]; then
+            echo "{\"title\": \"nacme\", \"target\": $ist1, \"target2\": $ist2}," >> "$input.json"
+        fi
+        (( tocalc_idx++ ))
+    done
+    (( jstate++ ))
+done
+
+# Remove dangling comma
+sed -i '$ s/,$//' "$input.json"
+echo "    ]," >> "$input.json"
+
+print_cas "$method" "$nspin" "$charge" "$nstate" "$nact" "$nclosed" "$thresh_CASSCF" "$thresh_CASPT2" "$maxiter_CASSCF" "$maxiter_CASPT2" "$shift" "$input.json"
+
+echo -e "      }]\n  }\n]}" >> "$input.json"
+### END OF BAGEL INPUT ###
+
+### RUN BAGEL ###
+exec_bagel "$input.json" "$input.out" "$timestep"
+returncode=$?
+
+### Check if BAGEL finished succesfully ###
+
+# NOTE: Since we are starting from converged wavefunction, CASSCF should always converge
+# TODO: Not sure if this is true, since previous calculation may have converged with looser threshold!
+casscf_error='ERROR: EXCEPTION RAISED:  Max iteration reached during the second-order optimization'
+smith_error='ERROR: EXCEPTION RAISED:  SMITH convergence not reached.'
+
+if grep -q "$casscf_error" "$input.out"; then 
+    errmsg="ERROR: convergence during second-order optimization not reached (usually CASSCF not converged during NAC calculation)"
+    errmsg=$errmsg"\nTry increasing maxiter_CASSCF in bagel.inp"
+    bagel_error "$errmsg" "$input.out" "$input.out.error.$timestep"
+elif grep -q "$smith_error" "$input.out"; then
+    errmsg="ERROR: Convergence in SMITH routine not achieved in CASPT2 NAC calculation."
+    errmsg=$errmsg"\nTry increasing maxiter_CASPT2 in bagel.inp."
+    bagel_error "$errmsg" "$input.out" "$input.out.error.$timestep"
+elif grep -q "EXCEPTION RAISED" "$input.out"; then
+    errmsg="ERROR: Unknown BAGEL error"
+    bagel_error "$errmsg" "$input.out" "$input.out.error.$timestep"
+elif [[ $returncode -ne 0 ]]; then
+    errmsg="ERROR: BAGEL returned error code $returncode"
+    bagel_error "$errmsg" "$input.out" "$input.out.error.$timestep"
+fi
+
+### Extract non-adiabatic coupling matrix elements (NACME) for ABIN
+istate=0
+jstate=1
+tocalc_idx=0
+for ((ist1=istate; ist1<nstate-1; ist1++)); do
+    for ((ist2=jstate; ist2<nstate; ist2++)); do
+        if [[ ${tocalc[$tocalc_idx]} -eq 1 ]]; then
+            file_exists "NACME_${ist1}_${ist2}.out"
+            tail -n +2 "NACME_${ist1}_${ist2}.out" | head -n -1 | awk '{print $2,$3,$4}' >> ../nacm.dat
+        fi
+        (( tocalc_idx++ ))
+    done
+    (( jstate++ ))
+done
+cat ../nacm.dat >> nacm.dat.all
+cat ../state.dat >> state.nacm.dat.all
+rm ../state.dat
