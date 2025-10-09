@@ -30,7 +30,6 @@ nresidue=$(echo $MMatom / $length_residue | bc)
 
 
 ############### MOlPRO INPUT ####################
-if [ ! -f molpro.com ]; then
 cat > molpro.com << EOF
 ***,molpro
 memory,$memory,m
@@ -66,7 +65,6 @@ clear,_TROV
 force
 
 EOF
-fi
 ################ END OF MOLPRO INPUT ####################
 
 ############ DL_POLY INPUT  ###################
