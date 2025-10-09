@@ -44,7 +44,11 @@ function diff_files {
   local ref_file
   local test_file
   # Compare test results with all existing reference files
-  local reference_files=$(ls *.ref)
+  if [[ ${1-} = "norestart" ]]; then
+    local reference_files=$(ls *.ref)
+  else
+    local reference_files=$(ls *.ref *.ref.restart 2>/dev/null)
+  fi
   if [[ -z $reference_files ]];then
     echo "ERROR: No reference files were found"
     return 1
@@ -52,7 +56,8 @@ function diff_files {
 
   for ref_file in $reference_files
   do
-    test_file=$(basename $ref_file .ref)
+    test_file=$(basename $ref_file .restart)
+    test_file=$(basename $test_file .ref)
     if [[ ! -f $test_file ]];then
       # The output file does not exist.
       # Something went seriously wrong, ABIN probably crashed prematurely.
@@ -66,7 +71,7 @@ function diff_files {
     if [[ $error_code -ne 0 ]];then
        # The reference file is different, but maybe it's just numerical noise?
        error_code=0
-       diff -y -W 500  $test_file $ref_file | grep -e '|' -e '<' -e '>' > $test_file.diff
+       diff -y -W 500 $test_file $ref_file | grep -e '|' -e '<' -e '>' > $test_file.diff
 
        ../numdiff.py $test_file.diff || error_code=$?
 
@@ -86,7 +91,7 @@ function diff_files {
 function makeref {
   local ref_file
   local test_file
-  local reference_files=$(ls *.ref)
+  local reference_files=$(ls *.ref *ref.restart 2>/dev/null)
   echo "Making new reference files."
   if [[ -z $reference_files ]];then
     echo "ERROR: No reference files were found."
@@ -94,13 +99,14 @@ function makeref {
   fi
   for ref_file in $reference_files
   do
-    test_file=$(basename $ref_file .ref)
+    test_file=$(basename $ref_file .restart)
+    test_file=$(basename $test_file .ref)
     if [[ ! -f $test_file ]];then
       echo "ERROR: Could not find output file \"$test_file\""
       exit 1
     fi
-    echo "mv $test_file $ref_file"
-    mv $test_file $ref_file
+    echo "cp $test_file $ref_file"
+    cp $test_file $ref_file
   done
 }
 
@@ -114,7 +120,7 @@ function clean {
 
 # List of all possible ABIN output files.
 # Used by `make testclean` to cleanup test directories.
-output_files=( *.dat *.out ERROR movie.xyz forces.xyz velocities.xyz
+output_files=( *.dat *.out $ABINOUT* ERROR movie.xyz forces.xyz velocities.xyz
 geom.dat.??? geom_mm.dat.??? geom.mini.xyz nacmrest.dat.?? hopgeom.*.xyz bck.*
 restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz )
 
@@ -209,11 +215,13 @@ global_error=0
 
 for dir in ${folders[@]}
 do
+   cd $TESTDIR
+   echo "======================="
    if [[ ! -d $dir ]];then
       echo "Directory $dir not found. Exiting prematurely."
       exit 1
    fi
-   echo "Entering directory $dir"
+   echo "Test $dir"
    cd $dir
 
    # Always clean the test directory before runnning the test.
@@ -223,7 +231,6 @@ do
    # we skip the the actual test here
    if [[ $ACTION = "clean" ]];then
       echo "Cleaning files in directory $dir"
-      cd $TESTDIR
       continue
    fi
 
@@ -251,35 +258,47 @@ do
 
       # for testing restart, only execute if previous run did not fail
       if [[ -f input.in2 && $? -eq 0 ]]; then
-         $ABINEXE -i input.in2 >> $ABINOUT 2>&1
+         $ABINEXE -i input.in2 > $ABINOUT.restart 2>&1
       fi
    fi
 
    if [[ $ACTION = "makeref" ]];then
-
       makeref
-
-   else
-
-      if diff_files; then
-        echo -e "\033[0;32mPASSED\033[0m"
-      else
-        global_error=1
-        echo -e "$dir \033[0;31mFAILED\033[0m"
-      fi
    fi
 
-   echo "======================="
+   if diff_files; then
+     echo -e "\033[0;32mPASSED\033[0m"
+   else
+     let global_error++
+     echo -e "$dir \033[0;31mFAILED\033[0m"
+     continue
+   fi
 
-   cd $TESTDIR
+   # Start again, but this time whole simulation without a restart
+   if [[ -f input.in.norestart ]]; then
+      echo "Running the test again without restart"
+      clean ${output_files[@]}
+      if [[ -f "velocities.in" ]];then
+         $ABINEXE -i input.in.norestart -v "velocities.in" > $ABINOUT.norestart 2>&1
+      else
+         $ABINEXE -i input.in.norestart > $ABINOUT.norestart 2>&1
+      fi
+
+      if diff_files norestart; then
+        echo -e "\033[0;32mPASSED\033[0m"
+      else
+        let global_error++
+        echo -e "$dir \033[0;31mFAILED - RESTARTING INCONSISTENT!\033[0m"
+        continue
+      fi
+   fi
 done
 
 echo " "
 
 if [[ ${global_error} -ne 0 ]];then
-   echo -e "Some tests \033[0;31mFAILED\033[0m."
+   echo -e "${global_error} tests \033[0;31mFAILED\033[0m."
+   exit 1
 else
    echo -e "\033[0;32mAll tests PASSED.\033[0m"
 fi
-
-exit $global_error
