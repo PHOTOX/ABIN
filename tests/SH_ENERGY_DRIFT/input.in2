@@ -2,7 +2,7 @@
 irandom=729375542,
 pot='molpro-sh'
 mdtype='sh',		
-nstep=2,
+nstep=3,
 dt=20.6697,
 irest=1,
 

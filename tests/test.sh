@@ -44,7 +44,11 @@ function diff_files {
   local ref_file
   local test_file
   # Compare test results with all existing reference files
-  local reference_files=$(ls *.ref)
+  if [[ ${1-} = "norestart" ]]; then
+    local reference_files=$(ls *.ref)
+  else
+    local reference_files=$(ls *.ref *.ref.restart)
+  fi
   if [[ -z $reference_files ]];then
     echo "ERROR: No reference files were found"
     return 1
@@ -114,7 +118,7 @@ function clean {
 
 # List of all possible ABIN output files.
 # Used by `make testclean` to cleanup test directories.
-output_files=( *.dat *.out ERROR movie.xyz forces.xyz velocities.xyz
+output_files=( *.dat *.out $ABINOUT* ERROR movie.xyz forces.xyz velocities.xyz
 geom.dat.??? geom_mm.dat.??? geom.mini.xyz nacmrest.dat.?? hopgeom.*.xyz bck.*
 restart_sh.bin restart_sh.bin.old restart_sh.bin.?? restart.xyz.old restart.xyz.? restart.xyz.?? restart.xyz )
 
@@ -209,11 +213,13 @@ global_error=0
 
 for dir in ${folders[@]}
 do
+   cd $TESTDIR
+   echo "======================="
    if [[ ! -d $dir ]];then
       echo "Directory $dir not found. Exiting prematurely."
       exit 1
    fi
-   echo "Entering directory $dir"
+   echo "Test $dir"
    cd $dir
 
    # Always clean the test directory before runnning the test.
@@ -223,7 +229,6 @@ do
    # we skip the the actual test here
    if [[ $ACTION = "clean" ]];then
       echo "Cleaning files in directory $dir"
-      cd $TESTDIR
       continue
    fi
 
@@ -251,35 +256,57 @@ do
 
       # for testing restart, only execute if previous run did not fail
       if [[ -f input.in2 && $? -eq 0 ]]; then
-         $ABINEXE -i input.in2 >> $ABINOUT 2>&1
+         $ABINEXE -i input.in2 > $ABINOUT.restart 2>&1
+      fi
+
+      # Start again, but this time whole simulation without a restart
+      if [[ -f input.in.norestart && $? -eq 0 ]]; then
+         rm -f movie.xyz restart.xyz stateall.dat stateall_grad.dat
+         if [[ -f "velocities.in" ]];then
+            $ABINEXE -i input.in.norestart -v "velocities.in" > $ABINOUT.norestart 2>&1
+         else
+            $ABINEXE -i input.in.norestart > $ABINOUT.norestart 2>&1
+         fi
       fi
    fi
 
    if [[ $ACTION = "makeref" ]];then
-
       makeref
+   fi
 
+   if diff_files norestart; then
+     echo -e "\033[0;32mPASSED\033[0m"
    else
+     let global_error++
+     echo -e "$dir \033[0;31mFAILED\033[0m"
+     continue
+   fi
+
+   # Start again, but this time whole simulation without a restart
+   if [[ -f input.in.norestart ]]; then
+      echo "Running the test again without restart"
+      clean ${output_files[@]}
+      if [[ -f "velocities.in" ]];then
+         $ABINEXE -i input.in.norestart -v "velocities.in" > $ABINOUT.norestart 2>&1
+      else
+         $ABINEXE -i input.in.norestart > $ABINOUT.norestart 2>&1
+      fi
 
       if diff_files; then
         echo -e "\033[0;32mPASSED\033[0m"
       else
-        global_error=1
-        echo -e "$dir \033[0;31mFAILED\033[0m"
+        let global_error++
+        echo -e "$dir \033[0;31mFAILED - RESTARTING INCONSISTENT!\033[0m"
+        continue
       fi
    fi
-
-   echo "======================="
-
-   cd $TESTDIR
 done
 
 echo " "
 
 if [[ ${global_error} -ne 0 ]];then
-   echo -e "Some tests \033[0;31mFAILED\033[0m."
+   echo -e "${global_error} tests \033[0;31mFAILED\033[0m."
+   exit 1
 else
    echo -e "\033[0;32mAll tests PASSED.\033[0m"
 fi
-
-exit $global_error
