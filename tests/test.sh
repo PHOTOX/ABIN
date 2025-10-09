@@ -47,7 +47,7 @@ function diff_files {
   if [[ ${1-} = "norestart" ]]; then
     local reference_files=$(ls *.ref)
   else
-    local reference_files=$(ls *.ref *.ref.restart)
+    local reference_files=$(ls *.ref *.ref.restart 2>/dev/null)
   fi
   if [[ -z $reference_files ]];then
     echo "ERROR: No reference files were found"
@@ -56,7 +56,8 @@ function diff_files {
 
   for ref_file in $reference_files
   do
-    test_file=$(basename $ref_file .ref)
+    test_file=$(basename $ref_file .restart)
+    test_file=$(basename $test_file .ref)
     if [[ ! -f $test_file ]];then
       # The output file does not exist.
       # Something went seriously wrong, ABIN probably crashed prematurely.
@@ -90,7 +91,7 @@ function diff_files {
 function makeref {
   local ref_file
   local test_file
-  local reference_files=$(ls *.ref)
+  local reference_files=$(ls *.ref *ref.restart 2>/dev/null)
   echo "Making new reference files."
   if [[ -z $reference_files ]];then
     echo "ERROR: No reference files were found."
@@ -98,13 +99,14 @@ function makeref {
   fi
   for ref_file in $reference_files
   do
-    test_file=$(basename $ref_file .ref)
+    test_file=$(basename $ref_file .restart)
+    test_file=$(basename $test_file .ref)
     if [[ ! -f $test_file ]];then
       echo "ERROR: Could not find output file \"$test_file\""
       exit 1
     fi
-    echo "mv $test_file $ref_file"
-    mv $test_file $ref_file
+    echo "cp $test_file $ref_file"
+    cp $test_file $ref_file
   done
 }
 
@@ -258,23 +260,13 @@ do
       if [[ -f input.in2 && $? -eq 0 ]]; then
          $ABINEXE -i input.in2 > $ABINOUT.restart 2>&1
       fi
-
-      # Start again, but this time whole simulation without a restart
-      if [[ -f input.in.norestart && $? -eq 0 ]]; then
-         rm -f movie.xyz restart.xyz stateall.dat stateall_grad.dat
-         if [[ -f "velocities.in" ]];then
-            $ABINEXE -i input.in.norestart -v "velocities.in" > $ABINOUT.norestart 2>&1
-         else
-            $ABINEXE -i input.in.norestart > $ABINOUT.norestart 2>&1
-         fi
-      fi
    fi
 
    if [[ $ACTION = "makeref" ]];then
       makeref
    fi
 
-   if diff_files norestart; then
+   if diff_files; then
      echo -e "\033[0;32mPASSED\033[0m"
    else
      let global_error++
@@ -292,7 +284,7 @@ do
          $ABINEXE -i input.in.norestart > $ABINOUT.norestart 2>&1
       fi
 
-      if diff_files; then
+      if diff_files norestart; then
         echo -e "\033[0;32mPASSED\033[0m"
       else
         let global_error++
