@@ -111,7 +111,7 @@ endif
 
 # End-To-End (E2E) tests
 e2etest: ${BIN}
-	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} ${PLUMED} ${CP2K} ${TCPB} test
+	/bin/bash tests/test.sh "${BIN}" "$(TEST)" "${MPI}" "${FFTW}" "${PLUMED}" "${CP2K}" "${TCPB}" test
 
 # Runs both end-to-end and unit tests
 test: unittest e2etest
@@ -121,11 +121,11 @@ testclean:
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests clean
 endif
-	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} ${TCPB} clean
+	/bin/bash tests/test.sh "${BIN}" "$(TEST)" "${MPI}" "${FFTW}" "$(PLUMED)" "${CP2K}" "${TCPB}" clean
 
 # This will automatically generate new reference data for E2E tests
 makeref: ${BIN}
-	/bin/bash tests/test.sh ${BIN} $(TEST) ${MPI} ${FFTW} $(PLUMED) ${CP2K} ${TCPB} makeref
+	/bin/bash tests/test.sh "${BIN}" "$(TEST)" "${MPI}" "${FFTW}" "$(PLUMED)" "${CP2K}" "${TCPB}" makeref
 
 
 .PHONY: clean test testclean makeref unittest e2etest
