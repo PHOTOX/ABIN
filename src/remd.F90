@@ -175,9 +175,9 @@ contains
       ! Momenta are scaled according to the new temperature
       ! p_new = p_old * dsqrt(T_new/T_old)
       if (my_rank == rank1) then
-         scal = dsqrt(temp_list(my_rank + 1) / temp_list(my_rank + 2))
+         scal = sqrt(temp_list(my_rank + 1) / temp_list(my_rank + 2))
       else if (my_rank == rank2) then
-         scal = dsqrt(temp_list(my_rank + 1) / temp_list(my_rank))
+         scal = sqrt(temp_list(my_rank + 1) / temp_list(my_rank))
       end if
 
       if (my_rank == rank1) then

@@ -301,9 +301,9 @@ contains
                call gautrg(ran, natom * 3)
                ipom = 1
                do iat = 1, natom
-                  pnhx(iat, iw, inh) = ran(ipom) * dsqrt(temp * Qm(iw))
-                  pnhy(iat, iw, inh) = ran(ipom + 1) * dsqrt(temp * Qm(iw))
-                  pnhz(iat, iw, inh) = ran(ipom + 2) * dsqrt(temp * Qm(iw))
+                  pnhx(iat, iw, inh) = ran(ipom) * sqrt(temp * Qm(iw))
+                  pnhy(iat, iw, inh) = ran(ipom + 1) * sqrt(temp * Qm(iw))
+                  pnhz(iat, iw, inh) = ran(ipom + 2) * sqrt(temp * Qm(iw))
                end do
                ipom = ipom + 3
             end do
@@ -316,7 +316,7 @@ contains
                ! +1 if nmolt=1, gautrg needs array at least of length=2
                call gautrg(ran, nmolt + 1)
                do imol = 1, nmolt
-                  pnhx(imol, iw, inh) = ran(imol) * dsqrt(temp * ms(imol, inh))
+                  pnhx(imol, iw, inh) = ran(imol) * sqrt(temp * ms(imol, inh))
                end do
             end do
          end do
@@ -482,13 +482,13 @@ contains
                pnhx(imol, iw, nchain) = pnhx(imol, iw, nchain) + G(nchain) * wdt2
                ! UPDATE THERMOSTAT VELOCITIES
                do inh = 1, nchain - 1
-                  AA = dexp(-wdt4 * pnhx(imol, iw, nchain - inh + 1) / ms(imol, nchain - inh + 1))
+                  AA = exp(-wdt4 * pnhx(imol, iw, nchain - inh + 1) / ms(imol, nchain - inh + 1))
                   pnhx(imol, iw, nchain - inh) = pnhx(imol, iw, nchain - inh) * AA * AA + &
                                                & wdt2 * G(nchain - inh) * AA
                end do
 
                ! UPDATE PARTICLE VELOCITIES
-               AA = dexp(-wdt * pnhx(imol, iw, 1) / ms(imol, 1))
+               AA = exp(-wdt * pnhx(imol, iw, 1) / ms(imol, 1))
                pscale = pscale * AA
                ! UPDATE FORCES
                G(1) = pscale * pscale * ekin2 - nf * temp
@@ -501,7 +501,7 @@ contains
 
                ! UPDATE THERMOSTAT VELOCITIES
                do inh = 1, nchain - 1
-                  AA = dexp(-wdt4 * pnhx(imol, iw, inh + 1) / ms(imol, inh + 1))
+                  AA = exp(-wdt4 * pnhx(imol, iw, inh + 1) / ms(imol, inh + 1))
                   pnhx(imol, iw, inh) = pnhx(imol, iw, inh) * AA * AA + wdt2 * G(inh) * AA
                   G(inh + 1) = pnhx(imol, iw, inh) * pnhx(imol, iw, inh) / ms(imol, inh) - temp
                end do
@@ -564,23 +564,23 @@ contains
 
                   ! UPDATE THERMOSTAT VELOCITIES
                   do inh = 1, nchain - 1
-                     AA = dexp(-wdt4 * pnhx(iat, iw, nchain - inh + 1) / Qm(iw))
+                     AA = exp(-wdt4 * pnhx(iat, iw, nchain - inh + 1) / Qm(iw))
                      pnhx(iat, iw, nchain - inh) = pnhx(iat, iw, nchain - inh) * AA * AA + &
                                                  & wdt2 * Gx(nchain - inh) * AA
-                     AA = dexp(-wdt4 * pnhy(iat, iw, nchain - inh + 1) / Qm(iw))
+                     AA = exp(-wdt4 * pnhy(iat, iw, nchain - inh + 1) / Qm(iw))
                      pnhy(iat, iw, nchain - inh) = pnhy(iat, iw, nchain - inh) * AA * AA + &
                                                  & wdt2 * Gy(nchain - inh) * AA
-                     AA = dexp(-wdt4 * pnhz(iat, iw, nchain - inh + 1) / Qm(iw))
+                     AA = exp(-wdt4 * pnhz(iat, iw, nchain - inh + 1) / Qm(iw))
                      pnhz(iat, iw, nchain - inh) = pnhz(iat, iw, nchain - inh) * AA * AA + &
                                                  & wdt2 * Gz(nchain - inh) * AA
                   end do
 
                   ! UPDATE PARTICLE VELOCITIES
-                  AA = dexp(-wdt * pnhx(iat, iw, 1) / Qm(iw))
+                  AA = exp(-wdt * pnhx(iat, iw, 1) / Qm(iw))
                   px(iat, iw) = px(iat, iw) * AA
-                  AA = dexp(-wdt * pnhy(iat, iw, 1) / Qm(iw))
+                  AA = exp(-wdt * pnhy(iat, iw, 1) / Qm(iw))
                   py(iat, iw) = py(iat, iw) * AA
-                  AA = dexp(-wdt * pnhz(iat, iw, 1) / Qm(iw))
+                  AA = exp(-wdt * pnhz(iat, iw, 1) / Qm(iw))
                   pz(iat, iw) = pz(iat, iw) * AA
 
                   ! UPDATE FORCES
@@ -597,13 +597,13 @@ contains
 
                   ! UPDATE THERMOSTAT VELOCITIES
                   do inh = 1, nchain - 1
-                     AA = dexp(-wdt4 * pnhx(iat, iw, inh + 1) / Qm(iw))
+                     AA = exp(-wdt4 * pnhx(iat, iw, inh + 1) / Qm(iw))
                      pnhx(iat, iw, inh) = pnhx(iat, iw, inh) * AA * AA + wdt2 * Gx(inh) * AA
                      Gx(inh + 1) = pnhx(iat, iw, inh)**2 / Qm(iw) - temp
-                     AA = dexp(-wdt4 * pnhy(iat, iw, inh + 1) / Qm(iw))
+                     AA = exp(-wdt4 * pnhy(iat, iw, inh + 1) / Qm(iw))
                      pnhy(iat, iw, inh) = pnhy(iat, iw, inh) * AA * AA + wdt2 * Gy(inh) * AA
                      Gy(inh + 1) = pnhy(iat, iw, inh)**2 / Qm(iw) - temp
-                     AA = dexp(-wdt4 * pnhz(iat, iw, inh + 1) / Qm(iw))
+                     AA = exp(-wdt4 * pnhz(iat, iw, inh + 1) / Qm(iw))
                      pnhz(iat, iw, inh) = pnhz(iat, iw, inh) * AA * AA + wdt2 * Gz(inh) * AA
                      Gz(inh + 1) = pnhz(iat, iw, inh)**2 / Qm(iw) - temp
                   end do

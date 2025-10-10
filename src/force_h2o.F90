@@ -192,6 +192,8 @@ contains
                   y_new_forward(i, j) = y_new_forward(i, j) + DELTA
                case (3)
                   z_new_forward(i, j) = z_new_forward(i, j) + DELTA
+               case default
+                  call fatal_error(__FILE__, __LINE__, "Whoops, I should not be here!")
                end select
 
                ! Calculate the energy for the forward perturbed geometry
@@ -209,6 +211,8 @@ contains
                   fy(i, j) = -(Epot_delta(1) - Eclas_orig) / DELTA
                case (3)
                   fz(i, j) = -(Epot_delta(1) - Eclas_orig) / DELTA
+               case default
+                  call fatal_error(__FILE__, __LINE__, "Whoops, I should not be here!")
                end select
             end do
          end do

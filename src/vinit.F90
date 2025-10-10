@@ -54,7 +54,7 @@ contains
          pom = 1
          do iat = 1, natom
             ! Variance of distribution
-            sigma = dsqrt(TEMP / MASS(iat))
+            sigma = sqrt(TEMP / MASS(iat))
 
             ! Velocity vector of iat-th atom
             vx(iat, iw) = sigma * rans(pom)
@@ -103,7 +103,7 @@ contains
       if (scaleveloc == 1 .and. temp_mom > 0.1E-10) then
 
          write (stdout, *) 'Scaling velocities to correct temperature.'
-         scal = dsqrt(temp / temp_mom)
+         scal = sqrt(temp / temp_mom)
          vx = vx * scal
          vy = vy * scal
          vz = vz * scal
@@ -202,7 +202,7 @@ contains
          Omx = Iinv(0) * Lx + Iinv(1) * Ly + Iinv(2) * Lz
          Omy = Iinv(3) * Lx + Iinv(4) * Ly + Iinv(5) * Lz
          Omz = Iinv(6) * Lx + Iinv(7) * Ly + Iinv(8) * Lz
-         Om_tot = dsqrt(Omx**2 + Omy**2 + Omz**2)
+         Om_tot = sqrt(Omx**2 + Omy**2 + Omz**2)
 
          ! We probably need to diagonalize I to get kinetic energy...
          !write(*,*)"Angular velocity:", Omx, Omy, Omz, Om_tot
@@ -315,7 +315,7 @@ contains
          Lz = Lz + (x(iat, iw) * vy(iat, iw) - y(iat, iw) * vx(iat, iw)) * masses(iat)
       end do
 
-      L_tot = dsqrt(Lx**2 + Ly**2 + Lz**2)
+      L_tot = sqrt(Lx**2 + Ly**2 + Lz**2)
    end subroutine calc_angular_momentum
 
    subroutine constrainP(px, py, pz, constrained_atoms)

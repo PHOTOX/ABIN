@@ -33,7 +33,7 @@ contains
             ! If we have only one atom, take the distance from the origin,
             ! i.e. [0, 0, 0]
             if (natom == 1) then
-               r(idist) = dsqrt(x(1, iw)**2 + y(1, iw)**2 + z(1, iw)**2)
+               r(idist) = sqrt(x(1, iw)**2 + y(1, iw)**2 + z(1, iw)**2)
             else
                r(idist) = get_distance(x, y, z, dist1(idist), dist2(idist), iw)
             end if

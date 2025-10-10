@@ -320,8 +320,8 @@ contains
       dnwalk = 1.0D0
       fac = 1.0D0
       if (inormalmodes == 1) then
-         dnwalk = dsqrt(1.0D0 * nwalk)
-         fac = dsqrt(2.0D0)
+         dnwalk = sqrt(1.0D0 * nwalk)
+         fac = sqrt(2.0D0)
       end if
 
       nmodes = nwalk / 2
@@ -386,8 +386,8 @@ contains
       dnwalk = 1.0D0
       fac = 1.0D0
       if (inormalmodes == 1) then
-         dnwalk = dsqrt(1.0D0 * nwalk)
-         fac = dsqrt(2.0D0)
+         dnwalk = sqrt(1.0D0 * nwalk)
+         fac = sqrt(2.0D0)
       end if
 
       nmodes = nwalk / 2
@@ -453,7 +453,7 @@ contains
 
       omega_n = NWALK * TEMP
       if (inormalmodes == 2) then
-         omega_n = omega_n * dsqrt(NWALK * 1.D0)
+         omega_n = omega_n * sqrt(NWALK * 1.D0)
       end if
       equantx = 0.0D0
       equanty = 0.0D0
@@ -497,7 +497,7 @@ contains
       omega_n = NWALK * TEMP
       ! Tuckerman Hamiltonian
       if (inormalmodes == 2) then
-         omega_n = omega_n * dsqrt(NWALK * 1.D0)
+         omega_n = omega_n * sqrt(NWALK * 1.D0)
       end if
       equantx = 0.0D0
       equanty = 0.0D0

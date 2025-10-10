@@ -255,7 +255,7 @@ contains
          ! Three point minima of adiabatic splitting Zjk
          if ((en_diff(1) > en_diff(2)) .and. (en_diff(2) < en_diff(3)) .and. (it > 2)) then
             second_der = ((en_diff(3) - 2 * en_diff(2) + en_diff(1)) / dt**2)
-            prob(ist1) = exp(-PI / 2 * (dsqrt(en_diff(2)**3 / second_der)))
+            prob(ist1) = exp(-PI / 2 * (sqrt(en_diff(2)**3 / second_der)))
             write (fmt_in, '(I2.2)') ist
             write (fmt_out, '(I2.2)') ist1
             write (stdout, *) "Three-point minimum (", trim(fmt_in), "->", trim(fmt_out), &
@@ -364,7 +364,7 @@ contains
             call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
             !d) Simple velocity rescaling (https://doi.org/10.1063/1.4882073)
-            vel_rescale = dsqrt(1 - (dE / Ekin))
+            vel_rescale = sqrt(1 - (dE / Ekin))
             do iat = 1, natom
                vx(iat, 1) = vx(iat, 1) * vel_rescale
                vy(iat, 1) = vy(iat, 1) * vel_rescale
@@ -398,7 +398,7 @@ contains
          prob = 0.0D0
 
          Ekin = ekin_v(vx, vy, vz)
-         molveloc = dsqrt(2.0D0 * Ekin / sum(am(1:natom)))
+         molveloc = sqrt(2.0D0 * Ekin / sum(am(1:natom)))
          call vranf(ran, 1)
          hop_rdnum = ran(1)
          icross = 0

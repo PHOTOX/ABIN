@@ -181,7 +181,7 @@ contains
             if (LJcomb == 'LB') then
                ! WARNING: We expect rmin in angstroms!
                rij = 0.5D0 * (rmin(i) + rmin(j)) * ANG
-               epsij = dsqrt(eps(i) * eps(j))
+               epsij = sqrt(eps(i) * eps(j))
             end if
             Bij(i, j) = 2 * 6 * epsij * rij**6
             Aij(i, j) = 12 * epsij * rij**12
@@ -211,7 +211,7 @@ contains
                i = inames(iat1)
                j = inames(iat2)
                kLJ = ri3 * (ri3 * Aij(i, j) - Bij(i, j)) * ri
-               kC = q(i) * q(j) * dsqrt(ri3)
+               kC = q(i) * q(j) * sqrt(ri3)
                fx(iat1, iw) = fx(iat1, iw) + (kLJ + kC) * dx
                fx(iat2, iw) = fx(iat2, iw) - (kLJ + kC) * dx
                fy(iat1, iw) = fy(iat1, iw) + (kLJ + kC) * dy
@@ -219,7 +219,7 @@ contains
                fz(iat1, iw) = fz(iat1, iw) + (kLJ + kC) * dz
                fz(iat2, iw) = fz(iat2, iw) - (kLJ + kC) * dz
                eclas = eclas + ri3 * (ri3 * Aij(i, j) / 12 - Bij(i, j) / 6)
-               eclas = eclas + q(i) * q(j) / dsqrt(r)
+               eclas = eclas + q(i) * q(j) / sqrt(r)
             end do
          end do
       end do

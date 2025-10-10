@@ -3,9 +3,11 @@ ignore = [
   "line-too-long",
   "trailing-whitespace", # we should enable this, autofix available 
   "incorrect-space-before-comment", # we should enable this, autofix available 
+  "superfluous-semicolon", # same as above
   "use-all", # should use "only:"
   "assumed-size-character-intent", # TODO: We should fix all instances!
   "implicit-external-procedures", # requires Fortran 2018
+  "bad-quote-string", # Use single or double quotes consistently
 ]
 exclude = [
   "src/fftw3.F90",

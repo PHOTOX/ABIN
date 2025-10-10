@@ -41,7 +41,7 @@ contains
       ! calculation of the cluster radius, taken from the center of mass
       do iat = 1, natom
          r = (x(iat, iw) - xcm)**2 + (y(iat, iw) - ycm)**2 + (z(iat, iw) - zcm)**2
-         r = dsqrt(r)
+         r = sqrt(r)
          if (r > rmax .and. names(iat) /= 'H') then
             rmax = r
          end if
@@ -97,7 +97,7 @@ contains
       do iw = 1, walkmax
          do iat = 1, natom
             r = (x(iat, iw) - xcm)**2 + (y(iat, iw) - ycm)**2 + (z(iat, iw) - zcm)**2
-            r = dsqrt(r)
+            r = sqrt(r)
             if (r > rb_sbc .and. names(iat) /= 'H') then
                frb = -kb_sbc * (r - rb_sbc)
                fx(iat, iw) = fx(iat, iw) + frb * (x(iat, iw) - xcm) / (r)

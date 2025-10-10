@@ -91,7 +91,7 @@ contains
       dy = y(2, 1) - y(1, 1)
       dz = z(2, 1) - z(1, 1)
       r = dx**2 + dy**2 + dz**2
-      r = dsqrt(r)
+      r = sqrt(r)
 
       ! normalized distance
       dx = dx / r
@@ -102,12 +102,12 @@ contains
       r = r / ANG
 
       ! calculating diabatic hamiltonian
-      VX = (nai%a2 + (nai%b2 / r)**8) * dexp(-r / nai%rho) - nai%e2 / r - nai%e2 * (nai%lp + nai%lm) / 2 / r**4 - &
+      VX = (nai%a2 + (nai%b2 / r)**8) * exp(-r / nai%rho) - nai%e2 / r - nai%e2 * (nai%lp + nai%lm) / 2 / r**4 - &
            nai%c2 / r**6 - 2 * nai%e2 * nai%lm * nai%lp / r**7 + nai%de0
-      VA = nai%a1 * dexp(-nai%beta1 * (r - nai%r0))
-      VXA = nai%a12 * dexp(-nai%beta12 * (r - nai%rx)**2)
+      VA = nai%a1 * exp(-nai%beta1 * (r - nai%r0))
+      VXA = nai%a12 * exp(-nai%beta12 * (r - nai%rx)**2)
       ! calculating derivatives of diabatic hamiltonian
-      dVX = -(nai%a2 + (nai%b2 / r)**8) * dexp(-r / nai%rho) / nai%rho - 8.0D0 * nai%b2**8 / r**9 * dexp(-r / nai%rho) + &
+      dVX = -(nai%a2 + (nai%b2 / r)**8) * exp(-r / nai%rho) / nai%rho - 8.0D0 * nai%b2**8 / r**9 * exp(-r / nai%rho) + &
             14.0D0 * nai%e2 * nai%lm * nai%lp / r**8 + 6.0D0 * nai%c2 / r**7 + 2.0D0 * nai%e2 * (nai%lp + nai%lm) / r**5 + &
             nai%e2 / r**2
       dVA = -nai%beta1 * VA
@@ -121,15 +121,15 @@ contains
       dVXA = dVXA / AUTOEV / ANG
 
       ! adiabatic potentials
-      E1 = (VA + VX) / 2.0D0 - dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0) / 2.0D0
-      E2 = (VA + VX) / 2.0D0 + dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0) / 2.0D0
+      E1 = (VA + VX) / 2.0D0 - sqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0) / 2.0D0
+      E2 = (VA + VX) / 2.0D0 + sqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0) / 2.0D0
       ! nonadiabatic coupling vector in the reduced system
       d12 = -(VXA * (dVA - dVX) + (-VA + VX) * dVXA) / (VA**2.0D0 - 2.0D0 * VA * VX + VX**2.0D0 + 4.0D0 * VXA**2.0D0)
       ! derivatives of energies
       dE1 = (dVA + dVX) / 2.0D0 - (2.0D0 * (VA - VX) * (dVA - dVX) + 8.0D0 * VXA * dVXA) / &
-            (4.0D0 * dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0))
+            (4.0D0 * sqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0))
       dE2 = (dVA + dVX) / 2.0D0 + (2.0D0 * (VA - VX) * (dVA - dVX) + 8.0D0 * VXA * dVXA) / &
-            (4.0D0 * dsqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0))
+            (4.0D0 * sqrt((VA - VX)**2.0D0 + 4.0D0 * VXA**2.0D0))
 
       ! saving electronic energies for SH
       en_array(1) = E1
