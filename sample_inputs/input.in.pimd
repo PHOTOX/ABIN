@@ -16,8 +16,8 @@ nwritex=5,		! how often should we print coordinates?
 nrest=5,		! how often we print restart files?
 /
 
-&nhcopt
+&thermostat
 temp=298.15,		! temperature [K] for Maxwell-Boltzmann sampling and thermostat
-inose=1,		! NHC thermostat 
+therm='nhc',		! NHC thermostat 
 tau0=0.001,             ! thermostat relaxation time (in picoseconds)
 /

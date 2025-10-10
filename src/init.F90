@@ -104,6 +104,7 @@ contains
       character(len=20) :: xyz_units
       character(len=60) :: chdivider
       character(len=60) :: mdtype
+      character(len=60) :: therm
       character(len=1024) :: tc_server_name, tcpb_input_file, tcpb_host
       integer :: tcpb_port
       logical :: file_exists
@@ -115,12 +116,12 @@ contains
       ! in the form of the standard Fortran namelist syntax.
       ! The input parameters are grouped in several different namelists:
       !
-      ! - general: Most basic MD settings + misc
-      ! - nhcopt:  parameters for thermostats
-      ! - remd:    parameters for Replica Exchange MD
-      ! - sh:      parameters for Surface Hopping, moved to mod_sh module
-      ! - system:  system-specific parameters for model potentials, masses, SHAKE constraints...
-      ! - qmmm:    parameters for internal QMMM (not really tested).
+      ! - general:      Most basic MD settings + misc
+      ! - thermostat:   parameters for thermostats (previously nhcopt)
+      ! - remd:         parameters for Replica Exchange MD
+      ! - sh:           parameters for Surface Hopping, moved to mod_sh module
+      ! - system:       system-specific parameters for model potentials, masses, SHAKE constraints...
+      ! - qmmm:         parameters for internal QMMM (not really tested).
       !
       ! All namelists need to be in a single input file, and the code
       ! in this subroutine must ensure that the namelists can be in any order.
@@ -133,7 +134,12 @@ contains
 
       namelist /remd/ nswap, nreplica, deltaT, Tmax, temp_list
 
-      namelist /nhcopt/ inose, temp, temp0, nchain, tau0, tau0_langevin, imasst, nrespnose, nyosh, &
+      ! new namelist section for thermostat, previously nhcopt
+      namelist /thermostat/ inose, therm, temp, temp0, nchain, tau0, tau0_langevin, imasst, nrespnose, nyosh, &
+         scaleveloc, readNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel, gle_test
+
+      ! old namelist section for thermostat, kept for backwards compatibility
+      namelist /nhcopt/ inose, therm, temp, temp0, nchain, tau0, tau0_langevin, imasst, nrespnose, nyosh, &
          scaleveloc, readNHC, nmolt, natmolt, nshakemol, rem_comrot, rem_comvel, gle_test
 
       namelist /system/ masses, massnames, ndist, dist1, dist2, &
@@ -152,6 +158,7 @@ contains
       tcpb_input_file = ''
       tcpb_port = -1
       mdtype = ''
+      therm = ''
       dt = -1
       nproc = 1
       iplumed = 0
@@ -359,8 +366,14 @@ contains
       natmolt(1) = natom ! default for global NHC thermostat
       nshakemol = 0
 
-      read (uinput, nhcopt)
+      ! read &thermostat section
+      read (uinput, thermostat, iostat=iost)
       rewind (uinput)
+      ! if &thermostat is not found, try the older &nhcopt
+      if (iost /= 0) then
+         read (uinput, nhcopt)
+         rewind (uinput)
+      end if
 
       if (ipimd == 2) then
          call read_sh_input(uinput)
@@ -394,6 +407,23 @@ contains
 
       if (pot == '_tcpb_' .or. restrain_pot == '_tcpb_' .or. pot_ref == '_tcpb_') then
          call initialize_tcpb(natqm, atnames, tcpb_port, tcpb_host, tcpb_input_file)
+      end if
+
+      ! first check if 'therm' keyword was used and then transfer to inose
+      if (therm /= '') then
+         therm = tolower(therm)
+         select case (therm)
+         case ('none')
+            inose = 0
+         case ('nhc')
+            inose = 1
+         case ('gle')
+            inose = 2
+         case ('langevine')
+            inose = 3
+         case default
+            call fatal_error(__FILE__, __LINE__, 'invalid thermostat (therm) in '//trim(chinput))
+         end select
       end if
 
       ! Check whether input parameters make sense

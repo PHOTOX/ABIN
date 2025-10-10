@@ -14,8 +14,8 @@ nwritev=1,
 nwritef=1,
 /
 
-&nhcopt
-inose=3,
+&thermostat 
+therm='langevine', 
 temp=300.0
 tau0_langevin=0.001
 /

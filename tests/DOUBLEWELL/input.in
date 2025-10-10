@@ -15,8 +15,8 @@ nwritef=1,
 idebug=1,
 /
 
-&nhcopt
-inose=0,
+&thermostat 
+therm='none', 
 temp=298.15,
 /
 
