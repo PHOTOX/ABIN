@@ -1,0 +1,38 @@
+&general
+irest=0,
+nstep=7,
+irandom=729375542,
+idebug=2
+pot='molpro'
+mdtype='sh',
+dt=20.6697,
+
+nwrite=1,
+nwritex=1,
+nrest=1,
+nwritev=1,
+nwritev=1,
+xyz_units='bohr'
+/
+
+&nhcopt
+temp=0.0,
+inose=0,
+/
+
+&sh
+istate_init=3,		! initial electronic state
+nstate=3,		! number of electronic states
+substep=100,		! number of substeps for solving ESCH
+deltae=100.,		! maximum energy difference [eV], for which we calculate NA coupling
+integ='butcher',	! integrator for ESCHE:euler,butcher or rk4
+couplings='analytic',	! non-adiabatic coupling terms 'analytic', 'baeck-an', 'none'
+nohop=0,		! 1 - hopping not allowed (default=0)
+decoh_alpha=0.1		! parameter for decoherence correction
+popthr=0.01
+energydifthr=0.80
+energydriftthr=0.80
+! Integrate phase along the trajectory
+phase=1
+correct_decoherence=.false.
+/

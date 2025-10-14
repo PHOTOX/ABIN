@@ -4,7 +4,7 @@ pot='molpro-sh'
 mdtype='sh',		
 nstep=3,
 dt=20.6697,
-irest=1,
+irest=0,
 
 nwrite=1,
 nwritex=1,

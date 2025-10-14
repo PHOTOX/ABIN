@@ -454,6 +454,7 @@ contains
    subroutine sh_write_wf(outunit)
       integer, intent(in) :: outunit
       integer :: ist1
+      write (outunit, '(A4, ES24.16E3)') 'E0= ', Eshift
       do ist1 = 1, nstate
          write (outunit, *) cel_re(ist1), cel_im(ist1)
       end do
@@ -461,14 +462,20 @@ contains
 
    subroutine sh_read_wf(inunit)
       integer, intent(in) :: inunit
-      integer :: ist1
+      integer :: ist, iost
+      character(len=4) :: tmp
 
       if (.not. allocated(cel_re)) then
          allocate (cel_re(nstate), cel_im(nstate))
       end if
 
-      do ist1 = 1, nstate
-         read (inunit, *) cel_re(ist1), cel_im(ist1)
+      read (inunit, '(A4, ES24.16E3)', iostat=iost) tmp, Eshift
+      if (iost /= 0 .or. tmp /= 'E0= ') then
+         ! TODO: Write a more helpful error message.
+         call fatal_error(__FILE__, __LINE__, 'Invalid restart file.')
+      end if
+      do ist = 1, nstate
+         read (inunit, *) cel_re(ist), cel_im(ist)
       end do
    end subroutine sh_read_wf
 
