@@ -39,10 +39,10 @@ jobs:
       fail-fast: false
       matrix:
          os: [ubuntu-22.04]
-         gcc_v: [9, 14]
+         gcc_v: [9, 13]
          include:
           - os: macos-14
-            gcc_v: 14
+            gcc_v: 13
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
