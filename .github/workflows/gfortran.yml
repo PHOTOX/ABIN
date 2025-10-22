@@ -37,11 +37,12 @@ jobs:
 
   basic_build:
     name: Basic build
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [9, 12]
+         os: [ubuntu-22.04]
+         gcc_v: [9, 15]
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
@@ -52,15 +53,10 @@ jobs:
       with:
         fetch-depth: 2
 
-    - name: Install libstdc++-dev
-      if: matrix.gcc_v == 9
-      run: sudo apt-get install libstdc++-9-dev
-
-    - name: Set GFortran version
-      run: |
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
-        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${GCC_V} \
-        --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_V}
+    - uses: fortran-lang/setup-fortran@v1
+      with:
+        compiler: gcc
+        version: ${{ matrix.gcc_v }}
 
     # pFUnit library is used to build and run unit tests
     - name: pFUnit build Cache
