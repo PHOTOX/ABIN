@@ -17,7 +17,7 @@ git clone --recursive https://github.com/Goddard-Fortran-Ecosystem/pFUnit $REPO_
 
 # This seems to be the last commit that works with GCC-7
 # Later commits fail with internal compiler error when compiling fArgParse submodule. 
-git checkout --recurse-submodules 0a09db354b665f1518e36460396c348c19185e04
+#git checkout --recurse-submodules 0a09db354b665f1518e36460396c348c19185e04
 
 mkdir -p build && cd build
 export FC=gfortran
