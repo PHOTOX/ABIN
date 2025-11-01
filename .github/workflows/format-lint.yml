@@ -16,7 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - uses: astral-sh/setup-uv@v6
+    - uses: astral-sh/setup-uv@v7
 
     - name: Run formatter
       run: |
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v5
-    - uses: astral-sh/setup-uv@v6
+    - uses: astral-sh/setup-uv@v7
     - name: Run scripts via uv run 
       run: uv run -p 3.9 utils/analysis/tsh_traj_anal.py -h
     - name: Run scripts directly using shebang
