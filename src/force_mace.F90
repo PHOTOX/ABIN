@@ -4,8 +4,6 @@ module mod_force_mace
 ! Perform MPI communications with the MACE Python server.
 !
 ! Modeled after mod_force_tera for TeraChem.
-!
-! Author: Jakub Ferencik
 ! ----------------------------------------------------------------
    use mod_const, only: DP
    use mod_error, only: fatal_error
@@ -55,7 +53,7 @@ contains
 
       if (abort) then
          call fatal_error(__FILE__, __LINE__, &
-            & 'MACE external forces error')
+         & 'MACE external forces error')
       end if
 
    end subroutine force_mace
@@ -96,7 +94,7 @@ contains
          call flush (OUTPUT_UNIT)
       end if
       call MPI_Recv(energy, 1, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
-                  & MPI_ANY_TAG, comm, status, ierr)
+      & MPI_ANY_TAG, comm, status, ierr)
       call handle_mpi_error(ierr)
       call check_recv_count(status, 1, MPI_DOUBLE_PRECISION)
 
@@ -118,14 +116,14 @@ contains
          print '(a)', 'MACE: Waiting to receive forces...'
       end if
       call MPI_Recv(forces, 3 * natqm, MPI_DOUBLE_PRECISION, &
-                    MPI_ANY_SOURCE, MPI_ANY_TAG, comm, status, ierr)
+         MPI_ANY_SOURCE, MPI_ANY_TAG, comm, status, ierr)
       call handle_mpi_error(ierr)
       call check_recv_count(status, 3 * natqm, MPI_DOUBLE_PRECISION)
 
       if (idebug > 1) then
          print '(A)', 'MACE: Received forces [Hartree/Bohr]:'
          do iat = 1, natqm
-            print *, 'Atom ', iat, ': ', forces(:, iat)
+            print*,'Atom ', iat, ': ', forces(:, iat)
          end do
          call flush (OUTPUT_UNIT)
       end if

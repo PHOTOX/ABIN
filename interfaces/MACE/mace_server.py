@@ -2,7 +2,6 @@
 # MACE MPI SERVER
 ######################
 # Version: 6.0.0
-# Author: Jakub Ferencik
 # Evaluation logic based on MACE/eval_config [mace.cli.eval_config]
 #
 # This server communicates with ABIN via MPI (using mpi4py).
