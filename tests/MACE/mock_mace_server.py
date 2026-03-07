@@ -3,8 +3,7 @@ Mock MACE MPI server for E2E testing.
 
 This server mimics the MPI protocol of the real mace_server.py
 but returns hardcoded energy and forces instead of running the
-actual MACE ML model. This avoids the need for mace-torch/PyTorch
-in CI environments.
+actual MACE ML model. This avoids the need for mace-torch/PyTorch.
 
 The returned values use a simple harmonic potential for water:
 energy = 0.5 * sum(forces^2) (not actually, just fixed values)
@@ -82,7 +81,6 @@ def main():
 
         # Compute mock energy and forces using simple harmonic potential
         # E = 0.5 * k * sum(r^2) where r is displacement from origin
-        # This gives deterministic, physically reasonable results
         k = 0.01  # force constant in Hartree/Bohr^2
         coords_t = coords.T  # (natom, 3)
 

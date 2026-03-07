@@ -23,7 +23,7 @@ VELOC_IN=
 
 # Path to Python with MACE dependencies (mpi4py, mace-torch, torch, ase, numpy).
 # Uncomment and set to your Python interpreter:
-#export MACE_PYTHON=/path/to/my/conda/envs/mace/bin/python
+# export MACE_PYTHON=/path/to/my/conda/envs/mace/bin/python
 MACE_PYTHON="${MACE_PYTHON:-python3}"
 
 # Path to MACE server script
