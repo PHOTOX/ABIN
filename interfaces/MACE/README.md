@@ -64,3 +64,10 @@ MACE settings are controlled via the `&mace` namelist in the ABIN input file (`i
 | `mace_mpi_milisleep` | Integer | `50` | Sleep interval (milliseconds) when polling for the MACE port or results. |
 
 See `sample_inputs/input.in.mace` for a template.
+
+## MACE License
+The provided MACE model (MACE-OFF23_medium.model) is downloaded from the [MACE-OFF GitHub repository](https://github.com/ACEsuit/mace-off) and is licensed under the [Academic Software License Agreement (ASLA)](https://github.com/ACEsuit/mace-off/blob/main/LICENSE.md).
+
+Note that this is not our model and we are not responsible for its performance or any issues related to its use. The purpose of its inclusion here is to provide a working example of how to use MACE with ABIN.
+
+For full terms and conditions, please refer to the [MACE-OFF GitHub repository](https://github.com/ACEsuit/mace-off).
