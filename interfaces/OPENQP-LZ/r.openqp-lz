@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# OPEN-QP/Landau-Zener Surface Hopping Interface for ABIN
+# Created by K. Vosovicova, J. Janos
+# Set parameters in 'openqp.inp' file
+
+cd OPENQP-LZ
+
+# ------------------ LOADING VARIABLES ---------------------
+
+source openqp.inp
+
+timestep=$1
+ibead=$2
+input=input$ibead.inp
+geom=../geom.dat.$ibead
+natom=$(wc -l < $geom)
+output=input$ibead.log
+
+sed -i "1i           ${natom}\n" "$geom"
+rm -f ../engrad.dat.$ibead
+
+# -------------- DETERMINING CURRENT STATE -----------------
+
+# Reading from state.dat
+# Number of states and state we are on 
+read -t 2 -a nstate
+read -t 2 -a tocalc
+read -t 1 -a nsinglet		# or doublet, just multiplicity of ground state
+read -t 1 -a ntriplet		# (not used) 
+
+
+# ---------------------- OPENQP INPUT ------------------------
+
+cat > $input << EOF
+[input]
+system=$geom
+charge=$charge
+runtype=grad
+basis=$basis
+functional=$functional
+method=$method
+
+EOF
+
+if [[ $timestep -eq 0 ]]; then
+
+cat >> $input << EOF
+[guess]
+type=$type_guess
+save_mol=True
+
+[scf]
+multiplicity=$multiplicity
+type=$type_scf
+maxit=$maxit_scf
+maxdiis=$maxdiis
+conv=$conv
+init_scf=$init_scf
+init_it=20
+init_converger=1
+vshift=$vshift
+mom=$mom
+mom_switch=$mom_switch
+
+EOF
+
+else
+
+cat >> $input << EOF
+[guess]
+type=json
+file=input$ibead.json
+
+[scf]
+multiplicity=$multiplicity
+type=$type_scf
+maxit=$maxit_scf
+maxdiis=$maxdiis
+conv=$conv
+vshift=$vshift
+mom=$mom
+mom_switch=$mom_switch
+
+EOF
+
+fi
+
+cat >> $input << EOF
+[tdhf]
+type=$type_tdhf
+nstate=$nstate
+
+[properties]
+grad=$tocalc
+export=True
+
+EOF
+
+# ---------------------- JOB LAUNCH ------------------------
+
+export OPENQP_ROOT=/home/janos/Programs/OpenQP/openqp
+export OMP_NUM_THREADS=1
+export LD_LIBRARY_PATH=$OPENQP_ROOT/lib:$LD_LIBRARY_PATH
+
+OPENQPEXE=/home/janos/Programs/Mambaforge/miniforge3/envs/openqp/bin/openqp
+
+$OPENQPEXE $input > output_file
+
+
+# --------------------- ERROR CHECK ------------------------
+
+if [[ $? -ne 0 ]] || ! $(grep -q "SCF convergence achieved" "$output") ;then
+   echo "WARNING from r.openqp: OPENQP calculation probably failed."
+   echo "See $output.error"
+   cp $output $output.error
+   exit 2
+fi
+
+# ------------------- DATA EXTRACTION ---------------------- 
+
+
+tail -n $nstate  energies >> ../engrad.dat.$ibead
+cat grad_$tocalc >> ../engrad.dat.$ibead
+
+
