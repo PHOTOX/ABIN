@@ -2,22 +2,21 @@
 
 # OPEN-QP/Landau-Zener Surface Hopping Interface for ABIN
 # Created by K. Vosovicova, J. Janos
-# Set parameters in 'openqp.inp' file
+# Set parameters in 'openqp.inp.template' file
 
 cd OPENQP-LZ
 
 # ------------------ LOADING VARIABLES ---------------------
 
-source openqp.inp
-
 timestep=$1
 ibead=$2
 input=input$ibead.inp
-geom=../geom.dat.$ibead
-natom=$(wc -l < $geom)
+geom=geom.dat.$ibead
+natom=$(wc -l < ../$geom)
 output=input$ibead.log
+template=openqp.inp.template
 
-sed -i "1i           ${natom}\n" "$geom"
+sed "1i ${natom}\n" "../$geom" > $geom
 rm -f ../engrad.dat.$ibead
 
 # -------------- DETERMINING CURRENT STATE -----------------
@@ -32,86 +31,32 @@ read -t 1 -a ntriplet		# (not used)
 
 # ---------------------- OPENQP INPUT ------------------------
 
-cat > $input << EOF
-[input]
-system=$geom
-charge=$charge
-runtype=grad
-basis=$basis
-functional=$functional
-method=$method
+cp $template $input
 
-EOF
-
-if [[ $timestep -eq 0 ]]; then
-
-cat >> $input << EOF
-[guess]
-type=$type_guess
-save_mol=True
-
-[scf]
-multiplicity=$multiplicity
-type=$type_scf
-maxit=$maxit_scf
-maxdiis=$maxdiis
-conv=$conv
-init_scf=$init_scf
-init_it=20
-init_converger=1
-vshift=$vshift
-mom=$mom
-mom_switch=$mom_switch
-
-EOF
-
-else
-
-cat >> $input << EOF
-[guess]
-type=json
-file=input$ibead.json
-
-[scf]
-multiplicity=$multiplicity
-type=$type_scf
-maxit=$maxit_scf
-maxdiis=$maxdiis
-conv=$conv
-vshift=$vshift
-mom=$mom
-mom_switch=$mom_switch
-
-EOF
-
+if [[ $timestep -ne 0 ]]; then
+    sed -i '/^\[guess\]/,/^\[scf\]/c\
+[guess]\
+type=json\
+file=input001.json\
+\
+[scf]' "$input"
 fi
 
-cat >> $input << EOF
-[tdhf]
-type=$type_tdhf
-nstate=$nstate
+sed -i "/^\[tdhf\]/,/^\[/ s/^nstate=.*/nstate=$nstate/" "$input"
 
-[properties]
-grad=$tocalc
-export=True
-
-EOF
+sed -i "/^\[properties\]/,/^\[/ s/^grad=.*/grad=$tocalc/" "$input"
 
 # ---------------------- JOB LAUNCH ------------------------
 
-export OPENQP_ROOT=/home/janos/Programs/OpenQP/openqp
-export OMP_NUM_THREADS=1
-export LD_LIBRARY_PATH=$OPENQP_ROOT/lib:$LD_LIBRARY_PATH
+source SetEnvironment.sh OPENQ
 
-OPENQPEXE=/home/janos/Programs/Mambaforge/miniforge3/envs/openqp/bin/openqp
-
-$OPENQPEXE $input > output_file
+$OPENQPEXE $input &> output_file
 
 
 # --------------------- ERROR CHECK ------------------------
 
-if [[ $? -ne 0 ]] || ! $(grep -q "SCF convergence achieved" "$output") ;then
-   echo "WARNING from r.openqp: OPENQP calculation probably failed."
+if [[ $? -ne 0 ]] || ! grep -q "SCF convergence achieved" "$output"; then
+   echo "ERROR from r.openqp: OPENQP calculation probably failed."
    echo "See $output.error"
    cp $output $output.error
    exit 2
