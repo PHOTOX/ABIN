@@ -116,7 +116,7 @@ contains
          print '(a)', 'MACE: Waiting to receive forces...'
       end if
       call MPI_Recv(forces, 3 * natqm, MPI_DOUBLE_PRECISION, &
-         MPI_ANY_SOURCE, MPI_ANY_TAG, comm, status, ierr)
+                    MPI_ANY_SOURCE, MPI_ANY_TAG, comm, status, ierr)
       call handle_mpi_error(ierr)
       call check_recv_count(status, 3 * natqm, MPI_DOUBLE_PRECISION)
 
