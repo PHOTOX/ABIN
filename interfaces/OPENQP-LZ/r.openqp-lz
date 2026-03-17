@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# OPEN-QP/Landau-Zener Surface Hopping Interface for ABIN
+# Created by K. Vosovicova, J. Janos
+# Set parameters in 'openqp.inp.template' file
+
+cd "$(dirname "$0")" || exit 2
+
+# ------------------ LOADING VARIABLES ---------------------
+
+timestep=$1
+ibead=$2
+input=input$ibead.inp
+geom=geom.dat.$ibead
+natom=$(wc -l < ../$geom)
+output=input$ibead.log
+template=openqp.inp.template
+
+sed "1i ${natom}\n" "../$geom" > $geom
+rm -f ../engrad.dat.$ibead
+
+# -------------- DETERMINING CURRENT STATE -----------------
+
+# Reading from state.dat
+# Number of states and state we are on 
+read -t 2 -a nstate
+read -t 2 -a tocalc
+read -t 1 -a nsinglet		# or doublet, just multiplicity of ground state
+read -t 1 -a ntriplet		# (not used) 
+
+
+# ---------------------- OPENQP INPUT ------------------------
+
+cp $template $input
+
+if [[ $timestep -ne 0 ]]; then
+    sed -i '/^\[guess\]/,/^\[scf\]/c\
+[guess]\
+type=json\
+file=input001.json\
+\
+[scf]' "$input"
+fi
+
+sed -i "/^\[tdhf\]/,/^\[/ s/^nstate=.*/nstate=$nstate/" "$input"
+
+sed -i "/^\[properties\]/,/^\[/ s/^grad=.*/grad=$tocalc/" "$input"
+
+# ---------------------- JOB LAUNCH ------------------------
+
+source SetEnvironment.sh OPENQ
+
+$OPENQPEXE $input &> output_file
+
+
+# --------------------- ERROR CHECK ------------------------
+
+if [[ $? -ne 0 ]] || ! grep -q "SCF convergence achieved" "$output"; then
+   echo "ERROR from r.openqp: OPENQP calculation probably failed."
+   echo "See $output.error"
+   cp $output $output.error
+   exit 2
+fi
+
+# ------------------- DATA EXTRACTION ---------------------- 
+
+
+tail -n $nstate  energies >> ../engrad.dat.$ibead
+cat grad_$tocalc >> ../engrad.dat.$ibead
