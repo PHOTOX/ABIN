@@ -14,7 +14,7 @@ contains
    @test
    subroutine test_mace_defaults()
       ! Verify that MACE namelist variables have correct defaults
-      @assertEqual('', trim(mace_model))
+      @assertEqual('MACE/MACE-OFF23_medium.model', trim(mace_model))
       @assertEqual('cpu', trim(mace_device))
       @assertEqual('float64', trim(mace_default_dtype))
       @assertEqual(64, mace_batch_size)
