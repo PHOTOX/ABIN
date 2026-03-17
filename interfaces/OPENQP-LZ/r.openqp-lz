@@ -4,7 +4,7 @@
 # Created by K. Vosovicova, J. Janos
 # Set parameters in 'openqp.inp.template' file
 
-cd OPENQP-LZ
+cd "$(dirname "$0")" || exit 2
 
 # ------------------ LOADING VARIABLES ---------------------
 
@@ -67,5 +67,3 @@ fi
 
 tail -n $nstate  energies >> ../engrad.dat.$ibead
 cat grad_$tocalc >> ../engrad.dat.$ibead
-
-
