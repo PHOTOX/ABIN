@@ -49,6 +49,10 @@ jobs:
       with:
         fetch-depth: 2
 
+    - name: Install libstdc++-dev
+      if: matrix.gcc_v == 9
+      run: sudo apt-get install libstdc++-9-dev
+
     - name: Set GFortran version
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_V} 100 \
