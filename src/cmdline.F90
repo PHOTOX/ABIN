@@ -7,9 +7,6 @@ module mod_cmdline
 contains
 
    subroutine print_help()
-      integer, dimension(8) :: time_data
-
-      call date_and_time(values=time_data)
       print '(a)', ''
       print '(a)', 'ABIN: Multipurpose ab initio MD program.'
       print '(a)', ''
