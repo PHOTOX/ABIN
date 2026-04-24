@@ -19,7 +19,8 @@ and can be done without any changes to ABIN or the ab initio code.
 The code is provided under the GNU General Public License.
 A full text of the license can be found in the file LICENCE.
 
-The documentation (work-in-progress) can be found in the folder `docs/`.
+The documentation for the latest stable release (v1.2.0) can be downloaded as a PDF file [here](https://github.com/PHOTOX/ABIN/releases/download/v1.2.0/ABIN_documentation_v1.2.0.pdf).
+The documentation for the development version can be found on [Overleaf](https://v2.overleaf.com/read/xbsxbyvdnfzh).
 
 ## Installation
 
