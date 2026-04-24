@@ -1,0 +1,255 @@
+\section{Detailed descriptions of the algorithms}
+\subsection{PIMD with staging transformation}
+There are three essential aspects of an efficient PIMD scheme: Coordinate transformation that uncouples the quantum harmonic terms (either staging or normal modes), efficient thermostatting and multiple time step algorithm. These will be all described in detail in next few paragraphs, including working equations as implemented in the \textsc{Abin} code.
+
+In line math $E=mc^2$ here
+
+\begin{equation}
+    \label{eq:cjskld}
+\end{equation}
+
+Staging transformation is defined by the recursive relations 
+\begin{eqnarray}
+q_1&=&x_1 \nonumber \\
+q_k&=&x_k - \frac{(k-1)x_{k+1}+x_1}{k},   k=2,\dots,P ,
+\end{eqnarray}
+with the inverse transformation:
+\begin{eqnarray}
+x_1&=&q_1 \nonumber \\
+x_k&=&q_k+\frac{k-1}{k}x_{k+1}+\frac{1}{k}q_1,   k=2,\dots,P .
+\end{eqnarray}
+Similar relations hold for the transformation of forces.
+The effective Hamiltonian of an extended system with $P$ beads  %(Eq. \ref{eqham}, see Section \ref{sPIMD})
+then transforms to: 
+\begin{equation}
+H_{\mathrm{eff}}= \sum^P_{k=1}\left[\frac{p_k^2}{2m^*_k} + \frac{1}{2}m_k\omega_P^2 q_k^2+\frac{1}{P}U(q_k)\right]  ,
+\end{equation}
+where $\omega_P=\sqrt{P}/\beta\hbar$ and parameters $m_k$ are defined as:
+\begin{eqnarray}
+m_1 &=& 0, \\
+m_k &=& \frac{k}{k-1}m,   k=2,\dots ,P ,
+\end{eqnarray}
+and fictitious masses $m_k^*$ are chosen as $m^*_1=m$ and $m_k^*=m_k$. The Hamiltonian is further supplemented by Nosé-Hoover chain of length $M$ (to be discussed in the next Section) so that the final set of equations of motion read as follows:
+\begin{subequations}
+\label{eqPIMDfull}
+\begin{eqnarray}
+\dot{q_k}&=&\frac{p_k}{m_k^{*}}  ,\\
+\dot{p_k}&=&-m_k\omega^2_P q_k - \frac{1}{P}\frac{\partial U}{\partial q_k} - \frac{p_{\eta_{k,1}}}{Q_1}p_k  , \\
+\dot{\eta}_{k,\gamma}&=&\frac{p_{\eta_{k, \gamma}}}{Q_k}   ,\\
+\label{eqNHC1}
+\dot{p}_{\eta_{k,1}}&=&\frac{p_k^2}{m_k^{}}-kT-\frac{p_{\eta_{k,2}}}{Q_k}p_{\eta_{k,1}}   ,\\
+\dot{p}_{\eta_{k,1}}&=&\left[\frac{p_{\eta_{k,\gamma-1}}^2}{m_k^{}}-kT\right]-\frac{p_{\eta_{k,\gamma+1}}}{Q_k}p_{\eta_{k,\gamma}}   \gamma = 2,\dots ,M-1   , \\
+\dot{p}_{\eta_{k,M}}&=&\left[\frac{p_{\eta_{k,M-1}}^2}{Q_k}-kT\right]  .
+\end{eqnarray}
+\end{subequations}
+The thermostat masses are set to $Q_k=kT/\omega^2_P$. The mass corresponding to the first bead, which happens to be the centroid of the bead necklace, can alternatively be set to $Q_1=kT\tau^2$, where $\tau$ s the characteristic time scale of the system.
+  
+The conserved quantity of these equations is:
+\begin{equation}
+H= \frac{p_k^2}{2m_k^*} + U + \sum_{\gamma=1}^M\left[\frac{p^2_{\eta_\gamma}}{2Q_k}+kT\eta_\gamma\right]   .
+\end{equation}
+
+This quantity should not drift over time as we are using a time-reversible integrator (see below). One should also always check the convergence of the primitive and centroid-virial energy estimators (Eqs. \ref{eqeprim} and \ref{eqevir}) as these should always converge to the same value regardless of number of beads. Failure to do so usually indicates that the time step is too long.
+
+
+\begin{equation}
+\epsilon_\mathrm{P}=\frac{3NP}{2\beta}-\frac{1}{2}\omega_P^2\sum_{i=1}^N m_i\sum_{s=1}^P |\mathbf{r}_{i,s}-\mathbf{r}_{i,s+1}|^2+\overline{U} ,
+\label{eqeprim}
+\end{equation}
+\begin{equation}
+\epsilon_{\mathrm{CV}}=\frac{3N}{2\beta}+\frac{1}{2P}\sum_{i=1}^N\sum_{s=1}^P(\mathbf{r}_{i,s}-\mathbf{r}_i^{(c)})\cdot\left(\frac{\partial \overline{U}}{\partial\mathbf{r}_{i,s}} \right)+\overline{U}  ,
+\label{eqevir}
+\end{equation}
+where $\overline{U}=\frac{1}{P}\sum_{s=1}^P U(\mathbf{r}_{1,s},\dots,\mathbf{r}_{N,s})$ and $\mathbf{r}_i^{(c)}=\sum_{s=1}^Pr_{i,s}/P $ are centroid variables.
+
+Eqs. \ref{eqPIMDfull} are integrated using RESPA multiple time step algorithm according to he following splitting of the Liouville operator:
+\begin{equation}
+iL = iL_{\mathrm{quant}}+iL_{\mathrm{kin}}+iL_{\mathrm{clas}}+iL_{\mathrm{NHC}}  ,
+\end{equation}
+where the operators for kinetic, quantum and classical parts are defined as:
+\begin{eqnarray}
+iL_{\mathrm{kin}} 	&=& \sum^P_{k=1}\frac{p_k}{m_k^*}\frac{\partial}{\partial q_k}  ,\\
+iL_{\mathrm{quant}} 	&=& -\sum^P_{k=1} m_k\omega^2_P q_k\frac{\partial}{\partial p_k}  ,\\
+iL_{\mathrm{clas}}  	&=& -\sum^P_{k=1}\frac{1}{P}\frac{\partial U}{\partial q_k}\frac{\partial}{\partial p_k}   .
+\end{eqnarray}
+The operator for Nosé-Hoover part $iL_{\mathrm{NHC}}$ will be discussed separately in the next Section. The propagator $e^{iL\Delta t}$ can be factorized into: 
+\begin{eqnarray}
+\label{eqRESPA}
+e^{iL\Delta t}&=&e^{iL_{\mathrm{NHC}}\delta t/2}e^{iL_{\mathrm{clas}}\Delta t/2}e^{-iL_{\mathrm{NHC}}\delta t/2}\\
+& &\left[e^{iL_{\mathrm{NHC}}\delta t/2}e^{iL_{\mathrm{quant}}\delta t/2}e^{iL_{\mathrm{kin}}\Delta t} e^{iL_{\mathrm{quant}}\delta t/2}e^{iL_{\mathrm{NHC}}\delta t/2}\right]^n \nonumber \\
+& & e^{iL_{\mathrm{NHC}}\delta t/2}e^{iL_{\mathrm{clas}}\Delta t/2}e^{iL_{\mathrm{NHC}}\delta t/2}  . \nonumber
+\end{eqnarray}
+Note that the propagator $e^{iL_{\mathrm{NHC}}\delta t/2}$ is applied in the inner loop in order to efficiently thermostat the rapidly varying harmonic motion (so called XI-RESPA scheme).
+In this scheme, the quantum forces are evaluated at $n$-times shorter time step. The classical forces and energies need to be calculated only once per $\Delta t$, which is very important mainly for \textit{ab initio} PIMD, where the calculation of classical forces is very expensive. Note that simple velocity Verlet algorithm sandwiched by $e^{iL_{\mathrm{NHC}}\Delta t/2}$ is recovered by setting $n=1$. 
+
+Eq.\,\ref{eqRESPA} can be transformed into the computer algorithm by noticing  that all the operators (except for Nosé-Hoover part) are of the form $e^{c\frac{\partial}{\partial x}}$. It can be shown, that these operators represent simple translation\cite{Tuckerman_book}:
+$$ e^{\frac{p_k}{m_k}\frac{\partial}{\partial q_k}\Delta t}\,q_k =q_k + \frac{p}{m}\Delta t   .$$
+
+\subsection{Integration of Nosé-Hoover Chain equations}
+\label{sec:NHC}
+There are currently two versions of the code for propagating the NHC equations in the \textsc{Abin} program. The massive version attach NHC chain to each degree of freedom and is primarily used for the PIMD simulations, while the second versions is more general and allows the user to specify the subsystems that are coupled separately to the thermostat. One chain is usually attached to the whole system in case of CMD. However, in this global version, only total kinetic energy is controlled so hot and cold spots can theoretically develop in the system. This version is necessary for simulations with constraints, since it does not break the constraint conditions. For example, if we want to simulate rigid water model, we can couple each water molecule to a separate thermostat, but we cannot thermostat each atom, since that would break the constraints. 
+
+The equations for the global version of NHC thermostat are only slightly different from the massive version described above. One simply replace Eq. \ref{eqNHC1} by:
+\begin{eqnarray}
+\dot{p}_{\eta_1}=\left[\sum^N_{i=1}\frac{\mathbf{p}_i}{m_i}-3NkT\right]-\frac{p_{\eta_{1}}}{Q_1}\mathbf{p}_i ,
+\end{eqnarray}
+where $N$ is number of thermostatted particles. The conserved quantity is now:
+\begin{equation}
+H = \sum^N_{i=1}\frac{\mathbf{p}_i^2}{2m_i} + U + 3NkT\eta_1 + \sum_{\gamma=1}^M\left[\frac{p_{\eta_\gamma}}{2Q_\gamma}\right]+ \sum_{\gamma=2}^M kT\eta_\gamma   .
+\end{equation}
+Note that the indexing of the masses $Q$ is now different.The masses in the massive PIMD scheme may be different for each bead, but they are the same for each index $\gamma$. In this case, they may differ for each index $\gamma$. Namely, it can be shown that optimal masses are\cite{Martyna1992a}:
+\begin{eqnarray}
+Q_1&=&3NkT\tau^2   ,\\
+Q_\gamma &=& kT\tau^2   \gamma =2,\dots, M , \nonumber
+\end{eqnarray}
+where $\tau$ is the characteristic time scale of the system. It is convenient to set the thermostat masses using this parameter, because the optimal values of the masses themselves depend on system size and target temperature. If the masses are set inappropriately, the thermostat may decouple from the system and the correct temperature will not be obtained.
+
+The integration of NHC equations is generally difficult, since the right hand side depends on velocities.
+I implemented the approach of Tuckerman \textit{et al.} who used the Liouville operator formalism to derive the time-reversible algorithm for propagation\cite{Martyna1996}. Here I describe the implementation of the global version. The implementation of the massive version is completely analogous.
+
+The Liouville operator for NHC is:
+\begin{eqnarray}
+iL_{\textrm{NHC}}&=&-\sum^N_{i=1}\frac{p_{\eta_1}}{Q_1}\mathbf{p}_i\cdot \frac{\partial}{\partial \mathbf{p}_i}+
+\sum_{\gamma =1}^M\frac{p_{\eta_\gamma}}{Q_\gamma}\frac{\partial}{\partial \eta_\gamma} \\
+&+&\sum_{\gamma=1}^{M-1}\left( G_\gamma-p_{\eta_\gamma}\frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}\right)\frac{\partial}{\partial p_{\eta_\gamma}}+G_M\frac{\partial}{\partial p_{\eta_M}} ,\nonumber
+\end{eqnarray}
+where the thermostat "forces" are defined as:
+\begin{eqnarray}
+G_1&=&\sum^N_{i=1}\frac{\mathbf{p}_i^2}{m_i}-3NkT   ,\\
+G_\gamma &=&\frac{p_{\eta_{\gamma-1}}}{Q_{\gamma-1}}-kT\nonumber  .
+\end{eqnarray}
+The primitive factorization of the propagator $e^{iL_{\mathrm{NHC}}\delta t/2} $ was done as:
+\begin{eqnarray}
+S(\delta/2)=\mathrm{exp}\left[\frac{\delta}{4} G_M \frac{\partial}{\partial p_{\eta_M}} \right] &&\nonumber \\
+\times \prod^{1}_{\gamma =M-1} \left\lbrace \mathrm{exp}\left[-\frac{\delta}{8}  \frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}
+p_{\eta_\gamma}\frac{\partial}{\partial p_{\eta_\gamma}} \right]
+\mathrm{exp}\left[\frac{\delta}{4}G_\gamma\frac{\partial}{\partial p_{\eta_\gamma}} \right]
+\mathrm{exp}\left[-\frac{\delta}{8}\frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}
+p_{\eta_\gamma}\frac{\partial}{\partial p_{\eta_\gamma}} \right] \right\rbrace & & \nonumber\\
+\times  \prod^N_{i=1} 
+\mathrm{exp}\left[-\frac{\delta}{2}\frac{p_{\eta_1}}{Q_1}\mathbf{p}_i\cdot\frac{\partial}{\partial \mathbf{p}_i} \right]
+\prod^M_{\gamma=1} \mathrm{exp}\left[\frac{\delta}{2}\frac{p_{\eta_\gamma}}{Q_\gamma}\frac{\partial}{\partial \eta_\gamma} \right]& &  \nonumber \\
+\times  \prod^{M-1}_{\gamma =1} \left\lbrace \mathrm{exp}\left[-\frac{\delta}{8}\frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}
+p_{\eta_\gamma}\frac{\partial}{\partial p_{\eta_\gamma}} \right] 
+\mathrm{exp}\left[\frac{\delta}{4}G_\gamma\frac{\partial}{\partial p_{\eta_\gamma}} \right]
+\mathrm{exp}\left[-\frac{\delta}{8}\frac{p_{\eta_{\gamma+1}}}{Q_{\gamma+1}}
+p_{\eta_\gamma}\frac{\partial}{\partial p_{\eta_\gamma}} \right] \right\rbrace &  & \nonumber \\
+\times  \mathrm{exp}\left[\frac{\delta}{4} G_M \frac{\partial}{\partial p_{\eta_M}} \right]  .& &
+\label{eqprimfac}
+\end{eqnarray}
+
+However, this factorization would severely limit the time step since the thermostat forces are rapidly varying. One can again exploit the RESPA scheme. Still, the number of inner time step $n_c$ would be very high. To reduce this number, I used the Suzuki-Yoshida scheme\cite{Yoshida1990}, in which the time step is multiplied by a set of numerical weights, which results in higher order method than the simple Trotter factorization. 
+The final factorization of the NHC propagator can be written as follows:
+\begin{equation}
+e^{iL_{\mathrm{NHC}}\Delta t/2} \approx \left[ \prod_{\alpha=1}^{n_{\mathrm{sy}}}S(w_\alpha\Delta t/2n) \right]^{n_c}   .
+\end{equation}
+Suzuki-Yoshida weights $w_\alpha$ for fourth-order method and sixth-order method are currently supported.
+
+The primitive factorization in Eq.\,\ref{eqprimfac} contains translational operators introduced above and also operators of the form $e^{cx\frac{\partial}{\partial x}}$. These can be shown to act as a scaling operators:
+\begin{equation}
+\mathrm{exp}\left[cx\frac{\partial}{\partial x}\right] x = xe^c  .
+\end{equation}
+Therefore, the factorization in Eq. \ref{eqprimfac} can be also directly translated to the computer code.
+
+\newpage
+\subsection{Quantum Thermostat}
+Unlike the PIMD method, the quantum thermostat (QT) technique is only an approximate way to describe the quantum nuclear effects. The code in \textsc{abin} is based on the implementation by Parinello \textit{et al.}\cite{Ceriotti2010d}.
+
+The quantum thermostat is based on Generalized Langevin equation (GLE), which is a stochastic integro-differential equation. The general theory is rather involved, so only the basic ideas are explained here. Interested reader is referred to the original literature\cite{Ceriotti2010d}.
+
+Integro-differential equation that is equations involving both derivatives and integrals are rather difficult to implement as the evolution of the system depends on the entire system history. Fortunately, the GLE can be cast into the simple matrix form using additional 
+dynamical variables as follows (considering only one particle with mass $m$)\cite{Ceriotti2010}:
+\begin{equation}
+\dot{q}=\frac{p}{m} ,
+\label{eqGLE}
+\end{equation}
+$${\dot{p} \choose \mathbf{s}} = {-U'(q) \choose \mathbf{0}} - 
+{a_{pp}  \textbf{a}_p^T  \choose \mathbf{\overline{a}}_p  \mathbf{A}} {p \choose \mathbf{s}} +
+{b_{pp}  \mathbf{b}_p^T  \choose \mathbf{{b}}_p  \mathbf{B}}
+\Bigg(\mathbf{\xi}\Bigg)   ,$$
+where $\mathbf{s}$ is the vector of $n$ additional degree of freedoms, $\mathbf{\xi}$ is the vector of $n+1$ uncorrelated Gaussian random numbers. For $n=0$, the standard Langevin equation is recovered.
+\begin{equation}
+\dot{q}=p
+\label{eqLE}
+\end{equation}
+$$\dot{p}=-U'(q)-a_{pp}p+b_{pp}\xi(t)  ,$$
+where $a_{pp}$ is the friction coefficient and $b_{pp}$ is the intensity of the random force. These are related through the so-called fluctuation-dissipation theorem (FDT), which reads as:
+\begin{equation}
+b_{pp}^2=2a_{pp}m k_\mathrm{B} T  .
+\end{equation}
+\noindent
+The matrices in the Eq. \ref{eqGLE} are related through so-called drift matrix $\mathbf{C}$ as\cite{Ceriotti2010}:
+\begin{equation}
+\mathbf{A}_p \mathbf{C}_p+\mathbf{C}_p\mathbf{A}_p^T=\mathbf{B}_p\mathbf{B}_p^T  ,
+\label{eqmatrix}
+\end{equation}
+with the notation $\mathbf{M}_p={m_{pp}  \textbf{m}_p^T  \choose \mathbf{\overline{m}}_p  \mathbf{M}}$. 
+By setting $\mathbf{C}_p=k_{B} T$, the Eq. \ref{eqGLE} satisfy the FDT and and thus generates canonical distributions at given temperature.
+
+Eq. \ref{eqGLE} can be solved analytically for the harmonic oscillator. Therefore, for a given frequency, 
+we know how the system responds to the thermostat and we can thus optimize the parameters of the matrices to obtain a desired response. 
+For example, the parameters can be optimized for the optimal sampling of classical phase space. One can also maintain different normal modes at different temperatures (frequency dependent thermostatting) and this possibility is the basis for simulating quantum effects.
+
+One can exploit the fact that both quantum and classical distributions have gaussian shape and differ only in the standard deviation. By setting the effective temperature to $T^*(\omega)=\frac{\hbar\omega}{2k_B}\mathrm{coth}\frac{\hbar\omega}{2k_\mathrm{B}T} $ we can convert classical gaussian distribution with standard deviation $\sigma^2_\mathrm{c}=\frac{k_\mathrm{B} T}{m\omega^2}$ to the quantum distribution with deviation $\sigma^2_\mathrm{q}=\frac{\hbar}{2m\omega}coth\frac{\hbar\omega}{2k_\mathrm{B}T}$  using purely classical simulations. However, we need to maintain different normal modes at different effective temperature, which is exactly what GLE makes possible. By doing this, the simulations are non-equilibrium and do not satisfy FDT theorem.
+
+The fitting of parameters in matrices $\mathbf{A}$ and $\mathbf{C}$ (matrix $\mathbf{B}$ is then computed using Eq. \ref{eqmatrix}) is not straightforward and is not described here. Although the derived parameters are strictly applicable only for systems of coupled harmonic oscillators, they can also be used as an approximate method for realistic molecular systems, which are in general anharmonic, since they can be viewed as a collection of normal modes coupled by anharmonicities. 
+However, one must be cautious when the anharmonic coupling is too strong. In such cases, the energy may flow between different normal modes (\textit{i.e.} from the high to low frequencies) and the simulation is spoiled. This may be viewed as ZPE leakage, which is a common problem in semiclassical approaches.
+
+The main advantage of QT is its computational simplicity. The computational savings as compared with full PIMD simulations are substantial, especially for \textit{ab initio} simulations. Moreover, the sampling efficiency is much greater using QT method, since the PIMD simulations become less ergodic and difficult to converge with large number of beads.
+
+Another advantage of the QT over the simple PIMD scheme presented here is that it provides at least an approximate momentum distributions. This might be potentially useful for the generation of initial conditions for semiclassical photodynamical simulations.
+
+Finally, it is possible to combine the QT with PIMD (here denoted as PI+GLE method)\cite{Ceriotti2011} which results in much faster convergence of quantities with the number of beads. Moreover, the ZPE leakage becomes of lesser concern as we increase the number of beads.
+It was shown\cite{Ceriotti2011} and it is also our experience that only four beads are sufficient for fully converged position distribution. 
+When using normal mode transformation, the GLE parameters can be optimized specifically for each normal mode to speed up the convergence of quantum kinetic energy computed with centroid-virial energy estimator\cite{Ceriotti2012}. This so called PIGLET method is not yet implemented. 
+Note that neither PI+GLE nor PIGLET methods provide rigorous momentum distribution function, although other approximate methods can still be used\cite{Ceriotti2012}.
+
+
+\subsubsection{Implementation}
+\label{sGLEimpl}
+The quantum thermostat in \textsc{ABIN} is based on the sample code from the website \textit{http://gle4md.berlios.de/} which is maintained by the original authors.
+At present, the GLE thermostat is called on top of the classical velocity Verlet algorithm according to the following pseudocode:
+
+\bigskip
+\begin{verbatim}
+    call GleStep(dt / 2)
+    p = p + F dt / 2
+    q = q + p / m dt
+    call GetForces(q, F) 
+    p = p + F dt / 2
+    call GleStep(dt / 2)
+\end{verbatim}
+\bigskip
+
+The PI+GLE method is also implemented. The GLE thermostat in this case is part of the RESPA algorithm in the same way as the NHC thermostat. Note, that in PI+GLE method, one has to use physical bead masses i.\,e. staging transformation is not applicable in this case\cite{Ceriotti2012}. More efficient implementation would require the use of normal mode transformation. This is now a work in progress.
+
+The parameters for different simulations can be obtained from the same website as mentioned above. To choose the appropriate parameters, one only needs to know the highest frequency present in the system and the temperature of the simulation. The parameters can be distinguished by a number of additional degrees of freedom $s$ and by the fitted frequency range which is given by the ration $x=\frac{\hbar\omega}{k_\mathrm{B}T}$. That means that the maximum frequency for given parameters depends on the temperature of the simulation. In the case of PI+GLE method, the parameters are different for different number of beads.
+
+There is a fundamental difference between GLE and PIGLE parameters. The latter were optimized only to give correct position distributions since the momenta do not have physical meaning in the PIMD method. This approach leaves more freedom in the fitting procedure and therefore, the PIGLE parameters were also optimized for optimal sampling. Therefore, even for simulations with one bead, PIGLE-P1 parameters should be superior to the original GLE parameters if one is not interested in the momentum distribution. 
+
+
+\newpage
+\subsection{Landau--Zener Surface Hopping}
+The Landau--Zener Surface Hopping (LZSH) method extends the Landau--Zener transition formula for 1D case into multidimensional systems and allows simultaneous treatment of \textit{internal conversion (IC)} and \textit{intersystem crossing (ISC)} events.\cite{SuchanLZ} Unlike in the FSSH algorithm, the transition probability is not evaluated at every timestep but only when a crossing event is detected. For IC this happens when two adiabatic surfaces come closest in energy, forming so-called three-point minimum. For ISC this is when two diabatic surfaces (e.g., singlet and triplet states)directly cross each other. This formulation eliminates the need for explicit nonadiabatic coupling (NAC) vectors, reducing computational cost and improving numerical stability. 
+
+For transitions between adiabatic states $k$ and $l$ within the same spin manifold (singlet--singlet or triplet--triplet), the transition probability equals to
+\begin{equation}
+P_{k \to l}^{\mathrm{LZ}} =
+\exp\!\left(-\frac{\pi}{2\hbar}\sqrt
+\frac{\Delta E_{kl}(\textbf{R}(t^*))^3}{
+\frac{\mathrm{d}^2}{\mathrm{d}t^2}\Delta E_{kl}(\textbf{R}(t^*))|_{t=t^*}}\right),
+\end{equation}
+where $\Delta E_{kl} = E_l - E_k$ is the instantaneous energy gap and $t^*$ is the time of minimal separation between the two surfaces. A velocity rescaling ensures energy conservation after a hop; if insufficient kinetic energy is available, the hop is rejected.
+
+Transitions between states of different spin multiplicities are treated in a spin-diabatic representation. The diabatic states are coupled by the spin--orbit coupling (SOC) matrix element $H_{ij}$, and the corresponding transition probability is
+\begin{equation}
+P_{i \to j}^{\mathrm{ISC}} =
+1 - \exp\left(-\frac{2\pi}{\hbar}
+\frac{H_{ij}^2}{
+\left|\frac{\mathrm{d}}{\mathrm{d}t}\Delta E_{ij}(\textbf{R}(t^*))\right|_{t^\dagger}}\right),
+\end{equation}
+where $\Delta E_{ij}$ is the energy difference and $t^\dagger$ is time of crossing.
+
+
+The limits of the method are following. Since the formula was originally developed for a two state problem, accuracy may decrease for dense manifolds of states or when encountering three-state intersections. For mixed singlet--triplet dynamics, it works well when SOCs are moderate, but will break down once the state splittings become large (e.g., HI molecule). Due to the reliance of the method on PESs one needs to use an electronic structure method that provides continuous energies without any sudden jumps. These would create false crossing events and render the results unreliable. Nevertheless, the code should issue warning in these cases.\cite{Jira2025}
+

@@ -1,0 +1,310 @@
+\section{Guided tour through ABIN}
+\subsection{Input files}
+
+There are two mandatory input files -- one contains the input coordinates in xyz format and the other one contains all the parameters specifying the simulation.
+
+The XYZ format is specified as follows:
+
+first line contains number of atoms, second line is empty or contains some comment and the following lines contains cartesian coordinates (in \AA ngstroms) in the form "\textit{atom-name	x y z}". The atom names are not case-sensitive. For example, a water molecule is specified as:
+
+\begin{verbatim}
+3
+Useful comment
+ O     0.000000     0.000000     0.000000
+ H     0.000000     0.000000     0.950000
+ H     0.895670     0.000000    -0.316663
+\end{verbatim}
+
+The parameter file contains all parameters needed for the simulation.
+The input uses Fortran namelist syntax.
+Variables are grouped into different namelists and there are two namelists that have to be always present: \textit{general} and \textit{nhcopt}. For each type of simulation, there is an example input file in
+the folder SAMPLES/. Here is the minimum input file for classical MD.
+
+\begin{verbatim}
+----------------------------------------------------------------
+Everything outside namelists is ignored
+
+&general                ! This is the beginning of a namelist.
+!Comments within a namelist start with exclamation mark.
+!The order of keywords is irrelevant.
+!Most of the keywords have reasonable default values.
+pot='g09'               ! where do we get forces and energies?
+natom=27,               ! number of atoms
+ipimd=0,                ! 0=CMD, 1=PIMD,2=SH
+mini=2000,              ! equilibration period
+
+!keywords on one line are separated by a comma
+nstep=50000,dt=20.,     ! number of time steps, time step [au]
+irandom=1651563,        ! random seed
+irest=0,                ! should we restart from restart.xyz?
+
+nwrite=1,               ! how often some output should be printed (energies etc.)
+nwritex=5,              ! how often should we print coordinates?
+nrest=5,                ! how often should we print restart files?
+nwritev=0,              ! how often should we print velocities?
+/  ! end of a namelist
+
+&nhcopt
+temp=298.15,     ! Temperature [K] for Maxwell-Boltzmann sampling and thermostat.
+inose=1,         ! Thermostatting: 0 = no thermostat, 1 = Nosé-Hoover 1, 2 = GLE
+tau0=0.001,      ! relaxation time of the NHC thermostat [ps]
+/
+
+\end{verbatim}
+
+Besides these two input files, you need to prepare the directory with a bash script calling the specified \textit{ab initio} program e.\,g. ORCA/r.orca. You have to modify this file and specify the method, basis set and other parameters specifying the \textit{ab initio} calculation. The interface can be found in the folder INTERFACES.
+
+After you prepared your input files, you can run \abin as:
+
+% Ugh, this is super ugly :-(
+\begin{lstlisting}
+./abin [-x  coord.xyz] [-i input.in] [-v vel.xyz] &> abin.out  
+\end{lstlisting}
+
+You can provide file with initial velocities in the same XYZ format as coordinates. However, velocities must be in atomic units. Without the command line options, the program looks for initial coordinates in file \texttt{mini.dat}, input parameters in \texttt{input.in} and takes initial velocities from Maxvell--Boltzmann distribution.
+
+If you run \abin in a cluster environment, it is better to use the automated scripts as described in the section \ref{sec:clusters}.
+
+\subsection{Output files}
+
+At the beginning of the simulation, \abin dumps all the input parameters (including the defaults not specified by the user)
+to the standard output along with some other essential information like atom masses, number of threads in parallel simulations etc.
+During the simulation, only the timestep and time in femtosecond is printed to standards output, all the other information are printed to separate files.
+
+All output files are simple text files. Besides the files containing the geometries, they should all be readable by \textsc{xmgrace} and you can thus visualize the time evolution of each quantity very easily. Each file contains a one-line header explaining the quantity in each column.
+
+\begin{description}
+\item[temper.dat] This file contains instantaneous and average temperature. The third column shows the conserved quantity of the respective thermostat (see section about NH thermostat). You should always check, whether this quantity does not drift. Otherwise, the thermostat
+is probably not working properly.
+
+\item[energies.dat] This file contains various types of energies. The content may vary slightly depending on the type of simulation. However, the columns are usually in the following order: \textit{time}, \textit{potential energy}, \textit{kinetic energy}, \textit{total energy}.
+
+\item[movie.xyz] This file contains the trajectory in the xyz format and is directly e.g. by VMD or Molden.
+
+\item[restart.xyz] This file contains all the necessary information so that \abin can restart the simulation in case it crashed or if the user wants to extend it. All data are given in atomic units. The structure of this file depends on the simulation parameters (\textit{e.g.} which thermostat you use). The first line contains the current time step. Then there is a section containing the current geometry followed by the section containing the velocities. The third section contains either the thermostat parameters (if you use one) or surface hopping wave function. The next section contains the cumulative averages of certain estimators. The last part contains the state of random number generator. This part is not mandatory. If it's missing, the random number generator simply uses the random seed from the input file and starts the sequence from the beginning.
+
+% This is obsolete, user should not mess with the restart file at all
+%If you need to produce restart file manually (but really you probably don't) you must always use the correct character string that comes at the beginning of each section (i.e. "\textit{Cartesian Velocities [au]}").
+%For surface hopping or classical MD, you can use program UTILS/make\_restart.f90 to produce the appropriate restart file.
+
+\end{description}
+
+The other output files are written only when using certain methods. These are described later in the manual. \textbf{TODO}
+
+\subsection{Running ABIN on clusters}
+\label{sec:clusters}
+There are a few scripts that are recommended for efficient execution of \abin jobs on clusters. All of them are simple BASH scripts and it should be straightforward to customize them to your needs.
+
+The launching script \textit{run.abin.sh} (it should be located at the same directory as your input files) can be submitted simply as follows:
+
+\bigskip 
+
+\colorbox{black!20}{\$  \textit{qsub -cwd run.abin.sh}} (you may also want to specify the queue by \textit{-q QueueName})
+
+\bigskip \noindent 
+The script copies all files in the current working directory to the directory on the node scratch and launches \abin there to avoid I/O traffic over the network.
+The names of the node and the scratch directory are written to file job.log
+
+In order to see the current data from the run, one can use the script \textit{fetchabin.sh} simply as:
+
+\bigskip
+\colorbox{black!20}{$ \$ \quad fetchabin.sh $} (assuming it is in your \textsc{\$PATH}).
+
+\bigskip \noindent 
+This will copy the files from the scratch to the current working directory.  
+
+\noindent
+To interrupt the simulation, use:
+
+\colorbox{black!20}{$ \$ \quad ExitAbin.sh $}
+
+\bigskip \noindent 
+This script will create empty file \textit{EXIT} in the scratch directory. \abin checks for the existence of this file at the beginning of each step and if present, prints the restart file and exits. There are two advantages of this approach over simple \textit{qdel} command. First, you have the most recent restart file. Moreover, the files from scratch disk are automatically deleted (if you used script run.abin.sh).
+
+\subsection{Running classical MD}
+
+Here we will see how to setup a basic classical NVT simulation using velocity Verlet algorithm to propagate classical Newton's equations and Nos\'{e}-Hoover-Chain thermostat to keep constant temperature. 
+It is supposed that you have a clean directory with the XYZ geometry of your system.
+
+\begin{itemize}
+
+\item The first thing to decide is what program to use to get forces and energies. If you would choose for example ORCA, copy the directory
+ABIN-INTERFACES/ORCA. Now you have to modify script ORCA/r.orca and specify the method and basis that you want to use. The job of this script is simple: take the geometry from \abin, create input for \textsc{Orca}, launch \textsc{Orca}, collect data from \textsc{Orca}'s output and send them back (via files) to \abin.
+
+\item Now you need to create or modify the file with input parameters. Copy the sample file from SAMPLES/input.in.cmd.
+
+This file is commented so it should be straightforward to understand. There are a few basic things that need to be specified in every simulation: where do we get forces (parameter \textit{pot}), how many atoms we have (\textit{natom}), what type of simulation do we want (\textit{ipimd}, how many time steps and their length (\textit{nstep, dt}). These keywords are in namelist "general". There are two more critical parameters in namelist "nhcopt". You need to specify the thermostat (in this case we will use Nosé-Hoover-Chain thermostat, inose=1)
+and temperature of the system (\textit{temp}). The keyword \textit{temp} also specifies the initial temperature i.e. the Maxvell-Boltzmann distribution from which we randomly take initial velocities. And that's basically it.
+
+\item Now you can launch the simulation. If you are using the cluster environment, copy the script \texttt{utils/run.abin.sh}.
+
+You should modify it and specify the names of your input files and and path to the \abin binary. Then you can send the job to queue and use \texttt{fetchabin.sh} script too see, what's happening. It is strongly advised that each simulation has its own folder and that there is no other stuff in that folder. Otherwise, \texttt{fetchabin.sh} will copy unnecessary amount of data and will rewrite any changes that you could make since the simulation began. 
+
+\end{itemize}
+
+There are couple of other options that you typically want to set. Each simulation should have its unique random seed (\texttt{irandom}). This is especially critical for surface hopping simulations and simulations utilizing quantum thermostat ($inose=2$). Secondly, you might want to control the frequency of writing to the output to files (\texttt{nwrite, nwritex, nrest, nwritev}). Especially the trajectory file \texttt{movie.xyz} might get very big for large systems and/or long simulations. If you are doing thermodynamical simulations $(inose > 0$) you don't need every geometry anyway, since they are correlated and therefore useless for statistical analysis.
+
+When running a classical simulation without thermostat (\texttt{inose=0}) you should always check the conservation of energy in file \texttt{energies.dat}. If you use thermostat ($inose>0$), you should check the conserved quantity of the thermostat, which is printed at the fourth column in file \texttt{temper.dat}. This might vividly oscillate, but it should not drift. If it drifts, then your time step is too long, or you need to tune the parameters of the thermostat, as explained below the next section.
+
+\subsubsection{Tuning Nosé-Hoover thermostat} 
+
+% TODO: Should be moved to advanced section
+
+A comprehensive review of Nosé-Hoover algorithm is given in section \ref{sec:NHC}. Here we describe only practical details.
+
+It is sometimes necessary to tune the parameters of the thermostat if its conserved quantity drifts or if it even produces incorrect temperature. There are couple of parameters that are needed to specify the action of the thermostat. All of them have default values, which were chosen for typical systems containing hydrogen atoms. The most important parameter is so called relaxation time of the thermostat ($tau0$) given in picoseconds. If this value is not chosen appropriately, the thermostat may decouple from the system and will not work.
+If your system does not contain fast vibrations, you may want to set a larger value.  
+
+Other parameters are more robust. Number of chains ($nchain=4$) and number of inner iterations during of the NHC integrator ($nrespnose$, $nyosh$) have by default high values that should suffice for common usage. Since the simulation time is typically determined by \textit{ab initio} calculations, the overhead caused by these conservative settings is usually completely negligible.
+
+\abin by default uses so called massive thermostatting scheme originally devised for PIMD simulations ($imasst=1$).
+If you know what you are doing, you might want to use global thermostat, but be aware that this is not tested nearly as much as the massive version and can in some cases provide wrong results for small systems, because \abin does not remove initial rotations. The details about the global version can be found in section \ref{sec:shake} which explains how to set up the simulation with SHAKE constraints.
+
+\subsection{Restarting the simulation}
+
+Quite often you will need to restart the simulation from the last point. This is typically pretty straightforward. Simply set \textit{irest=1} in namelist "general" and start the simulation again. 
+
+Note that \abin always checks for the presence of files movie.xyz and restart.xyz. If they are present but \textit{irest=0}, the program will stop with an error. This prevents an inadvertent deletion of your precious data. However, if you delete movie.xyz and restart.xyz and set \textit{irest=0}, all other output files will be rewritten. 
+
+Before reading any data, \abin copies the original restart.xyz file to "restart.xyz.\textit{timestep}". This file serves as a backup if anything goes wrong, so that you can always go back to that restart file. 
+
+\medskip
+WARNING: If the frequency of restart printing (\textit{nrest}) is different from the other ones (\textit{nwrite}, \textit{nwritex}), it may happen that there will be duplicate entries in the output files after the restart. However, you can easily fix this after the end of simulation by simply deleting the conflicting lines and geometries. You can easily determine, whether the simulation was restarted by searching for headers in the output files (lines beginning with "\# Time").
+
+\medskip
+In some rare cases, you may want to change the parameters of the simulations when before restart.
+This may cause troubles because the format of the restart file might be different. If you want for example to turn on the thermostat, the restart file will be missing the thermostat section. You may fix that by setting \textit{readNHC=0} or \textit{readQT=0}. In other more complicated cases, you will have to manually edit the restart file. As mentioned before, \abin is strict about the exact string match in order to prevent reading corrupted restart file.  
+
+\subsection{Running Path Integral MD}
+
+PIMD simulation produces one more output file -- \texttt{est\_energy.dat} -- which contains the instantaneous values and cumulative averages of primitive and centroid virial total energy estimators (equations \ref{eqeprim} a \ref{eqevir}). The cumulative average of the virial estimator should converge much more quickly to an constant value. However, both estimators should always converge to the same value. If they do not, something is wrong with your simulation.
+
+Note that during PIMD simulations \abin always prints geometries of every bead.
+
+\subsubsection{Running parallel simulations}
+
+PIMD algorithm can be straightforwardly parallelized, as we need to do do \textit{nwalk} independent \textit{ab initio} calculations at each time step.
+\abin uses OpenMP parallelization for this. Note that this is the only part of the code, that is currently parallelized.
+
+You can set variable \textit{nproc} to specify the number of processors you want to use. As you might suspect, \textit{nwalk} should be divisible by \textit{nproc} for maximum efficiency (\abin will complain if it is not).
+
+Note that you can in addition use parallel version of the \textit{ab initio} program as well. You can of course do that for all types of simulations. However, in the case of PIMD, it is almost always more efficient to use \abin parallelization, since you rarely get perfect linear scaling in \textit{ab initio} codes.
+
+For example, it might be convenient to set \textit{nproc=4} when using PI-GLE method with 4 beads (see below), and also set 2 processors for each ab initio calculation. This setup requires 8 processors in total.
+
+\subsection{Running simulations with GLE thermostat}
+\textit{NOTE: This section needs to be expanded. Sorry about that! 
+}
+
+Besides the Nosé-Hoover thermostat, \abin can also use the thermostat based on Generalized Langevin equation (GLE). While this thermostat can be used also for classical MD and has many different application, it is currently used to simulate quantum nuclear effects using either Quantum Thermostat or PI+GLE method as described below.
+
+\subsubsection{Quantum thermostat}
+
+The quantum thermostat method (here denoted QT) was devised by M. Cerriotti et al. %CITE 
+for efficient simulations of quantum nuclear effects without the need for Path Integrals, which are very computationally demanding. 
+%There are two key ideas behind this method:
+
+%\begin{itemize}
+The QT method is based on the solution of harmonic oscillator in thermal equilibrium. 
+It turns out that both classical and quantum distributions have Gaussian shape, albeit with different widths. One can then convert the classical distribution into the quantum distribution
+by running classical MD at elevated temperature.
+
+%$T^{\star}$ given by:
+%\begin{equation}
+%T =  
+%\end{equation}
+
+%\end{itemize}
+
+\subsubsection{PI+GLE method}
+The ideas behind the quantum thermostat can be also applied for accelerating the convergence of PIMD simulations to the quantum limit.  
+
+
+\subsection{Running Fewest Switches Surface Hopping simulations}
+Fewest switches surface hopping (FSSH) is the workhorse in theoretical photochemistry to predict outcomes of nonadiabatic dynamics. The molecules are propagated classically on Born--Oppenheimer potential energy surfaces until they run into a coupling region, where they can stochastically hop to another electronic state. The hopping is governed by a fewest switches hopping probability determined with a so-called time-derivative coupling. The time-derivative coupling can be calculated as a scalar product of a velocity and nonadiabatic coupling vector (NACV) which is the approach taken by \abin. Note that other approaches based on direct calculation of the time-derivative coupling are possible, but not yet implemented in \abin.
+The implementation of FSSH in \abin has all the standard features of FSSH such as momentum rescaling, frustrated hop handling, energy-based decoherence correction\cite{Granucci2007}, etc.  
+
+\abin also allow to calculate the curvature-driven FSSH ($\kappa$FSSH)\cite{Jira2025}. The difference from the standard FSSH describe above is that $\kappa$FSSH exploits an approximation to NACV based on potential energy surfaces. As such, it is significantly cheaper as it avoids the costly analytic calculation of NACVs. However, the approximate Baeck--An couplings are less accurate than NACVs and prone to numerical instabilities, see Ref.~\citenum{Jira2025} for recent investigation of this issue. Note also that the Baeck--An couplings were derived only for a two state problem.
+
+We provide a typical input file for FSSH dynamics. Note that in this case, we use and analytic NaI potential which does not require interface to any electronic structure code and as such can be used for testing or tutorials.
+\begin{verbatim}
+&general
+pot='_nai_'     ! Use analytic NaI potential
+irest=0,        ! should we restart from restart.xyz?
+irandom=347445, ! random seed
+
+mdtype='sh',    ! sh = Surface Hopping non adiabatic MD
+nstep=10000,    ! number of steps, originally in QD 260000
+dt=2.5,         ! timestep [au], originally in QD 0.25
+
+nwrite=1,       ! how often to print output (energies, populations, etc.)
+nwritex=1,      ! how often to print coordinates?
+nwritev=1,      ! how often to print velocities?
+narchive=100,   ! how often to print archive?
+nrest=200,      ! how often to print restart files?
+/
+
+&sh
+istate_init=2,          ! initial electronic state (1 is ground state)
+nstate=2,               ! number of electronic states
+deltaE=2.0,             ! max. energy diff. (eV) between states to calc. NACV
+couplings='analytic'    ! Analytic NACV (FSSH) or Baeck-An couplings (kFSSH)
+EnergyDifThr=0.01,      ! max. energy diff. (eV) between two consecutive steps
+EnergyDriftThr=0.01,    ! max. energy drift (eV) from initial total energy
+/
+\end{verbatim}
+The $\kappa$FSSH calculations can be performed by switching to \verb|couplings='baeck-an'|.
+
+The surface hopping module provides several new output files containing electronic state populaitons (\textit{pop.dat}), hopping probabilities (\textit{prob.dat}), time-derivative couplings (\textit{dotprod.dat}), hopping geometries (\textit{hopgeom.x.x.xyz}), potential energy surfaces (\textit{pes.dat}) and kinteic/potential energies along the trajectory (\textit{energies.dat}).
+
+
+\subsection{Running Landau-Zener Surface Hopping simulations}
+Landau-Zener Surface Hopping allows for fast nonadiabatic dynamics simulations further enabling to incorporate intersystem crossing (ISC).\cite{SuchanLZ} It determines probability of hops between states only in points of crossings -- for hops between adiabatic states we only use the PES curvature, for ISC we further calculate spin-orbit couplings. This means it can be used with almost all ABIN interfaces that provide excited state energies. 
+
+Information about the hop decisions can be found as a part of the \textit{output} file. The \textit{pop} file contains the state populations. Otherwise, the output files are similar to FSSH calculation
+
+The input for LZSH is similar to FSSH above, we just change the \verb|&sh| section for \verb|&lz| section. If we consider only singlet states (or states with the same multiplicity), there is the following example
+\begin{verbatim}
+&lz
+initstate_lz=2,				 
+nstate_lz=3,
+nsinglet_lz=3,
+deltaE_lz=1.0,
+/
+\end{verbatim}
+Example for singlet-triplet transitions:
+\begin{verbatim}
+&lz
+initstate_lz=4,
+nstate_lz=5,
+nsinglet_lz=2,
+ntriplet_lz=3,
+deltaE_lz=1.5,
+/
+\end{verbatim}
+
+Although the LZSH method is derived only for two-state problems, \abin implements also a multistate extension which considers hops only to the closest neighbouring states. If the probabilites for hopping to the neighbouring states sum to more than one, \abin issues warning. In such cases, a 'maximum-curvature' variant of multistate LZSH would be suitable.\cite{Jira2025} Implementation of this version is under construction. \abin further contains algorithm for preventing hops induced by discontinuities in potential energy surfaces. All details of these implementations are described in Ref.~\citenum{Jira2025}.
+
+%\subsection{SHAKE and global NH thermostat}
+%TODO:
+
+%\label{sec:shake}
+
+%\colorbox{black!20}{imasst=0 } %\hspace{4cm}} \newline
+%\colorbox{black!20}{natmolt=2 } %\hspace{4cm}}
+
+
+%\subsection{Boundary conditions}
+%By default, all simulations are performed under open boundary conditions.
+%For classical simulation with Amber force fields (keyword pot=nab), the periodic boundary conditions (\textbf{PBC}) are being developed.
+%For cluster simulations, one can use simple spherical restraining potential (\textbf{SBC}) as explained in detail below. 
+
+%The more elaborate elastic bag method\cite{bag} is currently under development.
+
+%\subsubsection{PBC} 
+%\subsubsection{SBC}
+%TODO 
+%\subsubsection{Elastic bag} 
+
+
+

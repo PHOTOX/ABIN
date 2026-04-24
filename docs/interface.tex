@@ -1,0 +1,47 @@
+\section{Interface with electronic structure codes}
+\label{sec:interface}
+\abin does not handle electronic structure calculations internally. It relies on external quantum chemistry programs to provide the energies and forces. When needed, other information such as nonadiabatic couplings are being relayed. We use a simple shell script with file-based interface that communicates between \abin and external program which is normally called at each timestep.  
+
+\subsection{List of available interfaces}
+List of existing standard interfaces and their variants is provided below:
+\begin{table}[ht]
+\centering
+\caption{Supported interfaces and available mdtypes.}
+\label{tab:interfaces_modes_minimal}
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Interface} & \textbf{MD} & \textbf{SH} & \textbf{LZ} \\
+\midrule
+BAGEL       & \checkmark & \checkmark & \checkmark \\
+CASTEP      & \checkmark & --- & ---  \\
+ChemShell   & \checkmark & \checkmark & \checkmark \\
+CP2K        & \checkmark & --- & ---  \\
+DFTB        & \checkmark & --- & --- \\
+GAMESS      & \checkmark & \checkmark & --- \\
+Gaussian    & \checkmark & --- & --- \\
+Molpro      & \checkmark & \checkmark & \checkmark \\
+MNDO        & \checkmark & --- & \checkmark \\
+MOPAC       & \checkmark & --- & --- \\
+ORCA        & \checkmark & --- & --- \\
+%PWSCF       & \checkmark & --- & --- \\
+QCHEM       & \checkmark & --- & --- \\
+TURBOMOLE   & \checkmark & --- & --- \\
+TeraChem    & \checkmark & \checkmark  & \checkmark \\
+XTB         & \checkmark & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In order to use an interface, copy the selected interface folder into your inputfile directory and set the \textit{pot} keyword to corresponding name. Check the interface file interfaces/r.interface or the template input file interfaces/*.inp to set the parameters such as method, basis, etc.
+
+For expert users we recommend further exploring the interfaces folder for exotic variants. In order to write you own interface, try to follow the general structure of an existing example. The interface is expected to (i) read the current molecular geometry (ii) prepare the input for external program (iii) run the external program and (iv) parse the output and write the quantities to a file for ABIN before exiting. 
+
+
+\subsection{MPI interface to TeraChem}
+\abin can also be compiled with MPI, providing direct interface to TeraChem. This makes calculations faster mainly due the elimination of long initialization period on TeraChem's side. In order to use this option, one needs to set the \textit{pot} to \textit{\_tera\_} and provide TeraChem input file \textit{tera.inp} in the starting directory. MD and SH mdtypes are currently supported.
+
+%\subsection{Built-in potentials}
+%Omitting for now: HO, double well, Morse, mmwater, ...
+
+
+
