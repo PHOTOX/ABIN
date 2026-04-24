@@ -1,5 +1,5 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19740845.svg)](https://doi.org/10.5281/zenodo.19740845)
-[![CI](https://github.com/PHOTOX/ABIN/workflows/GFortran%20CI/badge.svg?branch=master&event=push)](https://github.com/PHOTOX/ABIN/actions?query=workflow%3A%22GFortran+CI%22)
+[![CI](https://github.com/PHOTOX/ABIN/actions/workflows/gfortran.yml/badge.svg)](https://github.com/PHOTOX/ABIN/actions/workflows/gfortran.yml)
 [![codecov](https://codecov.io/gh/PHOTOX/ABIN/branch/master/graph/badge.svg)](https://codecov.io/gh/PHOTOX/ABIN)
 
 ## What is ABIN?
