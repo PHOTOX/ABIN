@@ -9,7 +9,9 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    paths-ignore: [docs/**, *.md]
+    paths-ignore:
+    - 'docs/**'
+    - '*.md'
 
 # Cancel in-progress jobs or runs for the current workflow - matches against branch & tags
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
