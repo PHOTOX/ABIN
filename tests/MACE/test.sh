@@ -60,7 +60,7 @@ if [[ "$IS_OPENMPI" = "true" ]]; then
   MPIRUN_EXTRA_ARGS="--ompi-server file:$OMPI_URI_FILE"
 fi
 
-MPIRUN_CMD="$MPIRUN --oversubscribe -n 1 $MPIRUN_EXTRA_ARGS"
+MPIRUN_CMD="$MPIRUN -n 1 $MPIRUN_EXTRA_ARGS"
 
 ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM"
 MACE_CMD="python3 $MACE_SERVER"
