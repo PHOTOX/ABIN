@@ -328,6 +328,9 @@ jobs:
         if [ $GCC_V -ge 10 ];then export FFLAGS="-fallow-argument-mismatch";export FCFLAGS="-fallow-argument-mismatch";fi && \
         ./dev_scripts/install_mpich.sh ${HOME}/mpich ${MPICH_V}
 
+    - name: Install MACE
+      run: pip install mace mpi4py ase numpy
+
     - name: build ABIN
       run: |
         if [ $GCC_V -ge 10 ];then export FFLAGS="-fallow-argument-mismatch $FFLAGS";fi && \
@@ -371,6 +374,9 @@ jobs:
     - name: Build and Install OpenMPI
       if: steps.openmpi-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_openmpi.sh ${HOME}/openmpi ${OPENMPI_V} ${OPENMPI_PATCH}
+
+    - name: Install MACE
+      run: pip install mace mpi4py ase numpy
 
     - name: build ABIN
       run: ./configure --mpi "${HOME}/openmpi/${OPENMPI_V}/install" && make
