@@ -9,6 +9,9 @@ on:
   push:
     branches: [ master ]
   pull_request:
+    paths-ignore:
+    - 'docs/**'
+    - '*.md'
 
 # Cancel in-progress jobs or runs for the current workflow - matches against branch & tags
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
@@ -45,9 +48,13 @@ jobs:
       CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 2
+
+    - name: Install libstdc++-dev
+      if: matrix.gcc_v == 9
+      run: sudo apt-get install libstdc++-9-dev
 
     - name: Set GFortran version
       run: |
@@ -58,7 +65,7 @@ jobs:
     # pFUnit library is used to build and run unit tests
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/pfunit/build/installed
         # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
@@ -98,7 +105,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - uses: fortran-lang/setup-fortran@v1
       id: setup-fortran
@@ -120,7 +127,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - uses: fortran-lang/setup-fortran@v1
       id: setup-fortran
@@ -144,7 +151,7 @@ jobs:
       FC: gfortran
       CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 2
 
@@ -153,7 +160,7 @@ jobs:
 
     - name: TCBP build cache
       id: tcpb-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/tcpb-cpp/lib
         # To force a rebuild (bust the cache), make a change to install_tcpb.sh
@@ -192,7 +199,7 @@ jobs:
       GCC_V: ${{ matrix.gcc_v}}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 2
     - name: Set GFortran version
@@ -202,7 +209,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
@@ -231,7 +238,7 @@ jobs:
     env:
       CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 2
 
@@ -240,7 +247,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
@@ -291,7 +298,7 @@ jobs:
       CODECOV_NAME: ${{format('{0} GCC-{1} MPICH-{2}', github.job, matrix.gcc_v, matrix.mpich_v)}}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 2
 
@@ -303,7 +310,7 @@ jobs:
 
     - name: MPICH build Cache
       id: mpich-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/mpich/${{ env.MPICH_V }}/install
         key: ${{runner.os}}-ubuntu22.04-mpich${{ env.MPICH_V }}-gfortran${{ env.GCC_V }}-${{hashFiles('dev_scripts/install_mpich.sh')}}
@@ -351,12 +358,12 @@ jobs:
       OPENMPI_PATCH: "2"
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 2
     - name: OpenMPI build cache
       id: openmpi-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/openmpi/${{ env.OPENMPI_V }}/install
         key: ${{runner.os}}-ubuntu22.04-openmpi${{ env.OPENMPI_V }}-gfortran-default-${{hashFiles('dev_scripts/install_openmpi.sh')}}
@@ -395,12 +402,12 @@ jobs:
       CODECOV_NAME: ${{format('{0} PLUMED-{1}', github.job, matrix.plumed_v)}}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 2
     - name: Plumed build cache
       id: plumed-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/plumed/${{ env.PLUMED_V }}/install
         key: ${{runner.os}}-ubuntu22.04-plumed${{env.PLUMED_V}}-gcc-default-${{hashFiles('dev_scripts/install_plumed.sh')}}
@@ -411,7 +418,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}

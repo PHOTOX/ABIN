@@ -1,5 +1,5 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1228462.svg)](https://zenodo.org/badge/latestdoi/28882168)
-[![CI](https://github.com/PHOTOX/ABIN/workflows/GFortran%20CI/badge.svg?branch=master&event=push)](https://github.com/PHOTOX/ABIN/actions?query=workflow%3A%22GFortran+CI%22)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19740845.svg)](https://doi.org/10.5281/zenodo.19740845)
+[![CI](https://github.com/PHOTOX/ABIN/actions/workflows/gfortran.yml/badge.svg)](https://github.com/PHOTOX/ABIN/actions/workflows/gfortran.yml)
 [![codecov](https://codecov.io/gh/PHOTOX/ABIN/branch/master/graph/badge.svg)](https://codecov.io/gh/PHOTOX/ABIN)
 
 ## What is ABIN?
@@ -19,7 +19,8 @@ and can be done without any changes to ABIN or the ab initio code.
 The code is provided under the GNU General Public License.
 A full text of the license can be found in the file LICENCE.
 
-The documentation (work-in-progress) can be found in the folder `docs/`.
+The documentation for the latest stable release (v1.2.0) can be downloaded as a PDF file [here](https://github.com/PHOTOX/ABIN/releases/download/v1.2.0/ABIN_documentation_v1.2.0.pdf).
+The documentation for the development version can be found on [Overleaf](https://v2.overleaf.com/read/xbsxbyvdnfzh).
 
 ## Installation
 
