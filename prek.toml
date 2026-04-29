@@ -21,7 +21,7 @@ hooks = [
     id = "fortitude",
     args = ["--fix", "src/"],
     pass_filenames = false,
-    files = "src/.[fF]90$",
+    files = "src/.*[fF]90",
   }
 ]
 
@@ -44,9 +44,9 @@ hooks = [
     name = "Format Fortran code",
     language = "python",
     entry = "./autoformat.py",
-    files = "src/.[fF]90$",
+    files = ".[fF]90",
     pass_filenames = true,
     # This list must be in sync with .fprettify.rc
-    exclude = "random.F90|fftw3.F90|force_cp2k.F90|h2o_schwenke.f|h2o_cvrqd.f"
+    exclude = "interfaces/DFTB-SOCKET-DEV/*|utils/analyze_movie.f90|random.F90|fftw3.F90|force_cp2k.F90|h2o_schwenke.f|h2o_cvrqd.f"
   }
 ]
