@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-         gcc_v: [9, 12]
+         gcc_v: [9, 13]
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
