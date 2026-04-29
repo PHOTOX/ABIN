@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # Test that ABIN exits gracefully
 # when reading from empty TC port file.

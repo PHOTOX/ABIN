@@ -1,0 +1,52 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "no-commit-to-branch" },
+  { id = "check-yaml" },
+  { id = "check-added-large-files" },
+  { id = "check-merge-conflict" },
+  { id = "check-executables-have-shebangs" }
+]
+
+[[repos]]
+# fortitude: A Fortran linter, https://fortitude.readthedocs.io/
+repo = "https://github.com/PlasmaFAIR/fortitude-pre-commit"
+rev = "v0.7.1"
+hooks = [
+  {
+    id = "fortitude",
+    args = ["--fix", "src/"],
+    pass_filenames = false,
+    files = "src/.[fF]90$",
+  }
+]
+
+[[repos]]
+# shellcheck: A shell linter, https://www.shellcheck.net/
+repo = "https://github.com/koalaman/shellcheck-precommit"
+rev = "v0.11.0"
+hooks = [
+  {
+    id = "shellcheck",
+    files = "dev_scripts/setup_vim.sh"
+  }
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "format",
+    name = "Format Fortran code",
+    language = "python",
+    entry = "./autoformat.py",
+    files = "src/.[fF]90$",
+    pass_filenames = true,
+    # This list must be in sync with .fprettify.rc
+    exclude = "random.F90|fftw3.F90|force_cp2k.F90|h2o_schwenke.f|h2o_cvrqd.f"
+  }
+]

@@ -40,7 +40,7 @@ program abin_randomint
       write (*, '(I0)') irans(i)
    end do
    deallocate (irans)
-end program
+end program abin_randomint
 
 subroutine get_cmdline(iseed, nran)
    use, intrinsic :: iso_fortran_env, only: ERROR_UNIT

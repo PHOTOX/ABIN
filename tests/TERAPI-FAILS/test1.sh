@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # Test a scenario in which SCF does not converge
 # and TeraChem sends the MPI_SCF_DIE tag to ABIN.
