@@ -5,16 +5,89 @@ Here's a couple of guidelines that you should keep in mind.
 
 ## Setup your environment
 
-To setup your Unix environment, run:
-```sh
-cd dev_scripts && ./setup_dev_environment.sh
-```
-Read through the script first to see what it does (it's not long, I promise).
-It is useful especially if you use VIM as your text editor, as it sets it up to use our code style rules.
-If you use a different editor, we welcome if you contribute your config files!
+We use tools such as autoformatter ([fprettify](https://github.com/fortran-lang/fprettify)) and linter ([fortitude](https://github.com/PlasmaFAIR/fortitude/))
+to keep our code nice and tidy. Instead of having the developer to
+install these and run them manually, we use a tool called `prek`
+which does this automatically before every commit.
 
-The script also tries to install the `configargparse` Python dependency,
-which is needed for the code autoformatting (see below).
+To install `prek` run:
+
+```console
+pip install --user prek
+```
+
+Then you must run the following in the repository to install prek's [pre-commit hook](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks):
+
+```
+prek install
+```
+
+From now on, prek will execute hooks defined in `prek.toml` before every commit.
+You can also run the hooks manually at any point:
+
+```
+❯ prek run -a
+don't commit to branch...................................................Passed
+check yaml...............................................................Passed
+check for added large files..............................................Passed
+check for merge conflicts................................................Passed
+check that executables have shebangs.....................................Passed
+fortitude................................................................Passed
+ShellCheck v0.11.0.......................................................Passed
+Format Fortran code......................................................Passed
+```
+
+To run only the formatter
+
+```
+❯ prek run -a format
+Format Fortran code........................................Passed
+```
+
+If any of the checks fail, the commit is aborted. Often times, the violations
+are fixed automatically (e.g. formatter will autoformat the code), so simply
+re-running `git commit` together with the changes files is enough.
+Sometimes, manual intervention is necessary, for example if `fortitude` catches
+that you forgot to use `implicit none`.
+
+```console
+❯ prek run -a fortitude
+fortitude................................................................Failed
+- hook id: fortitude
+- exit code: 1
+
+  src/abin.F90:19:1: C001 program missing 'implicit none'
+     |
+  17 | !  You should have received a copy of the GNU General Public License
+  18 | !  along with this program in the file LICENSE. If not, see <http://www.gnu.org/licenses/>.
+  19 | program abin
+     | ^^^^^^^^^^^^ C001
+  20 |    use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
+  21 |    use mod_const, only: DP, AUtoFS
+  22 |    use mod_arrays
+     |
+
+  fortitude: 47 files scanned.
+  Number of errors: 1
+```
+
+
+> [!TIP]
+> In rare circumstances, you might want to skip the checks and make a commit even if they are failing,
+> such as when you want to quickly save your work. 
+> Use `--no-verify` option to skip the pre-commit hooks.
+> `git commit --no-verify`
+> Note that the pre-commit hooks are nevertheless always enforced on GitHub.
+
+See [prek documentation](https://prek.j178.dev/) for more details.
+
+### Configuring your editor
+
+If you use vim as your editor, you might want to run this setup script
+to configure proper autoindentation in Fortran files.
+```sh
+./dev_scripts/setup_vim.sh
+```
 
 ### Install dev dependencies
 
@@ -27,9 +100,10 @@ which is needed for the code autoformatting (see below).
 Here's a quick summary of our code style that we try to adhere to:
 
  - use `implicit none` everywhere, no exceptions!
+   This is enforced by default via the `-fimplicit-none` compiler flag.
  - each function/subroutine argument should have the intent attribute.
- - use `REAL(DP)` for real numbers, the `DP` constant indicating the kind (precision) is defined in `modules.F90`
- - variables and subroutines in modules should be private by default, use `private` attribute,e.g.
+ - use `real(DP)` for real numbers, the `DP` constant indicating the kind (precision) is defined in `modules.F90`
+ - variables and subroutines in modules should be private by default, use `private` attribute:
 ```fortran
 module mod_my_module
    private
@@ -47,13 +121,10 @@ end module mod_my_module
 ### Code formatting
 
 We're using `fprettify` to automatically format our code; you should use it too!
-That way you don't need to worry about it and just apply the autoformatter at the end, like so:
+To run formatter on all code in `src/` folder, run the formatter via prek as
+
 ```console
-./autoformat.py
-```
-This will autoformat all Fortran files in `src/`. You can also autoformat individual files:
-```console
-./autoformat.py source.f90
+$ prek run -a format
 ```
 
 Here's a quick summary of our formatting style, as it is defined in `.fprettify.rc` config file.
