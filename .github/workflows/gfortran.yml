@@ -44,8 +44,8 @@ jobs:
          os: [ubuntu-22.04]
          gcc_v: [9, 13]
          include:
-          - os: macos-14
-            gcc_v: 13
+          - os: macos-15
+            gcc_v: 15
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
