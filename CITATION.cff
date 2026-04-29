@@ -13,12 +13,22 @@ authors:
   - family-names: Ončák
     given-names: Milan
     orcid: https://orcid.org/0000-0002-4801-3068
+  - family-names: Sršeň
+    given-names: Štěpán
+  - family-names: Poštulka
+    given-names: Jan
+  - family-names: Jurásková
+    given-names: Veronika
+  - family-names: Barnfield
+    given-names: Marco
+  - family-names: Svoboda
+    given-names: Ondřej
   - family-names: Slavíček
     given-names: Petr
     orcid: https://orcid.org/0000-0002-5358-5538
 title: "ABIN"
 version: 1.2.0
 doi: 10.5281/zenodo.1228462
-date-released: 2025-10-07
+date-released: 2026-04-24
 url: "https://github.com/PHOTOX/ABIN"
 # preferred citation for later if publication
