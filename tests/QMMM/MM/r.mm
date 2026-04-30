@@ -10,8 +10,8 @@ let natom1=natom+1
 
 let lines=timestep*natom1+natom1
 if [[ $natom -eq 3 ]];then
-   head -$lines engrad_mmhigh.dat.all.ref | tail -$natom1 > ../engrad_mm.dat.$ibead
+   head -n $lines engrad_mmhigh.dat.all.ref | tail -n $natom1 > ../engrad_mm.dat.$ibead
 else 
-   head -$lines engrad_mmlow.dat.all.ref | tail -$natom1 > ../engrad_mm.dat.$ibead
+   head -n $lines engrad_mmlow.dat.all.ref | tail -n $natom1 > ../engrad_mm.dat.$ibead
 fi
 

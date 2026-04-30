@@ -79,7 +79,7 @@ function folders_exist {
 folders_exist "$inputdir"
 files_exist "$movie" "${veloc-}" "$abin_input" "${launch_script-}"
 
-natom=$(head -1 $movie)
+natom=$(head -n 1 $movie)
 if [[ $natom -lt 1 ]];then
   echo "ERROR: Invalid number of atoms on the first line of file $movie"
   exit 1
@@ -151,13 +151,13 @@ while [[ $i -le "$nsample" ]];do
    cp -r $inputdir/* $folder/TRAJ.$i
 
    # Prepare input geometry and velocities
-   head -$offset $movie | tail -$natom2 > $folder/TRAJ.$i/initial.xyz
+   head -n $offset $movie | tail -n $natom2 > $folder/TRAJ.$i/initial.xyz
    if [[ -n "${veloc-}" ]];then
-      head -$offset "$veloc" | tail -$natom2 > $folder/TRAJ.$i/veloc.in
+      head -n $offset "$veloc" | tail -n $natom2 > $folder/TRAJ.$i/veloc.in
    fi
 
    ## Now prepare input.in and r.abin
-   irandom=$(head -$i iran.dat |tail -1)
+   irandom=$(head -n $i iran.dat |tail -n 1)
 
    # TODO: Validate this step
    sed -r "s/irandom *= *[0-9]+/irandom=$irandom/" $abin_input > $folder/TRAJ.$i/input.in 
