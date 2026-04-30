@@ -42,7 +42,7 @@ jobs:
       fail-fast: false
       matrix:
          os: [ubuntu-22.04]
-         gcc_v: [9, 13]
+         gcc_v: [9, 15]
          include:
           - os: macos-15
             gcc_v: 15
