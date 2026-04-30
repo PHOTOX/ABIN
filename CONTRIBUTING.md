@@ -5,10 +5,10 @@ Here's a couple of guidelines that you should keep in mind.
 
 ## Setup your environment
 
-We use tools such as autoformatter ([fprettify](https://github.com/fortran-lang/fprettify)) and linter ([fortitude](https://github.com/PlasmaFAIR/fortitude/))
+We use tools such as an autoformatter ([fprettify](https://github.com/fortran-lang/fprettify)) and linter ([fortitude](https://github.com/PlasmaFAIR/fortitude/))
 to keep our code nice and tidy. Instead of having the developer to
-install these and run them manually, we use a tool called `prek`
-which does this automatically before every commit.
+install these and run them manually, we use a programm called `prek`
+which automatically installs and runs them before every commit.
 
 To install `prek` run:
 
@@ -46,7 +46,7 @@ Format Fortran code........................................Passed
 
 If any of the checks fail, the commit is aborted. Often times, the violations
 are fixed automatically (e.g. formatter will autoformat the code), so simply
-re-running `git commit` together with the changes files is enough.
+re-running `git commit` together with the changed files is enough.
 Sometimes, manual intervention is necessary, for example if `fortitude` catches
 that you forgot to use `implicit none`.
 
@@ -75,7 +75,7 @@ fortitude................................................................Failed
 > [!TIP]
 > In rare circumstances, you might want to skip the checks and make a commit even if they are failing,
 > such as when you want to quickly save your work. 
-> Use `--no-verify` option to skip the pre-commit hooks.
+> Use the `--no-verify` (or `-n`) option to skip the pre-commit hooks.
 > `git commit --no-verify`
 > Note that the pre-commit hooks are nevertheless always enforced on GitHub.
 
@@ -89,7 +89,7 @@ to configure proper autoindentation in Fortran files.
 ./dev_scripts/setup_vim.sh
 ```
 
-### Install dev dependencies
+### Installing dev dependencies
 
 - Some ABIN functionality requires external libraries; see [README.md](README.md#optional-dependencies) for details.
 - To build and run Unit Tests, you will need to install pFUnit library, you can use
@@ -137,21 +137,30 @@ Here's a quick summary of our formatting style, as it is defined in `.fprettify.
  - comments should start at the same indentation level as the code they are commenting.
     - use an exclamation mark to start a comment
 
-### Inspecting Git history
-
-To ignore bulk whitespace changes in git blame history, use:
-```sh
-git blame --ignore-revs-file .git-blame-ignore-revs
-```
-
-or to do it automatically:
-```sh
-git config blame.ignoreRevsFile .git-blame-ignore-revs
-```
-
 ## Submitting code changes
 
 Last but not least, to get your code merged to the main repository, please open a Pull Request (PR) on Github.
 If you're not familiar with Pull Requests, take a look [here](https://guides.github.com/activities/hello-world/#pr).
+It might be confusing at first, but is quite easy once you get a hang of it!
 
-It's super easy, barely an inconvenience! (assuming basic familiarity with Git)
+> [!TIP]
+> Note: We highly recommend that any new development is done in your own separate branch.
+> Here's how you create a new branch and push it to GitHub.
+> ```bash
+> git switch -c cool_feature
+> git push origin cool_feature
+> ```
+
+### Inspecting Git history (advanced)
+
+To ignore bulk whitespace changes in [git blame](https://git-scm.com/docs/git-blame) history, use:
+```sh
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+From now on, running `git blame` will automatically skip commits
+that are defined in `.git-blame-ignore-revs`.
+(This is what GitHub does under the hood if you use its blame feature).
+
+If you intend to make a bulk change that is mechanical and touches a lot of files,
+(such as updating formatter configuration), it changes must be done in a separate commit,
+and once this commit lands on the master branch, it should be added to the `.git-blame-ignore-revs` file.
