@@ -1,4 +1,4 @@
-name: GFortran CI
+name: build
 
 # WARNING: When updating the OS version of Github Actions runner,
 # e.g. from Ubuntu 20.04 to 22.04, you need to manually update the cache keys!
@@ -36,7 +36,7 @@ env:
 jobs:
 
   basic_build:
-    name: Basic build
+    name: gfortran
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -104,7 +104,7 @@ jobs:
         fail_ci_if_error: true
 
   debug_build:
-    name: Debug build
+    name: Debug
     runs-on: ubuntu-24.04
 
     steps:
@@ -126,7 +126,7 @@ jobs:
       run: make e2etest
 
   intel_build:
-    name: Intel build
+    name: Intel ifx
     runs-on: ubuntu-22.04
 
     steps:
@@ -147,7 +147,7 @@ jobs:
       run: make e2etest
 
   tcpb_build:
-    name: TCPB build
+    name: TCPB interface
     runs-on: ubuntu-22.04
     needs: basic_build
     env:
@@ -190,7 +190,7 @@ jobs:
 
 
   optimized_build:
-    name: Optimized build
+    name: Optimized
     runs-on: ubuntu-22.04
     needs: basic_build
     strategy:
@@ -236,7 +236,7 @@ jobs:
   # To use FFTW with other Gfortran versions, we would need to build it.
   fftw_build:
     runs-on: ubuntu-22.04
-    name: FFTW build
+    name: FFTW
     needs: basic_build
     env:
       CODECOV_NAME: ${{format('{0}', github.job)}}
@@ -284,7 +284,7 @@ jobs:
         fail_ci_if_error: true
 
   mpich_build:
-    name: MPICH build
+    name: MPICH
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     needs: basic_build
@@ -347,7 +347,7 @@ jobs:
         fail_ci_if_error: true
 
   openmpi_build:
-    name: OpenMPI build
+    name: OpenMPI
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     needs: basic_build
@@ -387,7 +387,7 @@ jobs:
         fail_ci_if_error: true
 
   plumed_build:
-    name: PLUMED build
+    name: PLUMED
     runs-on: ubuntu-22.04
     needs: basic_build
     strategy:
