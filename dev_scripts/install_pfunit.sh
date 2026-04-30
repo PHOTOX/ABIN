@@ -12,7 +12,7 @@ if [[ "$#" -ne 1 ]];then
 fi
 
 mkdir -p "$1"
-REPO_DIR="$1/$PFUNIT_VERSION/pFUnit"
+REPO_DIR="$1"
 
 git clone --recursive --branch $PFUNIT_VERSION https://github.com/Goddard-Fortran-Ecosystem/pFUnit "$REPO_DIR" && cd "$REPO_DIR"
 
