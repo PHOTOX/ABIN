@@ -11,7 +11,7 @@ let natom1=natom+1
 
 let lines=timestep*natom1+natom1
 # Use the same energies and forces for all beads
-head -$lines engrad.dat.all.ref | tail -$natom1 > ../engrad.dat.$ibead
+head -n $lines engrad.dat.all.ref | tail -n $natom1 > ../engrad.dat.$ibead
 
 # Simulate ab initio failure for the second bead
 echo "Calculating bead $ibead"
