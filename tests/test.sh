@@ -261,6 +261,9 @@ do
       if [[ -f input.in2 && $? -eq 0 ]]; then
          $ABINEXE -i input.in2 >> $ABINOUT 2>&1
       fi
+      if [[ $? -ne 0 ]]; then
+         cat $ABINOUT
+      fi
    fi
 
    if [[ $ACTION = "makeref" ]];then
