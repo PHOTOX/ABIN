@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # Test that ABIN stops if nteraservers > nbeads
 

@@ -348,8 +348,6 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     needs: basic_build
-    strategy:
-      fail-fast: false
     env:
       # To speed-up OpenMPI build
       CFLAGS: -O0

@@ -10,30 +10,14 @@ env:
 
 jobs:
 
-  format:
-    name: Code format check
+  prek:
     runs-on: ubuntu-24.04
+    env:
+      SKIP: 'no-commit-to-branch'
 
     steps:
     - uses: actions/checkout@v6
-    - uses: astral-sh/setup-uv@v7
-
-    - name: Run formatter
-      run: |
-        uv run autoformat.py
-        f=`git ls-files -m`; if [[ -n $f ]]; then echo -e "ERROR: Detected unformatted files:\n$f"; exit 1; fi
-
-  lint:
-    name: Lint check
-    runs-on: ubuntu-24.04
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Install fortitude linter
-      run: pip install fortitude-lint==0.7.1
-
-    - name: Lint check
-      run: fortitude check src/
+    - uses: j178/prek-action@v2
 
   scripts:
     name: Test and lint utililities and analysis scripts

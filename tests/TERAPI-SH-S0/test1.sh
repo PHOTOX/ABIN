@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 set -euo pipefail
 
 source ../test_tc_server_utils.sh

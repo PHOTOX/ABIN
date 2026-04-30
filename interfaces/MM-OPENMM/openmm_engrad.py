@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # --------------------------------------------
 # Single point MM energy and forces using OpenMM. 
 # To be used with ABIN
@@ -5,8 +6,6 @@
 # Before running the actual MD simulation, 
 # you should run this script with your template PDB file to verify that everything works
 # ---------------------------------------------
-
-from __future__ import print_function
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
@@ -57,5 +56,3 @@ print(energy * KJMOLtoAU)
 # Forces in atomic units
 for f in forces:
    print('%g %g %g' % (-f[0]*KJMOLtoAU/NMtoBOHR, -f[1]*KJMOLtoAU/NMtoBOHR, -f[2]*KJMOLtoAU/NMtoBOHR))
-
-

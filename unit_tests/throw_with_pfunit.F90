@@ -26,5 +26,4 @@ contains
       call set_error_method(throw)
    end subroutine initialize_throw
 
-   
 end module throw_with_pfunit_mod
