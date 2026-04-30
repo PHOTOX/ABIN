@@ -1225,11 +1225,12 @@ contains
       write (stdout, *) ''
       write (stdout, '(1x, a, t25)', advance='no') "Running on node:"
       call execute_command_line('uname -n')
-      write (stdout, '(A)') 'Working directory: '
+      write (stdout, '(1x, a, t25)', advance='no') 'Working directory:'
       call execute_command_line('pwd')
-      write (stdout, *)
+      write (stdout, '(1x, a, t25)', advance='no') 'Executable:'
       call get_command(cmdline)
       write (stdout, *) trim(cmdline)
+      write (stdout, '(1x, a)') 'Dynamic linking info:'
       call flush (stdout)
       ! NOTE: `ldd` is not available on MacOS by default, so ignore errors
       call get_command_argument(0, cmdline)
