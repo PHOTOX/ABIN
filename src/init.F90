@@ -66,6 +66,7 @@ contains
       use mod_force_tcpb, only: initialize_tcpb
       use mod_terampi
       use mod_terampi_sh
+      use mod_mace_mpi
       use mod_mdstep, only: initialize_integrator, nabin, nstep_ref
       real(DP), intent(out) :: dt
       ! Input parameters for analytical potentials
@@ -149,6 +150,10 @@ contains
 
       namelist /qmmm/ natqm, natmm, q, LJ_rmin, LJ_eps, mm_types
 
+      namelist /mace/ mace_model, mace_device, mace_default_dtype, &
+         mace_batch_size, mace_compute_stress, mace_return_contributions, &
+         mace_info_prefix, mace_head, mace_max_mpi_wait_time, mace_mpi_milisleep
+
       chcoords = 'mini.dat'
       xyz_units = 'angstrom'
       chinput = 'input.in'
@@ -214,6 +219,11 @@ contains
       ! because we want to shut down TeraChem nicely in case something goes wrong.
       if (pot == '_tera_' .or. restrain_pot == '_tera_' .or. pot_ref == '_tera_') then
          call initialize_terachem_interface(trim(tc_server_name))
+      end if
+
+      ! Connect to MACE server as early as possible
+      if (pot == '_mace_') then
+         call initialize_mace_interface()
       end if
 
       if (mdtype /= '') then
@@ -395,6 +405,17 @@ contains
          rewind (uinput)
       end if
 
+      ! Read &mace namelist when using MACE potential
+      if (pot == '_mace_') then
+         read (uinput, mace, iostat=iost, iomsg=chiomsg)
+         rewind (uinput)
+         if (iost /= 0) then
+            write (stderr, *) chiomsg
+            call fatal_error(__FILE__, __LINE__, &
+               & 'Could not read namelist "mace". Required when pot="_mace_".')
+         end if
+      end if
+
       close (uinput)
       ! END OF READING INPUT
 
@@ -403,6 +424,10 @@ contains
          if (ipimd == 2 .or. ipimd == 5) then
             call init_terash(x, y, z)
          end if
+      end if
+
+      if (pot == '_mace_') then
+         call initialize_mace_server()
       end if
 
       if (pot == '_tcpb_' .or. restrain_pot == '_tcpb_' .or. pot_ref == '_tcpb_') then
@@ -821,6 +846,10 @@ contains
          end if
          if (iqmmm > 0 .or. pot == '_mm_') then
             write (stdout, nml=qmmm, delim='APOSTROPHE')
+            write (stdout, *)
+         end if
+         if (pot == '_mace_') then
+            write (stdout, nml=mace, delim='APOSTROPHE')
             write (stdout, *)
          end if
       end subroutine print_simulation_parameters
@@ -1253,6 +1282,7 @@ subroutine finish(error_code)
    use mod_plumed, only: iplumed, finalize_plumed
    use mod_terampi, only: finalize_terachem
    use mod_terampi_sh, only: finalize_terash
+   use mod_mace_mpi, only: finalize_mace
    use mod_splined_grid, only: finalize_spline
    use mod_force_mm, only: finalize_mm
    use mod_force_tcpb, only: finalize_tcpb
@@ -1265,6 +1295,10 @@ subroutine finish(error_code)
          call finalize_terash()
       end if
       call finalize_terachem(error_code)
+   end if
+
+   if (pot == '_mace_') then
+      call finalize_mace(error_code)
    end if
 
    if (pot == '_tcpb_') then

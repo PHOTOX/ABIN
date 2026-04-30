@@ -140,6 +140,7 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_force_tcpb, only: force_tcpb
    use mod_force_tera, only: force_tera
    use mod_terampi_sh, only: force_terash
+   use mod_force_mace, only: force_mace
    implicit none
    ! allow(external-procedure) ! fortitude linter
    external :: force_water
@@ -183,6 +184,8 @@ subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
       else
          call force_tera(x, y, z, fx, fy, fz, eclas, walkmax)
       end if
+   case ("_mace_")
+      call force_mace(x, y, z, fx, fy, fz, eclas, walkmax)
    case DEFAULT
       call force_abin(x, y, z, fx, fy, fz, eclas, chpot, walkmax)
    end select
