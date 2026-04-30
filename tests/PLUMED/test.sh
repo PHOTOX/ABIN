@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 rm -f EXIT ERROR plumed_*.dat abin.out* bck.0.plumed.out
 if [[ "$1" = "clean" ]];then

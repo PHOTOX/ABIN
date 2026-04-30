@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 set -euo pipefail
 
 export ABINEXE=$1

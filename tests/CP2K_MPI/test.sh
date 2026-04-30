@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 if [[ $1 = "clean" ]];then
    rm -f restart.xyz.old output *.diff temper.dat energies.dat restart.xyz WATER* movie.xyz cp2k.out

@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # Test how ABIN handles MPI error.
 # Concretely, how it handles if TC sends more data

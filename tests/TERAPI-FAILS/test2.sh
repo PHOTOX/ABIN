@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # Test that ABIN sends TC error tag early
 # when it fails during parsing its own input,
