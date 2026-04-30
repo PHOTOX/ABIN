@@ -10,7 +10,7 @@ env:
 
 jobs:
 
-  format-and-lint:
+  prek:
     runs-on: ubuntu-24.04
     env:
       SKIP: 'no-commit-to-branch'
