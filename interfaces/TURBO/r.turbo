@@ -55,7 +55,7 @@ elif [[ $TYPE = "RI-MP2" ]];then
   if [[ $timestep -eq 0 ]];then
     rm -f $BACK/d1_diagnostic.dat
   fi
-  grep 'D1 diagnostic' grad.out|tail -1|awk '{print $4}'>>$BACK/d1_diagnostic.dat
+  grep 'D1 diagnostic' grad.out|tail -n 1|awk '{print $4}'>>$BACK/d1_diagnostic.dat
 else
   echo "ERROR: Wrong calculation type in $0"
   exit 2
@@ -64,13 +64,13 @@ fi
 # Extract energy and gradients
 if [[ $TYPE = "RI-MP2" ]];then
 
-  grep 'Final MP2 energy' grad.out | awk '{print $6}' | tail -1 > $BACK/../engrad.dat.$ibead
+  grep 'Final MP2 energy' grad.out | awk '{print $6}' | tail -n 1 > $BACK/../engrad.dat.$ibead
 
   gradlines=$(grep -c 'dE/dx' grad.out)
   for ((i=1;i<=gradlines;i++)) {
-    gradx=( ${gradx[@]} $(grep 'dE/dx' grad.out|head -$i|sed "s/dE\/dx//"| tail -1) )
-    grady=( ${grady[@]} $(grep 'dE/dy' grad.out|head -$i|sed "s/dE\/dy//"| tail -1) )
-    gradz=( ${gradz[@]} $(grep 'dE/dz' grad.out|head -$i|sed "s/dE\/dz//"| tail -1) )
+    gradx=( ${gradx[@]} $(grep 'dE/dx' grad.out | head -n $i | sed "s/dE\/dx//"| tail -n 1) )
+    grady=( ${grady[@]} $(grep 'dE/dy' grad.out | head -n $i | sed "s/dE\/dy//"| tail -n 1) )
+    gradz=( ${gradz[@]} $(grep 'dE/dz' grad.out | head -n $i | sed "s/dE\/dz//"| tail -n 1) )
   }
   for ((i=0;i<natom;i++)){
     echo "${gradx[$i]} ${grady[$i]} ${gradz[$i]}" >> $BACK/../engrad.dat.$ibead
@@ -78,10 +78,10 @@ if [[ $TYPE = "RI-MP2" ]];then
 
 else
 
-  grep 'total energy' energy.out | awk '{print $5}'|tail -1 > $BACK/../engrad.dat.$ibead
+  grep 'total energy' energy.out | awk '{print $5}' | tail -1 > $BACK/../engrad.dat.$ibead
   let natom1=natom+1
   if [[ -f gradient ]];then
-    tail -$natom1 gradient|head -$natom|awk '{print $1,$2,$3}'>> $BACK/../engrad.dat.$ibead
+    tail -n $natom1 gradient | head -n $natom | awk '{print $1,$2,$3}' >> $BACK/../engrad.dat.$ibead
   else
     echo "ERROR: file \"gradient\" not found!"
     exit 2
