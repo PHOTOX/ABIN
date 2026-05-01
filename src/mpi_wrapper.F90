@@ -173,6 +173,7 @@ contains
       i = nteraservers
       if (iremd == 1 .or. &
         & pot == '_tera_' .or. pot_ref == '_tera_' .or. &
+        & pot == '_mace_' .or. &
         & pot == '_cp2k_' .or. pot_ref == '__cp2k__') then
          call not_compiled_with('MPI')
       end if
