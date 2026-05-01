@@ -205,7 +205,7 @@ fi
 echo "Running tests in directories:"
 echo ${folders[@]}
 
-global_error=0
+errors=0
 
 for dir in ${folders[@]}
 do
@@ -264,7 +264,7 @@ do
       if diff_files; then
         echo -e "\033[0;32mPASSED\033[0m"
       else
-        global_error=1
+        let errors++
         echo -e "$dir \033[0;31mFAILED\033[0m"
       fi
    fi
@@ -276,10 +276,9 @@ done
 
 echo " "
 
-if [[ ${global_error} -ne 0 ]];then
-   echo -e "Some tests \033[0;31mFAILED\033[0m."
+if [[ ${errors} -ne 0 ]];then
+   echo -e "$errors tests \033[0;31mFAILED\033[0m."
+   exit 1
 else
    echo -e "\033[0;32mAll tests PASSED.\033[0m"
 fi
-
-exit $global_error
