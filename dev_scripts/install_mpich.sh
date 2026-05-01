@@ -11,7 +11,7 @@ set -euo pipefail
 MPICH_DIR="${1-$HOME/mpich}"
 # We take current stable version as default
 # (as of 06 Nov 2020).
-MPICH_VERSION="${2-"3.3.2"}"
+MPICH_VERSION="${2-"4.0.2"}"
 
 TAR_FILE="mpich-${MPICH_VERSION}.tar.gz"
 DOWNLOAD_URL="https://www.mpich.org/static/downloads/${MPICH_VERSION}/${TAR_FILE}"
@@ -21,25 +21,25 @@ INSTALL_DIR="$MPICH_DIR/$MPICH_VERSION/install"
 # https://docs.github.com/en/free-pro-team@latest/actions/reference/specifications-for-github-hosted-runners#supported-runners-and-hardware-resources
 NCPUS=2
 
-if [[ -d $INSTALL_DIR ]];then
+if [[ -d "$INSTALL_DIR" ]];then
   echo "Found existing MPICH installation in $INSTALL_DIR"
   echo "Remove this folder if you want to reinstall"
   exit 1
 fi
 
-if [[ ! -d $MPICH_DIR/$MPICH_VERSION/pkg ]];then
-  mkdir -p $MPICH_DIR/$MPICH_VERSION/pkg
+if [[ ! -d "$MPICH_DIR/$MPICH_VERSION/pkg" ]];then
+  mkdir -p "$MPICH_DIR/$MPICH_VERSION/pkg"
 fi
 
-if [[ ! -f  $MPICH_DIR/$MPICH_VERSION/pkg/${TAR_FILE} ]];then
-  curl "$DOWNLOAD_URL" > $MPICH_DIR/$MPICH_VERSION/pkg/${TAR_FILE}
+if [[ ! -f "$MPICH_DIR/$MPICH_VERSION/pkg/${TAR_FILE}" ]];then
+  curl "$DOWNLOAD_URL" > "$MPICH_DIR/$MPICH_VERSION/pkg/${TAR_FILE}"
 fi
 
-if [[ -d $MPICH_DIR/$MPICH_VERSION/src ]];then
-  rm -rf $MPICH_DIR/$MPICH_VERSION/src
+if [[ -d "$MPICH_DIR/$MPICH_VERSION/src" ]];then
+  rm -rf "$MPICH_DIR/$MPICH_VERSION/src"
 fi
-mkdir -p $MPICH_DIR/$MPICH_VERSION/src
-cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MPICH_VERSION}
+mkdir -p "$MPICH_DIR/$MPICH_VERSION/src"
+cd "$MPICH_DIR/$MPICH_VERSION/src" && tar -xzf "../pkg/${TAR_FILE}" && cd "mpich-${MPICH_VERSION}"
 
 # If you're building MPI for general use, not only for ABIN,
 # you might want change some of the configure options.
@@ -59,7 +59,7 @@ cd $MPICH_DIR/$MPICH_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && cd mpich-${MP
   --with-pm=hydra --with-device=ch3:nemesis \
   --with-namepublisher=pmi \
   --enable-static --disable-shared \
-  --prefix=${INSTALL_DIR} 2>&1 |\
+  --prefix="${INSTALL_DIR}" 2>&1 |\
   tee configure.log
 make -j $NCPUS 2>&1 | tee make.log
 make install 2>&1 | tee make_install.log

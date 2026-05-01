@@ -67,7 +67,7 @@ jobs:
       id: pfunit-cache
       uses: actions/cache@v5
       with:
-        path: ~/pfunit/build/installed
+        path: ~/pfunit/build/installed/
         # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
 
