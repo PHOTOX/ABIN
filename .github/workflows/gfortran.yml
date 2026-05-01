@@ -114,7 +114,7 @@ jobs:
       id: setup-fortran
       with:
         compiler: gcc
-        version: '14'
+        version: '15'
 
     - name: Build ABIN
       run: ./configure && make
