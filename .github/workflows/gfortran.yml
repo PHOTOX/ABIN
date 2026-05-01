@@ -42,9 +42,11 @@ jobs:
       fail-fast: false
       matrix:
          os: [ubuntu-22.04]
-         gcc_v: [9, 15]
+         gcc_v: [9]
          include:
           - os: macos-26
+            gcc_v: 15
+          - os: ubuntu-24.04
             gcc_v: 15
     env:
       FC: gfortran
