@@ -23,7 +23,8 @@ module mod_mace_mpi
    ! How long do we wait for MACE port [seconds]
    real(DP) :: mace_max_mpi_wait_time = 60
    ! Sleep interval in miliseconds while waiting for MACE calculation to finish
-   integer :: mace_mpi_milisleep = 50
+   ! By default, don't sleep at all (negative value)
+   integer :: mace_mpi_milisleep = -1
 
    ! MACE configuration parameters (read from &mace namelist in init.F90)
    character(len=1024) :: mace_model = 'MACE/MACE-OFF23_medium.model'

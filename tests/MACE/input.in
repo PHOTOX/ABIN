@@ -22,4 +22,5 @@ temp=0.0d0
 mace_model='mock.model',
 mace_device='cpu',
 mace_default_dtype='float64',
+mace_mpi_milisleep=-1
 /
