@@ -61,16 +61,12 @@ jobs:
         compiler: gcc
         version: ${{ matrix.gcc_v }}
 
-    - name: Install libstdc++-dev
-      if: matrix.gcc_v == 9
-      run: sudo apt-get install libstdc++-9-dev
-
     # pFUnit library is used to build and run unit tests
     - name: pFUnit build Cache
       id: pfunit-cache
       uses: actions/cache@v5
       with:
-        path: ~/pfunit/build/installed
+        path: ~/pfunit/build/installed/
         # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
         key: ${{ matrix.os }}-pfunit-gfortran${{ matrix.gcc_v }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
 
