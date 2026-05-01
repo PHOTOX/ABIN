@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # The goal here is to test various failure modes
 # and how TC and ABIN respond to them.

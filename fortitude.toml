@@ -10,6 +10,7 @@ ignore = [
 exclude = [
   "src/fftw3.F90",
   "src/force_cp2k.F90",
+  "src/random.F90",
 ]
 line-length = 132
 show-fixes = true

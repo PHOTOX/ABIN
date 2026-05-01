@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # Test that ABIN timeouts gracefully
 # if it cannot find TC port via hydra_nameserver.
