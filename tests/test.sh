@@ -1,5 +1,13 @@
 #!/bin/bash
+
+# Stop on any error
 set -euo pipefail
+
+# Make sure that '[A-Z]' regex works as expected,
+# i.e. only matches capital letters, regardless of global collate settings.
+# This workaround is needed for MacOS 15,
+# but is probably a good idea in general to make this script robust.
+export LC_ALL=C
 
 # Parameters are passed from Makefile.
 if [[ $# -ne 8 ]]; then

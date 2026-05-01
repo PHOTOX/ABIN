@@ -42,7 +42,12 @@ jobs:
       fail-fast: false
       matrix:
          os: [ubuntu-22.04]
-         gcc_v: [9, 15]
+         gcc_v: [9]
+         include:
+          - os: macos-26
+            gcc_v: 15
+          - os: ubuntu-24.04
+            gcc_v: 15
     env:
       FC: gfortran
       GCC_V: ${{ matrix.gcc_v}}
@@ -65,7 +70,7 @@ jobs:
       with:
         path: ~/pfunit/build/installed/
         # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
-        key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
+        key: ${{ matrix.os }}-pfunit-gfortran${{ matrix.gcc_v }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
 
     - name: Download and build pFUnit
       if: steps.pfunit-cache.outputs.cache-hit != 'true'
@@ -92,6 +97,8 @@ jobs:
 
     - name: Codecov upload
       uses: codecov/codecov-action@v5
+      # For some reason gcov does not seem to work on MacOS
+      if: startsWith(matrix.os, 'ubuntu')
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -107,7 +114,7 @@ jobs:
       id: setup-fortran
       with:
         compiler: gcc
-        version: '14'
+        version: '15'
 
     - name: Build ABIN
       run: ./configure && make
