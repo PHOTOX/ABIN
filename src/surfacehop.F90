@@ -77,7 +77,12 @@ module mod_sh
    ! Stop simulation if total energy drift since the beginning exceeds energydriftthr
    real(DP) :: energydriftthr = 1.0D0
 
-   ! Special case for adiabatic TDDFT, terminate when close to S1-S0 crossing
+   ! Surface Hopping with Induced Transitions,
+   ! typically used with methods that can't describe S1S0 intersections,
+   ! such as TDDFT or ADC2.
+   ! In this case, we force a hop to S0 when the energy difference
+   ! between S1 and S0 drops below user defined threshold.
+   logical :: SHwIT = .false.
    real(DP) :: dE_S0S1_thr = 0.0D0 !eV
    ! NA Couplings
    real(DP), allocatable :: nacx(:, :, :), nacy(:, :, :), nacz(:, :, :)
@@ -100,7 +105,7 @@ module mod_sh
 
    namelist /sh/ istate_init, nstate, substep, deltae, integ, couplings, nohop, phase, decoh_alpha, popthr, ignore_state, &
       nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, velocity_rescaling, revmom, &
-      dE_S0S1_thr, correct_decoherence
+      shwit, dE_S0S1_thr, correct_decoherence
    save
 
 contains
@@ -252,7 +257,7 @@ contains
          write (stdout, '(A)') 'Using approximate Baeck-An couplings.'
       case ('none')
          inac = 2
-         write (stdout, '(A)') 'Ignoring nonadaiabatic couplings.'
+         write (stdout, '(A)') 'Ignoring nonadiabatic couplings.'
       case default
          write (stderr, '(A)') 'Parameter "couplings" must be "analytic", "baeck-an" or "none".'
          error = .true.
@@ -279,7 +284,7 @@ contains
          error = .true.
       end if
 
-      if (inac == 2 .and. nohop == 0) then
+      if (inac == 2 .and. nohop == 0 .and. .not. shwit) then
          write (stdout, '(A)') 'WARNING: For simulations without couplings(="none") hopping probability cannot be determined.'
          nohop = 1
       end if
@@ -821,6 +826,12 @@ contains
          !itp loop
       end do
 
+      if (SHwIT) then
+         call shwit_check(en_array(1), en_array(2), dE_S0S1_thr, &
+               vx, vy, vz, eclas)
+      end if
+
+
       ! set tocalc array for the next step
       call set_tocalc()
 
@@ -1211,15 +1222,6 @@ contains
       real(DP), intent(in) :: vx_old(:, :), vy_old(:, :), vz_old(:, :)
       real(DP) :: ekin, ekin_old, entot, entot_old
 
-      ! Special case for running AIMD with TDDFT:
-      ! End the simulation when S1-S0 energy difference drops
-      ! below a certain small threshold.
-      if (dE_S0S1_thr > 0.0D0 .and. nstate >= 2) then
-         call check_S0S1_gap(en_S0=en_array(1), &
-                             en_S1=en_array(2), &
-                             threshold_ev=dE_S0S1_thr)
-      end if
-
       ekin = ekin_v(vx, vy, vz)
       ekin_old = ekin_v(vx_old, vy_old, vz_old)
 
@@ -1242,26 +1244,29 @@ contains
 
    end subroutine check_energy
 
-   subroutine check_S0S1_gap(en_S0, en_S1, threshold_ev)
-      use mod_general, only: STOP_SIMULATION
+   subroutine shwit_check(en_S0, en_S1, threshold_ev, vx, vy, vz, eclas)
       use mod_const, only: AUtoEV
       real(DP), intent(in) :: en_S0, en_S1
       real(DP), intent(in) :: threshold_ev
+      real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :), eclas
       real(DP) :: dE_S0S1
+
+      ! We only hop from S1 to S0
+      if (istate /= 2) return
 
       dE_S0S1 = (en_S1 - en_S0) * AUtoEV
 
       if (dE_S0S1 < threshold_ev) then
-         write (stdout, *) 'S1 - S0 gap dropped below threshold!'
+         write (stdout, *) 'SHwIT: S1 - S0 gap dropped below threshold!'
          write (stdout, *) dE_S0S1, ' < ', threshold_ev
-         ! TODO: This is an unfortunate hack,
-         ! but we can't directly stop here since we need the last step
-         ! to be written to the output files.
-         write (stdout, *) 'Simulation will stop at the end of this step.'
+         write (stdout, *) "Let's jump to S0 and continue!"
          ! This global flag is checked in the main loop in abin.F90
-         STOP_SIMULATION = .true.
+         ! STOP_SIMULATION = .true.
+         call try_hop_simple_rescale(vx, vy, vz, 2, 1, eclas)
+         ! Horrible hack to exchange c_el coefficients between S1 - S0
+         call shwit_switch()
       end if
-   end subroutine check_S0S1_gap
+   end subroutine shwit_check
 
    subroutine check_energydrift(vx, vy, vz)
       use mod_const, only: AUtoEV
