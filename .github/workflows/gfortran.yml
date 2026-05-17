@@ -21,7 +21,7 @@ concurrency:
 
 env:
   # FFLAGS for building ABIN, applicable for most jobs
-  ABIN_FFLAGS: -O3 -fopenmp --coverage -fprofile-abs-path -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
+  ABIN_FFLAGS: -O1 -fopenmp --coverage -fprofile-abs-path -ffpe-trap=invalid,zero,overflow,denormal -fimplicit-none -Wall -Wno-integer-division -Wno-maybe-uninitialized
   ABIN_LDLIBS: --coverage
   OPTIMIZED_FFLAGS: -O3 -fopenmp -fimplicit-none -Wall -Wno-integer-division
   # NOTE: It would be safer to only pass the secret token to the codecov-upload action,
