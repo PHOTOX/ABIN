@@ -449,7 +449,7 @@ contains
    subroutine read_wfn()
       use mod_general, only: iknow, it
       use mod_files, only: stderr
-      use mod_chars, only: chknow
+      use mod_chars, only: CHKNOW
       use mod_error, only: fatal_error
       use mod_utils, only: archive_file
       use mod_sh_integ, only: nstate
@@ -461,10 +461,9 @@ contains
 
       inquire (file=fname, exist=file_exists)
       if (.not. file_exists) then
-         close (uwfn)
          write (stderr, *) 'Wavefunction restart file '//trim(fname)//' does not exist!'
          if (iknow /= 1) then
-            write (stderr, *) chknow
+            write (stderr, *) CHKNOW
             call fatal_error(__FILE__, __LINE__, &
                & 'missing restart file '//trim(fname))
          end if
