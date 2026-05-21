@@ -3,21 +3,22 @@
 # Exit script immediately upon error
 set -euo pipefail
 
-REPO_DIR="$HOME/pfunit"
-if [[ "$#" -eq 1 && ! -z $1 ]];then
-   REPO_DIR=$1
-fi
+# This must correspond to a git tag in https://github.com/Goddard-Fortran-Ecosystem/pFUnit/tags
+PFUNIT_VERSION="v4.18.0"
 
-if [[ -e $REPO_DIR ]];then
-  echo "ERROR: $REPO_DIR already exists."
+if [[ "$#" -ne 1 ]];then
+  echo "Provide path where to install pfunit as a first parameter"
   exit 1
 fi
 
-git clone --recursive https://github.com/Goddard-Fortran-Ecosystem/pFUnit $REPO_DIR && cd $REPO_DIR
+mkdir -p "$1"
+REPO_DIR="$1"
+
+git clone --recursive --branch $PFUNIT_VERSION https://github.com/Goddard-Fortran-Ecosystem/pFUnit "$REPO_DIR" && cd "$REPO_DIR"
 
 # This seems to be the last commit that works with GCC-7
 # Later commits fail with internal compiler error when compiling fArgParse submodule. 
-git checkout --recurse-submodules 0a09db354b665f1518e36460396c348c19185e04
+#git checkout --recurse-submodules 0a09db354b665f1518e36460396c348c19185e04
 
 mkdir -p build && cd build
 export FC=gfortran

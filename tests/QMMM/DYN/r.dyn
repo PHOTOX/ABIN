@@ -10,4 +10,4 @@ natom=`cat $geom | wc -l`
 let natom1=natom+1
 
 let lines=timestep*natom1+natom1
-head -$lines engrad.dat.$ibead.all.ref | tail -$natom1 > ../engrad.dat.$ibead
+head -n $lines engrad.dat.$ibead.all.ref | tail -n $natom1 > ../engrad.dat.$ibead
