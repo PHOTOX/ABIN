@@ -16,16 +16,10 @@
 #
 # The server writes its MPI port to 'mace_port.txt.1' for ABIN to read.
 
-import sys
 import time
-from io import StringIO
 
 import numpy as np
 from mpi4py import MPI
-
-# These imports are deferred until after config is received
-# so the server can start quickly and report port
-import ase.data
 
 LOG_NAME = "MaceMPIServer"
 
@@ -253,10 +247,18 @@ def main():
     log(f"Received config: {config_str}")
 
     config = parse_config_string(config_str)
+    default_dtype = config.get('default_dtype', 'float64')
 
     # Load MACE model
     mace_model = MaceModel(config)
     log("MACE model ready. Entering main loop.")
+
+    def shutdown_server():
+        log("Shutting down...")
+        abin_comm.Disconnect()
+        MPI.Close_port(port_name)
+        log("Server stopped.")
+
 
     # Main loop: receive coordinates, compute, send results
     eval_count = 0
@@ -289,30 +291,36 @@ def main():
 
         try:
             energy, forces = mace_model.evaluate(atom_types, coords_bohr)
+        except Exception as e:
+            log(f"ERROR during evaluation: {e}")
+            # Send error tag
+            error_energy = np.array([0.0], dtype=np.float64)
+            abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=1)
+            shutdown_server()
+            raise e
+        else:
+            log(f"Evaluation {eval_count}: energy = {energy:.10f} Hartree")
 
+        try:
             # Send energy (1 double, in Hartree)
             energy_buf = np.array([energy], dtype=np.float64)
             abin_comm.Send([energy_buf, MPI.DOUBLE], dest=0, tag=0)
 
             # Send forces (3*natom doubles, in Hartree/Bohr)
             # Transpose back to (3, natom) to match Fortran column-major layout
-            forces_send = forces.T.copy()
+            if default_dtype != 'float64':
+                forces_send = forces.T.astype(np.float64)
+            else:
+                forces_send = forces.T.copy()
             abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=0)
-
-            log(f"Evaluation {eval_count}: energy = {energy:.10f} Hartree")
-
         except Exception as e:
-            log(f"ERROR during evaluation: {e}")
-            # Send error tag
+            log(f"ERROR when sending energy and forces to ABIN: {e}")
             error_energy = np.array([0.0], dtype=np.float64)
             abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=1)
-            break
+            shutdown_server()
+            raise e
 
-    # Cleanup
-    log("Shutting down...")
-    abin_comm.Disconnect()
-    MPI.Close_port(port_name)
-    log("Server stopped.")
+    shutdown_server()
 
 
 if __name__ == "__main__":
