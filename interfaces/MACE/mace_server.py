@@ -39,7 +39,6 @@ def parse_config_string(config_str):
     """Parse key=value config string sent from ABIN's &mace namelist."""
     config = {}
     for pair in config_str.split(';'):
-        pair = pair.strip()
         if '=' in pair:
             key, value = pair.split('=', 1)
             config[key.strip()] = value.strip()
@@ -54,13 +53,7 @@ class MaceModel:
 
     def __init__(self, config):
         import torch
-        from mace.tools import torch_tools, utils
-        from mace import data as mace_data
-
-        self.mace_data = mace_data
-        self.torch_tools = torch_tools
-        self.utils = utils
-        self.torch = torch
+        from mace.tools import torch_tools
 
         log("initializing MaceModel...")
         start_time = time.time()
@@ -147,7 +140,9 @@ class MaceModel:
             forces_hartree_bohr: forces in Hartree/Bohr, shape (natom, 3)
         """
         import ase
-        from mace.tools import torch_geometric
+        import mace.data
+        import mace.tools
+        from mace.tools import torch_geometric, torch_tools
 
         # Unit conversions
         bohr_to_ang = 0.529177249
@@ -163,10 +158,10 @@ class MaceModel:
         if self.head is not None:
             atoms.info["head"] = self.head
 
-        configs = [self.mace_data.config_from_atoms(atoms)]
+        configs = [mace.data.config_from_atoms(atoms)]
 
         # Prepare dataset
-        z_table = self.utils.AtomicNumberTable([
+        z_table = mace.tools.utils.AtomicNumberTable([
             int(z) for z in self.model.atomic_numbers
         ])
 
@@ -176,7 +171,7 @@ class MaceModel:
             heads = None
 
         data_loader = torch_geometric.dataloader.DataLoader(dataset=[
-            self.mace_data.AtomicData.from_config(
+            mace.data.AtomicData.from_config(
                 config,
                 z_table=z_table,
                 cutoff=float(self.model.r_max),
@@ -193,9 +188,9 @@ class MaceModel:
                 compute_stress=self.compute_stress
             )
 
-            energy_ev = self.torch_tools.to_numpy(output["energy"])[0]
+            energy_ev = torch_tools.to_numpy(output["energy"])[0]
             forces_ev_ang = np.split(
-                self.torch_tools.to_numpy(output["forces"]),
+                torch_tools.to_numpy(output["forces"]),
                 indices_or_sections=batch.ptr[1:],
                 axis=0,
             )[0]
