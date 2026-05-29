@@ -16,6 +16,7 @@
 #
 # The server writes its MPI port to 'mace_port.txt.1' for ABIN to read.
 
+import os
 import time
 
 import numpy as np
@@ -52,80 +53,26 @@ class MaceModel:
     """
 
     def __init__(self, config):
-        import torch
-        from mace.tools import torch_tools
+        from mace.calculators import MACECalculator
 
-        log("initializing MaceModel...")
-        start_time = time.time()
-
+        log("initializing MACE model")
         model_path = config.get('model', '')
         if not model_path:
             raise RuntimeError("MACE model path not specified")
 
         device = config.get('device', 'cpu')
-        default_dtype = config.get('default_dtype', 'float64')
-        self.batch_size = int(config.get('batch_size', '64'))
-        self.compute_stress = config.get('compute_stress', 'false').lower() == 'true'
-        self.return_contributions = config.get('return_contributions', 'false').lower() == 'true'
-        self.info_prefix = config.get('info_prefix', 'MACE_')
         head_val = config.get('head', '')
         self.head = head_val if head_val else None
 
-        torch_tools.set_default_dtype(default_dtype)
-        self.device = str(torch_tools.init_device(device))
+        if not os.path.isfile(model_path):
+            raise RuntimeError(f"file '{model_path}' not found")
 
-        import os
-        if os.path.isfile(model_path):
-            # Load from local file
-            try:
-                self.model = torch.jit.load(f=model_path, map_location=device).to(device)
-            except Exception:
-                log("Failed to load as TorchScript, trying as regular PyTorch model...")
-                self.model = torch.load(f=model_path, map_location=device, weights_only=False).to(device)
-        else:
-            # Try loading as a MACE foundation model (auto-downloads)
-            self.model = self._load_foundation_model(model_path, device)
+        # Set ASE calculator
+        self.calculator = MACECalculator(
+            model_paths=model_path,
+            device=device,
+        )
 
-        for param in self.model.parameters():
-            param.requires_grad = False
-
-        log("model loaded in %.2f s" % (time.time() - start_time))
-
-    def _load_foundation_model(self, model_name, device):
-        """
-        Load a MACE foundation model by name.
-        Supported names include:
-          - MACE-OFF23_medium.model, MACE-OFF23_small.model, MACE-OFF23_large.model
-          - medium, small, large (shorthand for MACE-OFF23)
-          - MACE-MP-0_medium.model, etc.
-        """
-        from mace.calculators.foundations_models import mace_off, mace_mp
-
-        name = model_name.replace('.model', '').strip()
-        log(f"Loading foundation model: {name}")
-
-        # Parse model family and size
-        name_lower = name.lower()
-        if name_lower in ('small', 'medium', 'large'):
-            size = name_lower
-            calc = mace_off(model=size, device=device, return_raw_model=True)
-        elif 'mace-off23' in name_lower or 'mace_off23' in name_lower:
-            size = name.split('_')[-1].lower()
-            if size not in ('small', 'medium', 'large'):
-                size = 'medium'
-            calc = mace_off(model=size, device=device, return_raw_model=True)
-        elif 'mace-mp' in name_lower or 'mace_mp' in name_lower:
-            size = name.split('_')[-1].lower()
-            if size not in ('small', 'medium', 'large'):
-                size = 'medium'
-            calc = mace_mp(model=size, device=device, return_raw_model=True)
-        else:
-            raise RuntimeError(
-                f"Unknown model '{model_name}'. Provide a path to a local .model file, "
-                f"or use a foundation model name like 'MACE-OFF23_medium.model' or 'medium'."
-            )
-
-        return calc
 
     def evaluate(self, atom_types, coords_bohr):
         """
@@ -140,9 +87,6 @@ class MaceModel:
             forces_hartree_bohr: forces in Hartree/Bohr, shape (natom, 3)
         """
         import ase
-        import mace.data
-        import mace.tools
-        from mace.tools import torch_geometric, torch_tools
 
         # Unit conversions
         bohr_to_ang = 0.529177249
@@ -153,51 +97,17 @@ class MaceModel:
         coords_ang = coords_bohr * bohr_to_ang
 
         # Create ASE atoms object
-        atoms = ase.Atoms(symbols=atom_types, positions=coords_ang)
+        pbc = (False, False, False)
+        cell_size = 100.0  # Angstroms
+        cell = ((cell_size, 0, 0), (0, cell_size, 0), (0, 0, cell_size))
+        atoms = ase.Atoms(symbols=atom_types, positions=coords_ang, pbc=pbc, cell=cell)
+        atoms.set_calculator(self.calculator)
 
         if self.head is not None:
             atoms.info["head"] = self.head
 
-        configs = [mace.data.config_from_atoms(atoms)]
-
-        # Prepare dataset
-        z_table = mace.tools.utils.AtomicNumberTable([
-            int(z) for z in self.model.atomic_numbers
-        ])
-
-        try:
-            heads = self.model.heads
-        except AttributeError:
-            heads = None
-
-        data_loader = torch_geometric.dataloader.DataLoader(dataset=[
-            mace.data.AtomicData.from_config(
-                config,
-                z_table=z_table,
-                cutoff=float(self.model.r_max),
-                heads=heads
-            )
-            for config in configs
-        ], batch_size=self.batch_size, shuffle=False, drop_last=False)
-
-        # Evaluate
-        for batch in data_loader:
-            batch = batch.to(self.device)
-            output = self.model(
-                batch.to_dict(),
-                compute_stress=self.compute_stress
-            )
-
-            energy_ev = torch_tools.to_numpy(output["energy"])[0]
-            forces_ev_ang = np.split(
-                torch_tools.to_numpy(output["forces"]),
-                indices_or_sections=batch.ptr[1:],
-                axis=0,
-            )[0]
-
-        # Convert to atomic units
-        energy_hartree = energy_ev * ev_to_hartree
-        forces_hartree_bohr = forces_ev_ang * ev_per_ang_to_hartree_per_bohr
+        energy_hartree = atoms.get_potential_energy() * ev_to_hartree
+        forces_hartree_bohr = atoms.get_forces() * ev_per_ang_to_hartree_per_bohr
 
         return energy_hartree, forces_hartree_bohr
 
@@ -294,7 +204,8 @@ def main():
             shutdown_server()
             raise e
         else:
-            log(f"Evaluation {eval_count}: energy = {energy:.10f} Hartree")
+            log(f"Evaluation {eval_count}: energy = {energy:.15f} Hartree")
+            log(f"Evaluation {eval_count}: forces = \n{forces}")
 
         try:
             # Send energy (1 double, in Hartree)
@@ -307,6 +218,8 @@ def main():
                 forces_send = forces.T.astype(np.float64)
             else:
                 forces_send = forces.T.copy()
+            #log(f"Energy sent to ABIN ({eval_count}): {energy_buf}")
+            #log(f"Forces sent to ABIN ({eval_count}): {forces_send!r}")
             abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=0)
         except Exception as e:
             log(f"ERROR when sending energy and forces to ABIN: {e}")
