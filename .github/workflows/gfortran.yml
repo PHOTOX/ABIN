@@ -328,8 +328,14 @@ jobs:
         if [ $GCC_V -ge 10 ];then export FFLAGS="-fallow-argument-mismatch";export FCFLAGS="-fallow-argument-mismatch";fi && \
         ./dev_scripts/install_mpich.sh ${HOME}/mpich ${MPICH_V}
 
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: 3.12
+        activate-environment: true
+
     - name: Install MACE
-      run: pip install mace mpi4py ase numpy
+      run: uv pip install --torch-backend=cpu -r interfaces/MACE/mace_server.py
 
     - name: build ABIN
       run: |
@@ -374,8 +380,14 @@ jobs:
       if: steps.openmpi-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_openmpi.sh ${HOME}/openmpi ${OPENMPI_V} ${OPENMPI_PATCH}
 
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: 3.12
+        activate-environment: true
+
     - name: Install MACE
-      run: pip install mace mpi4py ase numpy
+      run: uv pip install --torch-backend=cpu -r interfaces/MACE/mace_server.py
 
     - name: build ABIN
       run: ./configure --mpi "${HOME}/openmpi/${OPENMPI_V}/install" && make

@@ -1,7 +1,18 @@
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "ase>=3.18.0",
+#     "mace-torch>=0.3.10",
+#     "mpi4py>=4.1.2",
+#     "numpy>=1.26.0",
+# ]
+# ///
+"""
 ######################
 # MACE MPI SERVER
 ######################
-# Version: 6.0.0
+# Version: 7.0.0
 #
 # This server communicates with ABIN via MPI (using mpi4py).
 # MACE configuration (model path, device, etc.) is received from ABIN's
@@ -14,6 +25,7 @@
 #   mpirun -n 1 python mace_server.py
 #
 # The server writes its MPI port to 'mace_port.txt.1' for ABIN to read.
+"""
 
 import os
 import time
