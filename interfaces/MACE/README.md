@@ -15,29 +15,10 @@ You can install all dependencies using:
 ```console
 pip install mace-torch ase mpi4py numpy
 ```
-Or use the provided script in the root directory:
-```console
-./dev_scripts/install_mace.sh
-```
 
 ## Usage
 
 The MACE server is typically launched alongside ABIN using MPI. ABIN communicates with the server to obtain energies and forces.
-
-### Manual Launch (OpenMPI)
-
-When using OpenMPI, you need an `ompi-server` running for the connection handshake:
-
-```console
-# 1. Start ompi-server
-ompi-server --no-daemonize -r ompi_uri.txt &
-
-# 2. Start MACE server
-mpirun --ompi-server file:ompi_uri.txt -n 1 python3 mace_server.py &
-
-# 3. Start ABIN (in another terminal or same script)
-mpirun --ompi-server file:ompi_uri.txt -n 1 abin -i input.in -x geom.xyz
-```
 
 ### Automatic Launch
 
@@ -64,10 +45,3 @@ MACE settings are controlled via the `&mace` namelist in the ABIN input file (`i
 | `mace_mpi_milisleep` | Integer | `50` | Sleep interval (milliseconds) when polling for the MACE port or results. |
 
 See `sample_inputs/input.in.mace` for a template.
-
-## MACE License
-The provided MACE model (MACE-OFF23_medium.model) is downloaded from the [MACE-OFF GitHub repository](https://github.com/ACEsuit/mace-off) and is licensed under the [Academic Software License Agreement (ASLA)](https://github.com/ACEsuit/mace-off/blob/main/LICENSE.md).
-
-Note that this is not our model and we are not responsible for its performance or any issues related to its use. The purpose of its inclusion here is to provide a working example of how to use MACE with ABIN.
-
-For full terms and conditions, please refer to the [MACE-OFF GitHub repository](https://github.com/ACEsuit/mace-off).
