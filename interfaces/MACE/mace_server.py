@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.9"
+# requires-python = ">=3.8"
 # dependencies = [
 #     "ase>=3.18.0",
 #     "mace-torch>=0.3.10",
@@ -38,7 +38,7 @@ MACE_TAG_DATA = 2
 
 
 def log(message, should_print=True):
-    msg_formatted = "[{}]: {}".format(LOG_NAME, str(message))
+    msg_formatted = f"[{LOG_NAME}]: {message!s}"
     if should_print:
         print(msg_formatted, flush=True)
     return msg_formatted
@@ -80,7 +80,6 @@ class MaceModel:
             model_paths=model_path,
             device=device,
         )
-
 
     def evaluate(self, atom_types, coords_bohr):
         """
@@ -173,7 +172,6 @@ def main():
         MPI.Close_port(port_name)
         log("Server stopped.")
 
-
     # Main loop: receive coordinates, compute, send results
     eval_count = 0
     while True:
@@ -211,7 +209,7 @@ def main():
             error_energy = np.array([0.0], dtype=np.float64)
             abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=1)
             shutdown_server()
-            raise e
+            raise
         else:
             log(f"Evaluation {eval_count}: energy = {energy:.15f} Hartree")
             # log(f"Evaluation {eval_count}: forces = \n{forces}")
@@ -227,15 +225,13 @@ def main():
                 forces_send = forces.T.astype(np.float64)
             else:
                 forces_send = forces.T.copy()
-            #log(f"Energy sent to ABIN ({eval_count}): {energy_buf}")
-            #log(f"Forces sent to ABIN ({eval_count}): {forces_send!r}")
             abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=0)
         except Exception as e:
             log(f"ERROR when sending energy and forces to ABIN: {e}")
             error_energy = np.array([0.0], dtype=np.float64)
             abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=1)
             shutdown_server()
-            raise e
+            raise
 
     shutdown_server()
 
