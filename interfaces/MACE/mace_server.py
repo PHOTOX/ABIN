@@ -2,7 +2,6 @@
 # MACE MPI SERVER
 ######################
 # Version: 6.0.0
-# Evaluation logic based on MACE/eval_config [mace.cli.eval_config]
 #
 # This server communicates with ABIN via MPI (using mpi4py).
 # MACE configuration (model path, device, etc.) is received from ABIN's
@@ -18,9 +17,6 @@
 
 import os
 import time
-
-import numpy as np
-from mpi4py import MPI
 
 LOG_NAME = "MaceMPIServer"
 
@@ -98,9 +94,9 @@ class MaceModel:
 
         # Create ASE atoms object
         pbc = (False, False, False)
-        cell_size = 100.0  # Angstroms
-        cell = ((cell_size, 0, 0), (0, cell_size, 0), (0, 0, cell_size))
-        atoms = ase.Atoms(symbols=atom_types, positions=coords_ang, pbc=pbc, cell=cell)
+        # cell_size = 100.0  # Angstroms
+        # cell = ((cell_size, 0, 0), (0, cell_size, 0), (0, 0, cell_size))
+        atoms = ase.Atoms(symbols=atom_types, positions=coords_ang, pbc=pbc)
         atoms.set_calculator(self.calculator)
 
         if self.head is not None:
@@ -113,7 +109,8 @@ class MaceModel:
 
 
 def main():
-    comm = MPI.COMM_WORLD
+    import numpy as np
+    from mpi4py import MPI
 
     # Open MPI port and write to file for ABIN to read
     port_name = MPI.Open_port()
@@ -126,7 +123,7 @@ def main():
 
     # Accept connection from ABIN
     log("Waiting for ABIN to connect...")
-    abin_comm = comm.Accept(port_name)
+    abin_comm = MPI.COMM_WORLD.Accept(port_name)
     log("Connection from ABIN accepted!")
 
     # Receive number of atoms
@@ -186,13 +183,13 @@ def main():
             break
 
         # Receive coordinates (3*natom doubles, in Bohr)
-        coords = np.empty((3, natom), dtype=np.float64)
+        coords = np.empty((natom, 3), dtype=np.float64)
         abin_comm.Recv([coords, MPI.DOUBLE], source=0, tag=MACE_TAG_DATA)
-        # Transpose to (natom, 3) for ASE
-        coords_bohr = coords.T.copy()
+
+        coords_bohr = coords.copy()
 
         eval_count += 1
-        log(f"Evaluation {eval_count}: evaluating...")
+        log(f"Evaluation {eval_count}")
 
         try:
             energy, forces = mace_model.evaluate(atom_types, coords_bohr)
@@ -205,7 +202,7 @@ def main():
             raise e
         else:
             log(f"Evaluation {eval_count}: energy = {energy:.15f} Hartree")
-            log(f"Evaluation {eval_count}: forces = \n{forces}")
+            # log(f"Evaluation {eval_count}: forces = \n{forces}")
 
         try:
             # Send energy (1 double, in Hartree)
