@@ -1,0 +1,48 @@
+! Testing MACE MPI interface
+module test_mace
+   use funit
+   use mod_const, only: DP
+   use mod_mace_mpi
+   implicit none
+   integer, parameter :: NATOMS = 3, NBEADS = 1
+   real(DP) :: x(NATOMS, NBEADS), y(NATOMS, NBEADS), z(NATOMS, NBEADS)
+   real(DP) :: fx(NATOMS, NBEADS), fy(NATOMS, NBEADS), fz(NATOMS, NBEADS)
+   save
+
+contains
+
+   @test
+   subroutine test_mace_defaults()
+      ! Verify that MACE namelist variables have correct defaults
+      @assertEqual('MACE/MACE-OFF23_medium.model', trim(mace_model))
+      @assertEqual('cpu', trim(mace_device))
+      @assertEqual('float64', trim(mace_default_dtype))
+      @assertEqual(64, mace_batch_size)
+      @assertFalse(mace_compute_stress)
+      @assertFalse(mace_return_contributions)
+      @assertEqual('MACE_', trim(mace_info_prefix))
+      @assertEqual('', trim(mace_head))
+   end subroutine test_mace_defaults
+
+   @test
+   subroutine test_mace_tag_values()
+      ! Verify MPI tag constants
+      @assertEqual(666, MACE_TAG_EXIT)
+      @assertEqual(2, MACE_TAG_DATA)
+   end subroutine test_mace_tag_values
+
+#ifndef USE_MPI
+
+   @test(ifndef=USE_MPI)
+   subroutine test_mace_not_compiled_with_mpi()
+
+      call initialize_mace_interface()
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+
+      call initialize_mace_server()
+      @assertExceptionRaised('ABIN was not compiled with MPI')
+
+   end subroutine test_mace_not_compiled_with_mpi
+
+#endif
+end module test_mace

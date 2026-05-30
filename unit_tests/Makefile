@@ -58,6 +58,13 @@ terapi_EXTRA_USE := throw_with_pfunit_mod
 terapi_EXTRA_INITIALIZE := initialize_throw
 $(eval $(call make_pfunit_test,terapi))
 
+mace_TESTS := test_mace.pf
+mace_OTHER_LIBRARIES := ${LDFLAGS} ${LDLIBS}
+mace_OTHER_SRCS := throw_with_pfunit.F90
+mace_EXTRA_USE := throw_with_pfunit_mod
+mace_EXTRA_INITIALIZE := initialize_throw
+$(eval $(call make_pfunit_test,mace))
+
 fftw_TESTS := test_fftw.pf
 fftw_OTHER_LIBRARIES := ${LDFLAGS} ${LDLIBS}
 fftw_OTHER_SRCS := throw_with_pfunit.F90
@@ -117,7 +124,7 @@ $(eval $(call make_pfunit_test,interface))
 
 # TODO: Re-enable spline tests
 #all : utils prng masses plumed fftw terapi gle nhc pot mm spline interface io
-all : utils prng masses plumed fftw terapi gle nhc pot mm interface io
+all : utils prng masses plumed fftw terapi mace gle nhc pot mm interface io
 
 %.o : %.F90
 	$(FC) -c $(FFLAGS) $<
@@ -129,6 +136,7 @@ test : clean_plumed_output clean_terapi_output clean_gle_output
 	./plumed
 	./fftw
 	./terapi
+	./mace
 	./gle
 	./nhc
 	./pot
@@ -139,7 +147,7 @@ test : clean_plumed_output clean_terapi_output clean_gle_output
 
 clean : clean_plumed_output clean_terapi_output clean_gle_output
 	/bin/rm -f *dat *.o *.out *.mod *.inc test_*.F90 ERROR
-	/bin/rm -f masses utils plumed fftw terapi gle pot mm spline interface
+	/bin/rm -f masses utils plumed fftw terapi mace gle pot mm spline interface
 
 clean_plumed_output :
 	/bin/rm -f bck.* plumed_*.dat

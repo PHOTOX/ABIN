@@ -1,0 +1,39 @@
+Sample input for ABIN with MACE (Machine Learning Atomic Cluster Expansion) interface.
+
+The MACE server is a Python process communicating with ABIN via MPI.
+Required Python packages: pip install mpi4py mace-torch torch ase numpy
+
+Launch with: bash utils/run.mace_mpi_abin.sh
+
+&general
+pot='_mace_'             ! MACE ML potential via MPI
+mdtype='md',            ! classical simulation
+nstep=5000,             ! number of steps
+dt=5.,                  ! timestep [au]
+
+irest=0,                ! should we restart from restart.xyz?
+
+nwrite=1,               ! how often some output should be printed
+nwritex=5,              ! how often should we print coordinates?
+nrest=1000,             ! how often we print restart files?
+nwritev=5,              ! how often we print velocities?
+/
+
+&nhcopt
+temp=0.0,               ! temperature [K]
+inose=0,                ! no thermostat (NVE)
+/
+
+
+MACE model configuration
+
+&mace
+mace_model='MACE/MACE_compiled.model',  ! path to compiled MACE model (required)
+mace_device='cpu',                      ! 'cpu' or 'cuda' (defaults to 'cpu')
+mace_default_dtype='float64',           ! 'float32' or 'float64' (defaults to 'float64')
+mace_batch_size=64,                     ! batch size for evaluation (defaults to 64)
+mace_compute_stress=.false.,            ! compute stress tensor (defaults to .false.)
+mace_return_contributions=.false.,      ! return energy contributions per body order (defaults to .false.)
+mace_info_prefix='MACE_',               ! prefix for output keys (defaults to 'MACE_')
+mace_head='',                           ! model head (optional, for multi-head models) (defaults to '')
+/

@@ -75,6 +75,9 @@ The optional libraries are:
  - [FFTW](http://www.fftw.org/): Fast Fourier Transform library used for normal mode transformation in Path Integral MD.
  - [PLUMED](https://www.plumed.org/): A collection of very useful tools for free energy calculations (MetaDynamics, Umbrella Sampling etc).
  - [TCPB-CPP](https://github.com/mtzgroup/tcpb-cpp): [EXPERIMENTAL] TCPB interface to TeraChem
+ - [MACE](https://github.com/ACEsuit/mace): Machine Learning Atomic Cluster Expansion potential.
+      - Integrated via an MPI interface. Requires a Python environment with `mace-torch`, `torch`, `ase`, and `mpi4py`.
+      - Use `dev_scripts/install_mace.sh` for easy installation.
 
 
 ## Structure of the repository
