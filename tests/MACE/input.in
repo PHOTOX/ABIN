@@ -5,6 +5,7 @@ ipimd=0,
 nstep=2,
 dt=20.,
 irandom=13131313,
+idebug=2
 
 nwrite=1,
 nwritef=1,
