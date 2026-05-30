@@ -25,12 +25,12 @@ if [[ -d $PLUMED_DIR/$PLUMED_VERSION ]];then
   exit 1
 fi
 
-mkdir -p $PLUMED_DIR/$PLUMED_VERSION/src
-mkdir -p $PLUMED_DIR/$PLUMED_VERSION/pkg
+mkdir -p "$PLUMED_DIR/$PLUMED_VERSION/src"
+mkdir -p "$PLUMED_DIR/$PLUMED_VERSION/pkg"
 
-curl -L "$DOWNLOAD_URL" > $PLUMED_DIR/$PLUMED_VERSION/pkg/${TAR_FILE}
-cd $PLUMED_DIR/$PLUMED_VERSION/src && tar -xzf ../pkg/${TAR_FILE} 
-cd plumed-${PLUMED_VERSION}
+curl -L "$DOWNLOAD_URL" > "$PLUMED_DIR/$PLUMED_VERSION/pkg/${TAR_FILE}"
+cd "$PLUMED_DIR/$PLUMED_VERSION/src" && tar -xzf "../pkg/${TAR_FILE}"
+cd "plumed-${PLUMED_VERSION}"
 
 # To keep things simple, we don't compile with MPI support
 # We also disable the use of external BLAS and LAPACK
@@ -44,7 +44,7 @@ cd plumed-${PLUMED_VERSION}
   --disable-mpi --disable-xdrfile \
   --disable-external-lapack --disable-external-blas \
   --enable-static-patch --enable-shared \
-  --prefix=${INSTALL_DIR} 2>&1 |\
+  --prefix="${INSTALL_DIR}" 2>&1 |\
   tee configure.log
 
 make -j $NPROC 2>&1 | tee make.log

@@ -81,7 +81,7 @@ echo $EN_EXC_TARGET >> ../../engrad.dat.$ibead
 
 # Add other excited states (non-interacting, we're running adiabatic MD!)
 let nstate2=nstate-2
-tail -$nstate2 EXC.DAT | awk -v "en0=$EN_GS" '{print $1/27.2114 + en0}' >> ../../engrad.dat.$ibead
+tail -n $nstate2 EXC.DAT | awk -v "en0=$EN_GS" '{print $1/27.2114 + en0}' >> ../../engrad.dat.$ibead
 
 # FORCES
 awk -v natom=$natom '{if ($2=="Forces"){for (i=1;i<=natom;i++){getline;printf"%3.15e %3.15e %3.15e \n",-$1,-$2,-$3}}}' \

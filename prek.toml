@@ -32,7 +32,7 @@ rev = "v0.11.0"
 hooks = [
   {
     id = "shellcheck",
-    files = "dev_scripts/setup_vim.sh"
+    files = "dev_scripts/"
   }
 ]
 
@@ -54,7 +54,7 @@ hooks = [
     name = "Format Fortran code",
     language = "python",
     entry = "./autoformat.py",
-    files = ".[fF]90",
+    types = ["fortran"],
     pass_filenames = true,
     # This list must be in sync with .fprettify.rc
     exclude = "interfaces/DFTB-SOCKET-DEV/*|utils/analyze_movie.f90|random.F90|fftw3.F90|force_cp2k.F90|h2o_schwenke.f|h2o_cvrqd.f"

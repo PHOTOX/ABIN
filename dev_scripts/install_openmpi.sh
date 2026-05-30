@@ -29,15 +29,15 @@ if [[ -d "$OPENMPI_DIR/$OPENMPI_VERSION" ]];then
   exit 1
 fi
 
-mkdir -p $OPENMPI_DIR/$OPENMPI_VERSION/src
-mkdir -p $OPENMPI_DIR/$OPENMPI_VERSION/pkg
+mkdir -p "$OPENMPI_DIR/$OPENMPI_VERSION/src"
+mkdir -p "$OPENMPI_DIR/$OPENMPI_VERSION/pkg"
 
-curl "${DOWNLOAD_URL}" > $OPENMPI_DIR/$OPENMPI_VERSION/pkg/${TAR_FILE}
-cd $OPENMPI_DIR/$OPENMPI_VERSION/src && tar -xzf ../pkg/${TAR_FILE} && \
-  cd openmpi-${OPENMPI_VERSION}.${OPENMPI_VERSION_PATCH}
+curl "${DOWNLOAD_URL}" > "$OPENMPI_DIR/$OPENMPI_VERSION/pkg/${TAR_FILE}"
+cd "$OPENMPI_DIR/$OPENMPI_VERSION/src" && tar -xzf "../pkg/${TAR_FILE}" && \
+  cd "openmpi-${OPENMPI_VERSION}.${OPENMPI_VERSION_PATCH}"
 
 # For compilation on PHOTOX clusters, add --with-sge
-./configure FC=gfortran CC=gcc CXX=g++ --with-gnu-ld --prefix=${INSTALL_DIR} 2>&1 |\
+./configure FC=gfortran CC=gcc CXX=g++ --with-gnu-ld --prefix="${INSTALL_DIR}" 2>&1 |\
   tee configure.log
 make -j ${NCPUS} all 2>&1 | tee make.log
 make install 2>&1 | tee make_install.log

@@ -2,10 +2,11 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/mtzgroup/tcpb-cpp.git"
-REPO_DIR="$HOME/tcpb-cpp"
-if [[ "$#" -eq 1 && ! -z $1 ]];then
-   REPO_DIR=$1
+if [[ "$#" -ne 1 ]];then
+  echo "Provide path where to install pfunit as a first parameter"
+  exit 1
 fi
+REPO_DIR=$1
 
 if [[ -e $REPO_DIR ]];then
   echo "ERROR: $REPO_DIR already exists."

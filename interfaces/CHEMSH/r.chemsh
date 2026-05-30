@@ -80,7 +80,7 @@ if [ -n "$types_mm_atoms" ]; then
    # Create types_mm_atoms_all as a repetition of types_mm_atoms_all
    types_mm_atoms_all=$(for i in $(seq 1 $nresidue); do echo -n "$types_mm_atoms "; done)
 else
-   types_mm_atoms_all=$(for atom in $(tail -$MMatom $geometry | awk '{print $1}'); do echo -n "${atom,     ,} "; done)
+   types_mm_atoms_all=$(for atom in $(tail -n $MMatom $geometry | awk '{print $1}'); do echo -n "${atom,     ,} "; done)
 fi
 
 dl_defs="{ mm_defs=ff.dat mxlist=100000 use_pairlist=no conn=geom.c atom_types= { $types_qm_atoms $types_mm_atoms_all } } " 

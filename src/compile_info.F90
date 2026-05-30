@@ -11,9 +11,13 @@ subroutine print_compile_info()
    write (stdout, *) ''
    write (stdout, *) '          COMPILATION INFO'
    write (stdout, *) ''
-   write (stdout, *) 'ABIN version '//ABIN_VERSION
-   write (stdout, '(a, a, 1x, a)') 'Compiled at ', __TIME__, __DATE__
-   write (stdout, *) 'Git commit '//GIT_COMMIT
+   write (stdout, '(1x, a, t25, a)') 'ABIN version:', ABIN_VERSION
+   write (stdout, '(1x, a, t25, a, 1x, a)') 'Compiled at:', __TIME__, __DATE__
+   write (stdout, '(1x, a, t25, a)') 'Git commit:', GIT_COMMIT
+   write (stdout, '(1x, a, t25, a)') 'Compiler:', compiler_version()
+   write (stdout, *) 'Compiler options:'
+   write (stdout, *) compiler_options()
+   write (stdout, *)
 !$ write (stdout, *) 'Compiled with parallel OpenMP support for PIMD.'
 #ifdef USE_FFTW
    write (stdout, *) 'Compiled with FFTW support.'
@@ -29,8 +33,4 @@ subroutine print_compile_info()
    write (stdout, *) '(used for REMD and direct CP2K and TeraChem interfaces.)'
 #endif
    write (stdout, *)
-
-   write (stdout, *) 'This program was compiled by '//compiler_version()
-   write (stdout, *) 'using the following compiler options:'
-   write (stdout, *) compiler_options()
 end subroutine print_compile_info
