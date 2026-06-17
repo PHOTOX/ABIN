@@ -3,6 +3,7 @@
 # OPEN-QP/Landau-Zener Surface Hopping Interface for ABIN
 # Created by K. Vosovicova, J. Janos
 # Set parameters in 'openqp.inp.template' file
+# The interface was tested for both Linux and MacOS. In case of modifications, please check the compatibility with both OS.
 
 cd "$(dirname "$0")" || exit 2
 
@@ -16,7 +17,17 @@ natom=$(wc -l < ../$geom)
 output=input$ibead.log
 template=openqp.inp.template
 
-sed "1i ${natom}\n" "../$geom" > $geom
+
+if [[ -f ../SetEnvironment.sh ]]; then
+  # This is specific to Prague clusters
+  source ../SetEnvironment.sh OPENQP
+else
+  # We assume openqp is in PATH already. If not, add it here.
+  OPENQPEXE=openqp
+fi
+
+
+{ printf '%s\n\n' "$natom"; cat "../$geom"; } > "$geom"  # used instead of 'sed "1i ${natom}\n" "../$geom" > $geom' to avoid issues with sed on MacOS
 rm -f ../engrad.dat.$ibead
 
 # -------------- DETERMINING CURRENT STATE -----------------
@@ -33,22 +44,23 @@ read -t 1 -a ntriplet		# (not used)
 
 cp $template $input
 
+tmp=$(mktemp) # create a temporary file for intermediate processing since sed -i is not supported on MacOS
+
 if [[ $timestep -ne 0 ]]; then
-    sed -i '/^\[guess\]/,/^\[scf\]/c\
+    sed '/^\[guess\]/,/^\[scf\]/c\
 [guess]\
 type=json\
 file=input001.json\
 \
-[scf]' "$input"
+[scf]' "$input" > "$tmp" && mv "$tmp" "$input"
 fi
 
-sed -i "/^\[tdhf\]/,/^\[/ s/^nstate=.*/nstate=$nstate/" "$input"
+sed "/^\[tdhf\]/,/^\[/ s/^nstate=.*/nstate=$nstate/" "$input" > "$tmp" && mv "$tmp" "$input"
 
-sed -i "/^\[properties\]/,/^\[/ s/^grad=.*/grad=$tocalc/" "$input"
+sed "/^\[properties\]/,/^\[/ s/^grad=.*/grad=$tocalc/" "$input" > "$tmp" && mv "$tmp" "$input"
 
 # ---------------------- JOB LAUNCH ------------------------
 
-source SetEnvironment.sh OPENQ
 
 $OPENQPEXE $input &> output_file
 
