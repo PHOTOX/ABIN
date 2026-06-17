@@ -17,6 +17,16 @@ natom=$(wc -l < ../$geom)
 output=input$ibead.log
 template=openqp.inp.template
 
+
+if [[ -f ../SetEnvironment.sh ]]; then
+  # This is specific to Prague clusters
+  source ../SetEnvironment.sh OPENQP
+else
+  # We assume openqp is in PATH already. If not, add it here.
+  OPENQPEXE=openqp
+fi
+
+
 { printf '%s\n\n' "$natom"; cat "../$geom"; } > "$geom"  # used instead of 'sed "1i ${natom}\n" "../$geom" > $geom' to avoid issues with sed on MacOS
 rm -f ../engrad.dat.$ibead
 
@@ -51,7 +61,6 @@ sed "/^\[properties\]/,/^\[/ s/^grad=.*/grad=$tocalc/" "$input" > "$tmp" && mv "
 
 # ---------------------- JOB LAUNCH ------------------------
 
-source SetEnvironment.sh OPENQP
 
 $OPENQPEXE $input &> output_file
 
