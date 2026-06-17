@@ -48,6 +48,7 @@ module mod_sh
    ! velocity_rescaling = 'nac_then_velocity' (adjmom=0) - Adjust velocity along the NAC vector, if not possible,
    ! try the velocity vector (default)
    ! velocity_rescaling = 'velocity'  (adjmom=1) - Rescale along the velocity vector
+   ! velocity_rescaling = 'nac' (adjmom=2) - Adjust velocity along the NAC vector.
    integer :: adjmom = 0 ! for working within the code
    character(len=50) :: velocity_rescaling = 'nac_then_velocity' ! for reading the input file
    ! 1 - Reverse momentum direction after frustrated hop
@@ -267,13 +268,21 @@ contains
       case ('velocity')
          adjmom = 1
          write (stdout, '(A)') 'Rescaling velocity along the momentum vector after hop.'
+      case ('nac')
+         adjmom = 2
+         write (stdout, '(A)') 'Rescaling velocity along the NAC vector after hop.'
       case default
-         write (stderr, '(A)') 'Parameter "velocity_rescaling" must be "nac_then_velocity" or "velocity".'
+         write (stderr, '(A)') 'Parameter "velocity_rescaling" must be "nac_then_velocity", "nac" or "velocity".'
          error = .true.
       end select
 
       if (adjmom == 0 .and. inac == 1) then
          write (stderr, '(A)') 'Combination of velocity_rescaling="nac_then_velocity" and couplings="baeck-an" is not possible.'
+         write (stderr, '(A)') 'Velocity cannot be rescaled along NAC when using Baeck-An.'
+         write (stderr, '(A)') 'Change velocity_rescaling="velocity" to rescale along the velocity vector.'
+         error = .true.
+      else if (adjmom == 2 .and. inac == 1) then
+         write (stderr, '(A)') 'Combination of velocity_rescaling="nac" and couplings="baeck-an" is not possible.'
          write (stderr, '(A)') 'Velocity cannot be rescaled along NAC when using Baeck-An.'
          write (stderr, '(A)') 'Change velocity_rescaling="velocity" to rescale along the velocity vector.'
          error = .true.
@@ -304,14 +313,14 @@ contains
       end if
 
       call int_switch(nohop, 'nohop')
-      call int_switch(adjmom, 'adjmom')
-      call int_switch(adjmom, 'revmom')
+      call int_switch(revmom, 'revmom')
 
       call int_positive(istate_init, 'istate_init')
       call int_positive(nstate, 'nstate')
       call int_positive(substep, 'substep')
       call int_positive(nac_accu1, 'nac_accu1')
 
+      call int_nonnegative(adjmom, 'adjmom')
       call int_nonnegative(nac_accu2, 'nac_accu2')
       call int_nonnegative(ignore_state, 'ignore_state')
 
@@ -796,9 +805,11 @@ contains
             ! NOTE: Hop can still fail due to insufficient kinetic energy
             ! ("frustrated hop")
             if (adjmom == 0) then
-               call try_hop_nacme_rescale(vx, vy, vz, ist, ihop, eclas)
+               call try_hop_nacme_rescale(vx, vy, vz, ist, ihop, eclas, isotropic_fallback=.true.)
             else if (adjmom == 1) then
                call try_hop_simple_rescale(vx, vy, vz, ist, ihop, eclas)
+            else if (adjmom == 2) then
+               call try_hop_nacme_rescale(vx, vy, vz, ist, ihop, eclas, isotropic_fallback=.false.)
             else
                call fatal_error(__FILE__, __LINE__, 'Invalid adjmom value')
             end if
@@ -986,7 +997,7 @@ contains
       end do
    end subroutine random_hop
 
-   subroutine try_hop_nacme_rescale(vx, vy, vz, instate, outstate, eclas)
+   subroutine try_hop_nacme_rescale(vx, vy, vz, instate, outstate, eclas, isotropic_fallback)
       use mod_general, only: natom, pot
       use mod_system, only: am
       use mod_files, only: UPOP
@@ -999,6 +1010,7 @@ contains
       real(DP) :: a_temp, b_temp, c_temp, g_temp
       real(DP) :: ekin, ekin_new
       integer :: iat, iw
+      logical, intent(in) :: isotropic_fallback
 
       iw = 1
       write (stdout, '(A,I0,A,I0)') 'Trying to hop from state ', instate, ' to state ', outstate
@@ -1022,16 +1034,25 @@ contains
       c_temp = b_temp**2 + 4 * a_temp * (en_array(instate) - en_array(outstate))
 
       if (a_temp <= 0.0D0) then
-         write (stdout, *) 'WARNING: NACME vector is zero, rescaling velocities isotropically along the velocity vector'
-         call try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
+         if (isotropic_fallback) then
+            write (stdout, *) 'WARNING: NACME vector is zero, rescaling velocities isotropically along the velocity vector.'
+            call try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
+         else
+            write (stdout, *) 'WARNING: NACME vector is zero, cannot rescale velocities along the NACME vector.'
+            call frustrated_hop(vx, vy, vz, instate, outstate)
+         end if
          return
       end if
 
       if (c_temp < 0) then
          write (stdout, *) 'WARNING:  Not enough kinetic energy in the direction of NAC vector.'
-         write (stdout, *) 'Trying isotropic velocity rescaling instead'
-         ! Try, whether there is enough total kinetic energy and scale velocities.
-         call try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
+         if (isotropic_fallback) then
+            write (stdout, *) 'Trying isotropic velocity rescaling instead'
+            ! Try, whether there is enough total kinetic energy and scale velocities.
+            call try_hop_simple_rescale(vx, vy, vz, instate, outstate, eclas)
+         else
+            call frustrated_hop(vx, vy, vz, instate, outstate)
+         end if
          return
       end if
 
@@ -1189,20 +1210,29 @@ contains
 
       else
 
-         write (*, '(A,I0,A,I0)') '# Frustrated Hop occured from state ', &
-                                    & instate, ' to state ', outstate
-         if (revmom == 1) then
-            write (*, '(A)') '# Reversing momentum direction.'
-            vx = -vx
-            vy = -vy
-            vz = -vz
-         end if
+         call frustrated_hop(vx, vy, vz, instate, outstate)
 
       end if
 
       write (*, '(A,E17.10,A,E17.10)') '# deltaE_pot / a.u. = ', dE, ' E_kin-total / a.u. = ', ekin
 
    end subroutine try_hop_simple_rescale
+
+   subroutine frustrated_hop(vx, vy, vz, instate, outstate)
+      use mod_interfaces, only: force_clas
+      real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
+      integer, intent(in) :: instate, outstate
+
+      write (*, '(A,I0,A,I0)') '# Frustrated Hop occured from state ', &
+                                 & instate, ' to state ', outstate
+      if (revmom == 1) then
+         write (*, '(A)') '# Reversing momentum direction.'
+         vx = -vx
+         vy = -vy
+         vz = -vz
+      end if
+
+   end subroutine frustrated_hop
 
    subroutine check_energy(vx_old, vy_old, vz_old, vx, vy, vz)
       use mod_const, only: AUtoEV
