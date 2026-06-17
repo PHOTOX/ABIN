@@ -1188,6 +1188,8 @@ contains
       dE = en_array(outstate) - en_array(instate)
       ekin = ekin_v(vx, vy, vz)
 
+      write (*, '(A,E17.10,A,E17.10)') '# deltaE_pot / a.u. = ', dE, ' E_kin-total / a.u. = ', ekin
+
       if (ekin >= de) then
 
          alfa = dsqrt(1 - de / ekin)
@@ -1213,8 +1215,6 @@ contains
          call frustrated_hop(vx, vy, vz, instate, outstate)
 
       end if
-
-      write (*, '(A,E17.10,A,E17.10)') '# deltaE_pot / a.u. = ', dE, ' E_kin-total / a.u. = ', ekin
 
    end subroutine try_hop_simple_rescale
 
