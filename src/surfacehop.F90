@@ -1007,10 +1007,10 @@ contains
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       real(DP), intent(inout) :: eclas
       integer, intent(in) :: instate, outstate
+      logical, intent(in) :: isotropic_fallback
       real(DP) :: a_temp, b_temp, c_temp, g_temp
       real(DP) :: ekin, ekin_new
       integer :: iat, iw
-      logical, intent(in) :: isotropic_fallback
 
       iw = 1
       write (stdout, '(A,I0,A,I0)') 'Trying to hop from state ', instate, ' to state ', outstate
@@ -1188,7 +1188,7 @@ contains
       dE = en_array(outstate) - en_array(instate)
       ekin = ekin_v(vx, vy, vz)
 
-      write (*, '(A,E17.10,A,E17.10)') '# deltaE_pot / a.u. = ', dE, ' E_kin-total / a.u. = ', ekin
+      write (stdout, '(A,E17.10,A,E17.10)') '# deltaE_pot / a.u. = ', dE, ' E_kin-total / a.u. = ', ekin
 
       if (ekin >= de) then
 
@@ -1219,7 +1219,6 @@ contains
    end subroutine try_hop_simple_rescale
 
    subroutine frustrated_hop(vx, vy, vz, instate, outstate)
-      use mod_interfaces, only: force_clas
       real(DP), intent(inout) :: vx(:, :), vy(:, :), vz(:, :)
       integer, intent(in) :: instate, outstate
 
