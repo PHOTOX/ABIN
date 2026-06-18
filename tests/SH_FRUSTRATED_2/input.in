@@ -21,8 +21,9 @@ inose=0,
 /
 
 &sh
+! this test differes from SH_FRUSTRATED by the following two keywords `velocity_rescaling` and `revmom`
 velocity_rescaling='nac'        ! momentum adjustment along either 'nac_then_velocity', 'nac' or 'velocity'
-revmom=1,               ! Reverse momentum after frustrated hop
+revmom=0,               ! Do not reverse momentum after frustrated hop
 istate_init=2,		! initial electronic state
 nstate=3,		! number of electronic states
 substep=100,		! number of substeps for solving ESCH
