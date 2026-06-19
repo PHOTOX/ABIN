@@ -50,7 +50,7 @@ module mod_sh
    ! velocity_rescaling = 'velocity'  (adjmom=1) - Rescale along the velocity vector
    ! velocity_rescaling = 'nac' (adjmom=2) - Adjust velocity along the NAC vector.
    integer :: adjmom = 0 ! for working within the code
-   character(len=50) :: velocity_rescaling = 'nac_then_velocity' ! for reading the input file
+   character(len=50) :: velocity_rescaling = 'nac' ! for reading the input file, default is set here
    ! 1 - Reverse momentum direction after frustrated hop
    integer :: revmom = 0
 
