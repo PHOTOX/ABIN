@@ -66,7 +66,7 @@ contains
       use mod_force_tcpb, only: initialize_tcpb
       use mod_terampi
       use mod_terampi_sh
-      use mod_mace_mpi
+      use mod_mace_mpi, only: initialize_mace_interface, initialize_mace_server
       use mod_mdstep, only: initialize_integrator, nabin, nstep_ref
       real(DP), intent(out) :: dt
       ! Input parameters for analytical potentials
@@ -149,10 +149,6 @@ contains
          Nshake, ishake1, ishake2, shake_tol, potential_file
 
       namelist /qmmm/ natqm, natmm, q, LJ_rmin, LJ_eps, mm_types
-
-      namelist /mace/ mace_model, mace_device, mace_default_dtype, &
-         mace_batch_size, mace_compute_stress, mace_return_contributions, &
-         mace_info_prefix, mace_head, mace_max_mpi_wait_time, mace_mpi_milisleep
 
       chcoords = 'mini.dat'
       xyz_units = 'angstrom'
@@ -403,17 +399,6 @@ contains
       if (iqmmm > 0 .or. pot == '_mm_') then
          read (uinput, qmmm)
          rewind (uinput)
-      end if
-
-      ! Read &mace namelist when using MACE potential
-      if (pot == '_mace_') then
-         read (uinput, mace, iostat=iost, iomsg=chiomsg)
-         rewind (uinput)
-         if (iost /= 0) then
-            write (stderr, *) chiomsg
-            call fatal_error(__FILE__, __LINE__, &
-               & 'Could not read namelist "mace". Required when pot="_mace_".')
-         end if
       end if
 
       close (uinput)
@@ -846,10 +831,6 @@ contains
          end if
          if (iqmmm > 0 .or. pot == '_mm_') then
             write (stdout, nml=qmmm, delim='APOSTROPHE')
-            write (stdout, *)
-         end if
-         if (pot == '_mace_') then
-            write (stdout, nml=mace, delim='APOSTROPHE')
             write (stdout, *)
          end if
       end subroutine print_simulation_parameters
@@ -1301,7 +1282,7 @@ subroutine finish(error_code)
    end if
 
    if (pot == '_mace_') then
-      call finalize_mace(error_code)
+      call finalize_mace()
    end if
 
    if (pot == '_tcpb_') then

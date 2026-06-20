@@ -15,8 +15,6 @@
 # Version: 7.0.0
 #
 # This server communicates with ABIN via MPI (using mpi4py).
-# MACE configuration (model path, device, etc.) is received from ABIN's
-# &mace namelist section at initialization time.
 #
 # Dependencies:
 #   pip install mpi4py mace-torch torch ase numpy
@@ -42,16 +40,6 @@ def log(message, should_print=True):
     if should_print:
         print(msg_formatted, flush=True)
     return msg_formatted
-
-
-def parse_config_string(config_str):
-    """Parse key=value config string sent from ABIN's &mace namelist."""
-    config = {}
-    for pair in config_str.split(';'):
-        if '=' in pair:
-            key, value = pair.split('=', 1)
-            config[key.strip()] = value.strip()
-    return config
 
 
 class MaceModel:
@@ -150,17 +138,9 @@ def main():
     atom_types = [atom_types_str[i:i + 2].strip() for i in range(0, len(atom_types_str), 2)]
     log(f"Received atom types: {atom_types}")
 
-    # Receive configuration string
-    config_status = MPI.Status()
-    abin_comm.Probe(source=0, tag=MACE_TAG_DATA, status=config_status)
-    config_len = config_status.Get_count(MPI.CHAR)
-    config_buf = bytearray(config_len)
-    abin_comm.Recv([config_buf, MPI.CHAR], source=0, tag=MACE_TAG_DATA)
-    config_str = config_buf.decode('ascii').strip()
-    log(f"Received config: {config_str}")
-
-    config = parse_config_string(config_str)
-    default_dtype = config.get('default_dtype', 'float64')
+    # TODO: Read MACE configuration from YAML?
+    # default_dtype = config.get('default_dtype', 'float64')
+    default_dtype = 'float64'
 
     # Load MACE model
     mace_model = MaceModel(config)

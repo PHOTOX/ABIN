@@ -26,15 +26,7 @@ module mod_mace_mpi
    ! By default, don't sleep at all (negative value)
    integer :: mace_mpi_milisleep = -1
 
-   ! MACE configuration parameters (read from &mace namelist in init.F90)
-   character(len=1024) :: mace_model = 'MACE/MACE-OFF23_medium.model'
-   character(len=16) :: mace_device = 'cpu'
-   character(len=16) :: mace_default_dtype = 'float64'
-   integer :: mace_batch_size = 64
-   logical :: mace_compute_stress = .false.
-   logical :: mace_return_contributions = .false.
    character(len=64) :: mace_info_prefix = 'MACE_'
-   character(len=256) :: mace_head = ''
 
 #ifdef USE_MPI
    integer :: mace_comm = MPI_COMM_NULL
@@ -42,14 +34,12 @@ module mod_mace_mpi
 #endif
 
    public :: MACE_TAG_EXIT, MACE_TAG_DATA
-   public :: mace_model, mace_device, mace_default_dtype
-   public :: mace_batch_size, mace_compute_stress, mace_return_contributions
-   public :: mace_info_prefix, mace_head
+   public :: mace_info_prefix
    public :: mace_max_mpi_wait_time, mace_mpi_milisleep
 #ifdef USE_MPI
    public :: get_mace_communicator
    public :: wait_for_mace
-   public :: send_mace_natom, send_mace_atom_types, send_mace_config
+   public :: send_mace_natom, send_mace_atom_types
    public :: send_mace_coordinates
 #endif
    public :: initialize_mace_interface, initialize_mace_server, finalize_mace
@@ -136,16 +126,10 @@ contains
 
       call send_mace_natom(natqm, mace_comm)
       call send_mace_atom_types(names, natqm, mace_comm)
-      call send_mace_config(mace_comm)
    end subroutine initialize_mace_server
 
-   subroutine finalize_mace(abin_error_code)
-      integer, intent(in) :: abin_error_code
+   subroutine finalize_mace()
       integer :: ierr, empty
-      integer :: i
-
-      ! Suppress unused variable warning
-      i = abin_error_code
 
       ! Set error handler to return so we can handle errors gracefully
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
@@ -223,47 +207,6 @@ contains
       call MPI_Send(buffer, num_atom * 2, MPI_CHARACTER, 0, MACE_TAG_DATA, comm, ierr)
       call handle_mpi_error(ierr)
    end subroutine send_mace_atom_types
-
-   subroutine send_mace_config(comm)
-      use mod_general, only: idebug
-      integer, intent(in) :: comm
-      character(len=4096) :: config_str
-      integer :: ierr
-      character(len=8) :: batch_str
-      character(len=8) :: stress_str, contrib_str
-
-      ! Build a key=value config string for the Python server
-      write (batch_str, '(I0)') mace_batch_size
-      if (mace_compute_stress) then
-         stress_str = 'true'
-      else
-         stress_str = 'false'
-      end if
-      if (mace_return_contributions) then
-         contrib_str = 'true'
-      else
-         contrib_str = 'false'
-      end if
-
-      config_str = 'model='//trim(mace_model)// &
-      & ';device='//trim(mace_device)// &
-      & ';default_dtype='//trim(mace_default_dtype)// &
-      & ';batch_size='//trim(adjustl(batch_str))// &
-      & ';compute_stress='//trim(stress_str)// &
-      & ';return_contributions='//trim(contrib_str)// &
-      & ';info_prefix='//trim(mace_info_prefix)// &
-      & ';head='//trim(mace_head)
-
-      if (idebug > 1) then
-         write (stdout, '(A)') 'MACE: Sending config: '
-         write (stdout, '(A)') trim(config_str)
-         call flush (OUTPUT_UNIT)
-      end if
-
-      call MPI_Send(config_str, len_trim(config_str), MPI_CHARACTER, &
-      & 0, MACE_TAG_DATA, comm, ierr)
-      call handle_mpi_error(ierr)
-   end subroutine send_mace_config
 
    subroutine send_mace_coordinates(x, y, z, num_atom, iw, comm)
       use mod_general, only: idebug

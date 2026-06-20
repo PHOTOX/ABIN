@@ -49,15 +49,6 @@ def main():
     atom_types_str = atom_type_buf.decode('ascii')
     print(f"[MockMACE]: atom types = {atom_types_str}", flush=True)
 
-    # Receive config string
-    config_status = MPI.Status()
-    abin_comm.Probe(source=0, tag=MACE_TAG_DATA, status=config_status)
-    config_len = config_status.Get_count(MPI.CHAR)
-    config_buf = bytearray(config_len)
-    abin_comm.Recv([config_buf, MPI.CHAR], source=0, tag=MACE_TAG_DATA)
-    config_str = config_buf.decode('ascii')
-    print(f"[MockMACE]: config = {config_str}", flush=True)
-
     # Main loop
     step = 0
     max_steps = 100
