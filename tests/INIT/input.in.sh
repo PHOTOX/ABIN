@@ -8,6 +8,7 @@ dt=20.,
 
 &nhcopt
 inose=0,
+temp0=0.0
 /
 
 ! Invalid SH parameters

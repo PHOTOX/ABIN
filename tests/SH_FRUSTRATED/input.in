@@ -17,6 +17,7 @@ xyz_units='bohr'
 
 &nhcopt
 temp=0.0D0,
+temp0=0.0,
 inose=0,
 /
 

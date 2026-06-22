@@ -84,7 +84,7 @@ contains
       ! L-J parameters
       real(DP), allocatable :: LJ_rmin(:), LJ_eps(:)
       ! Initial temperature (read from namelist nhcopt)
-      real(DP), save :: temp0 = -1
+      real(DP), save :: temp0 = -1.0_DP
       ! User-defined masses in relative atomic units
       real(DP), allocatable :: masses(:)
       integer :: iw, iat, natom_xyz, iost
@@ -435,9 +435,7 @@ contains
          call plumed_init(natom, irest, dt0, nrest)
       end if
 
-      if (temp0 < 0) then
-         temp0 = temp
-      end if
+      ! Print initial and target temperature information
       write (stdout, *) 'Initial temperature [K] =', temp0
       if (inose /= 0) write (stdout, *) 'Target temperature [K] =', temp
 
@@ -463,7 +461,7 @@ contains
       if (inose == 1) then
          call nhc_init()
       else if (inose == 2) then
-         call gle_init(dt * 0.5D0 / nabin / nstep_ref) !nabin is set to 1 unless ipimd=1
+         call gle_init(dt * 0.5D0 / nabin / nstep_ref) ! nabin is set to 1 unless ipimd=1
       else if (inose == 3) then
          call pile_init(dt * 0.5D0, tau0_langevin)
       else if (inose == 4) then
@@ -484,9 +482,11 @@ contains
          ! what about massive thermostat?
       end if
 
-      ! Set initial velocities according to the Maxwell-Boltzmann distribution
+      ! Set initial velocities according to the Maxwell--Boltzmann distribution
       if (irest == 0 .and. chveloc == '') then
          call vinit(temp0, am, vx, vy, vz)
+         write (*, '(a,1x,f8.2,1x,a)') "Initial velocities generated from Maxwell--Boltzmann distribution based at temperature", &
+                                        temp0, "K"      
       end if
 
       ! Read velocities from file (optional)
@@ -599,6 +599,12 @@ contains
             write (stderr, *) 'Velocities will be taken from restart file because irest=1.'
          end if
 
+         if (irest == 0 .and. chveloc == '' .and. temp0 < 0) then
+            write (*, '(a)') 'ERROR: Initial temperature (temp0) was not set and no file with initial velocities were provided.'
+            write (*, '(a,/)') 'FIX: Set parameter temp0 >= 0 or provide initial velocities.'
+            error = 1
+         end if
+
          if (pot /= '_cp2k_') then
             if (nproc > nwalk) then
                write (*, *) 'ERROR: Nproc greater than nwalk. That does not make sense.'
@@ -620,7 +626,7 @@ contains
             error = 1
          end if
          if (ipimd == 1 .and. nwalk <= 1) then
-            write (*, *) 'Number of walkers for PIMD (nwalk) mus be >= 1!'
+            write (*, *) 'Number of walkers for PIMD (nwalk) must be >= 1!'
             write (*, *) 'Either set ipimd=0 for classical simulation'
             write (*, *) 'or set nwalk > 1'
             error = 1

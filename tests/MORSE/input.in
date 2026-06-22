@@ -30,5 +30,6 @@ d0_morse=0.363965D0
 &nhcopt
 inose=1,
 temp=300.0,
+temp0=300.0,
 tau0=0.001
 /
