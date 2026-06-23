@@ -486,7 +486,7 @@ contains
       if (irest == 0 .and. chveloc == '') then
          call vinit(temp0, am, vx, vy, vz)
          write (*, '(a,1x,f8.2,1x,a)') "Initial velocities generated from Maxwell--Boltzmann distribution based at temperature", &
-                                        temp0, "K"      
+            temp0, "K"
       end if
 
       ! Read velocities from file (optional)
