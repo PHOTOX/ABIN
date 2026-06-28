@@ -20,8 +20,10 @@ Usage:
 """
 
 import argparse
+import functools
 import sys
 import time
+from traceback import print_tb
 from pathlib import Path
 
 LOG_NAME = "MaceMPIServer"
@@ -114,9 +116,8 @@ class MaceModel:
 
         return energy_hartree, forces_hartree_bohr
 
-
-def main(config):
-    import numpy as np
+def connect_to_abin():
+    """Establish initial connection to ABIN"""
     from mpi4py import MPI
 
     # Open MPI port and write to file for ABIN to read
@@ -132,6 +133,60 @@ def main(config):
     log("Waiting for ABIN to connect...")
     abin_comm = MPI.COMM_WORLD.Accept(port_name)
     log("Connection from ABIN accepted!")
+    return port_name, abin_comm
+
+
+def exception_handler(shutdown_callback, exception_type, exception, traceback):
+    """Try to gracefully shutdown communication with ABIN upon uncaught exceptions"""
+    print(f"Unexpected {exception_type.__name__}: {exception}")
+    print_tb(traceback)
+    # Restore original exception handling to prevent endless loop
+    # in case of uncaught excpetion during shutdown
+    sys.excepthook = None
+    shutdown_callback()
+    sys.exit(1)
+
+
+def main(config):
+    import numpy as np
+    from mpi4py import MPI
+
+    port_name, abin_comm = connect_to_abin()
+
+    def shutdown_communication():
+        """Gracefully shutdown communication with ABIN"""
+        log("Shutting down communication with ABIN...")
+        try:
+            abin_comm.Disconnect()
+        except BaseException as e:  # noqa: E722
+            log(e)
+        else:
+            log("Disconnected")
+
+        try:
+            MPI.Close_port(port_name)
+        except BaseException as e:  # noqa: E722
+            log(e)
+        else:
+            log("Port {port_name} close")
+
+
+    def error_shutdown():
+        log("Sending ERROR tag to ABIN")
+        error_energy = np.array([0.0], dtype=np.float64)
+        # This is best effort only, since ABIN might be dead already, ignore any errors here
+        try:
+            abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=1)
+        except Exception as e:
+            log(e)
+            pass
+
+        shutdown_communication()
+
+        sys.exit(1)
+
+    # Call error_shutdown upon any unhandled exception
+    sys.excepthook = functools.partial(exception_handler, error_shutdown)
 
     # Receive number of atoms
     natom_buf = np.empty(1, dtype=np.intc)
@@ -150,12 +205,6 @@ def main(config):
     mace_model = MaceModel(config)
     log("MACE model ready. Entering main loop.")
 
-    def shutdown_server():
-        log("Shutting down...")
-        abin_comm.Disconnect()
-        MPI.Close_port(port_name)
-        log("Server stopped.")
-
     # Main loop: receive coordinates, compute, send results
     eval_count = 0
     while True:
@@ -166,7 +215,10 @@ def main(config):
         if status.Get_tag() == MACE_TAG_EXIT:
             log("Received exit signal from ABIN")
             # Consume the message
-            abin_comm.Recv([natom_buf, MPI.INT], source=0, tag=MACE_TAG_EXIT)
+            try:
+                abin_comm.Recv([natom_buf, MPI.INT], source=0, tag=MACE_TAG_EXIT)
+            except Exception as e:
+                log(e)
             break
 
         abin_comm.Recv([natom_buf, MPI.INT], source=0, tag=MACE_TAG_DATA)
@@ -174,7 +226,7 @@ def main(config):
 
         if natom_step != natom:
             log(f"ERROR: Received natom={natom_step}, expected {natom}")
-            break
+            error_shutdown()
 
         # Receive coordinates (3*natom doubles, in Bohr)
         coords = np.empty((natom, 3), dtype=np.float64)
@@ -185,39 +237,22 @@ def main(config):
         eval_count += 1
         log(f"Evaluation {eval_count}")
 
-        try:
-            energy, forces = mace_model.evaluate(atom_types, coords_bohr)
-        except Exception as e:
-            log(f"ERROR during evaluation: {e}")
-            # Send error tag
-            error_energy = np.array([0.0], dtype=np.float64)
-            abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=1)
-            shutdown_server()
-            raise
+        energy, forces = mace_model.evaluate(atom_types, coords_bohr)
+        log(f"Evaluation {eval_count}: energy = {energy:.15f} Hartree")
+
+        # Send energy (1 double, in Hartree)
+        energy_buf = np.array([energy], dtype=np.float64)
+        abin_comm.Send([energy_buf, MPI.DOUBLE], dest=0, tag=0)
+
+        # Send forces (3*natom doubles, in Hartree/Bohr)
+        # Transpose back to (3, natom) to match Fortran column-major layout
+        if forces.dtype != np.float64:
+            forces_send = forces.T.astype(np.float64)
         else:
-            log(f"Evaluation {eval_count}: energy = {energy:.15f} Hartree")
-            # log(f"Evaluation {eval_count}: forces = \n{forces}")
+            forces_send = forces.T.copy()
+        abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=0)
 
-        try:
-            # Send energy (1 double, in Hartree)
-            energy_buf = np.array([energy], dtype=np.float64)
-            abin_comm.Send([energy_buf, MPI.DOUBLE], dest=0, tag=0)
-
-            # Send forces (3*natom doubles, in Hartree/Bohr)
-            # Transpose back to (3, natom) to match Fortran column-major layout
-            if forces.dtype != np.float64:
-                forces_send = forces.T.astype(np.float64)
-            else:
-                forces_send = forces.T.copy()
-            abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=0)
-        except Exception as e:
-            log(f"ERROR when sending energy and forces to ABIN: {e}")
-            error_energy = np.array([0.0], dtype=np.float64)
-            abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=1)
-            shutdown_server()
-            raise
-
-    shutdown_server()
+    shutdown_communication()
 
 
 if __name__ == "__main__":
