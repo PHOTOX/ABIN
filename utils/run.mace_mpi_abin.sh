@@ -7,7 +7,6 @@
 # Prerequisites:
 #   - ABIN compiled with MPI=TRUE
 #   - Python environment with: mpi4py, mace-torch, torch, ase, numpy
-#     Install with: pip install mpi4py mace-torch torch ase numpy
 #   - MPICH (not OpenMPI)
 #
 # Usage:
@@ -20,6 +19,9 @@ ABIN_OUT=abin.out
 ABIN_IN=input.in
 GEOM_IN=mini.xyz
 VELOC_IN=
+
+MODEL_PATH=/path/to/mace.model
+MACE_DEVICE=cpu   # 'cpu' or 'cuda'
 
 # Path to Python with MACE dependencies (mpi4py, mace-torch, torch, ase, numpy).
 # Uncomment and set to your Python interpreter:
@@ -82,7 +84,7 @@ echo "=============================="
 declare -A job_pids
 
 # LAUNCH MACE SERVER
-$MPIRUN_MACE $MACE_PYTHON $MACE_SERVER > mace_server.out 2>&1 &
+$MPIRUN_MACE $MACE_PYTHON $MACE_SERVER --device $DEVICE --model-path $MODEL_PATH > mace_server.out 2>&1 &
 job_pids[mace]=$!
 echo "Launched MACE server (PID: ${job_pids[mace]})"
 

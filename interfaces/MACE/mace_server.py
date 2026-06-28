@@ -9,24 +9,20 @@
 # ]
 # ///
 """
-######################
-# MACE MPI SERVER
-######################
-# Version: 7.0.0
-#
-# This server communicates with ABIN via MPI (using mpi4py).
-#
-# Dependencies:
-#   pip install mpi4py mace-torch torch ase numpy
-#
-# Usage:
-#   mpirun -n 1 python mace_server.py
-#
-# The server writes its MPI port to 'mace_port.txt.1' for ABIN to read.
+MACE MPI SERVER
+
+This server communicates with ABIN via MPI (using mpi4py).
+
+Usage:
+  mpirun -n 1 python mace_server.py
+
+  The server writes its MPI port to 'mace_port.txt.1' for ABIN to read.
 """
 
-import os
+import argparse
+import sys
 import time
+from pathlib import Path
 
 LOG_NAME = "MaceMPIServer"
 
@@ -42,6 +38,28 @@ def log(message, should_print=True):
     return msg_formatted
 
 
+def parse_cmd():
+    desc = "MACE MPI server for ground state MD with ABIN"
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument(
+        "--model-path",
+        type=str,
+        required=True,
+        help="Path to MACE model file",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        choices=("cpu", "cuda"),
+        required=True,
+        help="Device for model inference",
+    )
+    config = parser.parse_args()
+    if not Path(config.model_path).is_file():
+        sys.exit(f"ERROR: file '{config.model_path}' not found")
+    return config
+
+
 class MaceModel:
     """
     Manages the MACE ML model for evaluating atomic configurations.
@@ -52,21 +70,11 @@ class MaceModel:
         from mace.calculators import MACECalculator
 
         log("initializing MACE model")
-        model_path = config.get('model', '')
-        if not model_path:
-            raise RuntimeError("MACE model path not specified")
-
-        device = config.get('device', 'cpu')
-        head_val = config.get('head', '')
-        self.head = head_val if head_val else None
-
-        if not os.path.isfile(model_path):
-            raise RuntimeError(f"file '{model_path}' not found")
 
         # Set ASE calculator
         self.calculator = MACECalculator(
-            model_paths=model_path,
-            device=device,
+            model_paths=config.model_path,
+            device=config.device,
         )
 
     def evaluate(self, atom_types, coords_bohr):
@@ -107,7 +115,7 @@ class MaceModel:
         return energy_hartree, forces_hartree_bohr
 
 
-def main():
+def main(config):
     import numpy as np
     from mpi4py import MPI
 
@@ -137,10 +145,6 @@ def main():
     atom_types_str = atom_type_buf.decode('ascii')
     atom_types = [atom_types_str[i:i + 2].strip() for i in range(0, len(atom_types_str), 2)]
     log(f"Received atom types: {atom_types}")
-
-    # TODO: Read MACE configuration from YAML?
-    # default_dtype = config.get('default_dtype', 'float64')
-    default_dtype = 'float64'
 
     # Load MACE model
     mace_model = MaceModel(config)
@@ -201,7 +205,7 @@ def main():
 
             # Send forces (3*natom doubles, in Hartree/Bohr)
             # Transpose back to (3, natom) to match Fortran column-major layout
-            if default_dtype != 'float64':
+            if forces.dtype != np.float64:
                 forces_send = forces.T.astype(np.float64)
             else:
                 forces_send = forces.T.copy()
@@ -217,4 +221,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    config = parse_cmd()
+    main(config)
