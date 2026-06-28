@@ -31,30 +31,20 @@ contains
 
       abort = .false.
 
-!$OMP PARALLEL DO PRIVATE(iw, mace_comm)
       do iw = 1, walkmax
 
-!$OMP FLUSH(abort)
-         if (.not. abort) then
+         mace_comm = get_mace_communicator()
 
 #ifdef USE_MPI
-            mace_comm = get_mace_communicator()
+         call send_mace(x, y, z, iw, mace_comm)
 
-            call send_mace(x, y, z, iw, mace_comm)
-
-            call receive_mace(fx, fy, fz, eclas, iw, walkmax, mace_comm, abort)
-            if (abort) cycle
+         call receive_mace(fx, fy, fz, eclas, iw, walkmax, mace_comm, abort)
 #endif
-
+         if (abort) then
+            call fatal_error(__FILE__, __LINE__, 'MACE evaluation failed')
          end if
 
       end do
-!$OMP END PARALLEL DO
-
-      if (abort) then
-         call fatal_error(__FILE__, __LINE__, &
-         & 'MACE external forces error')
-      end if
 
    end subroutine force_mace
 
@@ -102,7 +92,6 @@ contains
       if (status(MPI_TAG) == 1) then
          write (stderr, *) 'Got error tag from MACE server. Evaluation failed.'
          abort = .true.
-!$OMP FLUSH(abort)
          return
       end if
 
@@ -135,7 +124,6 @@ contains
          fz(iat, iw) = forces(3, iat)
       end do
 
-!$OMP ATOMIC
       eclas = eclas + energy / walkmax
 
    end subroutine receive_mace
