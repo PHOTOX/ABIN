@@ -34,9 +34,8 @@ contains
 
       do iw = 1, walkmax
 
-         mace_comm = get_mace_communicator()
-
 #ifdef USE_MPI
+         mace_comm = get_mace_communicator()
          ! Send coordinates in Bohr
          call send_mace_coordinates(x, y, z, natqm, iw, mace_comm)
 
