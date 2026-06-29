@@ -65,7 +65,7 @@ contains
       integer :: ierr, iat
 
       ! Receive energy (in Hartree, already converted by server)
-      if (idebug > 2) then
+      if (idebug > 1) then
          write (stdout, '(a)') 'MACE: Waiting to receive energy...'
          call flush (stdout)
       end if
@@ -87,7 +87,7 @@ contains
       end if
 
       ! Receive forces (in Hartree/Bohr, already converted by server)
-      if (idebug > 2) then
+      if (idebug > 1) then
          print '(a)', 'MACE: Waiting to receive forces...'
       end if
       call MPI_Recv(forces, 3 * natqm, MPI_DOUBLE_PRECISION, &
