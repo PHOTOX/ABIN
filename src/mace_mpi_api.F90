@@ -93,8 +93,14 @@ contains
       call send_mace_atom_types(names, natqm, mace_comm)
    end subroutine initialize_mace_server
 
-   subroutine finalize_mace()
-      integer :: ierr, empty
+   subroutine finalize_mace(error_code)
+      integer, intent(in) :: error_code
+      integer :: ierr, empty, mpi_tag
+
+      mpi_tag = MACE_TAG_EXIT
+      if (error_code /= 0) then
+         mpi_tag = MACE_TAG_ERROR
+      end if
 
       ! Set error handler to return so we can handle errors gracefully
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)

@@ -1282,7 +1282,7 @@ subroutine finish(error_code)
    end if
 
    if (pot == '_mace_') then
-      call finalize_mace()
+      call finalize_mace(error_code)
    end if
 
    if (pot == '_tcpb_') then
