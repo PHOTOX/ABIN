@@ -14,7 +14,7 @@ MACE_OUT=mace_server.out
 if [[ "${1-}" = "clean" ]]; then
   rm -f $MACE_OUT $ABINOUT *.dat *.diff
   rm -f restart.xyz velocities.xyz forces.xyz movie.xyz restart.xyz.old
-  rm -f mace_port.txt.* ERROR ompi_uri.txt
+  rm -f mace_port.txt ERROR ompi_uri.txt
   rm -f mace_server.py
   exit 0
 fi
@@ -85,12 +85,12 @@ macepid=$!
 # Wait for the server to write the port file
 MAX_WAIT=15
 i=0
-while [[ ! -f mace_port.txt.1 ]] && [[ $i -lt $MAX_WAIT ]]; do
+while [[ ! -f mace_port.txt ]] && [[ $i -lt $MAX_WAIT ]]; do
   sleep 0.5
   let ++i
 done
 
-if [[ ! -f mace_port.txt.1 ]]; then
+if [[ ! -f mace_port.txt ]]; then
   echo "ERROR: MACE server did not write port file"
   cat $MACE_OUT 2>/dev/null || true
   exit 1

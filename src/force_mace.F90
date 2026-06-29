@@ -7,7 +7,7 @@ module mod_force_mace
 ! ----------------------------------------------------------------
    use mod_const, only: DP
    use mod_error, only: fatal_error
-   use mod_files, only: stderr
+   use mod_files, only: stdout, stderr
    use mod_mace_mpi
 #ifdef USE_MPI
    use mpi
@@ -21,6 +21,7 @@ module mod_force_mace
 contains
 
    subroutine force_mace(x, y, z, fx, fy, fz, eclas, walkmax)
+      use mod_qmmm, only: natqm
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
       real(DP), intent(inout) :: eclas
@@ -36,7 +37,8 @@ contains
          mace_comm = get_mace_communicator()
 
 #ifdef USE_MPI
-         call send_mace(x, y, z, iw, mace_comm)
+         ! Send coordinates in Bohr
+         call send_mace_coordinates(x, y, z, natqm, iw, mace_comm)
 
          call receive_mace(fx, fy, fz, eclas, iw, walkmax, mace_comm, abort)
 #endif
@@ -50,20 +52,7 @@ contains
 
 #ifdef USE_MPI
 
-   subroutine send_mace(x, y, z, iw, comm)
-      use mod_qmmm, only: natqm
-      real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-      integer, intent(in) :: iw, comm
-
-      ! Send number of atoms each step (for protocol consistency)
-      call send_mace_natom(natqm, comm)
-
-      ! Send coordinates in Bohr
-      call send_mace_coordinates(x, y, z, natqm, iw, comm)
-   end subroutine send_mace
-
    subroutine receive_mace(fx, fy, fz, eclas, iw, walkmax, comm, abort)
-      use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
       use mod_general, only: idebug
       use mod_qmmm, only: natqm
       real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
@@ -76,12 +65,10 @@ contains
       integer :: status(MPI_STATUS_SIZE)
       integer :: ierr, iat
 
-      call wait_for_mace(comm)
-
       ! Receive energy (in Hartree, already converted by server)
       if (idebug > 2) then
-         print '(a)', 'MACE: Waiting to receive energy...'
-         call flush (OUTPUT_UNIT)
+         write (stdout, '(a)') 'MACE: Waiting to receive energy...'
+         call flush (stdout)
       end if
       call MPI_Recv(energy, 1, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
                     MPI_ANY_TAG, comm, status, ierr)
@@ -97,7 +84,7 @@ contains
 
       if (idebug > 1) then
          print '(A,ES15.6)', 'MACE: Received energy [Hartree]:', energy
-         call flush (OUTPUT_UNIT)
+         call flush (stdout)
       end if
 
       ! Receive forces (in Hartree/Bohr, already converted by server)
@@ -112,9 +99,9 @@ contains
       if (idebug > 1) then
          print '(A)', 'MACE: Received forces [Hartree/Bohr]:'
          do iat = 1, natqm
-            print*,'Atom ', iat, ': ', forces(:, iat)
+            write (stdout, *) 'Atom ', iat, ': ', forces(:, iat)
          end do
-         call flush (OUTPUT_UNIT)
+         call flush (stdout)
       end if
 
       ! Forces are received as forces (not gradients), so no sign flip needed

@@ -1,11 +1,9 @@
 ! MPI interface with MACE Python server
 ! Modeled after mod_terampi for TeraChem
 module mod_mace_mpi
-   use, intrinsic :: iso_fortran_env, only: OUTPUT_UNIT
    use mod_const, only: DP
    use mod_error, only: fatal_error
    use mod_files, only: stdout, stderr
-   use mod_utils, only: milisleep
 #ifdef USE_MPI
    use mpi
    use mod_mpi, only: handle_mpi_error, get_mpi_error_string
@@ -19,15 +17,7 @@ module mod_mace_mpi
    integer, parameter :: MACE_TAG_ERROR = 13
 
    ! Port file for MACE MPI connection
-   character(len=*), parameter :: MACE_PORT_FILE_NAME = 'mace_port.txt.'
-
-   ! How long do we wait for MACE port [seconds]
-   real(DP) :: mace_max_mpi_wait_time = 60
-   ! Sleep interval in miliseconds while waiting for MACE calculation to finish
-   ! By default, don't sleep at all (negative value)
-   integer :: mace_mpi_milisleep = -1
-
-   character(len=64) :: mace_info_prefix = 'MACE_'
+   character(len=*), parameter :: MACE_PORT_FILE_NAME = 'mace_port.txt'
 
 #ifdef USE_MPI
    integer :: mace_comm = MPI_COMM_NULL
@@ -35,13 +25,9 @@ module mod_mace_mpi
 #endif
 
    public :: MACE_TAG_EXIT, MACE_TAG_ERROR, MACE_TAG_DATA
-   public :: mace_info_prefix
-   public :: mace_max_mpi_wait_time, mace_mpi_milisleep
 #ifdef USE_MPI
    public :: get_mace_communicator
-   public :: wait_for_mace
-   public :: send_mace_natom, send_mace_atom_types
-   public :: send_mace_coordinates
+   public :: send_mace_atom_types, send_mace_coordinates
 #endif
    public :: initialize_mace_interface, initialize_mace_server, finalize_mace
    save
@@ -66,14 +52,12 @@ contains
    subroutine connect_mace_server()
       character(len=MPI_MAX_PORT_NAME) :: port_name
       integer :: ierr, newcomm
-      character(len=1024) :: portfile
 
-      write (portfile, '(A,I0)') MACE_PORT_FILE_NAME, 1
-      call read_mace_port_from_file(trim(portfile), port_name)
+      call read_mpi_port_from_file(MACE_PORT_FILE_NAME, port_name)
 
       write (stdout, '(2A)') 'Found MACE port: ', trim(port_name)
       write (stdout, '(A)') 'Establishing connection to MACE server...'
-      call flush (OUTPUT_UNIT)
+      call flush (stdout)
 
       call MPI_Comm_connect(trim(port_name), MPI_INFO_NULL, 0, MPI_COMM_SELF, newcomm, ierr)
       call handle_mpi_error(ierr)
@@ -83,49 +67,29 @@ contains
       mace_communication_established = .true.
    end subroutine connect_mace_server
 
-   integer function get_mace_communicator() result(comm)
-      comm = mace_comm
-   end function get_mace_communicator
-
-   subroutine read_mace_port_from_file(portfile, port_name)
+   ! Read MPI port from a file.
+   subroutine read_mpi_port_from_file(portfile, port_name)
       character(len=*), intent(in) :: portfile
       character(len=MPI_MAX_PORT_NAME), intent(out) :: port_name
       integer :: iunit, iost
-      real(DP) :: timer
 
-      write (stdout, '(A)') 'Reading MACE port name from file '//portfile
+      write (stdout, '(A)') 'Reading MPI port name from file '//portfile
       port_name = ''
-      timer = MPI_WTIME()
 
-      do
-         open (newunit=iunit, file=portfile, action="read", status="old", iostat=iost)
-         if (iost == 0) then
-            exit
-         end if
-
-         if ((MPI_WTIME() - timer) > mace_max_mpi_wait_time) then
-            call fatal_error(__FILE__, __LINE__, &
-            & 'Could not open file '//portfile)
-         end if
-
-         write (stdout, '(A)') 'WARNING: Cannot open file '//portfile
-         call milisleep(500)
-      end do
-
+      open (newunit=iunit, file=portfile, action="read", status="old", iostat=iost)
       read (iunit, '(A)', iostat=iost) port_name
-      if (iost /= 0) then
-         call fatal_error(__FILE__, __LINE__, &
-         & 'Could not read file '//portfile)
-      end if
-
       close (iunit, status='delete')
-   end subroutine read_mace_port_from_file
+   end subroutine read_mpi_port_from_file
+
+   integer function get_mace_communicator() result(comm)
+      comm = mace_comm
+   end function get_mace_communicator
 
    subroutine initialize_mace_server()
       use mod_qmmm, only: natqm
       use mod_system, only: names
 
-      call send_mace_natom(natqm, mace_comm)
+      call send_natom(natqm, mace_comm)
       call send_mace_atom_types(names, natqm, mace_comm)
    end subroutine initialize_mace_server
 
@@ -153,24 +117,7 @@ contains
       end if
    end subroutine finalize_mace
 
-   subroutine wait_for_mace(comm)
-      integer, intent(in) :: comm
-      integer :: status(MPI_STATUS_SIZE)
-      integer :: ierr
-      logical :: ready
-
-      if (mace_mpi_milisleep <= 0) return
-
-      ! Reduce CPU usage by probing + sleeping instead of blocking MPI_Recv
-      ready = .false.
-      do while (.not. ready)
-         call MPI_IProbe(MPI_ANY_SOURCE, MPI_ANY_TAG, comm, ready, status, ierr)
-         call handle_mpi_error(ierr)
-         call milisleep(mace_mpi_milisleep)
-      end do
-   end subroutine wait_for_mace
-
-   subroutine send_mace_natom(num_atom, comm)
+   subroutine send_natom(num_atom, comm)
       use mod_general, only: idebug
       integer, intent(in) :: num_atom
       integer, intent(in) :: comm
@@ -178,11 +125,11 @@ contains
 
       if (idebug > 1) then
          write (stdout, '(A, I0)') 'MACE: Sending number of atoms = ', num_atom
-         call flush (OUTPUT_UNIT)
+         call flush (stdout)
       end if
       call MPI_Send(num_atom, 1, MPI_INTEGER, 0, MACE_TAG_DATA, comm, ierr)
       call handle_mpi_error(ierr)
-   end subroutine send_mace_natom
+   end subroutine send_natom
 
    subroutine send_mace_atom_types(at_names, num_atom, comm)
       use mod_general, only: idebug
@@ -202,7 +149,7 @@ contains
       if (idebug > 1) then
          write (stdout, '(A)') 'MACE: Sending atom types: '
          write (stdout, '(A)') trim(buffer)
-         call flush (OUTPUT_UNIT)
+         call flush (stdout)
       end if
 
       call MPI_Send(buffer, num_atom * 2, MPI_CHARACTER, 0, MACE_TAG_DATA, comm, ierr)
@@ -231,7 +178,7 @@ contains
          write (stdout, '(A)') 'MACE: Sending coordinates [Bohr]: '
          do iat = 1, num_atom
             write (stdout, *) 'Atom ', iat, ': ', coords(:, iat)
-            call flush (OUTPUT_UNIT)
+            call flush (stdout)
          end do
       end if
       call MPI_Send(coords, num_atom * 3, MPI_DOUBLE_PRECISION, 0, MACE_TAG_DATA, comm, ierr)

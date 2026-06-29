@@ -16,7 +16,7 @@ This server communicates with ABIN via MPI (using mpi4py).
 Usage:
   mpirun -n 1 python mace_server.py
 
-  The server writes its MPI port to 'mace_port.txt.1' for ABIN to read.
+  The server writes its MPI port to 'mace_port.txt' for ABIN to read.
 """
 
 import argparse
@@ -32,6 +32,8 @@ LOG_NAME = "MaceMPIServer"
 MACE_TAG_EXIT = 666
 MACE_TAG_DATA = 2
 MACE_TAG_ERROR = 13
+
+MACE_PORT_FILE = "mace_port.txt"
 
 
 # TODO: Use logging module
@@ -158,10 +160,9 @@ def connect_to_abin():
     port_name = MPI.Open_port()
     log(f"MPI port opened: {port_name}")
 
-    port_file = "mace_port.txt.1"
-    with open(port_file, "w") as f:
+    with open(MACE_PORT_FILE, "w") as f:
         f.write(port_name)
-    log(f"Port written to {port_file}")
+    log(f"Port written to {MACE_PORT_FILE}")
 
     # Accept connection from ABIN
     log("Waiting for ABIN to connect...")
@@ -253,19 +254,7 @@ def main(config):
 
         if status.Get_tag() == MACE_TAG_EXIT:
             log("Received exit signal from ABIN")
-            # Consume the message
-            try:
-                abin_comm.Recv([natom_buf, MPI.INT], source=0, tag=MACE_TAG_EXIT)
-            except Exception as e:
-                log(e)
             break
-
-        abin_comm.Recv([natom_buf, MPI.INT], source=0, tag=MACE_TAG_DATA)
-        natom_step = int(natom_buf[0])
-
-        if natom_step != natom:
-            log(f"ERROR: Received natom={natom_step}, expected {natom}")
-            error_shutdown()
 
         # Receive coordinates (3*natom doubles, in Bohr)
         coords = np.empty((natom, 3), dtype=np.float64)
