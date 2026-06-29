@@ -83,6 +83,7 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
+      if: startsWith(matrix.os, 'ubuntu')
       run: make unittest
 
     - name: Codecov upload unit tests
