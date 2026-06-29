@@ -7,7 +7,7 @@ export ABINOUT=abin.out
 export ABININ=input.in
 export ABINGEOM=mini.xyz
 
-MACE_SERVER=mock_mace_server.py
+MACE_SERVER=../../interfaces/MACE/mace_server.py
 MACE_OUT=mace_server.out
 
 # If $1 = "clean"; exit early.
@@ -15,8 +15,11 @@ if [[ "${1-}" = "clean" ]]; then
   rm -f $MACE_OUT $ABINOUT *.dat *.diff
   rm -f restart.xyz velocities.xyz forces.xyz movie.xyz restart.xyz.old
   rm -f mace_port.txt.* ERROR ompi_uri.txt
+  rm -f mace_server.py
   exit 0
 fi
+
+cp $MACE_SERVER .
 
 # Determine MPI paths
 if [[ -z ${MPI_PATH-} ]]; then
@@ -63,7 +66,7 @@ fi
 MPIRUN_CMD="$MPIRUN -n 1 $MPIRUN_EXTRA_ARGS"
 
 ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM"
-MACE_CMD="python3 $MACE_SERVER"
+MACE_CMD="python3 mace_server.py --device cpu --model-path __HARMONIC_MOCK__"
 
 function cleanup {
   kill -9 ${macepid-} ${abinpid-} > /dev/null 2>&1 || true

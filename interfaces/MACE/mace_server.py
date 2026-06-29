@@ -33,6 +33,8 @@ MACE_TAG_EXIT = 666
 MACE_TAG_DATA = 2
 
 
+# TODO: Use logging module
+# TODO: Create log_exception helper
 def log(message, should_print=True):
     msg_formatted = f"[{LOG_NAME}]: {message!s}"
     if should_print:
@@ -57,7 +59,8 @@ def parse_cmd():
         help="Device for model inference",
     )
     config = parser.parse_args()
-    if not Path(config.model_path).is_file():
+    model = config.model_path
+    if model != "__HARMONIC_MOCK__" and not Path(model).is_file():
         sys.exit(f"ERROR: file '{config.model_path}' not found")
     return config
 
@@ -108,13 +111,39 @@ class MaceModel:
         atoms = ase.Atoms(symbols=atom_types, positions=coords_ang, pbc=pbc)
         atoms.set_calculator(self.calculator)
 
-        if self.head is not None:
-            atoms.info["head"] = self.head
-
         energy_hartree = atoms.get_potential_energy() * ev_to_hartree
         forces_hartree_bohr = atoms.get_forces() * ev_per_ang_to_hartree_per_bohr
 
         return energy_hartree, forces_hartree_bohr
+
+
+class HarmonicModel:
+    """
+    This is just a mock for testing, using harmonic potential.
+    """
+
+    k = 0.01  # force constant in Hartree/Bohr^2
+
+    def __init__(self):
+        log("Using Harmonic Mock Model")
+
+    def evaluate(self, _atom_types, coords_bohr):
+        """
+        Compute mock energy and forces using simple harmonic potential
+        E = 0.5 * k * sum(r^2) where r is displacement from origin
+        """
+        import numpy as np
+
+        coords_t = coords_bohr.T  # (natom, 3)
+
+        # Simple harmonic energy around the center of mass
+        com = np.mean(coords_t, axis=0)
+        displ = coords_t - com
+        energy = 0.5 * self.k * np.sum(displ ** 2)
+
+        # Forces = -gradient = -k * displacement
+        forces = -self.k * displ  # (natom, 3)
+        return energy, forces
 
 def connect_to_abin():
     """Establish initial connection to ABIN"""
@@ -161,14 +190,14 @@ def main(config):
         except BaseException as e:  # noqa: E722
             log(e)
         else:
-            log("Disconnected")
+            log("ABIN communicator disconnected")
 
         try:
             MPI.Close_port(port_name)
         except BaseException as e:  # noqa: E722
             log(e)
         else:
-            log("Port {port_name} close")
+            log(f"Port {port_name} closed")
 
 
     def error_shutdown():
@@ -202,7 +231,12 @@ def main(config):
     log(f"Received atom types: {atom_types}")
 
     # Load MACE model
-    mace_model = MaceModel(config)
+    if config.model_path == "__HARMONIC_MOCK__":
+        # This is for testing purposes only
+        mace_model = HarmonicModel()
+    else:
+        mace_model = MaceModel(config)
+
     log("MACE model ready. Entering main loop.")
 
     # Main loop: receive coordinates, compute, send results
