@@ -84,12 +84,12 @@ contains
          call flush (OUTPUT_UNIT)
       end if
       call MPI_Recv(energy, 1, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, &
-      & MPI_ANY_TAG, comm, status, ierr)
+                    MPI_ANY_TAG, comm, status, ierr)
       call handle_mpi_error(ierr)
       call check_recv_count(status, 1, MPI_DOUBLE_PRECISION)
 
       ! Check for error tag
-      if (status(MPI_TAG) == 1) then
+      if (status(MPI_TAG) == MACE_TAG_ERROR) then
          write (stderr, *) 'Got error tag from MACE server. Evaluation failed.'
          abort = .true.
          return

@@ -31,6 +31,7 @@ LOG_NAME = "MaceMPIServer"
 # MPI Tags (must match Fortran module mod_mace_mpi)
 MACE_TAG_EXIT = 666
 MACE_TAG_DATA = 2
+MACE_TAG_ERROR = 13
 
 
 # TODO: Use logging module
@@ -60,7 +61,7 @@ def parse_cmd():
     )
     config = parser.parse_args()
     model = config.model_path
-    if model != "__HARMONIC_MOCK__" and not Path(model).is_file():
+    if not model.startswith("__MOCK_") and not Path(model).is_file():
         sys.exit(f"ERROR: file '{config.model_path}' not found")
     return config
 
@@ -124,7 +125,8 @@ class HarmonicModel:
 
     k = 0.01  # force constant in Hartree/Bohr^2
 
-    def __init__(self):
+    def __init__(self, config):
+        self.model_path = config.model_path
         log("Using Harmonic Mock Model")
 
     def evaluate(self, _atom_types, coords_bohr):
@@ -133,6 +135,9 @@ class HarmonicModel:
         E = 0.5 * k * sum(r^2) where r is displacement from origin
         """
         import numpy as np
+
+        if config.model_path == "__MOCK_ERROR__":
+            raise RuntimeError("Simulating error condition")
 
         coords_t = coords_bohr.T  # (natom, 3)
 
@@ -205,7 +210,7 @@ def main(config):
         error_energy = np.array([0.0], dtype=np.float64)
         # This is best effort only, since ABIN might be dead already, ignore any errors here
         try:
-            abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=1)
+            abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=MACE_TAG_ERROR)
         except Exception as e:
             log(e)
             pass
@@ -231,9 +236,9 @@ def main(config):
     log(f"Received atom types: {atom_types}")
 
     # Load MACE model
-    if config.model_path == "__HARMONIC_MOCK__":
+    if config.model_path.startswith("__MOCK_"):
         # This is for testing purposes only
-        mace_model = HarmonicModel()
+        mace_model = HarmonicModel(config)
     else:
         mace_model = MaceModel(config)
 

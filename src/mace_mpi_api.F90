@@ -16,6 +16,7 @@ module mod_mace_mpi
    ! MPI tags for MACE protocol
    integer, parameter :: MACE_TAG_EXIT = 666
    integer, parameter :: MACE_TAG_DATA = 2
+   integer, parameter :: MACE_TAG_ERROR = 13
 
    ! Port file for MACE MPI connection
    character(len=*), parameter :: MACE_PORT_FILE_NAME = 'mace_port.txt.'
@@ -33,7 +34,7 @@ module mod_mace_mpi
    logical :: mace_communication_established = .false.
 #endif
 
-   public :: MACE_TAG_EXIT, MACE_TAG_DATA
+   public :: MACE_TAG_EXIT, MACE_TAG_ERROR, MACE_TAG_DATA
    public :: mace_info_prefix
    public :: mace_max_mpi_wait_time, mace_mpi_milisleep
 #ifdef USE_MPI
