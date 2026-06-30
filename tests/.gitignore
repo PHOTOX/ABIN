@@ -25,6 +25,9 @@ SH_*/geom.?.?.?
 CP2K*/WATER*
 engrad.dat.???
 
+# This is a copy from interfaces/MACE
+MACE/mace_server.py
+
 # PLUMED backup files
 bck.*
 
