@@ -13,7 +13,8 @@ nwritef=1
 
 &nhcopt
 inose=0,
-temp=100,
+temp=100.0,
+temp0=100.0,
 /
 
 &qmmm

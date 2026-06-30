@@ -18,5 +18,6 @@ idebug=1,
 &nhcopt
 inose=0,
 temp=298.15,
+temp0=298.15,
 tau0=0.001D0
 /

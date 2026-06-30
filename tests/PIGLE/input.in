@@ -19,7 +19,8 @@ nrest=1,
 
 &thermostat 
 therm='gle',
-temp=200,
+temp=200.0,
+temp0=200.0,
 rem_comrot=.false.
 gle_test=.true.
 /

@@ -20,6 +20,7 @@ nrest=1,
 
 &nhcopt
 inose=2,
-temp=300,
+temp=300.0,
+temp0=300.0,
 gle_test=.false.
 /

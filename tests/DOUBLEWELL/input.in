@@ -18,6 +18,7 @@ idebug=1,
 &thermostat 
 therm='none', 
 temp=298.15,
+temp0=298.15
 /
 
 &system

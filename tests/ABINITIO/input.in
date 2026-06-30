@@ -31,6 +31,7 @@ kb_sbc=0.1d0,
 inose=1,
 nchain=4,
 temp=298.15,
+temp0=298.15,
 rem_comrot=.false.
 tau0=0.001D0
 /
