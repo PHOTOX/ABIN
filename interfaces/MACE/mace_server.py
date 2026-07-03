@@ -254,6 +254,10 @@ def main(config):
 
         if status.Get_tag() == MACE_TAG_EXIT:
             log("Received exit signal from ABIN")
+            try:
+                abin_comm.Recv([natom_buf, MPI.INT], source=0, tag=MACE_TAG_EXIT)
+            except Exception as e:
+                log(e)
             break
 
         # Receive coordinates (3*natom doubles, in Bohr)

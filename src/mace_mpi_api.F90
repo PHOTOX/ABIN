@@ -24,7 +24,7 @@ module mod_mace_mpi
    logical :: mace_communication_established = .false.
 #endif
 
-   public :: MACE_TAG_EXIT, MACE_TAG_ERROR, MACE_TAG_DATA
+   public :: MACE_TAG_ERROR
 #ifdef USE_MPI
    public :: get_mace_communicator
    public :: send_mace_atom_types, send_mace_coordinates
@@ -97,6 +97,8 @@ contains
       integer, intent(in) :: error_code
       integer :: ierr, empty, mpi_tag
 
+      if (.not. mace_communication_established) return
+
       mpi_tag = MACE_TAG_EXIT
       if (error_code /= 0) then
          mpi_tag = MACE_TAG_ERROR
@@ -105,11 +107,9 @@ contains
       ! Set error handler to return so we can handle errors gracefully
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
 
-      if (.not. mace_communication_established) return
-
       write (stdout, '(A)') 'Shutting down MACE server'
 
-      call MPI_Send(empty, 0, MPI_INTEGER, 0, MACE_TAG_EXIT, mace_comm, ierr)
+      call MPI_Send(MPI_BOTTOM, 0, MPI_DOUBLE_PRECISION, 0, mpi_tag, mace_comm, ierr)
 
       if (ierr /= MPI_SUCCESS) then
          write (stderr, '(A)') 'MPI ERROR during shutdown of MACE server'
