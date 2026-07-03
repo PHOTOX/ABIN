@@ -274,7 +274,7 @@ def main(config):
 
         # Send energy (1 double, in Hartree)
         energy_buf = np.array([energy], dtype=np.float64)
-        abin_comm.Send([energy_buf, MPI.DOUBLE], dest=0, tag=0)
+        abin_comm.Send([energy_buf, MPI.DOUBLE], dest=0, tag=MACE_TAG_DATA)
 
         # Send forces (3*natom doubles, in Hartree/Bohr)
         # Transpose back to (3, natom) to match Fortran column-major layout
@@ -282,7 +282,7 @@ def main(config):
             forces_send = forces.T.astype(np.float64)
         else:
             forces_send = forces.T.copy()
-        abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=0)
+        abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=MACE_TAG_DATA)
 
     shutdown_communication()
 

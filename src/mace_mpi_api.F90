@@ -26,6 +26,7 @@ module mod_mace_mpi
    public :: MACE_TAG_ERROR
 #ifdef USE_MPI
    public :: get_mace_communicator
+   public :: check_incoming_msg
    public :: send_mace_atom_types, send_mace_coordinates
 #endif
    public :: initialize_mace_interface, initialize_mace_server, finalize_mace
@@ -81,6 +82,34 @@ contains
    integer function get_mace_communicator() result(comm)
       comm = mace_comm
    end function get_mace_communicator
+
+   logical function check_incoming_msg() result(success)
+      ! Before calling MPI_Recv, check we're not receiving error tag
+      ! from the MACE server
+      integer :: mpi_status(MPI_STATUS_SIZE)
+      integer :: tag, ierr
+      character(len=100) :: errormsg
+
+      success = .false.
+
+      call MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, mace_comm, mpi_status, ierr)
+      tag = mpi_status(MPI_TAG)
+
+      if (tag == MACE_TAG_ERROR) then
+         ! Consume the error message from MACE, the caller of this function should
+         ! stop the program.
+         call MPI_Recv(MPI_BOTTOM, 0, MPI_INTEGER, MPI_ANY_SOURCE, MACE_TAG_ERROR, &
+                       mace_comm, mpi_status, ierr)
+
+      else if (tag /= MACE_TAG_DATA) then
+
+         write (errormsg, '(a,i0)') 'Got invalid MPI tag from MACE server: ', tag
+         call fatal_error(__FILE__, __LINE__, errormsg)
+
+      else
+         success = .true.
+      end if
+   end function check_incoming_msg
 
    subroutine initialize_mace_server()
       use mod_qmmm, only: natqm
