@@ -21,7 +21,6 @@ module mod_mace_mpi
 
 #ifdef USE_MPI
    integer :: mace_comm = MPI_COMM_NULL
-   logical :: mace_communication_established = .false.
 #endif
 
    public :: MACE_TAG_ERROR
@@ -40,7 +39,6 @@ contains
       integer :: ierr
 
       mace_comm = MPI_COMM_NULL
-      mace_communication_established = .false.
 
       ! Set MPI error handler to allow retries
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
@@ -64,7 +62,6 @@ contains
       write (stdout, '(A)') 'Connection to MACE server established!'
 
       mace_comm = newcomm
-      mace_communication_established = .true.
    end subroutine connect_mace_server
 
    ! Read MPI port from a file.
@@ -95,26 +92,31 @@ contains
 
    subroutine finalize_mace(error_code)
       integer, intent(in) :: error_code
-      integer :: ierr, empty, mpi_tag
+      integer :: ierr, mpi_tag
 
-      if (.not. mace_communication_established) return
-
-      mpi_tag = MACE_TAG_EXIT
-      if (error_code /= 0) then
-         mpi_tag = MACE_TAG_ERROR
-      end if
+      if (mace_comm == MPI_COMM_NULL) return
 
       ! Set error handler to return so we can handle errors gracefully
       call MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN, ierr)
 
-      write (stdout, '(A)') 'Shutting down MACE server'
+      ! if the error code is MACE_TAG_ERROR, then
+      ! MACE server crashed and notified us so no need to
+      ! send it another message.
+      if (error_code /= MACE_TAG_ERROR) then
+         mpi_tag = MACE_TAG_EXIT
+         if (error_code /= 0) then
+            mpi_tag = MACE_TAG_ERROR
+         end if
 
-      call MPI_Send(MPI_BOTTOM, 0, MPI_DOUBLE_PRECISION, 0, mpi_tag, mace_comm, ierr)
+         write (stdout, '(A)') 'Shutting down MACE server'
 
-      if (ierr /= MPI_SUCCESS) then
-         write (stderr, '(A)') 'MPI ERROR during shutdown of MACE server'
-         write (stderr, '(A)') 'Verify manually that the MACE server was terminated.'
-         write (stderr, *) get_mpi_error_string(ierr)
+         call MPI_Send(MPI_BOTTOM, 0, MPI_INTEGER, 0, mpi_tag, mace_comm, ierr)
+
+         if (ierr /= MPI_SUCCESS) then
+            write (stderr, '(A)') 'MPI ERROR during shutdown of MACE server'
+            write (stderr, '(A)') 'Verify manually that the MACE server was terminated.'
+            write (stderr, *) get_mpi_error_string(ierr)
+         end if
       end if
 
       call MPI_Comm_free(mace_comm, ierr)

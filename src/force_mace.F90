@@ -42,7 +42,7 @@ contains
          call receive_mace(fx, fy, fz, eclas, iw, walkmax, mace_comm, abort)
 #endif
          if (abort) then
-            call fatal_error(__FILE__, __LINE__, 'MACE evaluation failed')
+            call fatal_error(__FILE__, __LINE__, 'MACE evaluation failed', error_code=MACE_TAG_ERROR)
          end if
 
       end do

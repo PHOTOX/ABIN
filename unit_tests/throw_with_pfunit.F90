@@ -11,12 +11,13 @@ contains
 
    ! This routine replaces src/error.F90:fatal_error()
    ! so that we can catch exceptions in the unit tests.
-   subroutine throw(file_name, line_number, message)
+   subroutine throw(file_name, line_number, message, error_code)
       use funit, only: SourceLocation
       use funit, only: pFUnit_throw => throw
       character(len=*), intent(in) :: file_name
       integer, intent(in) :: line_number
       character(len=*), intent(in) :: message
+      integer, intent(in) :: error_code
 
       call pFUnit_throw(message, SourceLocation(file_name, line_number))
 
