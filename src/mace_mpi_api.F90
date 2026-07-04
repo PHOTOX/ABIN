@@ -98,6 +98,8 @@ contains
       if (tag == MACE_TAG_ERROR) then
          ! Consume the error message from MACE, the caller of this function should
          ! stop the program.
+         write (stdout, '(a)') 'MACE server sent an ERROR tag'
+         call flush (stdout)
          call MPI_Recv(MPI_BOTTOM, 0, MPI_INTEGER, MPI_ANY_SOURCE, MACE_TAG_ERROR, &
                        mace_comm, mpi_status, ierr)
 

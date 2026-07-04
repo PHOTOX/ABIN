@@ -179,7 +179,7 @@ def exception_handler(shutdown_callback, exception_type, exception, traceback):
     print_tb(traceback)
     # Restore original exception handling to prevent endless loop
     # in case of uncaught excpetion during shutdown
-    sys.excepthook = None
+    sys.excepthook = sys.__excepthook__
     shutdown_callback()
     sys.exit(1)
 
@@ -209,10 +209,9 @@ def main(config):
 
     def error_shutdown():
         log("Sending ERROR tag to ABIN")
-        error_energy = np.array([0.0], dtype=np.float64)
         # This is best effort only, since ABIN might be dead already, ignore any errors here
         try:
-            abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=MACE_TAG_ERROR)
+            abin_comm.Send([MPI.BOTTOM, MPI.INT], dest=0, tag=MACE_TAG_ERROR)
         except Exception as e:
             log(e)
 
@@ -255,7 +254,7 @@ def main(config):
         if status.Get_tag() == MACE_TAG_EXIT:
             log("Received exit signal from ABIN")
             try:
-                abin_comm.Recv([natom_buf, MPI.INT], source=0, tag=MACE_TAG_EXIT)
+                abin_comm.Recv([MPI.BOTTOM, MPI.INT], source=0, tag=MACE_TAG_EXIT)
             except Exception as e:
                 log(e)
             break
