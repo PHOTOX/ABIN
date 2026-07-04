@@ -12,12 +12,13 @@ MACE_OUT=mace_server.out
 
 ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM"
 MACE_CMD="python3 $MACE_SERVER --device cpu --model-path __MOCK_ERROR__"
+PORT_FILE=mace_port.txt
 
 # If $1 = "clean"; exit early.
 if [[ "${1-}" = "clean" ]]; then
   rm -f $MACE_OUT $ABINOUT ./*.dat ./*.diff
   rm -f restart.xyz velocities.xyz forces.xyz movie.xyz restart.xyz.old
-  rm -f mace_port.txt ERROR ompi_uri.txt
+  rm -f $PORT_FILE ERROR ompi_uri.txt
   exit 0
 fi
 
@@ -45,8 +46,8 @@ if [[ "$IS_OPENMPI" = "true" ]]; then
   fi
 
   if ! which $OMPI_SERVER &> /dev/null; then
-    echo "Skipping MACE test: ompi-server not found (required for OpenMPI)"
-    exit 0
+    echo "ERROR: Skipping MACE test: ompi-server not found (required for OpenMPI)" >> ERROR
+    exit 1
   fi
 
   OMPI_URI_FILE="$PWD/ompi_uri.txt"
@@ -55,8 +56,8 @@ if [[ "$IS_OPENMPI" = "true" ]]; then
   sleep 1
 
   if [[ ! -f "$OMPI_URI_FILE" ]]; then
-    echo "ERROR: ompi-server did not create URI file" >&2
-    kill $ompi_server_pid 2>/dev/null
+    echo "ERROR: ompi-server did not create URI file" >> ERROR
+    kill $ompi_server_pid 2> /dev/null
     exit 1
   fi
 
@@ -82,30 +83,32 @@ function cleanup {
   fi
 }
 
+function wait_for_portfile {
+  # Wait 10s for the MACE server to write the port file
+  MAX_WAIT=20
+  i=0
+  while [[ ! -f $PORT_FILE ]]; do
+    if [[ $i -gt $MAX_WAIT ]]; then
+      echo "ERROR: MACE server did not create $PORT_FILE" >> ERROR
+      exit 1
+    fi
+    sleep 0.5
+    let i++
+  done
+}
+
 # Automatically call the cleanup function when the script
 # exits or is interrupted by a signal
 trap cleanup INT ABRT TERM EXIT
 
 # Launch mock MACE server
-$MPIRUN_CMD $MACE_CMD > $MACE_OUT 2>&1 &
+$MPIRUN_CMD $MACE_CMD &> $MACE_OUT &
 macepid=$!
 
-# Wait for the server to write the port file
-MAX_WAIT=15
-i=0
-while [[ ! -f mace_port.txt && $i -lt $MAX_WAIT ]]; do
-  sleep 0.5
-  let ++i
-done
-
-if [[ ! -f mace_port.txt ]]; then
-  echo "ERROR: MACE server did not write port file" >> ERROR
-  cat $MACE_OUT 2>/dev/null || true
-  exit 1
-fi
+wait_for_portfile
 
 # Launch ABIN
-$MPIRUN_CMD $ABIN_CMD > $ABINOUT 2>&1 &
+$MPIRUN_CMD $ABIN_CMD &> $ABINOUT &
 abinpid=$!
 
 # Give both processes 10 seconds to finish
@@ -120,3 +123,8 @@ while ( (kill -0 $abinpid >& /dev/null) || (kill -0 $macepid >& /dev/null) ); do
   sleep 0.5
   let iter++
 done
+
+# Any errors in this script should be echoed to file ERROR
+# so that the overall test fails when comparing to empty ERROR.ref file
+# Here we create an empty one in case no errors actually occured, as is expected.
+touch ERROR

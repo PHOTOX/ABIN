@@ -12,7 +12,7 @@
 # Usage:
 #   ./run.mace_mpi_abin.sh
 
-set -euo pipefail
+set -uo pipefail
 
 # ABIN SETUP
 ABIN_OUT=abin.out
@@ -32,15 +32,18 @@ MACE_PYTHON="${MACE_PYTHON:-python3}"
 MACE_SERVER=MACE/mace_server.py
 # Path to ABIN binary
 ABINEXE=./abin
+if [[ -z ${MPI_PATH-} ]];then
+  MPIRUN=mpirun
+else
+  MPIRUN=$MPI_PATH/bin/mpirun
+fi
 
-################
 
-LAUNCH_DIR=$PWD
+##### END OF INPUT #####
 
 function files_exist() {
    local error=""
-   for file in $* ;
-   do
+   for file in "$@"; do
       if [[ ! -f $file ]];then
          echo "ERROR: Cannot find file $file" >&2
          error=1
@@ -52,7 +55,7 @@ function files_exist() {
 }
 
 function validate_inputs() {
-  files_exist $ABIN_IN $GEOM_IN $MACE_SERVER
+  files_exist $ABIN_IN $GEOM_IN $MACE_SERVER $ABINEXE
 
   # Check pot='_mace_' in ABIN input
   test=$(grep -E -o -e "^[^!]*pot[[:space:]]*=[[:space:]]*['\"]_mace_[\"']" $ABIN_IN || true)
@@ -62,50 +65,58 @@ function validate_inputs() {
   fi
 }
 
+# Cleanup function to stop the background processes
+function cleanup {
+  if [[ -n ${mace_pid-} ]] && kill -0 $mace_pid >& /dev/null; then
+    echo "ERROR: MACE server $mace_pid is still running!"
+    kill ${mace_pid} &> /dev/null
+  fi
+
+  if [[ -n ${abin_pid-} ]] && kill -0 $abin_pid >& /dev/null; then
+    echo "ERROR: ABIN process $abin_pid is still running!"
+    kill ${abin_pid} &> /dev/null
+  fi
+}
+
+function wait_for_portfile {
+  # Wait 10s for the MACE server to write the port file
+  MAX_WAIT=20
+  i=0
+  while [[ ! -f mace_port.txt ]]; do
+    if [[ $i -gt $MAX_WAIT ]]; then
+      echo "ERROR: MACE server did not write port file"
+      exit 1
+    fi
+    sleep 0.5
+    (( i++ ))
+  done
+}
+
 # Validate input files exist
 validate_inputs
 
-# Determine MPIRUN
-if [[ -z ${MPI_PATH-} ]];then
-  MPIRUN=mpirun
-else
-  MPIRUN=$MPI_PATH/bin/mpirun
-fi
-
-echo "Starting MACE MPI simulation"
-declare -A job_pids
+# Automatically call the cleanup function when the script
+# exits or is interrupted by a signal
+trap cleanup INT ABRT TERM EXIT
 
 # LAUNCH MACE SERVER
 $MPIRUN $MACE_PYTHON $MACE_SERVER --device $MACE_DEVICE --model-path $MODEL_PATH > mace_server.out 2>&1 &
-job_pids[mace]=$!
-echo "Launched MACE server (PID: ${job_pids[mace]})"
+mace_pid=$!
+echo "Launched MACE server (PID: ${mace_pid})"
 
-# Wait a moment for the port file to be created
-sleep 1
+wait_for_portfile
 
 # LAUNCH ABIN
 ABIN_CMD="$ABINEXE -i $ABIN_IN -x $GEOM_IN"
 if [[ -n $VELOC_IN ]];then
-   ABIN_CMD=$ABIN_CMD" -v $VELOC_IN"
+   ABIN_CMD="$ABIN_CMD -v $VELOC_IN"
 fi
-$MPIRUN $ABIN_CMD > $ABIN_OUT 2>&1 &
-job_pids[abin]=$!
-echo "Launched ABIN (PID: ${job_pids[abin]})"
+$MPIRUN $ABIN_CMD &> $ABIN_OUT &
+abin_pid=$!
+echo "Launched ABIN (PID: ${abin_pid})"
+echo "(Monitor abin.out and mace_server.out for progress)"
 
-# PERIODICALLY CHECK WHETHER ABIN AND MACE ARE RUNNING
-function join_by { local IFS="$1"; shift; echo "$*"; }
-regex=`join_by \| ${job_pids[@]}`
-while true;do
-   njobs=$(ps -eo pid | grep -E "$regex" | wc -l)
-   if [[ $njobs -eq 0 ]];then
-      echo "Both ABIN and MACE server stopped"
-      break
-   elif [[ $njobs -lt ${#job_pids[@]} ]];then
-      echo "One of ABIN or MACE server died. Killing the rest." >&2
-      kill -9 ${job_pids[@]} 2>/dev/null || true
-      break
-   fi
-   sleep 3
-done
+# Note about 'kill -0' https://unix.stackexchange.com/questions/169898/what-does-kill-0-do
+while ( (kill -0 $abin_pid >& /dev/null) && (kill -0 $mace_pid >& /dev/null) ); do sleep 1; done
 
 echo "Simulation finished."
