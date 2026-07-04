@@ -69,13 +69,13 @@ contains
    subroutine read_mpi_port_from_file(portfile, port_name)
       character(len=*), intent(in) :: portfile
       character(len=MPI_MAX_PORT_NAME), intent(out) :: port_name
-      integer :: iunit, iost
+      integer :: iunit
 
       write (stdout, '(A)') 'Reading MPI port name from file '//portfile
       port_name = ''
 
-      open (newunit=iunit, file=portfile, action="read", status="old", iostat=iost)
-      read (iunit, '(A)', iostat=iost) port_name
+      open (newunit=iunit, file=portfile, action="read", status="old")
+      read (iunit, '(A)') port_name
       close (iunit, status='delete')
    end subroutine read_mpi_port_from_file
 
