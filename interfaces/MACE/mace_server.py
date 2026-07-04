@@ -106,7 +106,7 @@ class MaceModel:
         ev_per_ang_to_hartree_per_bohr = ev_to_hartree * bohr_to_ang
 
         # Convert coordinates from Bohr to Angstrom
-        coords_ang = coords_bohr * bohr_to_ang
+        coords_ang = coords_bohr.copy() * bohr_to_ang
 
         # Create ASE atoms object
         pbc = (False, False, False)
@@ -219,16 +219,40 @@ def main(config):
 
         sys.exit(1)
 
+    def check_incoming_msg():
+        """Check whether ABIN is sending ERROR or EXIT message"""
+        status = MPI.Status()
+        abin_comm.Probe(source=0, tag=MPI.ANY_TAG, status=status)
+
+        if tag := status.Get_tag() in (MACE_TAG_EXIT, MACE_TAG_ERROR):
+
+            if tag == MACE_TAG_EXIT:
+                log("Received graceful exit signal from ABIN")
+                exit_code = 0
+            else:
+                log("Received ERROR signal from ABIN. Stopping server")
+                exit_code = 1
+
+            try:
+                abin_comm.Recv([MPI.BOTTOM, MPI.INT], source=0, tag=MPI.ANY_TAG)
+            except Exception as e:
+                log(e)
+
+            shutdown_communication()
+            sys.exit(exit_code)
+
     # Call error_shutdown upon any unhandled exception
     sys.excepthook = functools.partial(exception_handler, error_shutdown)
 
     # Receive number of atoms
+    check_incoming_msg()
     natom_buf = np.empty(1, dtype=np.intc)
     abin_comm.Recv([natom_buf, MPI.INT], source=0, tag=MACE_TAG_DATA)
     natom = int(natom_buf[0])
     log(f"Received number of atoms: {natom}")
 
     # Receive atom types
+    check_incoming_msg()
     atom_type_buf = bytearray(natom * 2)
     abin_comm.Recv([atom_type_buf, MPI.CHAR], source=0, tag=MACE_TAG_DATA)
     atom_types_str = atom_type_buf.decode('ascii')
@@ -247,28 +271,15 @@ def main(config):
     # Main loop: receive coordinates, compute, send results
     eval_count = 0
     while True:
-        # Receive natom (sent each step for protocol consistency)
-        status = MPI.Status()
-        abin_comm.Probe(source=0, tag=MPI.ANY_TAG, status=status)
+        check_incoming_msg()
 
-        if status.Get_tag() == MACE_TAG_EXIT:
-            log("Received exit signal from ABIN")
-            try:
-                abin_comm.Recv([MPI.BOTTOM, MPI.INT], source=0, tag=MACE_TAG_EXIT)
-            except Exception as e:
-                log(e)
-            break
+        eval_count += 1
 
         # Receive coordinates (3*natom doubles, in Bohr)
         coords = np.empty((natom, 3), dtype=np.float64)
         abin_comm.Recv([coords, MPI.DOUBLE], source=0, tag=MACE_TAG_DATA)
 
-        coords_bohr = coords.copy()
-
-        eval_count += 1
-        log(f"Evaluation {eval_count}")
-
-        energy, forces = mace_model.evaluate(atom_types, coords_bohr)
+        energy, forces = mace_model.evaluate(atom_types, coords)
         log(f"Evaluation {eval_count}: energy = {energy:.15f} Hartree")
 
         # Send energy (1 double, in Hartree)
