@@ -110,9 +110,9 @@ def parse_diff(fname, absolute_tolerance):
          if len(diff1) != len(diff2):
              print("Number of columns differ!")
              print("Expected:")
-             print(split[1])
+             print(split[1].strip())
              print("Test:")
-             print(split[0])
+             print(split[0].strip())
              exit(1)
          compare_lines(diff1, diff2, absolute_tolerance)
 

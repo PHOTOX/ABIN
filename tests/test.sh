@@ -72,6 +72,14 @@ function diff_files {
     error_code=0
     diff -q $test_file $ref_file > /dev/null || error_code=$?
     if [[ $error_code -ne 0 ]];then
+
+       if [[ $test_file = "ERROR" ]]; then
+          echo "Files $ref_file and $test_file differ!"
+          diff --color=always $ref_file $test_file | tee $test_file.diff
+          return_status=1
+          continue
+       fi
+
        # The reference file is different, but maybe it's just numerical noise?
        error_code=0
        diff -y -W 500  $test_file $ref_file | grep -e '|' -e '<' -e '>' > $test_file.diff
