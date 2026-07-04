@@ -77,7 +77,7 @@ The optional libraries are:
  - [TCPB-CPP](https://github.com/mtzgroup/tcpb-cpp): [EXPERIMENTAL] TCPB interface to TeraChem
  - [MACE](https://github.com/ACEsuit/mace): Machine Learning Atomic Cluster Expansion potential.
       - Integrated via an MPI interface. Requires a Python environment with `mace-torch`, `torch`, `ase`, and `mpi4py`.
-      - Use `dev_scripts/install_mace.sh` for easy installation.
+      - See interfaces/MACE/README.md for details
 
 
 ## Structure of the repository

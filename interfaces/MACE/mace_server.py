@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: file-ignore[blind-except]
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
@@ -23,8 +24,8 @@ import argparse
 import functools
 import sys
 import time
-from traceback import print_tb
 from pathlib import Path
+from traceback import print_tb
 
 LOG_NAME = "MaceMPIServer"
 
@@ -152,6 +153,7 @@ class HarmonicModel:
         forces = -self.k * displ  # (natom, 3)
         return energy, forces
 
+
 def connect_to_abin():
     """Establish initial connection to ABIN"""
     from mpi4py import MPI
@@ -160,7 +162,7 @@ def connect_to_abin():
     port_name = MPI.Open_port()
     log(f"MPI port opened: {port_name}")
 
-    with open(MACE_PORT_FILE, "w") as f:
+    with open(MACE_PORT_FILE, "w", encoding='utf-8') as f:
         f.write(port_name)
     log(f"Port written to {MACE_PORT_FILE}")
 
@@ -193,18 +195,17 @@ def main(config):
         log("Shutting down communication with ABIN...")
         try:
             abin_comm.Disconnect()
-        except BaseException as e:  # noqa: E722
+        except BaseException as e:
             log(e)
         else:
             log("ABIN communicator disconnected")
 
         try:
             MPI.Close_port(port_name)
-        except BaseException as e:  # noqa: E722
+        except BaseException as e:
             log(e)
         else:
             log(f"Port {port_name} closed")
-
 
     def error_shutdown():
         log("Sending ERROR tag to ABIN")
@@ -214,7 +215,6 @@ def main(config):
             abin_comm.Send([error_energy, MPI.DOUBLE], dest=0, tag=MACE_TAG_ERROR)
         except Exception as e:
             log(e)
-            pass
 
         shutdown_communication()
 
