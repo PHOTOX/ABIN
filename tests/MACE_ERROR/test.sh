@@ -1,18 +1,21 @@
 #!/bin/bash
-set -euo pipefail
+set -uo pipefail
 
 ABINEXE=$1
 
-export ABINOUT=abin.out
-export ABININ=input.in
-export ABINGEOM=mini.xyz
+ABINOUT=abin.out
+ABININ=input.in
+ABINGEOM=mini.xyz
 
 MACE_SERVER=../../interfaces/MACE/mace_server.py
 MACE_OUT=mace_server.out
 
+ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM"
+MACE_CMD="python3 $MACE_SERVER --device cpu --model-path __MOCK_ERROR__"
+
 # If $1 = "clean"; exit early.
 if [[ "${1-}" = "clean" ]]; then
-  rm -f $MACE_OUT $ABINOUT *.dat *.diff
+  rm -f $MACE_OUT $ABINOUT ./*.dat ./*.diff
   rm -f restart.xyz velocities.xyz forces.xyz movie.xyz restart.xyz.old
   rm -f mace_port.txt ERROR ompi_uri.txt
   exit 0
@@ -41,7 +44,7 @@ if [[ "$IS_OPENMPI" = "true" ]]; then
     OMPI_SERVER=ompi-server
   fi
 
-  if ! which $OMPI_SERVER > /dev/null 2>&1; then
+  if ! which $OMPI_SERVER &> /dev/null; then
     echo "Skipping MACE test: ompi-server not found (required for OpenMPI)"
     exit 0
   fi
@@ -49,11 +52,11 @@ if [[ "$IS_OPENMPI" = "true" ]]; then
   OMPI_URI_FILE="$PWD/ompi_uri.txt"
   $OMPI_SERVER --no-daemonize -r "$OMPI_URI_FILE" &
   ompi_server_pid=$!
-  sleep 0.5
+  sleep 1
 
   if [[ ! -f "$OMPI_URI_FILE" ]]; then
     echo "ERROR: ompi-server did not create URI file" >&2
-    kill $ompi_server_pid 2>/dev/null || true
+    kill $ompi_server_pid 2>/dev/null
     exit 1
   fi
 
@@ -62,17 +65,25 @@ fi
 
 MPIRUN_CMD="$MPIRUN -n 1 $MPIRUN_EXTRA_ARGS"
 
-ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM"
-MACE_CMD="python3 $MACE_SERVER --device cpu --model-path __MOCK_ERROR__"
-
+# Cleanup function to stop the background processes
 function cleanup {
-  kill -9 ${macepid-} ${abinpid-} > /dev/null 2>&1 || true
-  if [[ -n "$ompi_server_pid" ]]; then
-    kill $ompi_server_pid > /dev/null 2>&1 || true
+  if [[ -n ${macepid-} ]] && kill -0 $macepid >& /dev/null; then
+    echo "ERROR: MACE server $macepid is still running!" >> ERROR
+    kill ${macepid-} &> /dev/null || true
   fi
-  rm -f ompi_uri.txt
-  exit 0
+
+  if [[ -n ${abinpid-} ]] && kill -0 $abinpid >& /dev/null; then
+    echo "ERROR: ABIN process $abinpid is still running!" >> ERROR
+    kill ${abinpid-} &> /dev/null || true
+  fi
+
+  if [[ -n "${ompi_server_pid-}" ]]; then
+    kill $ompi_server_pid &> /dev/null || true
+  fi
 }
+
+# Automatically call the cleanup function when the script
+# exits or is interrupted by a signal
 trap cleanup INT ABRT TERM EXIT
 
 # Launch mock MACE server
@@ -82,13 +93,13 @@ macepid=$!
 # Wait for the server to write the port file
 MAX_WAIT=15
 i=0
-while [[ ! -f mace_port.txt ]] && [[ $i -lt $MAX_WAIT ]]; do
+while [[ ! -f mace_port.txt && $i -lt $MAX_WAIT ]]; do
   sleep 0.5
   let ++i
 done
 
 if [[ ! -f mace_port.txt ]]; then
-  echo "ERROR: MACE server did not write port file"
+  echo "ERROR: MACE server did not write port file" >> ERROR
   cat $MACE_OUT 2>/dev/null || true
   exit 1
 fi
@@ -97,29 +108,15 @@ fi
 $MPIRUN_CMD $ABIN_CMD > $ABINOUT 2>&1 &
 abinpid=$!
 
-# Monitor both processes
-MAX_ITER=60
+# Give both processes 10 seconds to finish
+MAX_ITER=20
 iter=0
-while true; do
-  abin_alive=$(ps -p $abinpid -o pid= 2>/dev/null | wc -l)
-  mace_alive=$(ps -p $macepid -o pid= 2>/dev/null | wc -l)
-
-  if [[ $abin_alive -eq 0 ]] && [[ $mace_alive -eq 0 ]]; then
-    break
-  elif [[ $abin_alive -eq 0 ]] && [[ $mace_alive -ne 0 ]]; then
-    sleep 1
-    kill -9 $macepid > /dev/null 2>&1 || true
-    break
-  elif [[ $mace_alive -eq 0 ]] && [[ $abin_alive -ne 0 ]]; then
-    echo "MACE server died. Killing ABIN." >&2
-    kill -9 $abinpid > /dev/null 2>&1 || true
-    break
-  fi
-
-  sleep 0.5
-  let ++iter
+# Note about 'kill -0' https://unix.stackexchange.com/questions/169898/what-does-kill-0-do
+while ( (kill -0 $abinpid >& /dev/null) || (kill -0 $macepid >& /dev/null) ); do
   if [[ $iter -gt $MAX_ITER ]]; then
-    echo "Maximum wait time exceeded."
+    echo "Test did not finish in time" >> ERROR
     break
   fi
+  sleep 0.5
+  let iter++
 done

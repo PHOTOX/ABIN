@@ -137,7 +137,7 @@ contains
             mpi_tag = MACE_TAG_ERROR
          end if
 
-         write (stdout, '(A)') 'Shutting down MACE server'
+         write (stdout, '(A)') 'Sending shutdown message to MACE server'
 
          call MPI_Send(MPI_BOTTOM, 0, MPI_INTEGER, 0, mpi_tag, mace_comm, ierr)
 
@@ -148,10 +148,12 @@ contains
          end if
       end if
 
+      write (stdout, '(A)') 'Freeing MACE communicator'
       call MPI_Comm_free(mace_comm, ierr)
       if (ierr /= MPI_SUCCESS) then
          write (stderr, *) get_mpi_error_string(ierr)
       end if
+      write (stdout, '(A)') 'MACE communicator freed'
    end subroutine finalize_mace
 
    subroutine send_natom(num_atom, comm)
