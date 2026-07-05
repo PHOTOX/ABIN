@@ -278,6 +278,7 @@ def main(config):
         # Receive coordinates (3*natom doubles, in Bohr)
         coords = np.empty((natom, 3), dtype=np.float64)
         abin_comm.Recv([coords, MPI.DOUBLE], source=0, tag=MACE_TAG_DATA)
+        # TODO: Check the size of received data!
 
         energy, forces = mace_model.evaluate(atom_types, coords)
         log(f"Evaluation {eval_count}: energy = {energy:.15f} Hartree")

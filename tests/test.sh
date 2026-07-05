@@ -169,6 +169,8 @@ if [[ $TESTS = "all" ]];then
       folders[index]=MACE
       let index++
       folders[index]=MACE_ERROR
+      let index++
+      folders[index]=MACE_ERROR2
    else
       let index=${#folders[@]}+1
       folders[index]=WITHOUT_MPI
