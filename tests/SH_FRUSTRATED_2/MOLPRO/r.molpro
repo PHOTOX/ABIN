@@ -1,0 +1,11 @@
+#!/bin/bash
+cd MOLPRO
+timestep=$1
+ibead=$2
+
+# TODO: This does not really work when we hop
+# so we now have big energy jump in energies.dat
+cp engrad.dat.$timestep  ../engrad.dat.$ibead
+
+echo "Timestep: $timestep" >> ../stateall_grad.dat
+cat ../state.dat >> ../stateall_grad.dat

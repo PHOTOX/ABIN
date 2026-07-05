@@ -40,6 +40,8 @@ Always test the installation by running the test suite:
 ```console
 $ make test
 ```
+Note that if you compile ABIN on ARM processors (e.g. Macbooks), you need to change the `FFLAGS` and `CXXFLAGS` in the generated `make.vars` to use `-O0` or `-O1` instead of the default `-O2`, otherwise some of the tests may fail due to numerics. 
+
 If you modify the source code and want to recompile,
 you should always clean up before the recompilation:
 
