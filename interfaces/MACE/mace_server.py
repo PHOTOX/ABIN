@@ -146,7 +146,7 @@ class HarmonicModel:
         # Simple harmonic energy around the center of mass
         com = np.mean(coords_t, axis=0)
         displ = coords_t - com
-        energy = 0.5 * self.k * np.sum(displ ** 2)
+        energy = 0.5 * self.k * np.sum(displ**2)
 
         # Forces = -gradient = -k * displacement
         forces = -self.k * displ  # (natom, 3)
@@ -161,7 +161,7 @@ def connect_to_abin():
     port_name = MPI.Open_port()
     log(f"MPI port opened: {port_name}")
 
-    with open(MACE_PORT_FILE, "w", encoding='utf-8') as f:
+    with open(MACE_PORT_FILE, "w", encoding="utf-8") as f:
         f.write(port_name)
     log(f"Port written to {MACE_PORT_FILE}")
 
@@ -209,7 +209,7 @@ def main(config):
 
     def error_shutdown():
         log("Sending ERROR tag to ABIN")
-        # This is best effort only, since ABIN might be dead already, ignore any errors here
+        # This is best effort only, since ABIN might be dead already
         try:
             abin_comm.Send([MPI.BOTTOM, MPI.INT], dest=0, tag=MACE_TAG_ERROR)
         except Exception as e:
@@ -225,7 +225,6 @@ def main(config):
         abin_comm.Probe(source=0, tag=MPI.ANY_TAG, status=status)
 
         if tag := status.Get_tag() in (MACE_TAG_EXIT, MACE_TAG_ERROR):
-
             if tag == MACE_TAG_EXIT:
                 log("Received graceful exit signal from ABIN")
                 exit_code = 0
@@ -253,11 +252,17 @@ def main(config):
 
     # Receive atom types
     check_incoming_msg()
-    atom_type_buf = bytearray(natom * 2)
-    abin_comm.Recv([atom_type_buf, MPI.CHAR], source=0, tag=MACE_TAG_DATA)
-    atom_types_str = atom_type_buf.decode('ascii')
-    atom_types = [atom_types_str[i:i + 2].strip() for i in range(0, len(atom_types_str), 2)]
+    byte_buf = bytearray(natom * 2)
+    mpi_status = MPI.Status()
+    abin_comm.Recv([byte_buf, MPI.CHAR], source=0, tag=MACE_TAG_DATA, status=mpi_status)
+    assert mpi_status.Get_count() == natom * 2
+    # TODO: Check that size of received data!
+    atom_types_str = byte_buf.decode("ascii")
+    atom_types = [
+        atom_types_str[i : i + 2].strip() for i in range(0, len(atom_types_str), 2)
+    ]
     log(f"Received atom types: {atom_types}")
+    assert len(atom_types) == natom
 
     # Load MACE model
     if config.model_path.startswith("__MOCK_"):
@@ -277,8 +282,10 @@ def main(config):
 
         # Receive coordinates (3*natom doubles, in Bohr)
         coords = np.empty((natom, 3), dtype=np.float64)
-        abin_comm.Recv([coords, MPI.DOUBLE], source=0, tag=MACE_TAG_DATA)
-        # TODO: Check the size of received data!
+        abin_comm.Recv(
+            [coords, MPI.DOUBLE], source=0, tag=MACE_TAG_DATA, status=mpi_status
+        )
+        assert mpi_status.Get_elements(MPI.DOUBLE) == natom * 3
 
         energy, forces = mace_model.evaluate(atom_types, coords)
         log(f"Evaluation {eval_count}: energy = {energy:.15f} Hartree")

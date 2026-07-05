@@ -174,7 +174,7 @@ if [[ $TESTS = "all" ]];then
    else
       let index=${#folders[@]}+1
       folders[index]=WITHOUT_MPI
-      let index=${#folders[@]}+1
+      let index++
       folders[index]=WITHOUT_MACE
    fi
 

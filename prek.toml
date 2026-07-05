@@ -35,6 +35,10 @@ hooks = [
     # The --preview flag enables a much larger set of rules by default
     args = ["--fix", "--preview"],
     files = "interfaces/MACE/mace_server.py",
+  },
+  {
+    id = "ruff-format",
+    files = "interfaces/MACE/mace_server.py",
   }
 ]
 
