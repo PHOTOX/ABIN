@@ -28,7 +28,7 @@ MACE_DEVICE=cpu   # 'cpu' or 'cuda'
 # export MACE_PYTHON=/path/to/my/conda/envs/mace/bin/python
 MACE_PYTHON="${MACE_PYTHON:-python3}"
 
-# Path to MACE server script
+# Path to MACE server script (copy from interfaces/MACE)
 MACE_SERVER=MACE/mace_server.py
 # Path to ABIN binary
 ABINEXE=./abin
@@ -37,7 +37,6 @@ if [[ -z ${MPI_PATH-} ]];then
 else
   MPIRUN=$MPI_PATH/bin/mpirun
 fi
-
 
 ##### END OF INPUT #####
 

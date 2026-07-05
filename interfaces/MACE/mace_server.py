@@ -24,6 +24,7 @@ import argparse
 import functools
 import sys
 from pathlib import Path
+from time import perf_counter
 from traceback import print_tb
 
 LOG_NAME = "MaceMPIServer"
@@ -195,14 +196,14 @@ def main(config):
         log("Shutting down communication with ABIN...")
         try:
             abin_comm.Disconnect()
-        except BaseException as e:
+        except Exception as e:
             log(e)
         else:
             log("ABIN communicator disconnected")
 
         try:
             MPI.Close_port(port_name)
-        except BaseException as e:
+        except Exception as e:
             log(e)
         else:
             log(f"Port {port_name} closed")
@@ -224,7 +225,7 @@ def main(config):
         status = MPI.Status()
         abin_comm.Probe(source=0, tag=MPI.ANY_TAG, status=status)
 
-        if tag := status.Get_tag() in (MACE_TAG_EXIT, MACE_TAG_ERROR):
+        if (tag := status.Get_tag()) in (MACE_TAG_EXIT, MACE_TAG_ERROR):
             if tag == MACE_TAG_EXIT:
                 log("Received graceful exit signal from ABIN")
                 exit_code = 0
@@ -233,7 +234,7 @@ def main(config):
                 exit_code = 1
 
             try:
-                abin_comm.Recv([MPI.BOTTOM, MPI.INT], source=0, tag=MPI.ANY_TAG)
+                abin_comm.Recv([MPI.BOTTOM, MPI.INT], source=0, tag=tag)
             except Exception as e:
                 log(e)
 
@@ -287,8 +288,11 @@ def main(config):
         )
         assert mpi_status.Get_elements(MPI.DOUBLE) == natom * 3
 
+        start = perf_counter()
         energy, forces = mace_model.evaluate(atom_types, coords)
-        log(f"Evaluation {eval_count}: energy = {energy:.15f} Hartree")
+        end = perf_counter()
+        log(f"Evaluation {eval_count} done in {end - start:.6f} miliseconds")
+        log(f"Energy = {energy:.15f} Hartree")
 
         # Send energy (1 double, in Hartree)
         energy_buf = np.array([energy], dtype=np.float64)

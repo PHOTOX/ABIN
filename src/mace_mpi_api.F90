@@ -134,8 +134,9 @@ contains
       ! MACE server crashed and notified us so no need to
       ! send it another message.
       if (error_code /= MACE_TAG_ERROR) then
-         mpi_tag = MACE_TAG_EXIT
-         if (error_code /= 0) then
+         if (error_code == 0) then
+            mpi_tag = MACE_TAG_EXIT
+         else
             mpi_tag = MACE_TAG_ERROR
          end if
 
