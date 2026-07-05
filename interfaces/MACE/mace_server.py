@@ -23,7 +23,6 @@ Usage:
 import argparse
 import functools
 import sys
-import time
 from pathlib import Path
 from traceback import print_tb
 
@@ -173,6 +172,7 @@ def connect_to_abin():
     return port_name, abin_comm
 
 
+# https://docs.python.org/3/library/sys.html#sys.excepthook
 def exception_handler(shutdown_callback, exception_type, exception, traceback):
     """Try to gracefully shutdown communication with ABIN upon uncaught exceptions"""
     print(f"Unexpected {exception_type.__name__}: {exception}")
