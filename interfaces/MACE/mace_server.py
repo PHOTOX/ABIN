@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: file-ignore[blind-except]
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
@@ -19,6 +18,7 @@ Usage:
 
   The server writes its MPI port to 'mace_port.txt' for ABIN to read.
 """
+# ruff: file-ignore[blind-except]
 
 import argparse
 import functools
@@ -305,8 +305,6 @@ def main(config):
         else:
             forces_send = forces.T.copy()
         abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=MACE_TAG_DATA)
-
-    shutdown_communication()
 
 
 if __name__ == "__main__":

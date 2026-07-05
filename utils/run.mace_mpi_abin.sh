@@ -67,13 +67,13 @@ function validate_inputs() {
 # Cleanup function to stop the background processes
 function cleanup {
   if [[ -n ${mace_pid-} ]] && kill -0 $mace_pid >& /dev/null; then
-    echo "ERROR: MACE server $mace_pid is still running!"
-    kill ${mace_pid} &> /dev/null
+    echo "WARNING: MACE server $mace_pid is still running. Killing it now."
+    kill ${mace_pid}
   fi
 
   if [[ -n ${abin_pid-} ]] && kill -0 $abin_pid >& /dev/null; then
-    echo "ERROR: ABIN process $abin_pid is still running!"
-    kill ${abin_pid} &> /dev/null
+    echo "WARNING: ABIN process $abin_pid is still running. Killing it now."
+    kill ${abin_pid}
   fi
 }
 
@@ -117,5 +117,6 @@ echo "(Monitor abin.out and mace_server.out for progress)"
 
 # Note about 'kill -0' https://unix.stackexchange.com/questions/169898/what-does-kill-0-do
 while ( (kill -0 $abin_pid >& /dev/null) && (kill -0 $mace_pid >& /dev/null) ); do sleep 1; done
+sleep 2 # grace time for program termination
 
 echo "Simulation finished."
