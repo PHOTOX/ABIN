@@ -1,7 +1,6 @@
 &general
 pot='_mace_'
 mdtype='md',
-ipimd=0,
 nstep=2,
 dt=20.,
 irandom=13131313,
@@ -17,11 +16,4 @@ nrest=1,
 &nhcopt
 inose=0,
 temp=0.0d0
-/
-
-&mace
-mace_model='mock.model',
-mace_device='cpu',
-mace_default_dtype='float64',
-mace_mpi_milisleep=-1
 /
