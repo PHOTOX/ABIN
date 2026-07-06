@@ -34,7 +34,7 @@ if [[ -z ${MPI_PATH-} ]]; then
 else
   MPIRUN=$MPI_PATH/bin/mpirun
   export PATH=$MPI_PATH/bin:$PATH
-  export LD_LIBRARY_PATH=$MPI_PATH/lib:$LD_LIBRARY_PATH
+  export LD_LIBRARY_PATH=$MPI_PATH/lib:${LD_LIBRARY_PATH-}
 fi
 
 # Detect OpenMPI vs MPICH
