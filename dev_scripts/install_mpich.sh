@@ -20,6 +20,9 @@ MPICH_DIR="$(realpath "$1")"
 # (as of 06 Nov 2020).
 MPICH_VERSION="${2-"4.3.2"}"
 
+# Detect number of CPUs
+NCPUS=$(nproc)
+
 TAR_FILE="mpich-${MPICH_VERSION}.tar.gz"
 DOWNLOAD_URL="https://www.mpich.org/static/downloads/${MPICH_VERSION}/${TAR_FILE}"
 INSTALL_DIR="$MPICH_DIR/$MPICH_VERSION/install"
@@ -66,7 +69,7 @@ cd "$MPICH_DIR/$MPICH_VERSION/src" && tar -xzf "../pkg/${TAR_FILE}" && cd "mpich
   --enable-static \
   --prefix="${INSTALL_DIR}" 2>&1 |\
   tee configure.log
-make -j 2>&1 | tee make.log
+make -j $NCPUS 2>&1 | tee make.log
 make install 2>&1 | tee make_install.log
 
 echo "
