@@ -127,6 +127,6 @@ if __name__ == '__main__':
       absolute_tolerance = read_custom_threshold(THR_FNAME)
 
    inpfile = read_cmd()
-   print("Comparing numerical differences in file " + inpfile)
+   print("\nComparing numerical differences in file " + inpfile)
    parse_diff(inpfile, absolute_tolerance)
    exit(0)

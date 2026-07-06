@@ -31,6 +31,21 @@ source .venv/bin/activate   # Activates the environment
 
 ABIN itself must be compiled using the MPICH compiler, see top-level README for instructions.
 
+After installation, run the MACE tests to make sure the basic communication works.
+```console
+$ make test TEST="MACE MACE_ERROR MACE_ERROR2"
+Running tests in directories:
+MACE MACE_ERROR MACE_ERROR2
+MACE	PASSED
+=======================
+MACE_ERROR	PASSED
+=======================
+MACE_ERROR2	PASSED
+=======================
+ 
+3 tests PASSED.
+```
+
 ## Usage
 
 The MACE server must be launched alongside ABIN using mpirun.

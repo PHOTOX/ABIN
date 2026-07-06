@@ -22,11 +22,19 @@ if [[ "${1-}" = "clean" ]]; then
   exit 0
 fi
 
+# Skip the test if the python environment does not contain necessary libraries
+if ! python3 -c "import mpi4py, numpy, ase" 2>/dev/null; then
+    echo "MACE python environment not activated"
+    exit 3
+fi
+
 # Determine MPI paths
 if [[ -z ${MPI_PATH-} ]]; then
-  export MPIRUN=mpirun
+  MPIRUN=mpirun
 else
-  export MPIRUN=$MPI_PATH/bin/mpirun
+  MPIRUN=$MPI_PATH/bin/mpirun
+  export PATH=$MPI_PATH/bin:$PATH
+  export LD_LIBRARY_PATH=$MPI_PATH/lib:$LD_LIBRARY_PATH
 fi
 
 # Detect OpenMPI vs MPICH
@@ -68,9 +76,9 @@ MPIRUN_CMD="$MPIRUN -n 1 $MPIRUN_EXTRA_ARGS"
 
 # Cleanup function to stop the background processes
 function cleanup {
-  if [[ -n ${macepid-} ]] && kill -0 $macepid >& /dev/null; then
-    echo "ERROR: MACE server $macepid is still running!" >> ERROR
-    kill ${macepid-} &> /dev/null || true
+  if [[ -n ${mace_pid-} ]] && kill -0 $mace_pid >& /dev/null; then
+    echo "ERROR: MACE server $mace_pid is still running!" >> ERROR
+    kill ${mace_pid-} &> /dev/null || true
   fi
 
   if [[ -n ${abinpid-} ]] && kill -0 $abinpid >& /dev/null; then
@@ -88,8 +96,10 @@ function wait_for_portfile {
   MAX_WAIT=20
   i=0
   while [[ ! -f $PORT_FILE ]]; do
-    if [[ $i -gt $MAX_WAIT ]]; then
-      echo "ERROR: MACE server did not create $PORT_FILE" >> ERROR
+    if [[ $i -gt $MAX_WAIT ]] || ! kill -0 $mace_pid >& /dev/null; then
+      echo "ERROR: MACE server did not write port file 'mace_port.txt'" | tee ERROR
+      set -x
+      cat $MACE_OUTPUT
       exit 1
     fi
     sleep 0.5
@@ -103,7 +113,7 @@ trap cleanup INT ABRT TERM EXIT
 
 # Launch mock MACE server
 $MPIRUN_CMD $MACE_CMD &> $MACE_OUT &
-macepid=$!
+mace_pid=$!
 
 wait_for_portfile
 
@@ -115,7 +125,7 @@ abinpid=$!
 MAX_ITER=20
 iter=0
 # Note about 'kill -0' https://unix.stackexchange.com/questions/169898/what-does-kill-0-do
-while ( (kill -0 $abinpid >& /dev/null) || (kill -0 $macepid >& /dev/null) ); do
+while ( (kill -0 $abinpid >& /dev/null) || (kill -0 $mace_pid >& /dev/null) ); do
   if [[ $iter -gt $MAX_ITER ]]; then
     echo "Test did not finish in time" >> ERROR
     break

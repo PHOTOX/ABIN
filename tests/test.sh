@@ -230,6 +230,8 @@ echo "Running tests in directories:"
 echo ${folders[@]}
 
 errors=0
+skipped=0
+passed=0
 
 for dir in ${folders[@]}
 do
@@ -237,7 +239,7 @@ do
       echo "Directory $dir not found. Exiting prematurely."
       exit 1
    fi
-   echo "Entering directory $dir"
+   echo -en "$dir\t"
    cd $dir
 
    # Always clean the test directory before runnning the test.
@@ -265,6 +267,13 @@ do
       # TODO: Figure out a different solution
       #./test.sh $ABINEXE 2> /dev/null
       ./test.sh $ABINEXE
+      # exit code 3 indicates skipped test
+      if [[ $? -eq 3 ]]; then
+        echo -e "\033[0;33mSKIPPED\033[0m"
+        let skipped++
+        cd $TESTDIR
+        continue
+      fi
 
    else
       if [[ -f "velocities.in" ]];then
@@ -287,6 +296,7 @@ do
 
       if diff_files; then
         echo -e "\033[0;32mPASSED\033[0m"
+        let passed++
       else
         let errors++
         echo -e "$dir \033[0;31mFAILED\033[0m"
@@ -299,10 +309,15 @@ do
 done
 
 echo " "
+if [[ $ACTION = "makeref" ]]; then
+   exit 0
+fi
 
+echo -e "\033[0;32m$passed tests PASSED.\033[0m"
+if [[ ${skipped} -ne 0 ]]; then
+   echo -e "\033[0;33m$skipped tests SKIPPED.\033[0m"
+fi
 if [[ ${errors} -ne 0 ]];then
    echo -e "$errors tests \033[0;31mFAILED\033[0m."
    exit 1
-else
-   echo -e "\033[0;32mAll tests PASSED.\033[0m"
 fi
