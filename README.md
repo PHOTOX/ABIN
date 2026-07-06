@@ -7,9 +7,9 @@
 ABIN is a program for performing ab initio molecular dynamics.
 It is a general purpose program that was initially designed to model nuclear quantum effects (NQE).
 NQE can be most rigirously captured with path integral MD (PIMD), but also within the Quantum Thermostat based on General Langevin Equation framework developed by Michele Cerriotti.
-ABIN can also simulate non-adiabatic events using Surface-hoping algorithm, using either the classical fewest-switches algorithm (FSSH) or simpler Landau-Zener approach which does not require non-adiabatic couplings. The LZ approach can also capture singlet-triplet transitions.
+ABIN can also simulate non-adiabatic events using Surface-hoping algorithm, using either the classical fewest-switches algorithm (FSSH) or simpler Landau-Zener (LZ) approach which does not require non-adiabatic couplings. The LZ approach can also capture singlet-triplet transitions.
 
-The basic philosophy of ABIN program is simple — 
+The basic philosophy of ABIN program is simple —
 while the program itself handles the propagation of the system according to the equations of motion,
 the forces and energies are taken from an external electronic structure program such as ORCA or TeraChem.
 The call to the chosen external program is handled via a simple shell script interface.
@@ -78,25 +78,34 @@ The optional libraries are:
  - [PLUMED](https://www.plumed.org/): A collection of very useful tools for free energy calculations (MetaDynamics, Umbrella Sampling etc).
  - [TCPB-CPP](https://github.com/mtzgroup/tcpb-cpp): [EXPERIMENTAL] TCPB interface to TeraChem
  - [MACE](https://github.com/ACEsuit/mace): Machine Learning Atomic Cluster Expansion potential.
-      - Integrated via an MPI interface. Requires a Python environment with `mace-torch`, `torch`, `ase`, and `mpi4py`
-        and an MPICH installation (see below).
-      - See interfaces/MACE/README.md for details
+      - The interface to MACE requires an MPICH installation (see below) and MACE python environment.
+        See `interfaces/MACE/README.md` for details
 
 
 ### Installing with MPICH
 
 1. Install MPICH (adjust MPICH_PATH as needed)
+
 ```bash
 MPICH_PATH=/home/$USER/software/mpich
 ./dev_scripts/install_mpich.sh $MPICH_PATH
+```
+
+2. Compile ABIN and run tests
+
+(Substitute the `<mpich_version>` for the actual version that was installed)
+```bash
+MPICH_PATH=$MPICH_PATH/<mpich_version>/install
 ./configure --mpi $MPICH_PATH
+make clean && make
+make test
 ```
 
 Before running ABIN, you might need to adjust your PATH and LD_LIBRARY_PATH
 
 ```bash
-export LD_LIBRARY_PATH=$MPICH_PATH:$LD_LIBRARY_PATH
-export PATH=$MPICH_PATH:$PATH
+export LD_LIBRARY_PATH=$MPICH_PATH/lib:$LD_LIBRARY_PATH
+export PATH=$MPICH_PATH/bin:$PATH
 ```
 
 
