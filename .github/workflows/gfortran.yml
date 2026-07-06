@@ -349,7 +349,7 @@ jobs:
         FFLAGS: ${{ env.ABIN_FFLAGS }} -g
         LDLIBS: ${{ env.ABIN_LDLIBS }}
     - name: test ABIN
-      run: LD_LIBRARY_PATH=${HOME}/mpich/${MPICH_V}/install/lib make test
+      run: make test
 
     - name: Codecov upload
       uses: codecov/codecov-action@v7
