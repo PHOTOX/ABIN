@@ -18,7 +18,7 @@ IDX=3
 ABININ=input.in$IDX
 ABINOUT=${ABINOUT}$IDX
 TCOUT=${TCOUT}$IDX
-N_TERA_SERVERS=$(egrep --only-matching 'nteraservers\s*=\s*[0-9]' $ABININ | egrep -o [0-9])
+N_TERA_SERVERS=$(grep -E --only-matching 'nteraservers\s*=\s*[0-9]' $ABININ | grep -E -o [0-9])
 
 MPIRUN="$MPIRUN -n 1"
 ABIN_CMD="$ABINEXE -i $ABININ -x $ABINGEOM"

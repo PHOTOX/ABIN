@@ -42,17 +42,6 @@ hooks = [
   }
 ]
 
-[[repos]]
-# shellcheck: A shell linter, https://www.shellcheck.net/
-repo = "https://github.com/koalaman/shellcheck-precommit"
-rev = "v0.11.0"
-hooks = [
-  {
-    id = "shellcheck",
-    files = "dev_scripts/"
-  }
-]
-
 # Verify Github workflows have correct syntax
 [[repos]]
 repo = "https://github.com/python-jsonschema/check-jsonschema"

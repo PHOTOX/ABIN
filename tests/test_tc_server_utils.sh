@@ -136,13 +136,13 @@ check_running_processes() {
   MAX_ITER=100
   iter=1
   while true;do
-    running=$(ps -eo pid | egrep "$regex" | wc -l)
+    running=$(ps -eo pid | grep -E "$regex" | wc -l)
     if [[ $running -eq 0 ]];then
       break
     elif [[ $running -lt $num_jobs ]];then
       # Give the others time to finish 
       sleep 1.2
-      running=$(ps -eo pid | egrep "$regex" | wc -l)
+      running=$(ps -eo pid | grep -E "$regex" | wc -l)
       if [[ $running -ne 0 ]];then
         echo "One of the TC servers or ABIN died. Killing the rest."
 	#echo "Printing ABIN and TC server outputs for debugging."
