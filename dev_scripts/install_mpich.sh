@@ -7,8 +7,12 @@
 # Exit script immediately upon error
 set -euo pipefail
 
+if [[ -z ${1-} ]]; then
+  echo "ERROR: Provide prefix path where install MPICH as first parameter"
+  exit 1
+fi
 # Path as an optional first parameter
-MPICH_DIR="${1-$HOME/mpich}"
+MPICH_DIR="$(realpath "$1")"
 # We take current stable version as default
 # (as of 06 Nov 2020).
 MPICH_VERSION="${2-"4.3.2"}"

@@ -79,8 +79,25 @@ The optional libraries are:
  - [TCPB-CPP](https://github.com/mtzgroup/tcpb-cpp): [EXPERIMENTAL] TCPB interface to TeraChem
  - [MACE](https://github.com/ACEsuit/mace): Machine Learning Atomic Cluster Expansion potential.
       - Integrated via an MPI interface. Requires a Python environment with `mace-torch`, `torch`, `ase`, and `mpi4py`
-        and an MPICH installation (see above).
+        and an MPICH installation (see below).
       - See interfaces/MACE/README.md for details
+
+
+### Installing with MPICH
+
+1. Install MPICH (adjust MPICH_PATH as needed)
+```bash
+MPICH_PATH=/home/$USER/software/mpich
+./dev_scripts/install_mpich.sh $MPICH_PATH
+./configure --mpi $MPICH_PATH
+```
+
+Before running ABIN, you might need to adjust your PATH and LD_LIBRARY_PATH
+
+```bash
+export LD_LIBRARY_PATH=$MPICH_PATH:$LD_LIBRARY_PATH
+export PATH=$MPICH_PATH:$PATH
+```
 
 
 ## Structure of the repository
