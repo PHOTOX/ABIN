@@ -23,7 +23,7 @@ else
   MPIRUN="$MPI_PATH/bin/mpirun"
 fi
 
-N_REPLICAS=$(egrep --only-matching 'nreplica\s*=\s*[0-9]' $ABININ | egrep -o [0-9])
+N_REPLICAS=$(grep -E --only-matching 'nreplica\s*=\s*[0-9]' $ABININ | grep -E -o [0-9])
 
 $MPIRUN -np $N_REPLICAS $ABINEXE -i $ABININ -v $ABINVEL > $ABINOUT
 $MPIRUN -np $N_REPLICAS $ABINEXE -i ${ABININ}2 > ${ABINOUT}2
