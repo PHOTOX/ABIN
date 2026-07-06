@@ -113,7 +113,7 @@ class MaceModel:
         # cell_size = 100.0  # Angstroms
         # cell = ((cell_size, 0, 0), (0, cell_size, 0), (0, 0, cell_size))
         atoms = ase.Atoms(symbols=atom_types, positions=coords_ang, pbc=pbc)
-        atoms.set_calculator(self.calculator)
+        atoms.calc = self.calculator
 
         energy_hartree = atoms.get_potential_energy() * ev_to_hartree
         forces_hartree_bohr = atoms.get_forces() * ev_per_ang_to_hartree_per_bohr
@@ -277,9 +277,8 @@ def main(config):
     # Main loop: receive coordinates, compute, send results
     eval_count = 0
     while True:
+        start_loop = perf_counter()
         check_incoming_msg()
-
-        eval_count += 1
 
         # Receive coordinates (3*natom doubles, in Bohr)
         coords = np.empty((natom, 3), dtype=np.float64)
@@ -289,9 +288,12 @@ def main(config):
         assert mpi_status.Get_elements(MPI.DOUBLE) == natom * 3
 
         start = perf_counter()
+
         energy, forces = mace_model.evaluate(atom_types, coords)
+
         end = perf_counter()
-        log(f"Evaluation {eval_count} done in {end - start:.6f} miliseconds")
+        time_ms = (end - start) * 1000
+        log(f"Step {eval_count} done in {time_ms:.3f} miliseconds")
         log(f"Energy = {energy:.15f} Hartree")
 
         # Send energy (1 double, in Hartree)
@@ -305,6 +307,14 @@ def main(config):
         else:
             forces_send = forces.T.copy()
         abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=MACE_TAG_DATA)
+
+        end_loop = perf_counter()
+        loop_ms = (end_loop - start_loop) * 1000
+        # Note: Communication overhead includes the ABIN propagation time,
+        # which should however be negligible.
+        log(f"Communication overhead = {loop_ms - time_ms:.3f} ms")
+
+        eval_count += 1
 
 
 if __name__ == "__main__":

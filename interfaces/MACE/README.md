@@ -22,7 +22,6 @@ uv pip install -r mace_server.py --torch-backend=auto
 source .venv/bin/activate   # Activates the environment
 ```
 
-
 > [!IMPORTANT]
 > The tricky part is to install the correct binary version of PyTorch, as it needs to match your CUDA version.
 > The `--torch-backend=auto` should autodetect your environment and install the correct version.
@@ -30,10 +29,17 @@ source .venv/bin/activate   # Activates the environment
 > Please read the [uv PyTorch documentation]()https://docs.astral.sh/uv/guides/integration/pytorch/#automatic-backend-selection for more information.
 > If your machine doesn't have a GPU accelerator, the installation will automatically pick up the CPU-only build.
 
+ABIN itself must be compiled using the MPICH compiler, see top-level README for instructions.
 
 ## Usage
 
 The MACE server must be launched alongside ABIN using mpirun.
-ABIN must be compiled using the MPICH MPI library.
-
 It is recommended to use the provided launch script `utils/run.mace_mpi_abin.sh`.
+
+Rough steps:
+
+1. In the ABIN input file, specify `pot=_mace_`, otherwise everything is the same.
+2. Copy `interfaces/MACE/mace_server.py` into your working directory.
+3. In the launch script, specify the ABIN input files, and paths to MPICH and Python installation.
+4. In the launch script, specify path to your MACE model file, and whether to evaluate the model on CPU or CUDA GPU.
+5. Profit!

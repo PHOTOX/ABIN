@@ -72,13 +72,14 @@ To install the libraries, you can use the install scripts in `dev_scripts/`.
 We use these in our Continuous Integration testing suite on Github using the Ubuntu 18.04 image.
 
 The optional libraries are:
- - [MPICH](https://www.mpich.org/): An MPI implementation used for Replica Exchange MD and MPI interface with TeraChem.
+ - [MPICH](https://www.mpich.org/): An MPI implementation used for Replica Exchange MD and MPI interface with TeraChem and MACE.
       - If you just need REMD you can also use other MPI libraries such as OpenMPI or IntelMPI.
  - [FFTW](http://www.fftw.org/): Fast Fourier Transform library used for normal mode transformation in Path Integral MD.
  - [PLUMED](https://www.plumed.org/): A collection of very useful tools for free energy calculations (MetaDynamics, Umbrella Sampling etc).
  - [TCPB-CPP](https://github.com/mtzgroup/tcpb-cpp): [EXPERIMENTAL] TCPB interface to TeraChem
  - [MACE](https://github.com/ACEsuit/mace): Machine Learning Atomic Cluster Expansion potential.
-      - Integrated via an MPI interface. Requires a Python environment with `mace-torch`, `torch`, `ase`, and `mpi4py`.
+      - Integrated via an MPI interface. Requires a Python environment with `mace-torch`, `torch`, `ase`, and `mpi4py`
+        and an MPICH installation (see above).
       - See interfaces/MACE/README.md for details
 
 
