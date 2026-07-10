@@ -61,8 +61,9 @@ module mod_sh
    integer :: nac_accu2 = 5
 
    ! Decoherence correction parameter (a.u.)
-   ! To turn off decoherence correction, set decoh_alpha = 0.0D0
    real(DP) :: decoh_alpha = 0.1D0
+   ! To turn off decoherence correction, set decoh = .false.
+   logical :: decoh = .true.
 
    ! Compute NACME only if states are less then deltaE apart (eV)
    ! The default value (5 eV) is very conservative.
@@ -99,8 +100,8 @@ module mod_sh
    ! of states that are calculated but ignored.
    integer :: ignore_state = 0
 
-   namelist /sh/ istate_init, nstate, substep, deltae, integ, couplings, nohop, phase, decoh_alpha, popthr, ignore_state, &
-      nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, velocity_rescaling, revmom, &
+   namelist /sh/ istate_init, nstate, substep, deltae, integ, couplings, nohop, phase, decoh, decoh_alpha, popthr, &
+      ignore_state, nac_accu1, nac_accu2, popsumthr, energydifthr, energydriftthr, velocity_rescaling, revmom, &
       dE_S0S1_thr, correct_decoherence
    save
 
@@ -298,7 +299,10 @@ contains
          write (stderr, '(A,I0)') 'Computing NACME only with default accuracy 10^-', nac_accu1
       end if
 
-      if (decoh_alpha == 0.0D0) then
+      if (decoh) then
+         write (stdout, '(A)') "Using energy decoherence correction by Granucci and Persico."
+         write (stdout, '(A,F10.6)') "Decoherence aplha parameter: ", decoh_alpha
+      else
          write (stdout, '(A)') "Turning OFF decoherence correction"
       end if
 
@@ -820,7 +824,7 @@ contains
          end if
 
          ! Apply decoherence correction from Persico et al
-         if (decoh_alpha > 0) then
+         if (decoh) then
 
             Ekin = ekin_v(vx_int, vy_int, vz_int)
             if (Ekin > 1.0D-4) then ! Decoherence diverges for zero velocities
