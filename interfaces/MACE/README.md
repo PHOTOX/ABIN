@@ -4,7 +4,7 @@ This directory contains the Python-based server for the MACE (Machine Learning A
 
 ## Requirements
 
-- Python >= 3.8
+- Python >= 3.9
 - PyTorch >= 1.12
 - mace-torch
 - ase
