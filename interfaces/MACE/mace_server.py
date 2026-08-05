@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.8"
+# requires-python = ">=3.9"
 # dependencies = [
 #     "ase>=3.18.0",
 #     "mace-torch>=0.3.10",
@@ -22,12 +22,72 @@ Usage:
 
 import argparse
 import functools
+import logging
 import sys
+import warnings
 from pathlib import Path
 from time import perf_counter
-from traceback import print_tb
 
-LOG_NAME = "MaceMPIServer"
+def setup_logger(debug=True):
+    """Configure standard library logging to output to sys.stdout."""
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s | %(levelname)-8s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        stream=sys.stdout,
+        force=True,
+    )
+    logging.captureWarnings(True)
+    warnings.formatwarning = (
+        lambda msg, cat, fname, lineno, line=None: f"{fname}:{lineno}: {cat.__name__}: {str(msg).strip()}"
+    )
+
+
+# Configure logger at module import time (debug=True by default)
+setup_logger(debug=True)
+
+
+def log_environment_info(config):
+    """Log debug information about Python, PyTorch, CUDA, dependencies, and environment."""
+    import platform
+    import ase
+    import mpi4py
+    import numpy as np
+    import torch
+
+    logging.debug("=== MACE Server Environment ===")
+    logging.debug(f"Python Executable : {sys.executable}")
+    logging.debug(f"Python Version    : {sys.version.replace('\n', ' ')}")
+    logging.debug(f"Platform / OS     : {platform.platform()}")
+    logging.debug(f"Working Directory : {Path.cwd()}")
+    logging.debug(f"Model Path        : {config.model_path}")
+    logging.debug(f"Configured Device : {config.device}")
+
+    # Dependency versions
+    logging.debug(f"PyTorch Version   : {torch.__version__}")
+    logging.debug(f"ASE Version       : {ase.__version__}")
+    logging.debug(f"NumPy Version     : {np.__version__}")
+    logging.debug(f"mpi4py Version    : {mpi4py.__version__}")
+
+    try:
+        import mace
+
+        logging.debug(f"MACE Version      : {getattr(mace, '__version__', 'unknown')}")
+    except ImportError:
+        logging.debug("MACE Version      : Not installed")
+
+    # CUDA & Hardware details
+    cuda_avail = torch.cuda.is_available()
+    logging.debug(f"CUDA Available    : {cuda_avail}")
+    if cuda_avail:
+        logging.debug(f"CUDA PyTorch Build: {torch.version.cuda}")
+        logging.debug(f"GPU Device Count  : {torch.cuda.device_count()}")
+        logging.debug(f"GPU Device Name   : {torch.cuda.get_device_name(0)}")
+        mem_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        logging.debug(f"GPU Total Memory  : {mem_gb:.2f} GB")
+    logging.debug("======================================================")
+
 
 # MPI Tags (must match Fortran module mod_mace_mpi)
 MACE_TAG_EXIT = 666
@@ -35,15 +95,6 @@ MACE_TAG_DATA = 2
 MACE_TAG_ERROR = 13
 
 MACE_PORT_FILE = "mace_port.txt"
-
-
-# TODO: Use logging module
-# TODO: Create log_exception helper
-def log(message, should_print=True):
-    msg_formatted = f"[{LOG_NAME}]: {message!s}"
-    if should_print:
-        print(msg_formatted, flush=True)
-    return msg_formatted
 
 
 def parse_cmd():
@@ -62,10 +113,19 @@ def parse_cmd():
         required=True,
         help="Device for model inference",
     )
+    parser.add_argument(
+        "--debug",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable or disable debug logging output",
+    )
     config = parser.parse_args()
+    if not config.debug:
+        setup_logger(debug=False)
     model = config.model_path
     if not model.startswith("__MOCK_") and not Path(model).is_file():
-        sys.exit(f"ERROR: file '{config.model_path}' not found")
+        logging.error(f"File '{config.model_path}' not found")
+        sys.exit(1)
     return config
 
 
@@ -78,7 +138,7 @@ class MaceModel:
     def __init__(self, config):
         from mace.calculators import MACECalculator
 
-        log("initializing MACE model")
+        logging.info("initializing MACE model")
 
         # Set ASE calculator
         self.calculator = MACECalculator(
@@ -130,7 +190,7 @@ class HarmonicModel:
 
     def __init__(self, config):
         self.model_path = config.model_path
-        log("Using Harmonic Mock Model")
+        logging.info("Using Harmonic Mock Model")
 
     def evaluate(self, _atom_types, coords_bohr):
         """
@@ -160,24 +220,26 @@ def connect_to_abin():
 
     # Open MPI port and write to file for ABIN to read
     port_name = MPI.Open_port()
-    log(f"MPI port opened: {port_name}")
+    logging.info(f"MPI port opened: {port_name}")
 
     with open(MACE_PORT_FILE, "w", encoding="utf-8") as f:
         f.write(port_name)
-    log(f"Port written to {MACE_PORT_FILE}")
+    logging.info(f"Port written to {MACE_PORT_FILE}")
 
     # Accept connection from ABIN
-    log("Waiting for ABIN to connect...")
+    logging.info("Waiting for ABIN to connect...")
     abin_comm = MPI.COMM_WORLD.Accept(port_name)
-    log("Connection from ABIN accepted!")
+    logging.info("Connection from ABIN accepted!")
     return port_name, abin_comm
 
 
 # https://docs.python.org/3/library/sys.html#sys.excepthook
 def exception_handler(shutdown_callback, exception_type, exception, traceback):
     """Try to gracefully shutdown communication with ABIN upon uncaught exceptions"""
-    print(f"Unexpected {exception_type.__name__}: {exception}")
-    print_tb(traceback)
+    logging.error(
+        f"Unexpected {exception_type.__name__}: {exception}",
+        exc_info=(exception_type, exception, traceback),
+    )
     # Restore original exception handling to prevent endless loop
     # in case of uncaught excpetion during shutdown
     sys.excepthook = sys.__excepthook__
@@ -189,32 +251,33 @@ def main(config):
     import numpy as np
     from mpi4py import MPI
 
+    log_environment_info(config)
     port_name, abin_comm = connect_to_abin()
 
     def shutdown_communication():
         """Gracefully shutdown communication with ABIN"""
-        log("Shutting down communication with ABIN...")
+        logging.info("Shutting down communication with ABIN...")
         try:
             abin_comm.Disconnect()
         except Exception as e:
-            log(e)
+            logging.error(f"Error disconnecting ABIN communicator: {e}")
         else:
-            log("ABIN communicator disconnected")
+            logging.info("ABIN communicator disconnected")
 
         try:
             MPI.Close_port(port_name)
         except Exception as e:
-            log(e)
+            logging.error(f"Error closing port {port_name}: {e}")
         else:
-            log(f"Port {port_name} closed")
+            logging.info(f"Port {port_name} closed")
 
     def error_shutdown():
-        log("Sending ERROR tag to ABIN")
+        logging.warning("Sending ERROR tag to ABIN")
         # This is best effort only, since ABIN might be dead already
         try:
             abin_comm.Send([MPI.BOTTOM, MPI.INT], dest=0, tag=MACE_TAG_ERROR)
         except Exception as e:
-            log(e)
+            logging.error(f"Error sending ERROR tag to ABIN: {e}")
 
         shutdown_communication()
 
@@ -227,16 +290,16 @@ def main(config):
 
         if (tag := status.Get_tag()) in (MACE_TAG_EXIT, MACE_TAG_ERROR):
             if tag == MACE_TAG_EXIT:
-                log("Received graceful exit signal from ABIN")
+                logging.info("Received graceful exit signal from ABIN")
                 exit_code = 0
             else:
-                log("Received ERROR signal from ABIN. Stopping server")
+                logging.warning("Received ERROR signal from ABIN. Stopping server")
                 exit_code = 1
 
             try:
                 abin_comm.Recv([MPI.BOTTOM, MPI.INT], source=0, tag=tag)
             except Exception as e:
-                log(e)
+                logging.error(f"Error receiving tag payload: {e}")
 
             shutdown_communication()
             sys.exit(exit_code)
@@ -249,7 +312,7 @@ def main(config):
     natom_buf = np.empty(1, dtype=np.intc)
     abin_comm.Recv([natom_buf, MPI.INT], source=0, tag=MACE_TAG_DATA)
     natom = int(natom_buf[0])
-    log(f"Received number of atoms: {natom}")
+    logging.info(f"Received number of atoms: {natom}")
 
     # Receive atom types
     check_incoming_msg()
@@ -262,7 +325,7 @@ def main(config):
     atom_types = [
         atom_types_str[i : i + 2].strip() for i in range(0, len(atom_types_str), 2)
     ]
-    log(f"Received atom types: {atom_types}")
+    logging.info(f"Received atom types: {atom_types}")
     assert len(atom_types) == natom
 
     # Load MACE model
@@ -272,7 +335,7 @@ def main(config):
     else:
         mace_model = MaceModel(config)
 
-    log("MACE model ready. Entering main loop.")
+    logging.info("MACE model ready. Entering main loop.")
 
     # Main loop: receive coordinates, compute, send results
     eval_count = 0
@@ -293,8 +356,8 @@ def main(config):
 
         end = perf_counter()
         time_ms = (end - start) * 1000
-        log(f"Step {eval_count} done in {time_ms:.3f} miliseconds")
-        log(f"Energy = {energy:.15f} Hartree")
+        logging.info(f"Step {eval_count} done in {time_ms:.3f} miliseconds")
+        logging.info(f"Energy = {energy:.15f} Hartree")
 
         # Send energy (1 double, in Hartree)
         energy_buf = np.array([energy], dtype=np.float64)
@@ -312,7 +375,7 @@ def main(config):
         loop_ms = (end_loop - start_loop) * 1000
         # Note: Communication overhead includes the ABIN propagation time,
         # which should however be negligible.
-        log(f"Communication overhead = {loop_ms - time_ms:.3f} ms")
+        logging.info(f"Communication overhead = {loop_ms - time_ms:.3f} ms")
 
         eval_count += 1
 
