@@ -15,7 +15,7 @@ The exact dependencies are specified as inline metadata in `mace_server.py`.
 We highly recommend installing the dependencies in a fresh virtual environment
 using the [uv package manager](https://github.com/astral-sh/uv):
 
-```console
+```bash
 # Install uv first, https://github.com/astral-sh/uv#installation
 uv venv  # Creates a new virtual environment in .venv/ folder
 uv pip install -r interfaces/MACE/mace_server.py --torch-backend=auto
@@ -32,7 +32,7 @@ source .venv/bin/activate   # Activates the environment
 ABIN itself must be compiled using the MPICH compiler, see top-level [README.md](../../README.md#installing-with-mpich) for instructions.
 
 After installation, run the MACE tests to make sure the basic communication works.
-```console
+```bash
 $ make test TEST="MACE MACE_ERROR MACE_ERROR2"
 Running tests in directories:
 MACE MACE_ERROR MACE_ERROR2
