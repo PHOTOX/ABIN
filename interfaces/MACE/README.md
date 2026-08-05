@@ -55,6 +55,8 @@ before running production calculations!
 The MACE server must be launched alongside ABIN using mpirun.
 It is recommended to use the provided launch script `utils/run.mace_mpi_abin.sh`.
 
+MACE model is required to use this interface. If you don't have one, you can check out MACE [foundational models](https://mace-docs.readthedocs.io/en/latest/guide/foundation_models.html).
+
 Rough steps:
 
 1. Specify `pot='_mace_'` in the ABIN input file, everything else is the same.
