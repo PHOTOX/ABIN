@@ -72,6 +72,14 @@ function diff_files {
     error_code=0
     diff -q $test_file $ref_file > /dev/null || error_code=$?
     if [[ $error_code -ne 0 ]];then
+
+       if [[ $test_file = "ERROR" ]]; then
+          echo "Files $ref_file and $test_file differ!"
+          diff --color=always $ref_file $test_file | tee $test_file.diff
+          return_status=1
+          continue
+       fi
+
        # The reference file is different, but maybe it's just numerical noise?
        error_code=0
        diff -y -W 500  $test_file $ref_file | grep -e '|' -e '<' -e '>' > $test_file.diff
@@ -157,9 +165,17 @@ if [[ $TESTS = "all" ]];then
       folders[index]=TERAPI-SH-S0
       let index++
       folders[index]=TERAPI-LZ
+      let index++
+      folders[index]=MACE
+      let index++
+      folders[index]=MACE_ERROR
+      let index++
+      folders[index]=MACE_ERROR2
    else
       let index=${#folders[@]}+1
       folders[index]=WITHOUT_MPI
+      let index++
+      folders[index]=WITHOUT_MACE
    fi
 
    if [[ $CP2K = "TRUE" ]];then
@@ -214,6 +230,8 @@ echo "Running tests in directories:"
 echo ${folders[@]}
 
 errors=0
+skipped=0
+passed=0
 
 for dir in ${folders[@]}
 do
@@ -221,7 +239,7 @@ do
       echo "Directory $dir not found. Exiting prematurely."
       exit 1
    fi
-   echo "Entering directory $dir"
+   echo -en "$dir\t"
    cd $dir
 
    # Always clean the test directory before runnning the test.
@@ -249,6 +267,13 @@ do
       # TODO: Figure out a different solution
       #./test.sh $ABINEXE 2> /dev/null
       ./test.sh $ABINEXE
+      # exit code 3 indicates skipped test
+      if [[ $? -eq 3 ]]; then
+        echo -e "\033[0;33mSKIPPED\033[0m"
+        let skipped++
+        cd $TESTDIR
+        continue
+      fi
 
    else
       if [[ -f "velocities.in" ]];then
@@ -271,6 +296,7 @@ do
 
       if diff_files; then
         echo -e "\033[0;32mPASSED\033[0m"
+        let passed++
       else
         let errors++
         echo -e "$dir \033[0;31mFAILED\033[0m"
@@ -283,10 +309,15 @@ do
 done
 
 echo " "
+if [[ $ACTION = "makeref" ]]; then
+   exit 0
+fi
 
+echo -e "\033[0;32m$passed tests PASSED.\033[0m"
+if [[ ${skipped} -ne 0 ]]; then
+   echo -e "\033[0;33m$skipped tests SKIPPED.\033[0m"
+fi
 if [[ ${errors} -ne 0 ]];then
    echo -e "$errors tests \033[0;31mFAILED\033[0m."
    exit 1
-else
-   echo -e "\033[0;32mAll tests PASSED.\033[0m"
 fi

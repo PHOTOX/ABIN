@@ -15,8 +15,7 @@
 !   During initialization the testing framework can override the
 !   default behavior with a call to set_error_method(). This logic
 !   can comfortably live in your test code, and thus does not
-!   introduce any undesirable dependencies (just a bit of
-!   obscurity).
+!   introduce any undesirable dependencies (just a bit of obscurity).
 module mod_error
    implicit none
    private
@@ -27,11 +26,12 @@ module mod_error
    public :: set_error_method
 
    abstract interface
-      subroutine error(filename, line_number, message)
+      subroutine error(filename, line_number, message, error_code)
          implicit none
          character(len=*), intent(in) :: filename
          integer, intent(in) :: line_number
          character(len=*), intent(in) :: message
+         integer, intent(in) :: error_code
       end subroutine error
    end interface
 
@@ -48,12 +48,20 @@ contains
 
    ! filename and line_number parameters should be passed using the preprocessor
    ! defined constants __FILE__ and __LINE__
-   subroutine fatal_error(filename, line_number, message)
+   subroutine fatal_error(filename, line_number, message, error_code)
       character(len=*), intent(in) :: filename
       integer, intent(in) :: line_number
       character(len=*), intent(in) :: message
+      integer, intent(in), optional :: error_code
+      integer :: err_code
 
-      call error_method(filename, line_number, message=message)
+      ! Default error code
+      err_code = 1
+      if (present(error_code)) then
+         err_code = error_code
+      end if
+
+      call error_method(filename, line_number, message=message, error_code=err_code)
    end subroutine fatal_error
 
    subroutine not_compiled_with(feature)
@@ -63,20 +71,19 @@ contains
       call fatal_error(__FILE__, __LINE__, error_msg)
    end subroutine not_compiled_with
 
-   subroutine print_error_and_stop(filename, line, message)
+   subroutine print_error_and_stop(filename, line, message, error_code)
       use mod_interfaces, only: finish
       character(*), intent(in) :: filename
       integer, intent(in) :: line
       character(*), intent(in) :: message
-      ! In case of an error, ABIN will return this to the shell.
-      integer, parameter :: ERROR_CODE = 1
+      integer, intent(in) :: error_code
 
       call print_error(filename, line, message)
 
       ! Try to finalize various modules gracefully.
-      call finish(ERROR_CODE)
+      call finish(error_code)
 
-      stop ERROR_CODE
+      stop error_code
    end subroutine print_error_and_stop
 
    ! We print the error both to stderr and to file 'ERROR'.

@@ -123,7 +123,7 @@ done
 
 # Set to default if FFLAGS is not defined yet, see
 # https://stackoverflow.com/questions/11362250/in-bash-how-do-i-test-if-a-variable-is-defined-in-u-mode
-: ${FFLAGS:="-O2 -fopenmp -fimplicit-none $warning_flags"}
+: ${FFLAGS:="-O2 -g -fopenmp -fimplicit-none $warning_flags"}
 
 if [[ -z ${FC-} ]];then
    if [[ $MPI = "TRUE" ]];then

@@ -25,6 +25,23 @@ hooks = [
   }
 ]
 
+[[repos]]
+# ruff: A Python linter, https://astral.sh/ruff
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.20"
+hooks = [
+  {
+    id = "ruff-check",
+    # The --preview flag enables a much larger set of rules by default
+    args = ["--fix", "--preview"],
+    files = "interfaces/MACE/mace_server.py",
+  },
+  {
+    id = "ruff-format",
+    files = "interfaces/MACE/mace_server.py",
+  }
+]
+
 # Verify Github workflows have correct syntax
 [[repos]]
 repo = "https://github.com/python-jsonschema/check-jsonschema"

@@ -61,6 +61,7 @@ contains
       integer :: ierr
 
       call MPI_Initialized(initialized, ierr)
+      call handle_mpi_error(ierr)
       if (.not. initialized) then
          return
       end if
@@ -75,8 +76,10 @@ contains
          ! so MPI_Abort is safer.
          if (error_code /= 0 .and. get_mpi_size() > 1) then
             call MPI_Abort(MPI_COMM_WORLD, error_code, ierr)
+            call handle_mpi_error(ierr)
          else
             call MPI_Finalize(ierr)
+            call handle_mpi_error(ierr)
          end if
       end if
    end subroutine finalize_mpi
@@ -173,6 +176,7 @@ contains
       i = nteraservers
       if (iremd == 1 .or. &
         & pot == '_tera_' .or. pot_ref == '_tera_' .or. &
+        & pot == '_mace_' .or. &
         & pot == '_cp2k_' .or. pot_ref == '__cp2k__') then
          call not_compiled_with('MPI')
       end if

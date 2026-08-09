@@ -1,0 +1,13 @@
+! Test that when ABIN encounters a fatal error,
+! it sends an error message to mace_server and mace_server shuts down gracefully.
+! Set invalid thermostat to trigger ABIN error
+&thermostat
+therm='invalid'
+/
+&general
+pot='_mace_'
+mdtype='md',
+nstep=1,
+dt=20.,
+idebug=2
+/

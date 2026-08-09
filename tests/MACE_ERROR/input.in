@@ -1,0 +1,13 @@
+! Test that ABIN handles ERROR tag sent by the MACE server
+&general
+pot='_mace_'
+mdtype='md',
+nstep=2,
+dt=20.,
+idebug=2
+/
+
+&nhcopt
+inose=0,
+temp=0.0d0
+/
