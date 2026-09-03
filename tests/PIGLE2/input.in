@@ -19,7 +19,8 @@ nrest=1,
 
 &nhcopt
 inose=2,
-temp=200,
+temp=200.0,
+temp0=200.0,
 rem_comrot=.false.
 
 ! Unlike in the PIGLE test, we're running a normal PIGLE here,

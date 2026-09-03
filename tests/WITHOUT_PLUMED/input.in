@@ -20,4 +20,5 @@ k=0.05,                     ! Ha*bohr-2
 
 &nhcopt
 inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+temp0=0.0
 /

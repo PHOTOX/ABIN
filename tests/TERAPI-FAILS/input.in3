@@ -16,5 +16,6 @@ idebug=3
 
 &nhcopt
 inose=1,
-temp=300
+temp=300.0,
+temp0=0.0
 /

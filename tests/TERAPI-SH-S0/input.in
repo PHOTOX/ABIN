@@ -27,7 +27,8 @@ idebug=3
 
 &nhcopt
 inose=0,
-temp=0.0d0
+temp=0.0d0,
+temp0=0.0
 /
 
 &sh

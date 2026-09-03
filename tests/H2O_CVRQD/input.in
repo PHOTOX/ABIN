@@ -14,6 +14,7 @@ nstep=2
 
 &nhcopt
 inose=0,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
-temp=100
+temp=100.0,
+temp0=100.0,
 rem_comrot=.true.       ! this is a default value, remove rotations at the beginning
 /

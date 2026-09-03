@@ -13,7 +13,8 @@ nrest=10,
 /
 
 &nhcopt
-temp=200.
 inose=1
+temp=200.0,
+temp0=200.0,
 tau0=0.001D0
 /

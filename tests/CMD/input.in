@@ -5,8 +5,9 @@
 # TESTING nyosh = 1
 # TESTING iknow
 &nhcopt
-inose=1,		! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
-temp=298.15,		! initial temperature for Maxwell-Boltzmann sampling [au]
+inose=1,                ! Thermostating: Nose-Hoover 1, microcanonical 0,GLE 2, LE 3
+temp=298.15,            ! Target temperature of thermostat [K]
+temp0=298.15,           ! Initial temperature for Maxwell--Boltzmann sampling [K]
 tau0=0.0015
 nrespnose=3
 nyosh=1                 ! Turn off Suzuki-Yoshida integration scheme (NOT RECOMMENDED!)
@@ -21,11 +22,11 @@ irest=0,
 idebug=1
 iknow=1
 
-pot='_mmwater_'		
-mdtype='MD',		! classical MD
+pot='_mmwater_'
+mdtype='MD',            ! classical MD
 
-dt=20.,			! number of steps and timestep
-irandom=131313,  	! random seed
+dt=20.,                 ! number of steps and timestep
+irandom=131313,         ! random seed
 
 nwrite=1,
 nwritex=1,
