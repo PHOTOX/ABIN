@@ -7,19 +7,26 @@
 # Exit script immediately upon error
 set -euo pipefail
 
+CC=${CC:-gcc}
+FC=${FC:-gfortran}
+
+if [[ -z ${1-} ]]; then
+  echo "ERROR: Provide prefix path where install MPICH as first parameter"
+  exit 1
+fi
 # Path as an optional first parameter
-MPICH_DIR="${1-$HOME/mpich}"
+MPICH_DIR="$(realpath "$1")"
 # We take current stable version as default
 # (as of 06 Nov 2020).
-MPICH_VERSION="${2-"4.0.2"}"
+MPICH_VERSION="${2-"4.3.2"}"
+
+# Detect number of CPUs
+NCPUS=$(nproc)
 
 TAR_FILE="mpich-${MPICH_VERSION}.tar.gz"
 DOWNLOAD_URL="https://www.mpich.org/static/downloads/${MPICH_VERSION}/${TAR_FILE}"
 INSTALL_DIR="$MPICH_DIR/$MPICH_VERSION/install"
 
-# Github Actions machines have two CPUs, per:
-# https://docs.github.com/en/free-pro-team@latest/actions/reference/specifications-for-github-hosted-runners#supported-runners-and-hardware-resources
-NCPUS=2
 
 if [[ -d "$INSTALL_DIR" ]];then
   echo "Found existing MPICH installation in $INSTALL_DIR"
@@ -56,9 +63,10 @@ cd "$MPICH_DIR/$MPICH_VERSION/src" && tar -xzf "../pkg/${TAR_FILE}" && cd "mpich
 # export FCFLAGS=-fallow-argument-mismatch
 ./configure FC=gfortran CC=gcc \
   --enable-fortran=all \
-  --with-pm=hydra --with-device=ch3:nemesis \
+  --with-pm=hydra \
+  --with-device=ch3:nemesis \
   --with-namepublisher=pmi \
-  --enable-static --disable-shared \
+  --enable-static \
   --prefix="${INSTALL_DIR}" 2>&1 |\
   tee configure.log
 make -j $NCPUS 2>&1 | tee make.log

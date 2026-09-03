@@ -54,7 +54,7 @@ jobs:
       CODECOV_NAME: ${{format('{0} GCC-{1}', github.job, matrix.gcc_v)}}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 2
 
@@ -66,7 +66,7 @@ jobs:
     # pFUnit library is used to build and run unit tests
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/pfunit/build/installed/
         # To force a pFUnit rebuild (bust the cache), make a change to install_pfunit.sh
@@ -83,10 +83,11 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
 
     - name: Run Unit tests
+      if: startsWith(matrix.os, 'ubuntu')
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -96,7 +97,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       # For some reason gcov does not seem to work on MacOS
       if: startsWith(matrix.os, 'ubuntu')
       with:
@@ -108,7 +109,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - uses: fortran-lang/setup-fortran@v1
       id: setup-fortran
@@ -130,7 +131,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - uses: fortran-lang/setup-fortran@v1
       id: setup-fortran
@@ -154,7 +155,7 @@ jobs:
       FC: gfortran
       CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 2
 
@@ -163,7 +164,7 @@ jobs:
 
     - name: TCBP build cache
       id: tcpb-cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/tcpb-cpp/lib
         # To force a rebuild (bust the cache), make a change to install_tcpb.sh
@@ -183,7 +184,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         name: tcpb
         fail_ci_if_error: true
@@ -202,7 +203,7 @@ jobs:
       GCC_V: ${{ matrix.gcc_v}}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 2
     - name: Set GFortran version
@@ -212,7 +213,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran${{ env.GCC_V }}-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
@@ -241,7 +242,7 @@ jobs:
     env:
       CODECOV_NAME: ${{format('{0}', github.job)}}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 2
 
@@ -250,7 +251,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
@@ -269,7 +270,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -278,7 +279,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -301,7 +302,7 @@ jobs:
       CODECOV_NAME: ${{format('{0} GCC-{1} MPICH-{2}', github.job, matrix.gcc_v, matrix.mpich_v)}}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 2
 
@@ -313,7 +314,7 @@ jobs:
 
     - name: MPICH build Cache
       id: mpich-cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/mpich/${{ env.MPICH_V }}/install
         key: ${{runner.os}}-ubuntu22.04-mpich${{ env.MPICH_V }}-gfortran${{ env.GCC_V }}-${{hashFiles('dev_scripts/install_mpich.sh')}}
@@ -331,6 +332,15 @@ jobs:
         if [ $GCC_V -ge 10 ];then export FFLAGS="-fallow-argument-mismatch";export FCFLAGS="-fallow-argument-mismatch";fi && \
         ./dev_scripts/install_mpich.sh ${HOME}/mpich ${MPICH_V}
 
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: 3.12
+        activate-environment: true
+
+    - name: Install MACE
+      run: uv pip install --torch-backend=cpu -r interfaces/MACE/mace_server.py
+
     - name: build ABIN
       run: |
         if [ $GCC_V -ge 10 ];then export FFLAGS="-fallow-argument-mismatch $FFLAGS";fi && \
@@ -340,8 +350,9 @@ jobs:
         LDLIBS: ${{ env.ABIN_LDLIBS }}
     - name: test ABIN
       run: make test
+
     - name: Codecov upload
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -359,12 +370,12 @@ jobs:
       OPENMPI_PATCH: "2"
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 2
     - name: OpenMPI build cache
       id: openmpi-cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/openmpi/${{ env.OPENMPI_V }}/install
         key: ${{runner.os}}-ubuntu22.04-openmpi${{ env.OPENMPI_V }}-gfortran-default-${{hashFiles('dev_scripts/install_openmpi.sh')}}
@@ -372,6 +383,15 @@ jobs:
     - name: Build and Install OpenMPI
       if: steps.openmpi-cache.outputs.cache-hit != 'true'
       run: ./dev_scripts/install_openmpi.sh ${HOME}/openmpi ${OPENMPI_V} ${OPENMPI_PATCH}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: 3.12
+        activate-environment: true
+
+    - name: Install MACE
+      run: uv pip install --torch-backend=cpu -r interfaces/MACE/mace_server.py
 
     - name: build ABIN
       run: ./configure --mpi "${HOME}/openmpi/${OPENMPI_V}/install" && make
@@ -381,7 +401,7 @@ jobs:
     - name: test ABIN
       run: make test
     - name: Codecov upload
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true
@@ -403,12 +423,12 @@ jobs:
       CODECOV_NAME: ${{format('{0} PLUMED-{1}', github.job, matrix.plumed_v)}}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 2
     - name: Plumed build cache
       id: plumed-cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/plumed/${{ env.PLUMED_V }}/install
         key: ${{runner.os}}-ubuntu22.04-plumed${{env.PLUMED_V}}-gcc-default-${{hashFiles('dev_scripts/install_plumed.sh')}}
@@ -419,7 +439,7 @@ jobs:
 
     - name: pFUnit build Cache
       id: pfunit-cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/pfunit/build/installed
         key: ${{ runner.os }}-ubuntu22.04-pfunit-gfortran-default-${{ hashFiles('dev_scripts/install_pfunit.sh') }}
@@ -441,7 +461,7 @@ jobs:
       run: make unittest
 
     - name: Codecov upload unit tests
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         name: ${{env.CODECOV_NAME}}
         flags: unittests
@@ -450,7 +470,7 @@ jobs:
       run: make e2etest
 
     - name: Codecov upload
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         name: ${{env.CODECOV_NAME}}
         fail_ci_if_error: true

@@ -1,0 +1,5 @@
+&general
+pot='_mace_'
+nstep=1,
+dt=40.,
+/

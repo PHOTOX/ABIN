@@ -28,6 +28,8 @@ engrad.dat.???
 # PLUMED backup files
 bck.*
 
+ompi_uri.txt
+
 # Files from TERAPI* tests
 tc_server?
 tc_server

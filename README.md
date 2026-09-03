@@ -7,9 +7,9 @@
 ABIN is a program for performing ab initio molecular dynamics.
 It is a general purpose program that was initially designed to model nuclear quantum effects (NQE).
 NQE can be most rigirously captured with path integral MD (PIMD), but also within the Quantum Thermostat based on General Langevin Equation framework developed by Michele Cerriotti.
-ABIN can also simulate non-adiabatic events using Surface-hoping algorithm, using either the classical fewest-switches algorithm (FSSH) or simpler Landau-Zener approach which does not require non-adiabatic couplings. The LZ approach can also capture singlet-triplet transitions.
+ABIN can also simulate non-adiabatic events using Surface-hoping algorithm, using either the classical fewest-switches algorithm (FSSH) or simpler Landau-Zener (LZ) approach which does not require non-adiabatic couplings. The LZ approach can also capture singlet-triplet transitions.
 
-The basic philosophy of ABIN program is simple — 
+The basic philosophy of ABIN program is simple —
 while the program itself handles the propagation of the system according to the equations of motion,
 the forces and energies are taken from an external electronic structure program such as ORCA or TeraChem.
 The call to the chosen external program is handled via a simple shell script interface.
@@ -72,11 +72,41 @@ To install the libraries, you can use the install scripts in `dev_scripts/`.
 We use these in our Continuous Integration testing suite on Github using the Ubuntu 18.04 image.
 
 The optional libraries are:
- - [MPICH](https://www.mpich.org/): An MPI implementation used for Replica Exchange MD and MPI interface with TeraChem.
+ - [MPICH](https://www.mpich.org/): An MPI implementation used for Replica Exchange MD and MPI interface with TeraChem and MACE.
       - If you just need REMD you can also use other MPI libraries such as OpenMPI or IntelMPI.
  - [FFTW](http://www.fftw.org/): Fast Fourier Transform library used for normal mode transformation in Path Integral MD.
  - [PLUMED](https://www.plumed.org/): A collection of very useful tools for free energy calculations (MetaDynamics, Umbrella Sampling etc).
  - [TCPB-CPP](https://github.com/mtzgroup/tcpb-cpp): [EXPERIMENTAL] TCPB interface to TeraChem
+ - [MACE](https://github.com/ACEsuit/mace): Machine Learning Atomic Cluster Expansion potential.
+      - The interface to MACE requires an MPICH installation (see below) and MACE python environment.
+        See `interfaces/MACE/README.md` for details
+
+
+### Installing with MPICH
+
+1. Install MPICH (adjust MPICH_PATH as needed)
+
+```bash
+MPICH_PATH=/home/$USER/software/mpich
+./dev_scripts/install_mpich.sh $MPICH_PATH
+```
+
+2. Compile ABIN and run tests
+
+(Substitute the `<mpich_version>` for the actual version that was installed)
+```bash
+MPICH_PATH=$MPICH_PATH/<mpich_version>/install
+./configure --mpi $MPICH_PATH
+make clean && make
+make test
+```
+
+Before running ABIN, you might need to adjust your PATH and LD_LIBRARY_PATH
+
+```bash
+export LD_LIBRARY_PATH=$MPICH_PATH/lib:$LD_LIBRARY_PATH
+export PATH=$MPICH_PATH/bin:$PATH
+```
 
 
 ## Structure of the repository

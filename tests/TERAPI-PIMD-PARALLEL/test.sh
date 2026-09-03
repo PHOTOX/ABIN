@@ -11,7 +11,7 @@ if ! clean_output_files $1; then
   exit 0
 fi
 
-N_TERA_SERVERS=$(egrep --only-matching 'nteraservers\s*=\s*[0-9]' $ABININ | egrep -o [0-9])
+N_TERA_SERVERS=$(grep -E --only-matching 'nteraservers\s*=\s*[0-9]' $ABININ | grep -E -o [0-9])
 
 # Exit early for OpenMPI build.
 check_for_openmpi

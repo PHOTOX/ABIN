@@ -110,9 +110,9 @@ def parse_diff(fname, absolute_tolerance):
          if len(diff1) != len(diff2):
              print("Number of columns differ!")
              print("Expected:")
-             print(split[1])
+             print(split[1].strip())
              print("Test:")
-             print(split[0])
+             print(split[0].strip())
              exit(1)
          compare_lines(diff1, diff2, absolute_tolerance)
 
@@ -127,6 +127,6 @@ if __name__ == '__main__':
       absolute_tolerance = read_custom_threshold(THR_FNAME)
 
    inpfile = read_cmd()
-   print("Comparing numerical differences in file " + inpfile)
+   print("\nComparing numerical differences in file " + inpfile)
    parse_diff(inpfile, absolute_tolerance)
    exit(0)
