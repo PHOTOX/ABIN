@@ -100,7 +100,7 @@ function cleanup {
 }
 
 function wait_for_portfile {
-  # Wait 10s for the MACE server to write the port file
+  # Wait 20s for the MACE server to write the port file
   MAX_WAIT=20
   i=0
   while [[ ! -f mace_port.txt ]]; do

@@ -4,7 +4,7 @@ This directory contains the Python-based server for the MACE (Machine Learning A
 
 ## Requirements
 
-- Python >= 3.8
+- Python >= 3.9
 - PyTorch >= 1.12
 - mace-torch
 - ase
@@ -54,6 +54,8 @@ before running production calculations!
 
 The MACE server must be launched alongside ABIN using mpirun.
 It is recommended to use the provided launch script `utils/run.mace_mpi_abin.sh`.
+
+MACE model is required to use this interface. If you don't have one, you can check out MACE [foundational models](https://mace-docs.readthedocs.io/en/latest/guide/foundation_models.html).
 
 Rough steps:
 
