@@ -22,6 +22,7 @@ nwritef=1,		! write forces
 &nhcopt
 inose=1,
 temp=298.15,
+temp0=298.15,
 tau0=0.0015
 nrespnose=3
 nyosh=7

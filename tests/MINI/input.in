@@ -19,4 +19,5 @@ gammthr=1.3
 
 &nhcopt
 inose=0,
+temp0=0.0
 /
