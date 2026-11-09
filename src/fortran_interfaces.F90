@@ -28,6 +28,14 @@ module mod_interfaces
          character(len=*), intent(in) :: chpot
       end subroutine force_clas
 
+      subroutine eh_force(x, y, z, fx, fy, fz, energy, pot)
+         import :: DP
+         implicit none
+         real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+         real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :), energy
+         character(len=*), intent(in) :: pot
+      end subroutine eh_force
+
       subroutine force_quantum(fx, fy, fz, x, y, z, amg, energy)
          import :: DP
          implicit none

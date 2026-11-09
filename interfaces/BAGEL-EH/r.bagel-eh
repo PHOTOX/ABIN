@@ -1,0 +1,5 @@
+#!/bin/bash
+# ABIN: BAGEL-EH/r.bagel-eh timestep 001 accuracy < eh_state.dat
+set -eu
+source "$(dirname "$0")/bagel_common.sh"
+run_bagel_eh gradients "$@"

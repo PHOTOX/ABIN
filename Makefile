@@ -113,7 +113,7 @@ endif
 e2etest: ${BIN}
 	/bin/bash tests/test.sh "${BIN}" "$(TEST)" "${MPI}" "${FFTW}" "${PLUMED}" "${CP2K}" "${TCPB}" test
 
-# Runs both end-to-end and unit tests
+# Ehrenfest checks are included in the end-to-end test runner.
 test: unittest e2etest
 
 # Clean all test folders.
@@ -129,3 +129,10 @@ makeref: ${BIN}
 
 
 .PHONY: clean test testclean makeref unittest e2etest
+
+# Analytic Ehrenfest checks without the optional pFUnit dependency.
+ehrenfest-test: ${BIN}
+	$(FC) $(FFLAGS) -Isrc tests/EHRENFEST/ehrenfest_physics.F90 -Lsrc -Lwater_potentials $(LDFLAGS) $(LDLIBS) -o bin/ehrenfest_physics
+	bin/ehrenfest_physics
+	python3 tests/EHRENFEST/test_ehrenfest_backend.py bin/$(BIN)
+	python3 tests/EHRENFEST/test_bagel_interface.py bin/$(BIN)

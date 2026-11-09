@@ -1,0 +1,158 @@
+#!/bin/bash
+
+# This script is should be called by ABIN as
+# MOLPRO-EH/r.molpro-eh.nacm timestep 001 nac_accu < eh_state.dat
+
+# You should't need to modify this file!
+# Specification of CAS wavefunction is in file molpro.setup
+
+cd "$(dirname "$0")"
+timestep=$1
+ibead=$2
+input=input$ibead.nacm
+nac_accu=$3
+
+source ../SetEnvironment.sh MOLPRO
+# Definition of wavefunction
+# (common for both forces and NACME)
+source molpro.setup
+
+# TODO: should do this differently
+rm -f ../nacm.dat
+
+# reading from eh_state.dat
+# Number of states and which NACME to compute
+read -t 2 nstate
+read -t 2 -a tocalc
+
+# Copy WF from previous gradient computation
+# Should correspond to the same geometry
+cp scratch$ibead/input$ibead.wfu scratch$ibead/$input.wfu
+
+cat > $input.com << EOF
+***Abin input
+memory,$memory,m;
+file,2,$input.wfu,old
+PUNCH,$input.pun,new
+!gprint,orbital,civector
+
+Angstrom
+
+geometry=../geom.dat.$ibead
+
+basis=$basis
+
+! for simple CASSCF, you don't need to modify anything below this
+
+!data,truncate,2,5100
+
+if (lastorb.ne.MCSCF)then
+   TEXT, Whoops, this should not happen! Exiting..
+   TEXT, ERROR: Missing CASSCF wavefunction
+   stop
+endif
+EOF
+
+
+###############################################################
+
+
+cat > cas.tmp << EOF
+
+$multi;
+occ,$nocc;
+closed,$nclosed;
+WF,$nelectrons,0,$spin;
+state,$nstate;
+orbital,2101.2
+ciguess,2501.2
+save,ci=2501.2
+diab,3000.2,save=2101.2,method=-1
+
+EOF
+
+# In standard MOLPRO install, one cannot have more than
+# 5 CPMSCF cards per one multi command
+# Hence the following weirdness
+MAX_CPMSCF_CARDS=5
+
+# Count the total number of NACME calcs
+NUM_CPMSCF=0
+let num_nac_total=(nstate-1)*nstate/2
+for ((ist=0;ist<num_nac_total;ist++)) {
+   let NUM_CPMSCF+=${tocalc[$ist]}
+}
+let NUM_MULTI=NUM_CPMSCF/MAX_CPMSCF_CARDS
+if [[ `expr $NUM_CPMSCF % $MAX_CPMSCF_CARDS` -ne 0 || $NUM_MULTI -eq 0 ]];then
+   let NUM_MULTI++
+fi
+
+istate=0
+jstate=1
+tocalc_idx=0
+rec=5001
+for ((n=1;n<=NUM_MULTI;n++))
+do
+   cat cas.tmp >> $input.com
+
+   pom=0
+   for ((ist1=istate; ist1<nstate-1; ist1++))
+   do
+      for ((ist2=jstate; ist2<nstate; ist2++))
+      do
+         if [[ ${tocalc[$tocalc_idx]} -eq 1 ]];then
+            # MOLPRO numbering starts from 1
+            let i=ist1+1
+            let j=ist2+1
+            # Store corresponding cpmscf and forces commands
+            cpmscf[$pom]="cpmcscf, nacm, $i.1, $j.1, save=$rec.2, accu=1d-$nac_accu;"
+            echo "${cpmscf[$pom]}" >> $input.com
+            forces[$pom]="forces; nacm, $rec.2;"
+            let rec++
+            let pom++
+         fi
+         let jstate++
+         let tocalc_idx++
+         if [[ $pom -eq $MAX_CPMSCF_CARDS ]];then
+            break
+         fi
+      done
+
+
+      if [[ $pom -eq $MAX_CPMSCF_CARDS ]];then
+         break
+      else
+         let istate++
+         let jstate=istate+1
+      fi
+
+   done
+   
+   # Print corresponding forces commands
+   for ((i=0; i<pom; i++)); do
+      echo ${forces[$i]} >> $input.com
+   done
+
+done
+
+# END OF MOLPRO INPUT
+
+# MOLPRO JOB
+export TMPDIR=$PWD/scratch$ibead
+$MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
+
+# Check whether all is OK.
+if [[ $? -eq 0 ]];then
+   cp $input.com.out $input.com.out.prev
+else 
+   cp $input.com.out $input.com.out.errornacm.$timestep
+   # TODO: indicate different problems with different exit signals
+   exit 2
+fi
+
+# Collect output for ABIN
+
+# Extracting non-adiabatic coupling matrix elements (NACME)
+# Better precision in $input.pun
+grep 'NACME,' $input.pun | awk '{print $5,$6,$7}' > ../nacm.dat
+

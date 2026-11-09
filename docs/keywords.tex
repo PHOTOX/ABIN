@@ -23,6 +23,7 @@ Order of namelists in the input file is irrelevant.
  & & \textbf{md} --- Classical simulation \\ 
  & & \textbf{pimd} --- Path-integral simulation \\  
  & & \textbf{sh} --- Surface Hopping \\
+ & & \textbf{ehrenfest} --- Adiabatic mean-field electron--nuclear dynamics \\
  & & \textbf{landau\_zener} --- Laundau--Zener Surface Hopping \\ 
 
 \textit{pot} & - & Specifies where do we get forces and energies. Supported options are: \\
@@ -208,6 +209,43 @@ matches the desired temperature. This should reduce the initial oscillations of 
 \hline
 \end{tabularx}
 
+
+\newpage
+\subsection{\&eh}
+Read for \textit{mdtype='ehrenfest'} (\textit{ipimd=6}).
+The initial implementation supports a fresh, unconstrained single-trajectory
+NVE run with the analytic NaI model or an Ehrenfest shell interface
+(for example, \textit{pot='molpro-eh'} with \textit{MOLPRO-EH},
+or \textit{pot='bagel-eh'} with \textit{BAGEL-EH}).
+Set \textit{inose=0} and \textit{irest=0}. Restarts, thermostats, SHAKE,
+QM/MM, REMD, external bias forces and reference potentials are not supported.
+
+\begin{tabularx}{\textwidth}{lcX}
+\textit{keyword} & \textbf{default} & Description \\
+\hline
+\textit{nstate} & \textbf{1} & Number of adiabatic electronic states. \\
+\textit{istate\_init} & \textbf{1} & Initially populated state (ground state is 1). \\
+\textit{substep} & \textbf{100} & Electronic integration steps per nuclear step. \\
+\textit{integ} & \textbf{butcher} & Existing electronic integrator: butcher, rk4 or euler. \\
+\textit{couplings} & \textbf{analytic} & Full NAC vectors are required; other values are rejected. \\
+\textit{popsumthr} & \textbf{0.001} & Maximum permitted error in the electronic norm. \\
+\textit{nac\_accu1} & \textbf{7} & Requested NAC accuracy, $10^{-n}$. \\
+\textit{nac\_accu2} & \textbf{5} & Retry accuracy if the first NAC calculation fails. \\
+\hline
+\end{tabularx}
+
+All state gradients and all pairwise NAC vectors are requested without
+population or energy-gap screening. Ehrenfest owns its electronic energies,
+force caches, NAC vectors and phase alignment. Each shell evaluation requests
+all state gradients together, followed by all pairwise NAC vectors. The
+interface uses \textit{eh\_state.dat} independently of SH request files; see
+Section~\ref{sec:eh-interface} for the contract.
+The electronic propagator in \textit{eh\_integ.F90} uses the same numerical
+schemes as surface hopping with independent wavefunction storage. Ehrenfest uses
+neither stochastic hops, velocity rescaling nor decoherence correction.
+\textit{pop.dat} contains time, all populations and their sum, with no active-state
+column; \textit{PES.dat} contains all adiabatic energies. The potential energy
+in \textit{energies.dat} is the population-weighted mean energy.
 
 \newpage
 \subsection{\&sh}

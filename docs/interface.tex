@@ -45,3 +45,66 @@ For expert users we recommend further exploring the interfaces folder for exotic
 
 
 
+
+\subsection{Independent Ehrenfest interfaces}
+\label{sec:eh-interface}
+Ehrenfest dynamics calls \textit{mod\_eh\_backend} in
+\textit{src/eh\_backend.F90}. Its entry point takes coordinates and returns
+arrays of energies, Cartesian state forces and derivative-coupling vectors
+explicitly. The array shapes are $(N_{\rm state})$ for energies,
+$(N_{\rm atom},1,N_{\rm state})$ for forces and
+$(N_{\rm atom},N_{\rm state},N_{\rm state})$ for each Cartesian NAC component.
+Backends do not access SH state, populations, gradient requests or integrators.
+Direct interfaces can be added to its dispatch routine; custom shell backends
+can use any potential name without a hard-coded program whitelist.
+
+For shell backends, \textit{pot='program'} selects
+\textit{PROGRAM/r.program}. ABIN writes \textit{geom.dat.001} in the usual
+headerless XYZ format (angstrom), and invokes the script with the arguments
+\textit{timestep 001 accuracy}, redirecting \textit{eh\_state.dat} to stdin.
+The first input line contains the number of states. The second contains
+one gradient-request flag per state (all ones). The output
+\textit{engrad.dat.001} must contain all state energies, one per line, followed
+by one block of $N_{\rm atom}$ Cartesian energy-gradient rows per state,
+in state order. Energies and gradients are in atomic units. ABIN converts
+the gradients to forces.
+
+For two or more states, ABIN then invokes \textit{PROGRAM/r.program.nacm}
+with the same argument layout. The input's second line contains all upper
+triangular pair-request flags, ordered $(1,2),(1,3),\ldots,(2,3),\ldots$.
+The script writes \textit{nacm.dat}: one $N_{\rm atom}$ block of three Cartesian
+NAC components per pair, in the same order and in inverse bohr. ABIN constructs
+the antisymmetric lower triangle. Failed or incomplete NAC output is retried
+using \textit{nac\_accu2} when it is lower than \textit{nac\_accu1}.
+A one-state run needs no NAC script. Missing or truncated output is an error;
+outputs left over from a previous call are removed before each invocation.
+
+\textit{interfaces/MOLPRO-EH} provides a separate all-state MOLPRO adapter.
+Copy that directory alongside the input, configure its \textit{molpro.setup}
+and the usual \textit{SetEnvironment.sh}, and set \textit{pot='molpro-eh'}.
+
+\subsubsection{BAGEL Ehrenfest adapter}
+Copy \textit{interfaces/BAGEL-EH} alongside the ABIN input and set
+\textit{mdtype='ehrenfest'} and \textit{pot='bagel-eh'}. Configure the basis,
+charge, spin and active space in \textit{BAGEL-EH/bagel.inp}. Its \textit{method}
+accepts \textit{sa\_casscf}, \textit{ms\_caspt2} or \textit{xms\_caspt2}.
+Set \textit{BAGELEXE} to the executable or launcher command, for example
+\textit{mpirun -n 8 BAGEL}; the default executable name is \textit{BAGEL}.
+The adapter also requires Python 3.
+
+Each invocation batches the requested derivatives in BAGEL's \textit{forces}
+block. ABIN states are translated to BAGEL's zero-based targets. NAC requests
+explicitly select \textit{nacmtype='full'}. The gradient job saves
+\textit{orbitals.archive}; subsequent jobs load that reference with the current
+geometry. Logs and generated JSON remain in \textit{BAGEL-EH/input001.*}.
+A requested accuracy $n$ sets the CASSCF threshold to $10^{-(n+1)}$, following
+the existing BAGEL interface convention; it is not a direct NAC error bound.
+CASPT2 convergence and Z-vector iteration limits are configurable in
+\textit{bagel.inp}.
+
+The parser accepts BAGEL's \textit{.out} and \textit{.txt} export filenames,
+checks state and atom counts, and passes raw gradients to ABIN for conversion
+to forces. Missing, unordered, truncated or non-finite export data are rejected.
+The implementation follows the BAGEL documentation:
+\url{https://nubakery.org/grad/force.html} and
+\url{https://nubakery.org/grad/dynamics.html}.

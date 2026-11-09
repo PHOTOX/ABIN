@@ -1,0 +1,20 @@
+# Electronic-structure settings for BAGEL-EH; sourced by the interface scripts.
+# Number of states comes from &eh in the ABIN input.
+basis=cc-pvdz
+df_basis=cc-pvdz-jkfit
+hf_variant=rohf
+method=xms_caspt2       # sa_casscf, ms_caspt2 or xms_caspt2
+charge=0
+nspin=0
+nact=8                 # Set the active space for your molecule.
+nclosed=15
+maxiter_CASSCF=500
+maxiter_CASPT2=300
+maxziter=100
+thresh_CASPT2=1.0e-8
+shift=0.25             # Imaginary CASPT2 shift, as in the existing BAGEL interfaces.
+
+# BAGELEXE can include an MPI launcher, e.g. "mpirun -n 8 BAGEL".
+# Site-specific environments can be sourced here if needed:
+# source ../SetEnvironment.sh BAGEL
+BAGELEXE=${BAGELEXE:-BAGEL}

@@ -25,6 +25,7 @@ program abin
       & nwrite, nstep, it, inormalmodes, istage, irest, STOP_SIMULATION
    use mod_init, only: init
    use mod_sh, only: surfacehop, sh_init, get_nacm, move_vars
+   use mod_eh, only: eh_init, eh_output, eh_mean_force
    use mod_lz, only: lz_hop, en_array_lz, lz_rewind
    use mod_kinetic, only: temperature
    use mod_utils, only: del_file, archive_file
@@ -65,6 +66,10 @@ program abin
       call sh_init(x, y, z, vx, vy, vz)
    end if
 
+   if (ipimd == 6) then
+      call eh_init(x, y, z, vx, vy, vz)
+   end if
+
    write (stdout, '(A)') 'Job started at: '//trim(get_formatted_date_and_time(time_start))
    write (stdout, *) ''
 
@@ -96,7 +101,12 @@ program abin
    call mpi_barrier_wrapper()
 
    ! Get initial forces and energies
-   call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+   if (ipimd == 6) then
+      ! eh_init already evaluated the initial geometry.
+      call eh_mean_force(fxc, fyc, fzc, eclas)
+   else
+      call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+   end if
    if (ipimd == 1) then
       call force_quantum(fxq, fyq, fzq, x, y, z, amg, equant)
    end if
@@ -197,6 +207,11 @@ program abin
          if (pot == '_tera_') then
             call move_new2old_terash()
          end if
+      end if
+
+      ! Ehrenfest dynamics
+      if (ipimd == 6) then
+         call eh_output()
       end if
 
       ! SWAP REMD REPLICAS

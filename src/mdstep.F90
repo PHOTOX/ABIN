@@ -56,7 +56,7 @@ contains
       end if
 
       ! Selecting proper integrator for a given MD type
-      if (ipimd == 2 .or. ipimd == 5) then
+      if (ipimd == 2 .or. ipimd == 5 .or. ipimd == 6) then
          mdstep => verletstep
          nabin = 1
       else if (ipimd == 1 .and. inormalmodes /= 1) then
@@ -229,7 +229,8 @@ contains
    ! Contains propagation of normal modes according to:
    ! eq 23 from J. Chem. Phys. 133, 124104 2010
    subroutine verletstep(x, y, z, px, py, pz, amt, dt, eclas, fxc, fyc, fzc)
-      use mod_general, only: pot, inormalmodes, en_restraint
+      use mod_general, only: pot, inormalmodes, en_restraint, ipimd
+      use mod_eh, only: eh_advance, eh_mean_force
       use mod_interfaces, only: force_clas
       use mod_en_restraint
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
@@ -252,6 +253,12 @@ contains
       end if
 
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
+
+      if (ipimd == 6) then
+         ! Drift velocities are centered on this nuclear interval.
+         call eh_advance(px / amt, py / amt, pz / amt, dt)
+         call eh_mean_force(fxc, fyc, fzc, eclas)
+      end if
 
       call shiftP(px, py, pz, fxc, fyc, fzc, dt / 2)
 

@@ -3,11 +3,11 @@
 subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
    use mod_const, only: DP
    use mod_general, only: natom, nwalk, istage, inormalmodes, &
-                          pot, pot_ref
+                          pot, pot_ref, ipimd
    use mod_system, only: conatom
    use mod_nhc, only: inose
    use mod_transform
-   use mod_interfaces, only: force_wrapper
+   use mod_interfaces, only: force_wrapper, eh_force
    implicit none
    real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
    real(DP), intent(inout) :: fx(:, :), fy(:, :), fz(:, :)
@@ -53,7 +53,11 @@ subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
 
    ! LET'S GET FORCES!
    ! The ab initio interface is still deeper in force_abin()
-   call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, chpot, nwalk)
+   if (ipimd == 6) then
+      call eh_force(transx, transy, transz, fxab, fyab, fzab, eclas, chpot)
+   else
+      call force_wrapper(transx, transy, transz, fxab, fyab, fzab, eclas, chpot, nwalk)
+   end if
 
    ! For reference potential (ring-polymer contraction not yet implemented)
    if (pot_ref /= '_none_' .and. chpot == pot) then
@@ -123,6 +127,33 @@ subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
    energy = eclas
 
 end subroutine force_clas
+
+! Ehrenfest backend dispatch returns all state forces and NACs explicitly.
+subroutine eh_force(x, y, z, fx, fy, fz, energy, pot)
+   use mod_const, only: DP
+   use mod_eh, only: en_array, nacx, nacy, nacz, state_fx, state_fy, state_fz, &
+                     old_en, old_nacx, old_nacy, old_nacz, eh_mean_force, eh_phase_nacme, nac_accu1, nac_accu2
+   use mod_eh_integ, only: eh_set_energy_shift
+   use mod_eh_backend, only: eh_evaluate_backend
+   implicit none
+   real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
+   real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :), energy
+   character(len=*), intent(in) :: pot
+   logical, save :: have_data = .false.
+
+   old_en = en_array
+   old_nacx = nacx; old_nacy = nacy; old_nacz = nacz
+   call eh_evaluate_backend(x, y, z, en_array, state_fx, state_fy, state_fz, &
+                            nacx, nacy, nacz, pot, nac_accu1, nac_accu2)
+   call eh_phase_nacme()
+   if (.not. have_data) then
+      old_en = en_array
+      old_nacx = nacx; old_nacy = nacy; old_nacz = nacz
+      call eh_set_energy_shift(en_array(1))
+      have_data = .true.
+   end if
+   call eh_mean_force(fx, fy, fz, energy)
+end subroutine eh_force
 
 subroutine force_wrapper(x, y, z, fx, fy, fz, e_pot, chpot, walkmax)
    use mod_const, only: DP

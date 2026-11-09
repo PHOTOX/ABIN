@@ -164,7 +164,7 @@ contains
          open (UENERGY, file=chfiles(UENERGY), access=chaccess, action='write')
       end if
 
-      if (ipimd == 5) then
+      if (ipimd == 5 .or. ipimd == 6) then
          open (UPES, file=chfiles(UPES), access=chaccess, action='write')
          open (UPOP, file=chfiles(UPOP), access=chaccess, action='write')
       end if
@@ -284,6 +284,7 @@ contains
       end if
 
       headers(UPOP) = '#    Time[fs] CurrentState   Populations Sum-of-Populations'
+      if (ipimd == 6) headers(UPOP) = '# Time[fs] Populations Sum-of-Populations'
       headers(UPHASE) = '# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
       headers(UPROB) = '#    Time[fs] CurrentState   Probabilities'
       headers(UDOTPROD) = '#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'

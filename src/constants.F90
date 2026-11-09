@@ -35,5 +35,7 @@ module mod_const
    real(DP), parameter :: AUTODEBYE = 2.54174623D0
    ! Boltzmann constant in a.u., assumed to be 1.0d0 in the program
    real(DP), parameter :: KBinAU = 0.9999999748284666D0
+   !one global imaginary unit for simplier work with complex numbers
+   complex(2*DP), parameter :: imaginary_unit = (0.0_DP, 1.0_DP)
    save
 end module mod_const

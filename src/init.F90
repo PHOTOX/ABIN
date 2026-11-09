@@ -40,10 +40,12 @@ contains
       use mod_nhc
       use mod_estimators
       use mod_potentials
-      use mod_potentials_sh
+      use mod_potentials_nai, only: nai_init
       use mod_sh_integ, only: phase, nstate
       use mod_sh, only: read_sh_input, print_sh_input
       use mod_lz, only: read_lz_input, print_lz_input, lz_init
+      use mod_eh_integ, only: nstate_eh => nstate
+      use mod_eh, only: read_eh_input, print_eh_input
       use mod_qmmm, only: natqm, natmm
       use mod_force_mm, only: initialize_mm
       use mod_force_h2o, only: initialize_h2o_pot, h2opot
@@ -235,6 +237,8 @@ contains
             ipimd = 3
          case ('landau_zener')
             ipimd = 5
+         case ('ehrenfest')
+            ipimd = 6
          case default
             call fatal_error(__FILE__, __LINE__, 'invalid mdtype in '//trim(chinput))
          end select
@@ -388,6 +392,10 @@ contains
       if (ipimd == 5) then
          call read_lz_input(uinput)
          call lz_init(pot)
+      end if
+
+      if (ipimd == 6) then
+         call read_eh_input(uinput)
       end if
 
       if (iremd == 1) then
@@ -556,7 +564,11 @@ contains
          call initialize_mm(natom, atnames, mm_types, q, LJ_rmin, LJ_eps)
       end if
       if (pot == '_nai_' .or. pot_ref == '_nai_') then
-         call nai_init(natom, nwalk, ipimd, nstate)
+         if (ipimd == 6) then
+            call nai_init(natom, nwalk, ipimd, nstate_eh)
+         else
+            call nai_init(natom, nwalk, ipimd, nstate)
+         end if
       end if
 
       if (my_rank == 0) then
@@ -662,7 +674,7 @@ contains
             write (*, *) chknow
             if (iknow /= 1) error = 1
          end if
-         if (ipimd < 0 .or. ipimd > 5) then
+         if (ipimd < 0 .or. ipimd > 6) then
             write (*, *) 'Invalid ipimd value'
             error = 1
          end if
@@ -802,6 +814,8 @@ contains
             write (stdout, *) '              Minimization                    '
          case (5)
             write (stdout, *) '             Landau Zener MD                  '
+         case (6)
+            write (stdout, *) '              Ehrenfest MD                    '
          end select
 
          write (stdout, *) '    using potential: '//toupper(trim(pot))
@@ -829,6 +843,10 @@ contains
             call print_lz_input()
             write (stdout, *)
          end if
+         if (ipimd == 6) then
+            call print_eh_input()
+            write (stdout, *)
+         end if
          if (iqmmm > 0 .or. pot == '_mm_') then
             write (stdout, nml=qmmm, delim='APOSTROPHE')
             write (stdout, *)
@@ -852,6 +870,28 @@ contains
          write (stdout, *) '      V. Juraskova, M. Barnfield, J. Chalabala and others'
          write (stdout, *) ' '
       end subroutine print_logo
+
+      subroutine print_photox_logo() !Handmade without any AI assistance by M. Klíma
+         write (stdout, *) '     ____                           '
+         write (stdout, *) '    /    \                          '
+         write (stdout, *) ' __/ @    ╲                         '
+         write (stdout, *) '<___    ___L___             ______  '
+         write (stdout, *) '    \  ▕######^\____~^^^^^^^______>'
+         write (stdout, *) '    |  [############^\___     _____>'
+         write (stdout, *) '    |   \################^\  _____> '
+         write (stdout, *) '     ^\    ^^\##############>       '
+         write (stdout, *) '       ^\         ^\#####/^         '
+         write (stdout, *) '         ^\________// ^^            '
+         write (stdout, *) '              |  |                  '
+         write (stdout, *) '              /  |                  '
+         write (stdout, *) '            _/   |                  '
+         write (stdout, *) '            /▏ __L                 '
+         write (stdout, *) '  ____  _   _  ___ _____ _____  __  '
+         write (stdout, *) ' |  _ \| | | |/ _ \_   _/ _ \ \/ /  '
+         write (stdout, *) ' | |_) | |_| | | | || || | | \  /   '
+         write (stdout, *) ' |  __/|  _  | |_| || || |_| /  \   '
+         write (stdout, *) ' |_|   |_| |_|\___/ |_| \___/_/\_\  '
+      end subroutine print_photox_logo
 
    end subroutine init
 

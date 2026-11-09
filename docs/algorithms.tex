@@ -253,3 +253,23 @@ where $\Delta E_{ij}$ is the energy difference and $t^\dagger$ is time of crossi
 
 The limits of the method are following. Since the formula was originally developed for a two state problem, accuracy may decrease for dense manifolds of states or when encountering three-state intersections. For mixed singlet--triplet dynamics, it works well when SOCs are moderate, but will break down once the state splittings become large (e.g., HI molecule). Due to the reliance of the method on PESs one needs to use an electronic structure method that provides continuous energies without any sudden jumps. These would create false crossing events and render the results unreliable. Nevertheless, the code should issue warning in these cases.\cite{Jira2025}
 
+
+\subsection{Simple Ehrenfest dynamics}
+For real adiabatic states, define
+$\mathbf d_{ij}=\langle\phi_i|\nabla_R\phi_j\rangle$ and
+$\mathbf F_i=-\nabla_R E_i$. In atomic units the implemented equations are
+\begin{eqnarray}
+\dot c_i &=& -i E_i c_i-\sum_j c_j\dot{\mathbf R}\cdot\mathbf d_{ij},\\
+\mathbf F &=& \sum_i |c_i|^2\mathbf F_i
+-2\sum_{i<j}\mathrm{Re}(c_i^*c_j)(E_j-E_i)\mathbf d_{ij}.
+\end{eqnarray}
+A constant energy shift is removed during electronic propagation; it affects
+only the global electronic phase. After the first Verlet momentum half-step
+and the position drift, the new state forces and NAC vectors are evaluated.
+Energies and NAC vectors are linearly interpolated between nuclear endpoints,
+and the electronic coefficients are propagated using the drift velocity.
+The mean force is then recomputed from the updated coefficients before the
+final momentum half-step. Electronic substeps do not require new backend calls.
+NAC phases are aligned by vector overlap with the preceding Ehrenfest endpoint.
+This assumes a smoothly trackable, real adiabatic basis; it does not implement
+state tracking through arbitrary rotations within degenerate subspaces.
