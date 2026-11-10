@@ -270,6 +270,13 @@ Energies and NAC vectors are linearly interpolated between nuclear endpoints,
 and the electronic coefficients are propagated using the drift velocity.
 The mean force is then recomputed from the updated coefficients before the
 final momentum half-step. Electronic substeps do not require new backend calls.
+The existing nuclear thermostats use the same symmetric splitting as ordinary
+velocity Verlet: a thermostat half-step precedes the first force kick, and
+another follows the final force kick. Nos\'{e}--Hoover chains and GLE therefore
+act on nuclear momenta while leaving the electronic coefficients fixed during
+each thermostat half-step. The electronic propagation uses the drift velocity
+after the first thermostat half-step and force kick, so the NAC contraction
+follows the actual nuclear displacement.
 NAC phases are aligned by vector overlap with the preceding Ehrenfest endpoint.
 This assumes a smoothly trackable, real adiabatic basis; it does not implement
 state tracking through arbitrary rotations within degenerate subspaces.

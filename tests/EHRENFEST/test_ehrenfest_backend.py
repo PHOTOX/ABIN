@@ -55,7 +55,7 @@ nstep=1, dt=0.1, nwrite=1, nwritef=1, nwritex=1, nwritev=0,
 inose=0, temp=0.0,
 /
 &eh
-nstate={nstates}, istate_init={initial_state},
+nstate={nstates}, istate_init={initial_state}, nac_accu1=7, nac_accu2=5,
 /
 &system
 /

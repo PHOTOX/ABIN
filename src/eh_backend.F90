@@ -1,4 +1,4 @@
-! Ehrenfest electronic-structure interfaces. No SH state or propagation is used.
+! Ehrenfest electronic-structure interfaces.
 ! Backends receive coordinates and return all adiabatic states in atomic units.
 module mod_eh_backend
    use mod_const, only: DP, ANG
@@ -35,7 +35,7 @@ contains
       character(len=*), intent(in) :: pot
       integer, intent(in) :: nac_accu1, nac_accu2
       character(:), allocatable :: script
-      integer :: u, state, nstates, natoms, status
+      integer :: u, state, nstates, natoms, status, gradient_accuracy
       logical :: abort
 
       natoms = size(x, 1)
@@ -44,7 +44,10 @@ contains
       call write_geom('geom.dat.001', names, x, y, z, natoms, 1)
       call write_eh_requests(nstates, nac_request=.false.)
       call discard_output('engrad.dat.001')
-      status = run_eh_script(script, 7)
+      gradient_accuracy = 7
+      ! BAGEL-EH evaluates gradients and NACs together and caches the NAC output.
+      if (pot == 'bagel-eh' .and. nstates > 1) gradient_accuracy = max(gradient_accuracy, nac_accu1)
+      status = run_eh_script(script, gradient_accuracy)
       if (status /= 0) call fatal_error(__FILE__, __LINE__, 'Ehrenfest gradient interface failed: '//script)
 
       abort = .false.

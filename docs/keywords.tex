@@ -213,12 +213,25 @@ matches the desired temperature. This should reduce the initial oscillations of 
 \newpage
 \subsection{\&eh}
 Read for \textit{mdtype='ehrenfest'} (\textit{ipimd=6}).
-The initial implementation supports a fresh, unconstrained single-trajectory
-NVE run with the analytic NaI model or an Ehrenfest shell interface
+Ehrenfest supports a fresh, unconstrained single-trajectory
+run with the analytic NaI model or an Ehrenfest shell interface
 (for example, \textit{pot='molpro-eh'} with \textit{MOLPRO-EH},
 or \textit{pot='bagel-eh'} with \textit{BAGEL-EH}).
-Set \textit{inose=0} and \textit{irest=0}. Restarts, thermostats, SHAKE,
-QM/MM, REMD, external bias forces and reference potentials are not supported.
+Set \textit{irest=0}. Restarts, SHAKE, QM/MM, REMD, external bias forces
+and reference potentials are not supported.
+
+Configure nuclear thermostatting in the usual \textit{\&thermostat} section
+(the legacy \textit{\&nhcopt} section is also accepted).
+Use \textit{inose=0} for NVE, \textit{therm='nhc'} (\textit{inose=1}) for
+Nos\'{e}--Hoover chains, or \textit{therm='gle'} (\textit{inose=2}) for GLE
+with \textit{GLE-A} and \textit{GLE-C} files. Canonical GLE
+(\textit{inose=4}) uses \textit{GLE-A} and sets its covariance from
+\textit{temp}; it needs no \textit{GLE-C} file. Both global
+(\textit{imasst=0}) and massive (\textit{imasst=1}) Nos\'{e}--Hoover
+thermostatting use the existing \textit{tau0}, \textit{nchain} and integration
+settings. The shared Langevin thermostat (\textit{inose=3}) is also available.
+Thermostats act on nuclear momenta; electronic coefficients evolve with the
+velocities of the thermostatted nuclear trajectory.
 
 \begin{tabularx}{\textwidth}{lcX}
 \textit{keyword} & \textbf{default} & Description \\
@@ -246,6 +259,10 @@ neither stochastic hops, velocity rescaling nor decoherence correction.
 \textit{pop.dat} contains time, all populations and their sum, with no active-state
 column; \textit{PES.dat} contains all adiabatic energies. The potential energy
 in \textit{energies.dat} is the population-weighted mean energy.
+With a thermostat, the physical energy in \textit{energies.dat} can change
+as heat is exchanged. The last column of \textit{temper.dat} includes the
+Nos\'{e}--Hoover extended energy or the GLE/Langevin accumulated heat,
+using the same convention as ordinary MD.
 
 \newpage
 \subsection{\&sh}

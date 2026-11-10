@@ -21,14 +21,16 @@ module mod_eh_integ
 
    ! Complex amplitudes
    complex(2*DP), allocatable :: cel(:)
+   ! phase for phase=1, i.e. the phase of the wavefunction in the adiabatic representation
    real(DP), allocatable, dimension(:, :) :: gama
 
    real(DP) :: Eshift, popsumthr = 0.001D0
-   ! TODO: phase variable should be named differently (as in sh_integ.F90) to avoid confusion with the phase of the wavefunction.
+   ! TODO: phase variable should be named differently (as in sh_integ.F90) to avoid confusion with the phase of the wavefunction (gama).
    integer :: phase = 0
    ! Number of electronic states
    integer :: nstate = 1
 
+   ! The Ehrenfest integrator is selected at runtime and stored in a procedure pointer.
    abstract interface
       subroutine eh_integrator(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
          import :: DP
@@ -62,37 +64,44 @@ contains
    end subroutine eh_select_integrator
 
    ! Calculate electronic population of a given state
-   ! from the Ehrenfest wavefunction.
    real(DP) function get_elpop(state) result(el_pop)
       integer, intent(in) :: state
       el_pop = real(conjg(cel(state)) * cel(state))
    end function get_elpop
 
    ! Electronic coherence: real part of conjg(c_i)*c_j in the adiabatic representation.
-   ! The derivative-coupling vectors themselves are stored in nacx, nacy and nacz.
    real(DP) function get_coherence(i, j) result(coherence)
       integer, intent(in) :: i, j
       complex(2*DP) :: density_element
 
       density_element = conjg(cel(i)) * cel(j)
+
+      !contribution from the phase of the wavefunction in the adiabatic representation
       if (phase == 1) density_element = density_element * exp(imaginary_unit * gama(i, j))
+
       coherence = real(density_element)
    end function get_coherence
 
+   ! Integrate the Ehrenfest wavefunction over one step
    subroutine integstep(k, en, y, dotprod, gam, dtp)
       complex(2*DP), intent(out) :: k(:)
       complex(2*DP), intent(in) :: y(:)
       real(DP), intent(in) :: en(:), dotprod(:, :), gam(:, :), dtp
       integer :: ist1, ist2
 
-      k = (0.0_DP, 0.0_DP)
+      ! contribution to the change from the state it self
+      k = -imaginary_unit * en * y
       if (phase == 0) then
-         k = -imaginary_unit * en * y
          do ist1 = 1, nstate
             do ist2 = 1, nstate
-               if (ist1 /= ist2) k(ist1) = k(ist1) - y(ist2) * dotprod(ist1, ist2)
+               ! contribution from the other states
+               if (ist1 /= ist2) then
+                  k(ist1) = k(ist1) - y(ist2) * dotprod(ist1, ist2)
+               end if
             end do
          end do
+         ! same as above but for the flow of the code done separately
+         ! ifs are heavy
       else if (phase == 1) then
          do ist1 = 1, nstate
             do ist2 = 1, nstate
@@ -102,9 +111,11 @@ contains
             end do
          end do
       end if
+
       k = dtp * k
    end subroutine integstep
 
+   ! Integrate the phase (gama) of the Ehrenfest wavefunction over one step
    subroutine integ_gama(en_array_int, en_array_newint, dtp)
       real(DP), intent(in) :: en_array_int(:)
       real(DP), intent(in) :: en_array_newint(:)
@@ -117,6 +128,7 @@ contains
             if (ist1 /= ist2) then
                g = (en_array_int(ist1) + en_array_newint(ist1)) / 2
                g = g - (en_array_int(ist2) + en_array_newint(ist2)) / 2
+
                gama(ist1, ist2) = gama(ist1, ist2) + g * dtp
             end if
          end do
@@ -124,6 +136,7 @@ contains
 
    end subroutine integ_gama
 
+   ! euler integrator for the Ehrenfest (not ideal but it is an option)
    subroutine eulerstep(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
       real(DP), intent(in) :: en_array_int(:), en_array_newint(:)
       real(DP), intent(in) :: dotproduct_int(:, :), dotproduct_newint(:, :), dtp
@@ -134,6 +147,7 @@ contains
       call integ_gama(en_array_int, en_array_newint, dtp)
    end subroutine eulerstep
 
+   ! rk4 integrator for the Ehrenfest
    subroutine rk4step(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
       real(DP), intent(in) :: en_array_int(:), en_array_newint(:)
       real(DP), intent(in) :: dotproduct_int(:, :), dotproduct_newint(:, :), dtp
@@ -157,6 +171,7 @@ contains
       cel = cel + k1 / 6 + k2 / 3 + k3 / 3 + k4 / 6
    end subroutine rk4step
 
+   ! butcher integrator for the Ehrenfest
    subroutine butcherstep(en_array_int, en_array_newint, dotproduct_int, dotproduct_newint, dtp)
       real(DP), intent(in) :: en_array_int(:), en_array_newint(:)
       real(DP), intent(in) :: dotproduct_int(:, :), dotproduct_newint(:, :), dtp
@@ -209,6 +224,7 @@ contains
       end do
    end subroutine eh_read_phase_bin
 
+   !TODO: expand to have multiple initial states
    subroutine eh_set_initialwf(initial_state)
       integer, intent(in) :: initial_state
 
@@ -221,7 +237,6 @@ contains
 
    subroutine eh_set_energy_shift(potential_energy)
       real(DP), intent(in) :: potential_energy
-
       Eshift = -potential_energy
    end subroutine eh_set_energy_shift
 
@@ -246,6 +261,7 @@ contains
       end do
    end subroutine eh_read_wf
 
+   !better to check sometimes
    real(DP) function check_popsum()
       use mod_files, only: stderr
       real(DP) :: popsum

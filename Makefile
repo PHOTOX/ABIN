@@ -136,3 +136,4 @@ ehrenfest-test: ${BIN}
 	bin/ehrenfest_physics
 	python3 tests/EHRENFEST/test_ehrenfest_backend.py bin/$(BIN)
 	python3 tests/EHRENFEST/test_bagel_interface.py bin/$(BIN)
+	python3 tests/EHRENFEST/test_ehrenfest_thermostats.py bin/$(BIN)

@@ -90,17 +90,31 @@ charge, spin and active space in \textit{BAGEL-EH/bagel.inp}. Its \textit{method
 accepts \textit{sa\_casscf}, \textit{ms\_caspt2} or \textit{xms\_caspt2}.
 Set \textit{BAGELEXE} to the executable or launcher command, for example
 \textit{mpirun -n 8 BAGEL}; the default executable name is \textit{BAGEL}.
-The adapter also requires Python 3.
+The adapter uses Bash and standard Unix tools (including AWK); no Python runtime is required.
 
-Each invocation batches the requested derivatives in BAGEL's \textit{forces}
-block. ABIN states are translated to BAGEL's zero-based targets. NAC requests
-explicitly select \textit{nacmtype='full'}. The gradient job saves
-\textit{orbitals.archive}; subsequent jobs load that reference with the current
-geometry. Logs and generated JSON remain in \textit{BAGEL-EH/input001.*}.
-A requested accuracy $n$ sets the CASSCF threshold to $10^{-(n+1)}$, following
-the existing BAGEL interface convention; it is not a direct NAC error bound.
-CASPT2 convergence and Z-vector iteration limits are configurable in
-\textit{bagel.inp}.
+The gradient invocation batches all state gradients and all upper-triangular
+NAC pairs in a single BAGEL \textit{forces} block, sharing one electronic
+energy calculation. ABIN states are translated to BAGEL's zero-based targets;
+NAC entries explicitly select \textit{nacmtype='full'}. The job saves
+\textit{orbitals.archive}; subsequent gradient jobs load that reference with
+the current geometry. Logs and generated JSON remain in
+\textit{BAGEL-EH/input001.*}.
+
+The NAC entry point restores the validated NAC vectors from private
+\textit{BAGEL-EH/.bagel-eh.001.*} cache files without launching BAGEL again.
+It requires matching timestep, bead, state count, geometry and electronic
+settings, and a cached accuracy at least as strict as requested. Every new
+gradient invocation invalidates the old cache; a failed calculation cannot
+leave reusable NACs. A single-state job requests only its state gradient.
+
+For BAGEL-EH, ABIN runs the combined job with accuracy
+$n=\max(7,\mathrm{nac\_accu1})$ for multiple states (7 for one state).
+Accuracy $n$ sets the CASSCF threshold to $10^{-(n+1)}$, following the existing
+BAGEL interface convention; it is not a direct NAC error bound. CASPT2
+convergence and Z-vector iteration limits are configurable in
+\textit{bagel.inp}. When invoking the scripts manually, the gradient call's
+accuracy must be at least the subsequent NAC call's accuracy. NAC retries
+restore the same cached vectors; they do not launch a new electronic job.
 
 The parser accepts BAGEL's \textit{.out} and \textit{.txt} export filenames,
 checks state and atom counts, and passes raw gradients to ABIN for conversion

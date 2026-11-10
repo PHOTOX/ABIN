@@ -1,5 +1,6 @@
 #!/bin/bash
 # ABIN: BAGEL-EH/r.bagel-eh.nacm timestep 001 accuracy < eh_state.dat
+# Restore NACs from the matching combined gradient job; no BAGEL launch.
 set -eu
 source "$(dirname "$0")/bagel_common.sh"
 run_bagel_eh nac "$@"
