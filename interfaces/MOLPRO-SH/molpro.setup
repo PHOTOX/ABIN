@@ -1,3 +1,5 @@
+#procedure parametrs
+NCORES=${NCORES:-1} # Number of parallel processes; can also be set in the environment.
 
 # Definition of the CASSCF wavefunction
 basis="6-31g*" # for Pople basis sets and df-casscf, fitting DF basis must be specified manually

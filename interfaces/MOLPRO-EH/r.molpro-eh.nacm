@@ -139,7 +139,7 @@ done
 
 # MOLPRO JOB
 export TMPDIR=$PWD/scratch$ibead
-$MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
+$MOLPROEXE -n "$NCORES" -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
 
 # Check whether all is OK.
 if [[ $? -eq 0 ]];then
