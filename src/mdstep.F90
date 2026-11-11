@@ -255,7 +255,7 @@ contains
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)
 
       if (ipimd == 6) then
-         ! Drift velocities are centered on this nuclear interval.
+         ! Drift velocities are centered on this nuclear interval
          call eh_advance(px / amt, py / amt, pz / amt, dt)
          call eh_mean_force(fxc, fyc, fzc, eclas)
       end if

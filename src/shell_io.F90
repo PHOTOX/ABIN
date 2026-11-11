@@ -1,4 +1,4 @@
-!module handeling IO
+!module handeling IO universally for all interfaces
 module mod_shell_io
    use mod_const, only: DP, ANG
    use mod_error, only: fatal_error

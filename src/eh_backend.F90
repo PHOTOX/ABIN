@@ -10,10 +10,13 @@ module mod_eh_backend
    public :: eh_evaluate_backend
 contains
 
+   ! This is used to obtain energies, gradients and NACs from the chosen pot
+   ! basicaly evaluate if it is _nai_ or we need quantum chemistry software
    subroutine eh_evaluate_backend(x, y, z, energies, fx, fy, fz, nacx, nacy, nacz, pot, nac_accu1, nac_accu2)
       use mod_potentials_nai, only: evaluate_nai
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-      real(DP), intent(out) :: energies(:), fx(:, :, :), fy(:, :, :), fz(:, :, :)
+      real(DP), intent(out) :: energies(:)
+      real(DP), intent(out) :: fx(:, :, :), fy(:, :, :), fz(:, :, :)
       real(DP), intent(out) :: nacx(:, :, :), nacy(:, :, :), nacz(:, :, :)
       character(len=*), intent(in) :: pot
       integer, intent(in) :: nac_accu1, nac_accu2
@@ -27,29 +30,31 @@ contains
       end select
    end subroutine eh_evaluate_backend
 
+   ! This if for getting energies, gradients and NACs from a quantum chemical software
    subroutine eh_shell_backend(x, y, z, energies, fx, fy, fz, nacx, nacy, nacz, pot, nac_accu1, nac_accu2)
       use mod_system, only: names
       real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-      real(DP), intent(out) :: energies(:), fx(:, :, :), fy(:, :, :), fz(:, :, :)
+      real(DP), intent(out) :: energies(:)
+      real(DP), intent(out) :: fx(:, :, :), fy(:, :, :), fz(:, :, :)
       real(DP), intent(out) :: nacx(:, :, :), nacy(:, :, :), nacz(:, :, :)
       character(len=*), intent(in) :: pot
       integer, intent(in) :: nac_accu1, nac_accu2
       character(:), allocatable :: script
-      integer :: u, state, nstates, natoms, status, gradient_accuracy
+      integer :: u, state, nstates, natoms, status
       logical :: abort
 
       natoms = size(x, 1)
       nstates = size(energies)
       script = trim(get_shellscript(pot))
+
+      ! run the quantum chemistry software
       call write_geom('geom.dat.001', names, x, y, z, natoms, 1)
       call write_eh_requests(nstates, nac_request=.false.)
       call discard_output('engrad.dat.001')
-      gradient_accuracy = 7
-      ! BAGEL-EH evaluates gradients and NACs together and caches the NAC output.
-      if (pot == 'bagel-eh' .and. nstates > 1) gradient_accuracy = max(gradient_accuracy, nac_accu1)
-      status = run_eh_script(script, gradient_accuracy)
+      status = run_eh_script(script, nac_accu1)
       if (status /= 0) call fatal_error(__FILE__, __LINE__, 'Ehrenfest gradient interface failed: '//script)
 
+      ! read the output
       abort = .false.
       u = open_engrad_file('engrad.dat.001', abort)
       if (abort) call fatal_error(__FILE__, __LINE__, 'Missing Ehrenfest energies and gradients')
@@ -57,17 +62,17 @@ contains
          energies(state) = read_energy(u, abort)
          if (abort) exit
       end do
-      if (.not. abort) then
-         do state = 1, nstates
-            call read_forces(fx(:, :, state), fy(:, :, state), fz(:, :, state), natoms, 1, u, abort)
-            if (abort) exit
-         end do
-      end if
+      do state = 1, nstates
+         call read_forces(fx(:, :, state), fy(:, :, state), fz(:, :, state), natoms, 1, u, abort)
+         if (abort) call fatal_error(__FILE__, __LINE__, 'Invalid Ehrenfest energies or state gradients')
+      end do
       close (u, status='delete')
-      if (abort) call fatal_error(__FILE__, __LINE__, 'Invalid Ehrenfest energies or state gradients')
 
-      nacx = 0.0_DP; nacy = 0.0_DP; nacz = 0.0_DP
+      ! should not happen but I want to have it iknow proof if it costs nothing
       if (nstates == 1) return
+
+      !  time to get the NACs
+      nacx = 0.0_DP; nacy = 0.0_DP; nacz = 0.0_DP
       call write_eh_requests(nstates, nac_request=.true.)
       call discard_output('nacm.dat')
       status = run_eh_script(script//'.nacm', nac_accu1)
@@ -88,13 +93,17 @@ contains
       logical, intent(in) :: nac_request
       integer :: u, count, i
       count = nstates
+
+      !utilising the antisymetry of the NACs, we only need to request the upper triangle of the matrix
       if (nac_request) count = nstates * (nstates - 1) / 2
+
       open (newunit=u, file='eh_state.dat', status='replace', action='write')
       write (u, '(I0)') nstates
       write (u, '(*(I0,1X))') (1, i=1, count)
       close (u)
    end subroutine write_eh_requests
 
+   ! This is the main entry point for the Ehrenfest interface. It is called from the main program.
    integer function run_eh_script(script, accuracy) result(status)
       use mod_general, only: it
       character(len=*), intent(in) :: script
@@ -102,6 +111,7 @@ contains
       character(len=64) :: arguments
       integer :: command_status
       logical :: exists
+
       inquire (file=script, exist=exists)
       if (.not. exists) call fatal_error(__FILE__, __LINE__, 'Ehrenfest interface does not exist: '//script)
       write (arguments, '(1X,I0,A,I0,A)') it, ' 001 ', accuracy, ' < eh_state.dat'
@@ -109,6 +119,7 @@ contains
       if (command_status /= 0) status = command_status
    end function run_eh_script
 
+   ! This is reads the NACs from the output of the quantum chemistry software
    integer function read_eh_nac(nacx, nacy, nacz) result(status)
       real(DP), intent(out) :: nacx(:, :, :), nacy(:, :, :), nacz(:, :, :)
       integer :: u, i, j, atom
@@ -124,6 +135,7 @@ contains
                   return
                end if
             end do
+            !utilising the antisymetry of the NACs
             nacx(:, j, i) = -nacx(:, i, j)
             nacy(:, j, i) = -nacy(:, i, j)
             nacz(:, j, i) = -nacz(:, i, j)
@@ -132,7 +144,8 @@ contains
       close (u, status='delete')
    end function read_eh_nac
 
-   ! Never accept an output file left behind by an earlier backend call.
+   ! Never accept an output file left behind by an earlier call of the quantum chemistry software
+   ! So I purge it to prevent accidents
    subroutine discard_output(filename)
       character(len=*), intent(in) :: filename
       integer :: u

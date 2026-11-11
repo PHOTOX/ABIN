@@ -867,11 +867,12 @@ contains
          write (stdout, *) ' D. Hollas, J. Suchan, J. Janos, M. Oncak and P. Slavicek'
          write (stdout, *) ' '
          write (stdout, *) ' with contributions by O. Svoboda, S. Srsen, Jan Postulka,'
-         write (stdout, *) '      V. Juraskova, M. Barnfield, J. Chalabala and others'
+         write (stdout, *) '        M. Klima, V. Juraskova, M. Barnfield, J. Chalabala'
+         write (stdout, *) '                                               and others '
          write (stdout, *) ' '
       end subroutine print_logo
 
-      subroutine print_photox_logo() !Handmade without any AI assistance by M. Klíma
+      subroutine print_photox_logo() ! Handmade without any AI assistance by M. Klima when he was bored during a lecture in 2024
          write (stdout, *) '     ____                           '
          write (stdout, *) '    /    \                          '
          write (stdout, *) ' __/ @    ╲                         '

@@ -81,8 +81,8 @@ contains
       if (isbc /= 0) &
          call fatal_error(__FILE__, __LINE__, 'isbc must be 0 for Ehrenfest dynamics')
       if (nstate < 2) &
-         call fatal_error(__FILE__, __LINE__, &
-                'nstate must be >= 2 for Ehrenfest dynamics since for nstate=1the Ehrenfest dynamics reduces to classical dynamics')
+         call fatal_error(__FILE__, __LINE__, 'nstate must be >= 2 for Ehrenfest dynamics since for'// &
+                          'nstate=1the Ehrenfest dynamics reduces to classical dynamics')
       if (istate_init < 1 .or. istate_init > nstate) &
          call fatal_error(__FILE__, __LINE__, 'istate_init is out of bounds')
       if (substep < 1) &
@@ -135,6 +135,11 @@ contains
          do j = i + 1, nstate
             overlap = sum(old_nacx(:, i, j) * nacx(:, i, j) + old_nacy(:, i, j) * nacy(:, i, j) + old_nacz(:, i, j) * nacz(:, i, j))
             if (overlap < 0.0_DP) then
+               !flip the sign of the NAC vectors to keep them continuous
+               nacx(:, i, j) = -nacx(:, i, j)
+               nacy(:, i, j) = -nacy(:, i, j)
+               nacz(:, i, j) = -nacz(:, i, j)
+               !use antisimmetry
                nacx(:, j, i) = -nacx(:, i, j)
                nacy(:, j, i) = -nacy(:, i, j)
                nacz(:, j, i) = -nacz(:, i, j)

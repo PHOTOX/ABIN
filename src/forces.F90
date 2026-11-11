@@ -128,7 +128,7 @@ subroutine force_clas(fx, fy, fz, x, y, z, energy, chpot)
 
 end subroutine force_clas
 
-! Ehrenfest backend dispatch returns all state forces and NACs explicitly.
+! returns all state forces and NACs for ehrenfest dynamics
 subroutine eh_force(x, y, z, fx, fy, fz, energy, pot)
    use mod_const, only: DP
    use mod_eh, only: en_array, nacx, nacy, nacz, state_fx, state_fy, state_fz, &
@@ -137,21 +137,30 @@ subroutine eh_force(x, y, z, fx, fy, fz, energy, pot)
    use mod_eh_backend, only: eh_evaluate_backend
    implicit none
    real(DP), intent(in) :: x(:, :), y(:, :), z(:, :)
-   real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :), energy
+   real(DP), intent(out) :: fx(:, :), fy(:, :), fz(:, :)
+   real(DP), intent(out) :: energy
    character(len=*), intent(in) :: pot
    logical, save :: have_data = .false.
 
+   ! We need to keep the old values for furhther calculatiuons
    old_en = en_array
-   old_nacx = nacx; old_nacy = nacy; old_nacz = nacz
+   old_nacx = nacx
+   old_nacy = nacy
+   old_nacz = nacz
+
    call eh_evaluate_backend(x, y, z, en_array, state_fx, state_fy, state_fz, &
                             nacx, nacy, nacz, pot, nac_accu1, nac_accu2)
    call eh_phase_nacme()
+   ! for the first iteration aka initialization
    if (.not. have_data) then
       old_en = en_array
-      old_nacx = nacx; old_nacy = nacy; old_nacz = nacz
+      old_nacx = nacx
+      old_nacy = nacy
+      old_nacz = nacz
       call eh_set_energy_shift(en_array(1))
       have_data = .true.
    end if
+   ! do the actual work, get the force and energy
    call eh_mean_force(fx, fy, fz, energy)
 end subroutine eh_force
 
