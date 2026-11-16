@@ -3,7 +3,7 @@
 module mod_eh
    use mod_const, only: DP, AUtoFS
    use mod_error, only: fatal_error
-   use mod_files, only: stdout, UPOP, UPES
+   use mod_files, only: stdout, UPOP, UPES, UDOTPROD
    use mod_eh_integ, only: nstate, phase, popsumthr, eh_set_initialwf, &
                            eh_select_integrator, eh_integrate_wf, get_elpop, &
                            get_coherence, check_popsum
@@ -23,6 +23,8 @@ module mod_eh
    character(len=50) :: couplings = 'analytic'
    real(DP), allocatable :: state_fx(:, :, :), state_fy(:, :, :), state_fz(:, :, :)
    real(DP), allocatable :: old_en(:)
+   ! Endpoint NAC-velocity products used by the electronic propagator.
+   real(DP), allocatable :: dotproduct(:, :)
    real(DP), allocatable :: old_nacx(:, :, :), old_nacy(:, :, :), old_nacz(:, :, :)
    ! Initial mean-field potential plus nuclear kinetic energy, in atomic units.
    real(DP), public, protected :: entot0 = 0.0_DP
@@ -115,6 +117,8 @@ contains
       allocate (nacx(natom, nstate, nstate), nacy(natom, nstate, nstate), nacz(natom, nstate, nstate))
       allocate (state_fx(natom, 1, nstate), state_fy(natom, 1, nstate), state_fz(natom, 1, nstate))
       allocate (en_array(nstate), old_en(nstate))
+      allocate (dotproduct(nstate, nstate))
+      dotproduct = 0.0_DP
       allocate (old_nacx(natom, nstate, nstate), old_nacy(natom, nstate, nstate), old_nacz(natom, nstate, nstate))
 
       ! setup initial values
@@ -202,6 +206,8 @@ contains
          end do
       end do
 
+      dotproduct = sigma1
+
       ! substep integration of the electronic state populations
       do i = 1, substep
          fr0 = real(i - 1, DP) / substep
@@ -217,12 +223,17 @@ contains
 
    subroutine eh_output()
       use mod_general, only: it, nwrite, sim_time
-      integer :: i
-      real(DP) :: norm
+      integer :: i, j, most_populated
+      real(DP) :: norm, populations(nstate)
       if (modulo(it, nwrite) /= 0) return
       norm = check_popsum()
-      write (UPOP, '(F15.6,*(ES20.10))') sim_time * AUtoFS, (get_elpop(i), i=1, nstate), norm
+      populations = [(get_elpop(i), i=1, nstate)]
+      ! MAXLOC selects the lowest state number when populations are tied.
+      most_populated = maxloc(populations, dim=1)
+      write (UPOP, '(F15.6,I8,*(ES20.10))') sim_time * AUtoFS, most_populated, populations, norm
       write (UPES, '(F15.6,*(ES20.10))') sim_time * AUtoFS, en_array
+      write (UDOTPROD, '(F15.6,*(ES20.10))') sim_time * AUtoFS, &
+         ((dotproduct(i, j), j=i + 1, nstate), i=1, nstate - 1)
    end subroutine eh_output
 
 end module mod_eh

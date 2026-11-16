@@ -130,10 +130,18 @@ makeref: ${BIN}
 
 .PHONY: clean test testclean makeref unittest e2etest
 
+# Static chemistry-interface fixtures; no ABIN build or QM executable required.
+INTERFACE=all
+.PHONY: interface-test
+interface-test:
+	bash tests/INTERFACES/self-test.sh
+	bash tests/INTERFACES/run.sh $(INTERFACE)
+
 # Analytic Ehrenfest checks without the optional pFUnit dependency.
 ehrenfest-test: ${BIN}
 	$(FC) $(FFLAGS) -Isrc tests/EHRENFEST/ehrenfest_physics.F90 -Lsrc -Lwater_potentials $(LDFLAGS) $(LDLIBS) -o bin/ehrenfest_physics
 	bin/ehrenfest_physics
+	$(FC) $(FFLAGS) -Isrc tests/EHRENFEST/ehrenfest_multistate.F90 -Lsrc -Lwater_potentials $(LDFLAGS) $(LDLIBS) -o bin/ehrenfest_multistate
+	bin/ehrenfest_multistate
 	python3 tests/EHRENFEST/test_ehrenfest_backend.py bin/$(BIN)
-	python3 tests/EHRENFEST/test_bagel_interface.py bin/$(BIN)
-	python3 tests/EHRENFEST/test_ehrenfest_thermostats.py bin/$(BIN)
+	python3 tests/EHRENFEST/test_ehrenfest_nve.py bin/$(BIN)

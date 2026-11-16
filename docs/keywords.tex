@@ -222,21 +222,13 @@ and reference potentials are not supported.
 
 Configure nuclear thermostatting in the usual \textit{\&thermostat} section
 (the legacy \textit{\&nhcopt} section is also accepted).
-Use \textit{inose=0} for NVE, \textit{therm='nhc'} (\textit{inose=1}) for
-Nos\'{e}--Hoover chains, or \textit{therm='gle'} (\textit{inose=2}) for GLE
-with \textit{GLE-A} and \textit{GLE-C} files. Canonical GLE
-(\textit{inose=4}) uses \textit{GLE-A} and sets its covariance from
-\textit{temp}; it needs no \textit{GLE-C} file. Both global
-(\textit{imasst=0}) and massive (\textit{imasst=1}) Nos\'{e}--Hoover
-thermostatting use the existing \textit{tau0}, \textit{nchain} and integration
-settings. The shared Langevin thermostat (\textit{inose=3}) is also available.
-Thermostats act on nuclear momenta; electronic coefficients evolve with the
-velocities of the thermostatted nuclear trajectory.
+Use \textit{inose=0} for NVE; Ehrenfest parameter validation rejects
+thermostatted runs (\textit{inose>0}).
 
 \begin{tabularx}{\textwidth}{lcX}
 \textit{keyword} & \textbf{default} & Description \\
 \hline
-\textit{nstate} & \textbf{1} & Number of adiabatic electronic states. \\
+\textit{nstate} & \textbf{1} & Number of adiabatic electronic states; must be set to at least 2. \\
 \textit{istate\_init} & \textbf{1} & Initially populated state (ground state is 1). \\
 \textit{substep} & \textbf{100} & Electronic integration steps per nuclear step. \\
 \textit{integ} & \textbf{butcher} & Existing electronic integrator: butcher, rk4 or euler. \\
@@ -256,13 +248,14 @@ Section~\ref{sec:eh-interface} for the contract.
 The electronic propagator in \textit{eh\_integ.F90} uses the same numerical
 schemes as surface hopping with independent wavefunction storage. Ehrenfest uses
 neither stochastic hops, velocity rescaling nor decoherence correction.
-\textit{pop.dat} contains time, all populations and their sum, with no active-state
-column; \textit{PES.dat} contains all adiabatic energies. The potential energy
+\textit{pop.dat} follows the SH column order: time in fs, the 1-based index of
+the most populated state (the lowest index in a tie), all populations and their sum.
+\textit{PES.dat} contains time and all adiabatic energies.
+\textit{dotprod.dat} contains time and the NAC--velocity products in atomic units,
+ordered as in SH: $(1,2),(1,3),\ldots,(nstate-1,nstate)$. These use the endpoint
+NAC vectors and the drift velocities used for electronic propagation.
+All three files are written every \textit{nwrite} steps. The potential energy
 in \textit{energies.dat} is the population-weighted mean energy.
-With a thermostat, the physical energy in \textit{energies.dat} can change
-as heat is exchanged. The last column of \textit{temper.dat} includes the
-Nos\'{e}--Hoover extended energy or the GLE/Langevin accumulated heat,
-using the same convention as ordinary MD.
 
 \newpage
 \subsection{\&sh}

@@ -67,6 +67,12 @@ nstate={nstates}, istate_init={initial_state}, nac_accu1=7, nac_accu2=5,
             (work / 'engrad.dat.001').write_text('0\n' * 100)
         result = subprocess.run([str(BINARY), '-x', 'mini.xyz', '-v', 'velocities.in'],
                                 cwd=work, capture_output=True, text=True, timeout=30)
+        if nstates == 1:
+            assert result.returncode != 0, 'Single-state Ehrenfest input was accepted'
+            assert 'nstate must be >= 2' in result.stderr, result.stderr
+            assert not (work / 'gradient_calls').exists()
+            assert not (work / 'nac_calls').exists()
+            return
         if mode in ('truncate_gradients', 'fail_nac'):
             assert result.returncode != 0, 'Malformed backend output was accepted'
             assert 'Invalid Ehrenfest' in result.stderr or 'Invalid or missing Ehrenfest NAC' in result.stderr
@@ -74,15 +80,15 @@ nstate={nstates}, istate_init={initial_state}, nac_accu1=7, nac_accu2=5,
         assert result.returncode == 0, result.stdout[-2000:] + result.stderr
         calls = (work / 'gradient_calls').read_text().splitlines()
         assert calls == [str(nstates)] * 2, calls
-        if nstates == 1:
-            assert not (work / 'nac_calls').exists()
-        else:
-            accuracies = (work / 'nac_calls').read_text().splitlines()
-            assert accuracies == (['7', '5'] * 2 if mode == 'retry_nac' else ['7'] * 2), accuracies
+        accuracies = (work / 'nac_calls').read_text().splitlines()
+        assert accuracies == (['7', '5'] * 2 if mode == 'retry_nac' else ['7'] * 2), accuracies
         population = [float(v) for v in (work / 'pop.dat').read_text().splitlines()[-1].split()]
         expected = [0.0] * nstates
         expected[initial_state - 1] = 1.0
-        assert population[1:-1] == expected and abs(population[-1] - 1) < 1e-12
+        assert population[1] == initial_state
+        assert population[2:-1] == expected and abs(population[-1] - 1) < 1e-12
+        dotproducts = [float(v) for v in (work / 'dotprod.dat').read_text().splitlines()[-1].split()]
+        assert dotproducts == [population[0]] + [0.0] * (nstates * (nstates - 1) // 2)
         pes = [float(v) for v in (work / 'PES.dat').read_text().splitlines()[-1].split()]
         assert all(abs(e - (i + 1) * .01) < 1e-12 for i, e in enumerate(pes[1:]))
         forces = (work / 'forces.xyz').read_text().splitlines()
@@ -94,8 +100,11 @@ nstate={nstates}, istate_init={initial_state}, nac_accu1=7, nac_accu2=5,
 
 for state in (1, 2, 3):
     run_case(3, state)
+for state in (1, 2):
+    run_case(2, state)
 run_case(1, 1)
 run_case(3, 2, 'retry_nac')
 run_case(3, 2, 'truncate_gradients')
 run_case(3, 2, 'fail_nac')
-print('Independent Ehrenfest shell backend: all states, gradient ordering, NAC retries and invalid-output checks passed.')
+print('Independent Ehrenfest shell backend: all states, gradient ordering, NAC retries, '
+      'invalid-output checks and single-state rejection passed.')

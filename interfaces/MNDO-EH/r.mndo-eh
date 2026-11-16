@@ -1,0 +1,162 @@
+#!/bin/bash
+
+# MNDO/Ehrenfest Interface for ABIN
+# Based on the MNDO surface-hopping interface by J. Polena, M. Belina and J. Janos
+# Called as: MNDO-EH/r.mndo-eh timestep 001 accuracy < eh_state.dat
+
+cd "$(dirname "$0")" || exit 2
+
+# ------------------ LOADING VARIABLES ---------------------
+
+if [[ -f ../SetEnvironment.sh ]]; then
+    source ../SetEnvironment.sh MNDO || exit 2
+fi
+source mndo.inp || exit 2
+
+timestep=$1
+ibead=$2
+input=input$ibead
+geom=../geom.dat.$ibead
+natom=$(wc -l < "$geom") || exit 2
+
+#parameters for MNDO input that should usually stay the same but change them if you have to
+comment1="Timestep $timestep"
+comment2=""
+jop=-2          # to evaluate gradients (do not change)
+igeom=1
+iform=1
+nsav15=3
+ipubo=1
+ktrial=11
+ifast=2
+mciref=${mciref:-1}
+kitscf=50000
+
+# ------------------- EHRENFEST STATES ---------------------
+
+# Ehrenfest requests gradients for every state, without an active SH state.
+read -r nstate || exit 2
+read -r -a tocalc || exit 2
+[[ $nstate =~ ^[1-9][0-9]*$ && ${#tocalc[@]} -eq $nstate ]] || exit 2
+ci_states=()
+for ((ist=0; ist<nstate; ist++)); do
+    [[ ${tocalc[$ist]} -eq 1 ]] || exit 2
+    ci_states+=($((ist+1)))
+done
+ncigrd=$nstate
+if ((nstate == 1)); then ncigrd=0; fi
+
+rm -f "../engrad.dat.$ibead" "../engrad.dat.$ibead.tmp" fort.15
+
+# ---------------------- MNDO INPUT ------------------------
+
+# MNDO2005 reads at most 80 columns per keyword line; OMx names allow three lines.
+cat > "$input" << INPUT
+$method jop=$jop igeom=$igeom iform=$iform nsav15=$nsav15 kharge=$charge imult=$multi lroot=1 +
+ipubo=$ipubo ktrial=$ktrial immdp=$disper kci=5 ici1=$occ ici2=$unocc iroot=$nstate icross=1 ncigrd=$ncigrd +
+nciref=$nciref mciref=$mciref levexc=$levelexc ioutci=1 kitscf=$kitscf iuvcd=2 ifast=$ifast
+$comment1
+$comment2
+INPUT
+awk 'NR<=3 && length($0)>80 {
+    print "ERROR from r.mndo-eh: Keyword line " NR " exceeds MNDO2005\047s 80-column limit." > "/dev/stderr"
+    exit 2
+}' "$input" || exit 2
+
+# Cartesian input, with dummy atoms for small molecules as in the original.
+awk '{printf "%s %.12g 1 %.12g 1 %.12g 1\n", $1, $2, $3, $4}
+END {for (i=1; i<=4-NR; i++) print 99, 0, 0, 0, 0, 0, 0}' "$geom" >> "$input"
+echo >> "$input"
+# Only mciref=1/4 read occupations before the list of gradient states.
+# A single closed-shell SCF reference is unambiguous; other choices are explicit.
+if ((nciref > 0 && (mciref == 1 || mciref == 4))) && ! awk -v refs="${ci_references:-}" -v nref="$nciref" -v occupied="$occ" -v virtual="$unocc" -v multi="$multi" '
+BEGIN {
+    if (refs=="") {
+        if (nref!=1 || multi!=0) {
+            print "ERROR: Set ci_references in mndo.inp for this reference configuration." > "/dev/stderr"
+            exit 2
+        }
+        for (i=1; i<=occupied+virtual; i++) printf "%s%s", (i<=occupied ? 2 : 0), (i<occupied+virtual ? " " : "\n")
+    } else {
+        if (split(refs, rows, "\n")!=nref) exit 2
+        for (r=1; r<=nref; r++) {
+            if (split(rows[r], values, " ")!=occupied+virtual) exit 2
+            for (i=1; i<=occupied+virtual; i++) if (values[i] !~ /^[012]$/) exit 2
+            print rows[r]
+        }
+    }
+}' >> "$input"; then
+    echo 'ERROR from r.mndo-eh: Invalid or missing CI reference occupations.' >&2
+    exit 2
+fi
+if ((ncigrd > 0)); then echo " ${ci_states[*]}" >> "$input"; fi
+
+# ---------------------- JOB LAUNCH ------------------------
+
+if ! $MNDOEXE < "$input" > "$input.out" 2>&1 ||
+   ! grep -q 'COMPUTATION TIME' "$input.out" ||
+   ! grep -q 'SCF TOTAL ENERGY' "$input.out"; then
+    echo "ERROR from r.mndo-eh: MNDO calculation failed. See $input.out.error" >&2
+    cp "$input.out" "$input.out.error"
+    exit 2
+fi
+
+# ------------------- DATA EXTRACTION ----------------------
+
+# All CI energies first (eV -> hartree), followed by all state gradients.
+: > "$input.extract.error"
+if ! awk -v n="$nstate" '
+function fail(message) {
+    print "MNDO energy extraction: " FILENAME ":" FNR ": " message > "/dev/stderr"
+    failed=1; exit 2
+}
+/^[[:space:]]*State[[:space:]]+[0-9]+/ {
+    value=$9; gsub(/[dD]/, "e", value)
+    if (value !~ /^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?$/)
+        fail("invalid energy in field 9 for state " $2 ": " value)
+    state=$2; sub(/,$/, "", state)
+    energy[state]=value/27.211396
+}
+END {
+    if (failed) exit 2
+    for (i=1; i<=n; i++) {
+        if (!(i in energy)) fail("missing energy for state " i " of " n)
+        printf "%.12f\n", energy[i]
+    }
+}' "$input.out" > "../engrad.dat.$ibead.tmp" 2>> "$input.extract.error" ||
+! awk -v n="$nstate" -v natom="$natom" '
+function fail(message) {
+    print "MNDO gradient extraction: " FILENAME ":" FNR ": " message > "/dev/stderr"
+    failed=1; exit 2
+}
+/INTERNAL COORDINATES AND GRADIENTS|INTERNAL GRADIENT FOR STATE/ {
+    if (left) fail("incomplete gradient for state " state ": expected " natom*3 " components, got " row)
+    state=++block
+    if ($0 ~ /FOR STATE[[:space:]]+[0-9]+/) state=$NF
+    if (state<1 || state>n) fail("unexpected gradient state label: " state)
+    if (seen[state]++) fail("duplicate gradient for state " state)
+    column=($0 ~ /INTERNAL GRADIENT FOR STATE/ ? 3 : 4)
+    left=natom*3; row=0; next
+}
+left>0 {
+    value=$column; gsub(/[dD]/, "e", value)
+    if (value !~ /^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?$/)
+        fail("invalid gradient for state " state ", component " row+1 ", field " column ": " value)
+    gradient[state,++row]=value*0.000843297
+    left--
+}
+END {
+    if (failed) exit 2
+    if (left) fail("incomplete gradient for state " state ": expected " natom*3 " components, got " row)
+    for (state=1; state<=n; state++)
+        if (!(state in seen)) fail("missing gradient for state " state " of " n "; found " block+0 " blocks")
+    for (state=1; state<=n; state++)
+        for (row=1; row<=natom*3; row+=3)
+            printf "%.12f %.12f %.12f\n", gradient[state,row], gradient[state,row+1], gradient[state,row+2]
+}' fort.15 >> "../engrad.dat.$ibead.tmp" 2>> "$input.extract.error"; then
+    cat "$input.extract.error" >&2
+    echo "ERROR from r.mndo-eh: Cannot extract all $nstate state energies/gradients. See $PWD/$input.extract.error, $input.out and fort.15." >&2
+    rm -f "../engrad.dat.$ibead.tmp"
+    exit 2
+fi
+mv "../engrad.dat.$ibead.tmp" "../engrad.dat.$ibead"

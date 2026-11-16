@@ -10,7 +10,8 @@ program ehrenfest_physics
                            phase, eh_read_phase_bin, eh_select_integrator, eh_integrate_wf, eh_set_energy_shift
    use mod_sh_integ, only: sh_nstate => nstate, sh_set_initialwf, sh_get_elpop => get_elpop
    implicit none
-   real(DP) :: x(2, 1), y(2, 1), z(2, 1), fx(2, 1), fy(2, 1), fz(2, 1)
+   real(DP) :: x(2, 1), y(2, 1), z(2, 1)
+   real(DP) :: fx(2, 1), fy(2, 1), fz(2, 1)
    real(DP) :: f1(2, 1), f2(2, 1)
    real(DP) :: e1, e2, energy, norm
    real(DP) :: expected(2)
@@ -19,11 +20,15 @@ program ehrenfest_physics
    integer :: u
 
    call set_natom(2)
-   nwalk = 1; nstate = 2; inose = 0; pot = '_nai_'
+   nwalk = 1
+   nstate = 2
+   inose = 0
+   pot = '_nai_'
    sh_nstate = 3
    call sh_set_initialwf(2)
    x(:, 1) = [0.0_DP, 6.93_DP * ANG]
-   y = 0.0_DP; z = 0.0_DP
+   y = 0.0_DP
+   z = 0.0_DP
    allocate (am(2))
    am = [2.0_DP, 3.0_DP]
    vx(:, 1) = [0.01_DP, -0.02_DP]
@@ -56,7 +61,8 @@ program ehrenfest_physics
    call set_wf(1.0_DP, 0.0_DP)
    call eh_force(x, y, z, fx, fy, fz, energy, pot)
    vx(:, 1) = [-0.002_DP, 0.002_DP]
-   vy = 0.0_DP; vz = 0.0_DP
+   vy = 0.0_DP
+   vz = 0.0_DP
    sigma = sum(vx(:, 1) * nacx(:, 1, 2))
    omega = sqrt(sigma**2 + ((e2 - e1) / 2)**2)
    dt = 100.0_DP
@@ -76,7 +82,7 @@ contains
       real(DP) :: en(2), coupling(2, 2), tolerance, elapsed, step, frequency, half_gap
       real(DP) :: expected_coherence
       complex(2*DP) :: expected_c(2), actual_c(2), stored_c(2), global_phase
-      integer :: mode, method, k, phase_unit, wf_unit
+      integer :: method, k, phase_unit, wf_unit
 
       en = [0.1_DP, 0.3_DP]
       coupling = 0.0_DP
@@ -93,8 +99,7 @@ contains
       expected_coherence = real(conjg(expected_c(1)) * expected_c(2), kind=DP)
       call eh_set_energy_shift(0.0_DP)
 
-      do mode = 0, 1
-         phase = mode
+      do phase = 0, 1
          do method = 1, size(methods)
             call set_wf(1.0_DP, 0.0_DP)
             open (newunit=phase_unit, status='scratch', form='unformatted')
@@ -109,11 +114,15 @@ contains
             end do
             call read_coefficients(actual_c)
             stored_c = actual_c
-            if (mode == 1) actual_c = actual_c * exp(-imaginary_unit * en * elapsed)
+            if (phase == 1) actual_c = actual_c * exp(-imaginary_unit * en * elapsed)
             tolerance = 1.E-11_DP
             if (methods(method) == 'euler') tolerance = 1.E-3_DP
-            if (maxval(abs(actual_c - expected_c)) > tolerance) error stop 'Complex electronic amplitudes'
-            if (abs(get_coherence(1, 2) - expected_coherence) > tolerance) error stop 'Complex coherence'
+            if (maxval(abs(actual_c - expected_c)) > tolerance) then
+               print*,'Integrator: ', trim(methods(method)), ', phase mode: ', phase
+               print*,'Maximum amplitude error: ', maxval(abs(actual_c - expected_c)), ', tolerance: ', tolerance
+               error stop 'Complex electronic amplitudes'
+            end if
+            if (abs(get_coherence(1, 2) - expected_coherence) > tolerance) error stop 'Coherence error'
 
             ! Preserve the extended precision through the complex coefficient file format.
             open (newunit=wf_unit, status='scratch', action='readwrite')
@@ -122,7 +131,7 @@ contains
             call eh_read_wf(wf_unit)
             close (wf_unit)
             call read_coefficients(actual_c)
-            if (maxval(abs(actual_c - stored_c)) > 1.E-30_DP) error stop 'Complex wavefunction I/O'
+            if (maxval(abs(actual_c - stored_c)) > 1.E-30_DP) error stop 'Wavefunction I/O error'
          end do
       end do
       phase = 0

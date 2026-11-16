@@ -24,7 +24,7 @@ module mod_eh_integ
    ! phase for phase=1, i.e. the phase of the wavefunction in the adiabatic representation
    real(DP), allocatable, dimension(:, :) :: gama
 
-   real(DP) :: Eshift, popsumthr = 0.001D0
+   real(DP) :: Eshift, popsumthr = 0.001_DP
    ! TODO: phase variable should be named differently (as in sh_integ.F90) to avoid confusion with the phase of the wavefunction (gama).
    integer :: phase = 0
    ! Number of electronic states
@@ -89,9 +89,11 @@ contains
       real(DP), intent(in) :: en(:), dotprod(:, :), gam(:, :), dtp
       integer :: ist1, ist2
 
-      ! contribution to the change from the state it self
-      k = -imaginary_unit * en * y
+      ! In phase mode 1, diagonal energy evolution has been factored out
+      ! gama supplies the relative phases of the off-diagonal couplings
+      k = (0.0_DP, 0.0_DP)
       if (phase == 0) then
+         k = -imaginary_unit * en * y
          do ist1 = 1, nstate
             do ist2 = 1, nstate
                ! contribution from the other states
@@ -101,7 +103,7 @@ contains
             end do
          end do
          ! same as above but for the flow of the code done separately
-         ! ifs are heavy
+         ! ifs are heavy on computing time, so I avoid them in the inner loop if possible
       else if (phase == 1) then
          do ist1 = 1, nstate
             do ist2 = 1, nstate

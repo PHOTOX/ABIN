@@ -169,6 +169,10 @@ contains
          open (UPOP, file=chfiles(UPOP), access=chaccess, action='write')
       end if
 
+      if (ipimd == 6) then
+         open (UDOTPROD, file=chfiles(UDOTPROD), access=chaccess, action='write')
+      end if
+
       if (ipimd == 2) then
          call sh_files_init(phase, chaccess)
       end if
@@ -284,7 +288,7 @@ contains
       end if
 
       headers(UPOP) = '#    Time[fs] CurrentState   Populations Sum-of-Populations'
-      if (ipimd == 6) headers(UPOP) = '# Time[fs] Populations Sum-of-Populations'
+      if (ipimd == 6) headers(UPOP) = '#    Time[fs] MostPopulatedState   Populations Sum-of-Populations'
       headers(UPHASE) = '# Lower triangular matrix of gamma (phase)  gamma(i,j) [i=1,nstate ;j=1,i-1]'
       headers(UPROB) = '#    Time[fs] CurrentState   Probabilities'
       headers(UDOTPROD) = '#    Time[fs] dotproduct(i,j) [i=1,nstate-1;j=i+1,nstate]'

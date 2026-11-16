@@ -1,0 +1,129 @@
+#!/bin/bash
+
+# MNDO/Ehrenfest Interface (NACME calculation) for ABIN
+# Based on the MNDO NACME interface by J. Polena
+# Called as: MNDO-EH/r.mndo-eh.nacm timestep 001 accuracy < eh_state.dat
+
+cd "$(dirname "$0")" || exit 2
+
+# ------------------ LOADING VARIABLES ---------------------
+
+if [[ -f ../SetEnvironment.sh ]]; then
+    source ../SetEnvironment.sh MNDO || exit 2
+fi
+source mndo.inp || exit 2
+
+timestep=$1
+ibead=$2
+input=input$ibead.nacm
+geom=../geom.dat.$ibead
+natom=$(wc -l < "$geom") || exit 2
+
+#parameters for MNDO input that should usually stay the same but change them if you have to
+comment1="Timestep $timestep"
+comment2=""
+jop=-2              # to evaluate gradients (do not change)
+igeom=1
+iform=1
+nsav15=3
+ipubo=0
+ktrial=11
+ifast=2
+mciref=${mciref:-1}
+kitscf=50000
+
+rm -f ../nacm.dat ../nacm.dat.tmp fort.15
+
+# ------------------- EHRENFEST PAIRS ----------------------
+
+# eh_state.dat requests every upper-triangular pair: (1,2),(1,3),... .
+read -r nstate || exit 2
+read -r -a tocalc || exit 2
+[[ $nstate =~ ^[1-9][0-9]*$ ]] || exit 2
+[[ ${#tocalc[@]} -eq $((nstate*(nstate-1)/2)) ]] || exit 2
+for flag in "${tocalc[@]}"; do [[ $flag -eq 1 ]] || exit 2; done
+ci_states=()
+for ((ist=1; ist<=nstate; ist++)); do ci_states+=($ist); done
+
+# ---------------------- MNDO INPUT ------------------------
+
+# Keep three keyword lines, each within MNDO2005's 80-column limit.
+cat > "$input" << INPUT
+$method jop=$jop igeom=$igeom iform=$iform nsav15=$nsav15 kharge=$charge imult=$multi +
+ipubo=$ipubo ktrial=$ktrial immdp=$disper kci=5 ici1=$occ ici2=$unocc iroot=$nstate icross=7 ncigrd=$nstate +
+nciref=$nciref mciref=$mciref levexc=$levelexc ioutci=1 kitscf=$kitscf ifast=$ifast
+$comment1
+$comment2
+INPUT
+awk 'NR<=3 && length($0)>80 {
+    print "ERROR from r.mndo-eh.nacm: Keyword line " NR " exceeds MNDO2005\047s 80-column limit." > "/dev/stderr"
+    exit 2
+}' "$input" || exit 2
+
+awk '{printf "%s %.12g 1 %.12g 1 %.12g 1\n", $1, $2, $3, $4}
+END {for (i=1; i<=4-NR; i++) print 99, 0, 0, 0, 0, 0, 0}' "$geom" >> "$input"
+echo >> "$input"
+# Match the occupations used by the gradient calculation, only for mciref=1/4.
+if ((nciref > 0 && (mciref == 1 || mciref == 4))) && ! awk -v refs="${ci_references:-}" -v nref="$nciref" -v occupied="$occ" -v virtual="$unocc" -v multi="$multi" '
+BEGIN {
+    if (refs=="") {
+        if (nref!=1 || multi!=0) {
+            print "ERROR: Set ci_references in mndo.inp for this reference configuration." > "/dev/stderr"
+            exit 2
+        }
+        for (i=1; i<=occupied+virtual; i++) printf "%s%s", (i<=occupied ? 2 : 0), (i<occupied+virtual ? " " : "\n")
+    } else {
+        if (split(refs, rows, "\n")!=nref) exit 2
+        for (r=1; r<=nref; r++) {
+            if (split(rows[r], values, " ")!=occupied+virtual) exit 2
+            for (i=1; i<=occupied+virtual; i++) if (values[i] !~ /^[012]$/) exit 2
+            print rows[r]
+        }
+    }
+}' >> "$input"; then
+    echo 'ERROR from r.mndo-eh.nacm: Invalid or missing CI reference occupations.' >&2
+    exit 2
+fi
+echo " ${ci_states[*]}" >> "$input"
+
+# ---------------------- JOB LAUNCH ------------------------
+
+if ! $MNDOEXE < "$input" > "$input.out" 2>&1 ||
+   ! grep -q 'COMPUTATION TIME' "$input.out" ||
+   ! grep -q 'SCF TOTAL ENERGY' "$input.out"; then
+    echo "ERROR from r.mndo-eh.nacm: MNDO calculation failed. See $input.out.error" >&2
+    cp "$input.out" "$input.out.error"
+    exit 2
+fi
+
+# ------------------- NACME EXTRACTION ---------------------
+
+# Keep the original MNDO (higher,lower) convention and inverse-angstrom
+# conversion; emit pairs in ABIN upper-triangular order, in inverse bohr.
+: > ../nacm.dat.tmp
+for ((ist1=1; ist1<nstate; ist1++)); do
+    for ((ist2=ist1+1; ist2<=nstate; ist2++)); do
+        if ! awk -v i="$ist1" -v j="$ist2" -v natom="$natom" '
+/INTERNAL INTERSTATE COUPLING GRADIENT FOR STATES/ {
+    if (left) exit 2
+    if ($(NF-1)==j && $NF==i) {found++; left=natom*3}
+    next
+}
+left>0 {
+    value=$3; gsub(/[dD]/, "e", value)
+    if (value !~ /^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?$/) exit 2
+    component[++row]=value*0.529177249
+    left--
+}
+END {
+    if (found!=1 || left || row!=natom*3) exit 2
+    for (row=1; row<=natom*3; row+=3)
+        printf "%.12f %.12f %.12f\n", component[row], component[row+1], component[row+2]
+}' fort.15 >> ../nacm.dat.tmp; then
+            echo "ERROR from r.mndo-eh.nacm: Missing or invalid coupling $ist1,$ist2." >&2
+            rm -f ../nacm.dat.tmp
+            exit 2
+        fi
+    done
+done
+mv ../nacm.dat.tmp ../nacm.dat

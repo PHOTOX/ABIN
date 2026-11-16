@@ -142,7 +142,7 @@ if [[ $TESTS = "all" ]];then
             SH_EULER SH_RK4 SH_BUTCHER SH_RK4_PHASE \
             SH_IGNORE SH_NACM_FAIL SH_S0S1 SH_ENERGY_DIFF SH_ENERGY_DRIFT \
             SH_BUTCHER_PHASE SH_SIMPLE_RESCALE SH_NAC_RESCALE SH_FRUSTRATED SH_FRUSTRATED_2 SH_NaI SH_BAECK-AN\
-            EHRENFEST LZ_SS LZ_ST LZ_ENE \
+            EHRENFEST INTERFACES LZ_SS LZ_ST LZ_ENE \
             PIMD ABINITIO ABINITIO-FAIL MTS \
             LANGEVIN QT QT2 PIGLE PIGLE2 GLE-CANONICAL \
             H2O_SCHWENKE H2O_SCHWENKE_PIMD H2O_CVRQD HARMON MORSE DOUBLEWELL MM MINI QMMM \
@@ -253,15 +253,21 @@ do
       continue
    fi
 
-   # Ehrenfest uses analytic and interface checks instead of reference files.
-   if [[ $dir = "EHRENFEST" ]];then
+   # These suites have their own analytic or static-fixture checks.
+   if [[ $dir = "EHRENFEST" || $dir = "INTERFACES" ]];then
+      check_target=ehrenfest-test
+      check_log=ehrenfest.out
+      if [[ $dir = "INTERFACES" ]]; then
+         check_target=interface-test
+         check_log=interfaces.out
+      fi
       if [[ $ACTION = "makeref" ]];then
-         echo "EHRENFEST has no reference files to update."
-      elif make -C "$TESTDIR/.." ehrenfest-test BIN="$1" > ehrenfest.out 2>&1; then
+         echo "$dir references must be maintained manually."
+      elif make -C "$TESTDIR/.." "$check_target" BIN="$1" > "$check_log" 2>&1; then
          echo -e "\033[0;32mPASSED\033[0m"
          passed=$((passed + 1))
       else
-         tail -n 40 ehrenfest.out
+         tail -n 40 "$check_log"
          echo -e "$dir \033[0;31mFAILED\033[0m"
          errors=$((errors + 1))
       fi
