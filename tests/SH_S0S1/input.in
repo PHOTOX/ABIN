@@ -19,17 +19,18 @@ inose=0,
 /
 
 &sh
+shwit=.true.
 dE_S0S1_thr=9.0
-istate_init=3,
+istate_init=2,
 nstate=3,
 substep=100,
 deltae=100.,
 integ='butcher',
-couplings='analytic',	! non-adiabatic coupling terms 'analytic', 'baeck-an', 'none'
+couplings='none',	! non-adiabatic coupling terms 'analytic', 'baeck-an', 'none'
 nohop=0,
 decoh_alpha=0.1
 popthr=0.01
-energydifthr=0.50
-energydriftthr=0.50
+energydifthr=1.00
+energydriftthr=1.00
 correct_decoherence=.false.
 /
