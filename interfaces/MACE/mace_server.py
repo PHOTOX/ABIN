@@ -142,11 +142,9 @@ class HarmonicModel:
         if config.model_path == "__MOCK_ERROR__":
             raise RuntimeError("Simulating error condition")
 
-        coords_t = coords_bohr.T  # (natom, 3)
-
         # Simple harmonic energy around the center of mass
-        com = np.mean(coords_t, axis=0)
-        displ = coords_t - com
+        com = np.mean(coords_bohr, axis=0)
+        displ = coords_bohr - com
         energy = 0.5 * self.k * np.sum(displ**2)
 
         # Forces = -gradient = -k * displacement
@@ -301,11 +299,9 @@ def main(config):
         abin_comm.Send([energy_buf, MPI.DOUBLE], dest=0, tag=MACE_TAG_DATA)
 
         # Send forces (3*natom doubles, in Hartree/Bohr)
-        # Transpose back to (3, natom) to match Fortran column-major layout
-        if forces.dtype != np.float64:
-            forces_send = forces.T.astype(np.float64)
-        else:
-            forces_send = forces.T.copy()
+        # NumPy (natom, 3) in C row-major layout has the exact same memory sequence
+        # [Fx0, Fy0, Fz0, Fx1, Fy1, Fz1, ...] as Fortran forces(3, natqm) in column-major layout.
+        forces_send = np.ascontiguousarray(forces, dtype=np.float64)
         abin_comm.Send([forces_send, MPI.DOUBLE], dest=0, tag=MACE_TAG_DATA)
 
         end_loop = perf_counter()
