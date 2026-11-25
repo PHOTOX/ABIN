@@ -11,7 +11,7 @@ CC=${CC:-gcc}
 FC=${FC:-gfortran}
 
 if [[ -z ${1-} ]]; then
-  echo "ERROR: Provide prefix path where install MPICH as first parameter"
+  echo "ERROR: Provide prefix path where to install MPICH as first parameter"
   exit 1
 fi
 # Path as an optional first parameter
