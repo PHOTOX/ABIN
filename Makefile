@@ -113,7 +113,7 @@ endif
 e2etest: ${BIN}
 	/bin/bash tests/test.sh "${BIN}" "$(TEST)" "${MPI}" "${FFTW}" "${PLUMED}" "${CP2K}" "${TCPB}" test
 
-# Ehrenfest checks are included in the end-to-end test runner.
+# Runs both end-to-end and unit tests
 test: unittest e2etest
 
 # Clean all test folders.
@@ -136,12 +136,3 @@ INTERFACE=all
 interface-test:
 	bash tests/INTERFACES/self-test.sh
 	bash tests/INTERFACES/run.sh $(INTERFACE)
-
-# Analytic Ehrenfest checks without the optional pFUnit dependency.
-ehrenfest-test: ${BIN}
-	$(FC) $(FFLAGS) -Isrc tests/EHRENFEST/ehrenfest_physics.F90 -Lsrc -Lwater_potentials $(LDFLAGS) $(LDLIBS) -o bin/ehrenfest_physics
-	bin/ehrenfest_physics
-	$(FC) $(FFLAGS) -Isrc tests/EHRENFEST/ehrenfest_multistate.F90 -Lsrc -Lwater_potentials $(LDFLAGS) $(LDLIBS) -o bin/ehrenfest_multistate
-	bin/ehrenfest_multistate
-	python3 tests/EHRENFEST/test_ehrenfest_backend.py bin/$(BIN)
-	python3 tests/EHRENFEST/test_ehrenfest_nve.py bin/$(BIN)

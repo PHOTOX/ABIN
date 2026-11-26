@@ -1,5 +1,6 @@
 #!/bin/bash
-# Run the real Ehrenfest adapters against static input/output fixtures.
+# Check the real adapters' generated inputs, launch counts, and extracted values
+# against prerecorded fixtures. ABIN propagation is covered by EHRENFEST.
 set -euo pipefail
 export LC_ALL=C
 SUITE=$(cd "$(dirname "$0")" && pwd)

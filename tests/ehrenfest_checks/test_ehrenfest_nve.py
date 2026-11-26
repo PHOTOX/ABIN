@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Check Ehrenfest NVE trajectories and electronic drift-velocity coupling."""
+"""Check NVE drift against classical MD and electronic rotation against an analytic solution.
+
+The NaI crossing also checks population transfer and bounds total-energy drift.
+Coverage is limited to the chosen initial conditions and NVE timesteps.
+"""
 import math
 from pathlib import Path
 import subprocess
@@ -15,6 +19,7 @@ BINARY = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / 'bin/abin'
 GRADIENT_SCRIPT = '''#!/usr/bin/env python3
 from pathlib import Path
 import sys
+# Ehrenfest requests every state. Classical MD needs one energy and gradient.
 request = Path('eh_state.dat')
 n = int(request.read_text().splitlines()[0]) if request.exists() else 1
 Path('engrad.dat.' + sys.argv[2]).write_text('0\\n' * n + '0 0 0\\n' * (2 * n))
@@ -22,12 +27,14 @@ Path('engrad.dat.' + sys.argv[2]).write_text('0\\n' * n + '0 0 0\\n' * (2 * n))
 NAC_SCRIPT = '''#!/usr/bin/env python3
 from pathlib import Path
 n = int(Path('eh_state.dat').read_text().splitlines()[0])
+# Write two opposite atomic vectors for each upper-triangle state pair.
 Path('nacm.dat').write_text(''.join(f'{0.4 * k} 0 0\\n{-0.4 * k} 0 0\\n'
                                  for k in range(1, n * (n - 1) // 2 + 1)))
 '''
 
 
 def table(work, name):
+    """Read a nonempty numeric output table and require all values to be finite."""
     rows = [[float(x) for x in line.split()]
             for line in (work / name).read_text().splitlines()
             if line.strip() and not line.lstrip().startswith('#')]
@@ -36,8 +43,10 @@ def table(work, name):
 
 
 def run_case(mdtype, pot='mock', nstep=12, crossing=False, nstate=2, nwrite=1):
+    """Run one NVE trajectory and return its final positions, velocities, and diagnostics."""
     with tempfile.TemporaryDirectory(prefix='abin-eh-nve-') as folder:
         work = Path(folder)
+        # Install the mock adapter at the path ABIN uses for this potential.
         adapter = work / 'MOCK'
         adapter.mkdir()
         for name, script in [('r.mock', GRADIENT_SCRIPT), ('r.mock.nacm', NAC_SCRIPT)]:
@@ -48,10 +57,12 @@ def run_case(mdtype, pot='mock', nstep=12, crossing=False, nstate=2, nwrite=1):
         if crossing:
             separation = 6.0 * 1.889726132873  # Start inside the NaI avoided crossing (bohr).
         (work / 'mini.xyz').write_text(f'2\nBohr\nNa 0 0 0\nI {separation} 0 0\n')
+        # Give the flat surfaces steady drift and send NaI outward through the crossing.
         velocities = 'Na 0.0002 0.0001 0\nI -0.0001 0 0.0001\n'
         if crossing:
             velocities = 'Na -0.0017 0 0\nI 0.0003 0 0\n'
         (work / 'velocities.in').write_text('2\nAtomic units\n' + velocities)
+        # Disable the thermostat and velocity adjustments to preserve the supplied velocities.
         (work / 'input.in').write_text(f'''&general
 mdtype='{mdtype}', pot='{pot}', irest=0, irandom=123,
 nstep={nstep}, dt=5.0, nwrite={nwrite}, nwritex=1, nwritev=1,
@@ -69,6 +80,7 @@ nstate={nstate}, istate_init={2 if crossing else 1}, substep=100,
         result = subprocess.run([str(BINARY), '-x', 'mini.xyz', '-v', 'velocities.in'],
                                 cwd=work, capture_output=True, text=True, timeout=30)
         assert result.returncode == 0, result.stdout[-3000:] + result.stderr
+        # Read the final nuclear state separately from the sampled diagnostics.
         restart = (work / 'restart.xyz').read_text().splitlines()
         coords = [[float(x) for x in row.split()] for row in restart[2:4]]
         velocities = [[float(x) for x in row.split()] for row in restart[5:7]]
@@ -79,10 +91,12 @@ nstate={nstate}, istate_init={2 if crossing else 1}, substep=100,
             populations = table(work, 'pop.dat')
             dotproducts = table(work, 'dotprod.dat')
             pes = table(work, 'PES.dat')
+            # Each write must include synchronized electronic diagnostics and a unit norm.
             assert len(populations) == len(dotproducts) == len(pes) == nstep // nwrite
             assert all(abs(row[-1] - 1) < 1e-9 for row in populations)
             for row, coupling, energy in zip(populations, dotproducts, pes):
                 assert len(row) == nstate + 3
+                # The state label must identify the largest reported population.
                 assert row[1] == 1 + max(range(nstate), key=lambda i: row[2 + i])
                 assert row[0] == coupling[0] == energy[0]
                 assert len(coupling) == 1 + nstate * (nstate - 1) // 2
@@ -92,6 +106,8 @@ nstate={nstate}, istate_init={2 if crossing else 1}, substep=100,
                     assert all(abs(value - 0.4 * k * 0.0003) < 1e-12
                                for k, value in enumerate(coupling[1:], 1))
             if pot == 'mock' and nstate == 2:
+                # Integrate the constant coupling over relative displacement
+                # to obtain the electronic rotation angle.
                 angle = 0.4 * (coords[0][0] - (coords[1][0] - separation))
                 assert abs(populations[-1][3] - math.sin(angle)**2) < 1e-9, (
                     populations[-1], angle)
@@ -107,6 +123,7 @@ nstate={nstate}, istate_init={2 if crossing else 1}, substep=100,
         return coords + velocities, temperatures, energies
 
 
+# Compare the final nuclear state and sampled NVE diagnostics on the flat surfaces.
 classical, temperatures, energies = run_case('md')
 eh, eh_temperatures, eh_energies = run_case('ehrenfest')
 assert max(abs(x - y) for erow, crow in zip(eh, classical)
@@ -118,6 +135,7 @@ assert all(len(row) == 3 for row in temperatures)
 # Run the physical two-state NaI model in the supported NVE ensemble too.
 run_case('ehrenfest', pot='_nai_', nstep=20)
 run_case('ehrenfest', pot='_nai_', nstep=400, crossing=True)
+# Exercise all three state pairs with a write interval longer than one timestep.
 run_case('ehrenfest', nstate=3, nstep=12, nwrite=3)
 
 print('Ehrenfest NVE trajectories, electronic drift velocities and NaI population transfer passed.')

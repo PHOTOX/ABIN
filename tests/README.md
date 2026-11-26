@@ -5,3 +5,7 @@ Each test runs a short simulation, and output files are compared to the referenc
 Run the tests from root folder `make test`
 
 Unit tests are in `../unit_tests/`
+
+TODO: document how to write new tests.
+
+TODO: document, what exactly each test is testing

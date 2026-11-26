@@ -1,0 +1,36 @@
+Two-state Ehrenfest trajectory through the NaI avoided crossing.
+
+! References check NVE population transfer, energies, NAC velocity products,
+! and nuclear motion for one initial condition with the built-in NaI potential.
+! Chemistry adapters are exercised by the EHRENFEST test matrix.
+
+&general
+pot='_nai_',
+mdtype='ehrenfest',
+irest=0,
+irandom=123,
+nstep=400,
+dt=5.0,
+nwrite=20,
+nwritex=20,
+xyz_units='bohr',
+/
+
+&thermostat
+inose=0,
+rem_comvel=.false.,
+rem_comrot=.false.,
+scaleveloc=0,
+/
+
+&eh
+nstate=2,
+istate_init=2,
+substep=100,
+/
+
+&system
+ndist=1,
+dist1=1,
+dist2=2,
+/

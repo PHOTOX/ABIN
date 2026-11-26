@@ -1,4 +1,6 @@
-! Standalone analytic checks, run with make ehrenfest-test.
+! Standalone two-state checks for the mean force, coherence, electronic
+! propagation, norm, and wavefunction I/O. The nuclear geometry is fixed,
+! and scratch-file I/O covers coefficients without exercising a trajectory restart.
 program ehrenfest_physics
    use mod_const, only: DP, ANG, imaginary_unit
    use mod_general, only: set_natom, nwalk, pot
@@ -19,6 +21,8 @@ program ehrenfest_physics
    real(DP) :: sigma, omega, dt, expected_population
    integer :: u
 
+   ! Initialize two-state Ehrenfest at a fixed NaI separation with prescribed masses and velocities.
+   ! Seed a separate SH state to detect accidental changes to SH data.
    call set_natom(2)
    nwalk = 1
    nstate = 2
@@ -35,6 +39,7 @@ program ehrenfest_physics
    vy(:, 1) = [0.03_DP, -0.04_DP]
    vz(:, 1) = [0.05_DP, -0.06_DP]
    call eh_init(x, y, z, vx, vy, vz)
+   ! Check the initial energy and coupling history, then obtain the two pure-state forces.
    call eh_mean_force(f1, fy, fz, e1)
    if (abs(e1 - en_array(1)) > 1.E-14_DP) error stop 'Initial electronic energy'
    if (abs(entot0 - e1 - 0.5_DP * sum(am * (vx(:, 1)**2 + vy(:, 1)**2 + vz(:, 1)**2))) > &
@@ -58,6 +63,7 @@ program ehrenfest_physics
 
    ! At fixed geometry and constant velocity, the 2x2 electronic generator
    ! has an analytic exponential, including both the gap and NAC terms.
+   ! Contract the derivative coupling with the prescribed velocity to get the electronic coupling.
    call set_wf(1.0_DP, 0.0_DP)
    call eh_force(x, y, z, fx, fy, fz, energy, pot)
    vx(:, 1) = [-0.002_DP, 0.002_DP]
@@ -71,12 +77,15 @@ program ehrenfest_physics
    if (abs(get_elpop(2) - expected_population) > 1.E-10_DP) error stop 'Electronic propagation'
    norm = check_popsum()
    if (abs(norm - 1.0_DP) > 1.E-10_DP) error stop 'Electronic norm'
+   ! Check that Ehrenfest left the SH state count and initial population intact.
    if (sh_nstate /= 3) error stop 'SH state count was modified by Ehrenfest'
    if (sh_get_elpop(2) /= 1.0_DP) error stop 'SH wavefunction was modified by Ehrenfest'
    call check_electronic_integrators()
    print*,'Ehrenfest force, coherence, electronic propagation and norm checks passed.'
 
 contains
+   ! Compare each integrator and phase mode against exact complex amplitudes and coherence.
+   ! Also exercise a round trip through the wavefunction file format.
    subroutine check_electronic_integrators()
       character(len=7), parameter :: methods(3) = [character(len=7) :: 'butcher', 'rk4', 'euler']
       real(DP) :: en(2), coupling(2, 2), tolerance, elapsed, step, frequency, half_gap
@@ -90,6 +99,7 @@ contains
       coupling(2, 1) = -coupling(1, 2)
       step = 0.01_DP
       elapsed = 100 * step
+      ! Solve the constant two-state generator, including the global phase from the mean energy.
       half_gap = (en(2) - en(1)) / 2
       frequency = sqrt(half_gap**2 + coupling(1, 2)**2)
       global_phase = exp(-imaginary_unit * sum(en) * elapsed / 2)
@@ -102,6 +112,7 @@ contains
       do phase = 0, 1
          do method = 1, size(methods)
             call set_wf(1.0_DP, 0.0_DP)
+            ! Start each run with zero accumulated phase differences.
             open (newunit=phase_unit, status='scratch', form='unformatted')
             write (phase_unit) 0.0_DP, 0.0_DP
             write (phase_unit) 0.0_DP, 0.0_DP
@@ -114,8 +125,10 @@ contains
             end do
             call read_coefficients(actual_c)
             stored_c = actual_c
+            ! Restore the removed dynamical phases before comparing physical amplitudes.
             if (phase == 1) actual_c = actual_c * exp(-imaginary_unit * en * elapsed)
             tolerance = 1.E-11_DP
+            ! Euler's first-order step needs a wider error tolerance.
             if (methods(method) == 'euler') tolerance = 1.E-3_DP
             if (maxval(abs(actual_c - expected_c)) > tolerance) then
                print*,'Integrator: ', trim(methods(method)), ', phase mode: ', phase
@@ -138,6 +151,7 @@ contains
       print*,'Complex amplitudes, coherence and I/O passed for all integrators and both phase modes.'
    end subroutine check_electronic_integrators
 
+   ! Read the current extended-precision amplitudes through the public wavefunction writer.
    subroutine read_coefficients(coefficients)
       complex(2*DP), intent(out) :: coefficients(:)
       integer :: wf_unit, state
@@ -150,6 +164,8 @@ contains
       close (wf_unit)
    end subroutine read_coefficients
 
+   ! Load two amplitudes through the public wavefunction reader.
+   ! Optionally give the second amplitude a relative phase of pi/2.
    subroutine set_wf(c1, c2, imaginary)
       real(DP), intent(in) :: c1, c2
       logical, intent(in), optional :: imaginary

@@ -1,4 +1,7 @@
-! Check high-state transfer and compare electronic propagation on identical data.
+! Standalone electronic propagation check with prescribed energies and couplings.
+! Compare high-state transfer with the analytic two-level result, then compare
+! all five populations with SH for all integrators and both phase modes.
+! Coverage is limited to populations and norm with fixed nuclear input.
 program ehrenfest_multistate
    use mod_const, only: DP
    use mod_eh_integ, only: nstate, phase, eh_set_initialwf, eh_set_energy_shift, &
@@ -13,6 +16,7 @@ program ehrenfest_multistate
    real(DP) :: parity_error, max_error, max_transfer
    integer :: method, mode, initial, k, i
 
+   ! Configure both propagators with the same number of states and energy shift.
    nstate = ns
    sh_nstate = ns
    call eh_set_initialwf(ns)
@@ -22,6 +26,7 @@ program ehrenfest_multistate
    max_error = 0.0_DP
    parity_error = 0.0_DP
 
+   ! Repeat both scenarios with every integrator and phase convention.
    do mode = 0, 1
       phase = mode
       sh_phase = mode
@@ -31,6 +36,7 @@ program ehrenfest_multistate
          ! Cover both ABIN state 4 -> 3 and spectroscopic S4 -> S3 (5 -> 4).
          do initial = 4, 5
             call reset(initial)
+            ! Couple only the initial state and its lower neighbor to isolate a two-level system.
             en0 = offset + [0.0_DP, 0.01_DP, 0.02_DP, 0.03_DP, 0.04_DP]
             d0 = 0.0_DP
             d0(initial - 1, initial) = 0.04_DP
@@ -39,6 +45,8 @@ program ehrenfest_multistate
                call eh_integrate_wf(en0, en0, d0, d0, h)
                call sh_integrate_wf(en0, en0, d0, d0, h)
             end do
+            ! The constant two-level generator gives an exact transfer probability.
+            ! Allow a wider tolerance for the first-order Euler integrator.
             gap = (en0(initial) - en0(initial - 1)) / 2
             frequency = sqrt(gap**2 + 0.04_DP**2)
             expected = (0.04_DP / frequency * sin(frequency * steps * h))**2
@@ -47,6 +55,7 @@ program ehrenfest_multistate
             max_error = max(max_error, abs(get_elpop(initial - 1) - expected))
             if (abs(get_elpop(initial - 1) - expected) > tolerance) error stop 'High-state transfer'
             if (abs(get_elpop(initial) - (1 - expected)) > tolerance) error stop 'Initial-state depletion'
+            ! Uncoupled spectator states must remain empty and the total norm must stay near one.
             do i = 1, ns
                if (i /= initial .and. i /= initial - 1) then
                   if (get_elpop(i) /= 0.0_DP) error stop 'Spectator-state leakage'
@@ -67,9 +76,11 @@ program ehrenfest_multistate
             call sh_integrate_wf(en0, en1, d0, d1, h)
             call compare_populations()
             max_transfer = max(max_transfer, 1.0_DP - get_elpop(5))
+            ! Use this endpoint as the start of the next interpolation interval.
             en0 = en1
             d0 = d1
          end do
+         ! Require measurable transfer to catch a wavefunction that never evolves.
          if (max_transfer < 0.01_DP) error stop 'Multistate propagation did not transfer population'
       end do
    end do
@@ -78,10 +89,12 @@ program ehrenfest_multistate
    print*,'Maximum analytic error (including Euler):', max_error
 
 contains
+   ! Seed both propagators with the same pure state and clear accumulated electronic phases.
    subroutine reset(state)
       integer, intent(in) :: state
       integer :: unit, j
       real(DP) :: amplitude
+      ! EH reads complex values. SH reads separate real and imaginary columns.
       open (newunit=unit, status='scratch', form='formatted')
       do j = 1, ns
          amplitude = 0.0_DP
@@ -100,6 +113,7 @@ contains
       rewind (unit)
       call sh_read_wf(unit)
       close (unit)
+      ! Both phase readers accept the same binary matrix of pairwise phase differences.
       open (newunit=unit, status='scratch', form='unformatted')
       do j = 1, ns
          write (unit) spread(0.0_DP, 1, ns)
@@ -111,6 +125,7 @@ contains
       close (unit)
    end subroutine reset
 
+   ! Generate time-varying state energies and antisymmetric couplings at a step endpoint.
    subroutine endpoint(time, en, coupling)
       real(DP), intent(in) :: time
       real(DP), intent(out) :: en(ns), coupling(ns, ns)
@@ -125,6 +140,7 @@ contains
       end do
    end subroutine endpoint
 
+   ! Check every state's EH/SH population and retain the largest difference for reporting.
    subroutine compare_populations()
       integer :: j
       real(DP) :: error
