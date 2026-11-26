@@ -93,8 +93,8 @@ contains
          call fatal_error(__FILE__, __LINE__, 'Invalid Ehrenfest NAC accuracy')
       if (couplings /= 'analytic') &
          call fatal_error(__FILE__, __LINE__, 'Ehrenfest requires analytic NAC vectors for the nuclear force')
-      if (inose > 0) &
-         call fatal_error(__FILE__, __LINE__, 'Ehrenfest dynamics is not compatible with thermostats in theory')
+      !if (inose > 0) & ! this was too scrict, lets trust users they know what they are doing
+      !   call fatal_error(__FILE__, __LINE__, 'Ehrenfest dynamics is not compatible with thermostats in theory')
    end subroutine check_eh_parameters
 
    subroutine print_eh_input()

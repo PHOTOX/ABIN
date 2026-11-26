@@ -64,8 +64,11 @@ awk '{printf "%s %.12g 1 %.12g 1 %.12g 1\n", $1, $2, $3, $4}
 END {for (i=1; i<=4-NR; i++) print 99, 0, 0, 0, 0, 0, 0}' "$geom" >> "$input"
 echo >> "$input"
 # Match the occupations used by the gradient calculation, only for mciref=1/4.
-if ((nciref > 0 && (mciref == 1 || mciref == 4))) && ! awk -v refs="${ci_references:-}" -v nref="$nciref" -v occupied="$occ" -v virtual="$unocc" -v multi="$multi" '
+# Pass literal newlines via the environment for compatibility with macOS awk.
+if ((nciref > 0 && (mciref == 1 || mciref == 4))) &&
+    ! MNDO_CI_REFERENCES="${ci_references:-}" awk -v nref="$nciref" -v occupied="$occ" -v virtual="$unocc" -v multi="$multi" '
 BEGIN {
+    refs=ENVIRON["MNDO_CI_REFERENCES"]
     if (refs=="") {
         if (nref!=1 || multi!=0) {
             print "ERROR: Set ci_references in mndo.inp for this reference configuration." > "/dev/stderr"

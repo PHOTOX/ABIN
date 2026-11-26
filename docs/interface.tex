@@ -8,26 +8,26 @@ List of existing standard interfaces and their variants is provided below:
 \centering
 \caption{Supported interfaces and available mdtypes.}
 \label{tab:interfaces_modes_minimal}
-\begin{tabular}{l c c c}
+\begin{tabular}{l c c c c}
 \toprule
-\textbf{Interface} & \textbf{MD} & \textbf{SH} & \textbf{LZ} \\
+\textbf{Interface} & \textbf{MD} & \textbf{SH} & \textbf{LZ} & \textbf{EH} \\
 \midrule
-BAGEL       & \checkmark & \checkmark & \checkmark \\
-CASTEP      & \checkmark & --- & ---  \\
-ChemShell   & \checkmark & \checkmark & \checkmark \\
-CP2K        & \checkmark & --- & ---  \\
-DFTB        & \checkmark & --- & --- \\
-GAMESS      & \checkmark & \checkmark & --- \\
-Gaussian    & \checkmark & --- & --- \\
-Molpro      & \checkmark & \checkmark & \checkmark \\
-MNDO        & \checkmark & --- & \checkmark \\
-MOPAC       & \checkmark & --- & --- \\
-ORCA        & \checkmark & --- & --- \\
-%PWSCF       & \checkmark & --- & --- \\
-QCHEM       & \checkmark & --- & --- \\
-TURBOMOLE   & \checkmark & --- & --- \\
-TeraChem    & \checkmark & \checkmark  & \checkmark \\
-XTB         & \checkmark & --- & --- \\
+BAGEL       & \checkmark & \checkmark & \checkmark & \checkmark \\
+CASTEP      & \checkmark & --- & ---  & ---  \\
+ChemShell   & \checkmark & \checkmark & \checkmark & ---  \\
+CP2K        & \checkmark & --- & ---  & ---  \\
+DFTB        & \checkmark & --- & --- & --- \\
+GAMESS      & \checkmark & \checkmark & --- & ---  \\
+Gaussian    & \checkmark & --- & --- & ---  \\
+Molpro      & \checkmark & \checkmark & \checkmark & \checkmark \\
+MNDO        & \checkmark & --- & \checkmark & \checkmark \\
+MOPAC       & \checkmark & --- & --- & ---  \\
+ORCA        & \checkmark & --- & --- & --- \\
+%PWSCF       & \checkmark & --- & --- & ---  \\
+QCHEM       & \checkmark & --- & --- & ---  \\
+TURBOMOLE   & \checkmark & --- & --- & ---  \\
+TeraChem    & \checkmark & \checkmark  & \checkmark & ---  \\
+XTB         & \checkmark & --- & --- & ---  \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -44,37 +44,3 @@ For expert users we recommend further exploring the interfaces folder for exotic
 %Omitting for now: HO, double well, Morse, mmwater, ...
 
 
-
-
-\subsection{Independent Ehrenfest interfaces}
-\label{sec:eh-interface}
-Ehrenfest dynamics calls \textit{mod\_eh\_backend} in
-\textit{src/eh\_backend.F90}. Its entry point takes coordinates and returns
-arrays of energies, Cartesian state forces and derivative-coupling vectors
-explicitly. The array shapes are $(N_{\rm state})$ for energies,
-$(N_{\rm atom},1,N_{\rm state})$ for forces and
-$(N_{\rm atom},N_{\rm state},N_{\rm state})$ for each Cartesian NAC component.
-Backends do not access SH state, populations, gradient requests or integrators.
-Direct interfaces can be added to its dispatch routine; custom shell backends
-can use any potential name without a hard-coded program whitelist.
-
-For shell backends, \textit{pot='program'} selects
-\textit{PROGRAM/r.program}. ABIN writes \textit{geom.dat.001} in the usual
-headerless XYZ format (angstrom), and invokes the script with the arguments
-\textit{timestep 001 accuracy}, redirecting \textit{eh\_state.dat} to stdin.
-The first input line contains the number of states. The second contains
-one gradient-request flag per state (all ones). The output
-\textit{engrad.dat.001} must contain all state energies, one per line, followed
-by one block of $N_{\rm atom}$ Cartesian energy-gradient rows per state,
-in state order. Energies and gradients are in atomic units. ABIN converts
-the gradients to forces.
-
-For two or more states, ABIN then invokes \textit{PROGRAM/r.program.nacm}
-with the same argument layout. The input's second line contains all upper
-triangular pair-request flags, ordered $(1,2),(1,3),\ldots,(2,3),\ldots$.
-The script writes \textit{nacm.dat}: one $N_{\rm atom}$ block of three Cartesian
-NAC components per pair, in the same order and in inverse bohr. ABIN constructs
-the antisymmetric lower triangle. Failed or incomplete NAC output is retried
-using \textit{nac\_accu2} when it is lower than \textit{nac\_accu1}.
-A one-state run needs no NAC script. Missing or truncated output is an error;
-outputs left over from a previous call are removed before each invocation.
