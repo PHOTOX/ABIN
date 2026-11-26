@@ -4,7 +4,7 @@ module mod_eh_backend
    use mod_const, only: DP, ANG
    use mod_error, only: fatal_error
    use mod_files, only: stderr
-   use mod_shell_io, only: write_geom, get_shellscript, open_engrad_file, read_energy, read_forces
+   use mod_shell_interface_private, only: write_geom, get_shellscript, open_engrad_file, read_energy, read_forces
    implicit none
    private
    public :: eh_evaluate_backend
