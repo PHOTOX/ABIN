@@ -1,6 +1,5 @@
 ! Standalone two-state checks for the mean force, coherence, electronic
-! propagation, norm, and wavefunction I/O. The nuclear geometry is fixed,
-! and scratch-file I/O covers coefficients without exercising a trajectory restart.
+! propagation, norm, and scratch-file I/O for coefficients and phase differences.
 program ehrenfest_physics
    use mod_const, only: DP, ANG, imaginary_unit
    use mod_general, only: set_natom, nwalk, pot
@@ -9,7 +8,7 @@ program ehrenfest_physics
    use mod_eh, only: eh_init, eh_mean_force, eh_advance, en_array, nacx, old_en, old_nacx, entot0
    use mod_interfaces, only: eh_force
    use mod_eh_integ, only: nstate, eh_read_wf, eh_write_wf, get_elpop, get_coherence, check_popsum, &
-                           phase, eh_read_phase_bin, eh_select_integrator, eh_integrate_wf, eh_set_energy_shift
+                           phase, eh_read_phase_bin, eh_write_phase_bin, eh_select_integrator, eh_integrate_wf, eh_set_energy_shift
    use mod_sh_integ, only: sh_nstate => nstate, sh_set_initialwf, sh_get_elpop => get_elpop
    implicit none
    real(DP) :: x(2, 1), y(2, 1), z(2, 1)
@@ -81,6 +80,7 @@ program ehrenfest_physics
    if (sh_nstate /= 3) error stop 'SH state count was modified by Ehrenfest'
    if (sh_get_elpop(2) /= 1.0_DP) error stop 'SH wavefunction was modified by Ehrenfest'
    call check_electronic_integrators()
+   call check_phase_round_trip()
    print*,'Ehrenfest force, coherence, electronic propagation and norm checks passed.'
 
 contains
@@ -91,7 +91,7 @@ contains
       real(DP) :: en(2), coupling(2, 2), tolerance, elapsed, step, frequency, half_gap
       real(DP) :: expected_coherence
       complex(2*DP) :: expected_c(2), actual_c(2), stored_c(2), global_phase
-      integer :: method, k, phase_unit, wf_unit
+      integer :: method, k, wf_unit
 
       en = [0.1_DP, 0.3_DP]
       coupling = 0.0_DP
@@ -113,12 +113,7 @@ contains
          do method = 1, size(methods)
             call set_wf(1.0_DP, 0.0_DP)
             ! Start each run with zero accumulated phase differences.
-            open (newunit=phase_unit, status='scratch', form='unformatted')
-            write (phase_unit) 0.0_DP, 0.0_DP
-            write (phase_unit) 0.0_DP, 0.0_DP
-            rewind (phase_unit)
-            call eh_read_phase_bin(phase_unit)
-            close (phase_unit)
+            call clear_phases()
             call eh_select_integrator(trim(methods(method)))
             do k = 1, 100
                call eh_integrate_wf(en, en, coupling, coupling, step)
@@ -150,6 +145,72 @@ contains
       phase = 0
       print*,'Complex amplitudes, coherence and I/O passed for all integrators and both phase modes.'
    end subroutine check_electronic_integrators
+
+   ! Save a phase-mode state midway through propagation and resume from the saved data.
+   subroutine check_phase_round_trip()
+      real(DP), parameter :: en(2) = [0.1_DP, 0.3_DP], step = 0.05_DP
+      integer, parameter :: checkpoint = 100
+      real(DP) :: coupling(2, 2), phase_rows(2, 2), expected_phase, coherence, final_coherence
+      complex(2*DP) :: uninterrupted(2), resumed(2)
+      integer :: phase_unit, wf_unit, k
+
+      phase = 1
+      coupling(1, :) = [0.0_DP, 0.04_DP]
+      coupling(2, :) = [-0.04_DP, 0.0_DP]
+      call eh_select_integrator('rk4')
+      call set_wf(1.0_DP, 0.0_DP)
+      call clear_phases()
+      do k = 1, checkpoint
+         call eh_integrate_wf(en, en, coupling, coupling, step)
+      end do
+
+      open (newunit=phase_unit, status='scratch', form='unformatted')
+      call eh_write_phase_bin(phase_unit)
+      rewind (phase_unit)
+      read (phase_unit) phase_rows(1, :)
+      read (phase_unit) phase_rows(2, :)
+      expected_phase = (en(1) - en(2)) * step * checkpoint
+      if (maxval(abs(phase_rows(1, :) - [0.0_DP, expected_phase])) > 1.E-13_DP .or. &
+          maxval(abs(phase_rows(2, :) - [-expected_phase, 0.0_DP])) > 1.E-13_DP) error stop 'Saved phase differences'
+      open (newunit=wf_unit, status='scratch', form='formatted')
+      call eh_write_wf(wf_unit)
+      coherence = get_coherence(1, 2)
+
+      do k = 1, checkpoint
+         call eh_integrate_wf(en, en, coupling, coupling, step)
+      end do
+      call read_coefficients(uninterrupted)
+      final_coherence = get_coherence(1, 2)
+
+      ! Clear both parts of the electronic state so the readers must restore them.
+      call clear_phases()
+      call set_wf(0.0_DP, 1.0_DP)
+      rewind (phase_unit)
+      call eh_read_phase_bin(phase_unit)
+      close (phase_unit)
+      rewind (wf_unit)
+      call eh_read_wf(wf_unit)
+      close (wf_unit)
+      if (abs(get_coherence(1, 2) - coherence) > 1.E-13_DP) error stop 'Restored coherence'
+      do k = 1, checkpoint
+         call eh_integrate_wf(en, en, coupling, coupling, step)
+      end do
+      call read_coefficients(resumed)
+      if (maxval(abs(resumed - uninterrupted)) > 1.E-13_DP) error stop 'Resumed amplitudes'
+      if (abs(get_coherence(1, 2) - final_coherence) > 1.E-13_DP) error stop 'Resumed coherence'
+      phase = 0
+   end subroutine check_phase_round_trip
+
+   ! Reset both rows of the phase matrix through the production reader.
+   subroutine clear_phases()
+      integer :: unit
+      open (newunit=unit, status='scratch', form='unformatted')
+      write (unit) 0.0_DP, 0.0_DP
+      write (unit) 0.0_DP, 0.0_DP
+      rewind (unit)
+      call eh_read_phase_bin(unit)
+      close (unit)
+   end subroutine clear_phases
 
    ! Read the current extended-precision amplitudes through the public wavefunction writer.
    subroutine read_coefficients(coefficients)

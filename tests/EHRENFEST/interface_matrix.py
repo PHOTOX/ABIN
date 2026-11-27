@@ -155,7 +155,7 @@ def main(binary):
 
         # Vary one invalid &eh value at a time and check rejection before chemistry
         # starts. The strict norm case below instead exercises rejection during propagation.
-        # TODO: Add cases for the general-input compatibility checks and iknow override.
+        # The standalone backend check covers general-input compatibility.
         baseline = dict(common, **profiles["ground"], integ="'euler'")
         rejections = (
             ("nstate", 1, "nstate must be >= 2"),

@@ -100,14 +100,24 @@ ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests clean
 endif
 
-# Build and run Unit tests (powered by pFUnit library)
-unittest: ${BIN}
+# Build and run the standalone Ehrenfest checks and optional pFUnit suite.
+unittest: ehrenfest-unit-test
 ifneq ($(strip $(PFUNIT_PATH)),)
 	$(MAKE) -C unit_tests all
 	$(MAKE) -C unit_tests test
 else
-	echo "pFUnit library not available. Skipping unit tests."
+	echo "pFUnit library not available. Skipping pFUnit tests."
 endif
+
+# Collect coverage from the ABIN library linked into each test driver.
+.PHONY: ehrenfest-unit-test
+ehrenfest-unit-test: ${BIN}
+	set -e; cd bin; for check in ehrenfest_physics ehrenfest_multistate; do \
+	    $(FC) $(filter-out --coverage -fprofile-arcs -ftest-coverage -fprofile-abs-path,$(FFLAGS)) \
+	        $(DFLAGS) -I../src -c ../tests/ehrenfest_checks/$$check.F90 -o $$check.o; \
+	    $(FC) $(LDFLAGS) $$check.o $(LDLIBS) -o $$check; \
+	    OMP_NUM_THREADS=1 ./$$check; \
+	done
 
 # End-To-End (E2E) tests
 e2etest: ${BIN}
