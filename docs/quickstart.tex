@@ -164,6 +164,8 @@ If you know what you are doing, you might want to use global thermostat, but be 
 
 Quite often you will need to restart the simulation from the last point. This is typically pretty straightforward. Simply set \textit{irest=1} in namelist "general" and start the simulation again. 
 
+For Ehrenfest dynamics, resume from a \texttt{restart.xyz} containing the Ehrenfest electronic state. Keep the same number of electronic states and set \textit{nstep} to the desired final step number. Restart files from older ABIN versions that only saved the Ehrenfest nuclear state cannot resume the electronic trajectory.
+
 Note that \abin always checks for the presence of files movie.xyz and restart.xyz. If they are present but \textit{irest=0}, the program will stop with an error. This prevents an inadvertent deletion of your precious data. However, if you delete movie.xyz and restart.xyz and set \textit{irest=0}, all other output files will be rewritten. 
 
 Before reading any data, \abin copies the original restart.xyz file to "restart.xyz.\textit{timestep}". This file serves as a backup if anything goes wrong, so that you can always go back to that restart file. 

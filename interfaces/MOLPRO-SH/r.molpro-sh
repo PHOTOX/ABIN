@@ -199,7 +199,7 @@ for ((ist1=1;ist1<=nstate;ist1++)) {
 
 #----------MOLPRO JOB-------------------------
 export TMPDIR=$PWD/scratch$ibead
-$MOLPROEXE -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
+$MOLPROEXE -n "$NCORES" -s --no-xml-output -W $PWD/scratch$ibead  >& $input.com.out <$input.com
 
 # Check whether all is OK.
 # If it is some other error, do nothing. It's up to ABIN to decide what to do.

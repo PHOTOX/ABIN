@@ -1,0 +1,13 @@
+OM3 jop=-2 igeom=1 iform=1 nsav15=3 kharge=-1 imult=2 lroot=1 +
+ipubo=1 ktrial=11 immdp=2 kci=5 ici1=3 ici2=4 iroot=3 icross=1 ncigrd=3 +
+nciref=2 mciref=1 levexc=1 ioutci=1 kitscf=50000 iuvcd=2 ifast=2
+Timestep 17
+
+H 0.125 1 -0.25 1 0.5 1
+F 1.25 1 2.5 1 -3.75 1
+99 0 0 0 0 0 0
+99 0 0 0 0 0 0
+
+2 2 1 0 0 0 0
+2 1 2 0 0 0 0
+ 1 2 3

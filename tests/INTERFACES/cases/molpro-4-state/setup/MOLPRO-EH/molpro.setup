@@ -1,0 +1,8 @@
+NCORES=${NCORES:-1}
+basis=def2-SVP
+nelectrons=10
+spin=0
+nocc=7
+nclosed=2
+memory=96
+multi=df-casscf

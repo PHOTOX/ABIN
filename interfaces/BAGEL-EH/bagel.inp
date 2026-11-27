@@ -1,0 +1,22 @@
+# Electronic-structure settings for BAGEL-EH; sourced by the interface scripts.
+# Number of states comes from &eh in the ABIN input.
+basis=cc-pvdz
+df_basis=cc-pvdz-jkfit
+hf_variant=rohf         # inital guess method
+method=xms_caspt2       # sa_casscf, ms_caspt2 or xms_caspt2
+charge=0
+nspin=0
+nact=8                 # Set the active space for your molecule.
+nclosed=15             # Number of closed orbitals
+maxiter_CASSCF=500
+maxiter_CASPT2=300
+maxziter=100
+thresh_CASPT2=1.0e-8   # convergence treshodld
+shift=0.25             # Imaginary CASPT2 shift
+
+
+# Site-specific environments can be sourced here if needed:
+# source ../SetEnvironment.sh BAGEL
+export BAGEL_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+BAGELEXE=${BAGELEXE:-BAGEL}

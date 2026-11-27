@@ -1,0 +1,10 @@
+method=OM3
+charge=-1
+multi=2
+occ=3
+unocc=4
+nciref=2
+mciref=1
+levelexc=1
+disper=2
+ci_references=$'2 2 1 0 0 0 0\n2 1 2 0 0 0 0'

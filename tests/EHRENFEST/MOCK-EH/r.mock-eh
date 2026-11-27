@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+# Record the all-state request for requests.dat.ref and return fixed gradients.
+# The real adapters' input generation and extraction are checked by the matrix.
+read -r nstate
+read -r -a gradients
+[[ -f eh_state.dat && ! -e state.dat ]]
+printf 'gradient %s %s %s %s\n' "$1" "$2" "$nstate" "${gradients[*]}" >> requests.dat
+
+cp "$(dirname "$0")/engrad.dat.fixture" "engrad.dat.$2"

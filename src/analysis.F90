@@ -12,6 +12,7 @@ module mod_analysis
    character(len=*), parameter :: chnose = 'NHC momenta', chQT = 'Quantum Thermostat', &
                                 & chLT = 'Langevin Thermostat', &
                                 & chSH = 'Coefficients for SH', &
+                                & chEH = 'Electronic state for Ehrenfest', &
                                 & chAVG = 'Cumulative averages of various estimators', &
                                 & chcoords = 'Cartesian Coordinates [au]', &
                                 & chvel = 'Cartesian Velocities [au]', &
@@ -200,6 +201,7 @@ contains
       use mod_sh_integ, only: sh_write_wf
       use mod_sh, only: write_nacmrest, istate
       use mod_lz, only: lz_restout
+      use mod_eh, only: eh_restout
       use mod_gle, only: gle_restout, pile_restout
       use mod_random, only: write_prng_state
       use mod_terampi_sh, only: write_wfn
@@ -239,6 +241,11 @@ contains
       if (ipimd == 5) then
          write (urest, *) chLZ
          call lz_restout(urest)
+      end if
+
+      if (ipimd == 6) then
+         write (urest, *) chEH
+         call eh_restout(urest)
       end if
 
       if (inose == 1) then
@@ -309,6 +316,7 @@ contains
       use mod_sh_integ, only: sh_read_wf
       use mod_sh, only: write_nacmrest, set_current_state
       use mod_lz, only: lz_restin
+      use mod_eh, only: eh_restin
       use mod_gle, only: gle_restin, pile_restin
       use mod_random, only: read_prng_state
       use mod_terampi_sh, only: read_wfn
@@ -348,6 +356,12 @@ contains
          read (urest, '(A)') chtemp
          call checkchar(chtemp, chlz)
          call lz_restin(urest, x, y, z, vx, vy, vz)
+      end if
+
+      if (ipimd == 6) then
+         read (urest, '(A)') chtemp
+         call checkchar(chtemp, chEH)
+         call eh_restin(urest)
       end if
 
       if (inose == 1 .and. readNHC) then

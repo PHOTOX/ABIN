@@ -1,0 +1,13 @@
+&general
+ mdtype='ehrenfest', pot='_nai_', irest=0,
+ nstep=10000, dt=10, nwrite=10, nwritex=10,
+/
+&nhcopt
+ inose=0, temp=273.15,
+/
+&eh
+ nstate=2, istate_init=2, substep=100, integ='butcher',
+/
+&system
+ ndist=1, dist1=1, dist2=2,
+/

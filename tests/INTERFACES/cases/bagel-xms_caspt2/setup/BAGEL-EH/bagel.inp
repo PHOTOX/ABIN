@@ -1,0 +1,14 @@
+basis=cc-pvdz
+df_basis=cc-pvdz-jkfit
+hf_variant=rohf
+method=xms_caspt2
+charge=-1
+nspin=1
+nact=2
+nclosed=4
+maxiter_CASSCF=30
+maxiter_CASPT2=20
+maxziter=12
+thresh_CASPT2=1e-7
+shift=0.3
+BAGELEXE=$FIXTURE_WORK/mock-program
