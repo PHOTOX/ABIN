@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check NVE drift against classical MD and electronic rotation against an analytic solution.
 
-The NaI crossing also checks population transfer and bounds total-energy drift.
+The NaI crossing also checks population transfer, energy drift, and restart continuity.
 Coverage is limited to the chosen initial conditions and NVE timesteps.
 """
 import math
@@ -42,7 +42,7 @@ def table(work, name):
     return rows
 
 
-def run_case(mdtype, pot='mock', nstep=12, crossing=False, nstate=2, nwrite=1):
+def run_case(mdtype, pot='mock', nstep=12, crossing=False, nstate=2, nwrite=1, restart_at=None):
     """Run one NVE trajectory and return its final positions, velocities, and diagnostics."""
     with tempfile.TemporaryDirectory(prefix='abin-eh-nve-') as folder:
         work = Path(folder)
@@ -63,9 +63,9 @@ def run_case(mdtype, pot='mock', nstep=12, crossing=False, nstate=2, nwrite=1):
             velocities = 'Na -0.0017 0 0\nI 0.0003 0 0\n'
         (work / 'velocities.in').write_text('2\nAtomic units\n' + velocities)
         # Disable the thermostat and velocity adjustments to preserve the supplied velocities.
-        (work / 'input.in').write_text(f'''&general
-mdtype='{mdtype}', pot='{pot}', irest=0, irandom=123,
-nstep={nstep}, dt=5.0, nwrite={nwrite}, nwritex=1, nwritev=1,
+        input_text = f'''&general
+mdtype='{mdtype}', pot='{pot}', irest={{irest}}, irandom=123,
+nstep={{last_step}}, dt=5.0, nwrite={nwrite}, nwritex=1, nwritev=1,
 xyz_units='bohr',
 /
 &thermostat
@@ -76,10 +76,15 @@ temp=300.0, rem_comvel=.false., rem_comrot=.false., scaleveloc=0,
 nstate={nstate}, istate_init={2 if crossing else 1}, substep=100,
 /
 &system
-/''')
-        result = subprocess.run([str(BINARY), '-x', 'mini.xyz', '-v', 'velocities.in'],
-                                cwd=work, capture_output=True, text=True, timeout=30)
-        assert result.returncode == 0, result.stdout[-3000:] + result.stderr
+/'''
+        step_limits = (nstep,) if restart_at is None else (restart_at, nstep)
+        for irest, last_step in enumerate(step_limits):
+            (work / 'input.in').write_text(input_text.format(irest=irest, last_step=last_step))
+            command = [str(BINARY), '-x', 'mini.xyz']
+            if irest == 0:
+                command.extend(['-v', 'velocities.in'])
+            result = subprocess.run(command, cwd=work, capture_output=True, text=True, timeout=30)
+            assert result.returncode == 0, result.stdout[-3000:] + result.stderr
         # Read the final nuclear state separately from the sampled diagnostics.
         restart = (work / 'restart.xyz').read_text().splitlines()
         coords = [[float(x) for x in row.split()] for row in restart[2:4]]
@@ -87,10 +92,12 @@ nstate={nstate}, istate_init={2 if crossing else 1}, substep=100,
         temperatures = table(work, 'temper.dat')
         energies = table(work, 'energies.dat')
         assert len(temperatures) == len(energies) == nstep // nwrite
+        outputs = {'nuclear state': coords + velocities, 'temper.dat': temperatures, 'energies.dat': energies}
         if mdtype == 'ehrenfest':
             populations = table(work, 'pop.dat')
             dotproducts = table(work, 'dotprod.dat')
             pes = table(work, 'PES.dat')
+            outputs.update({'pop.dat': populations, 'dotprod.dat': dotproducts, 'PES.dat': pes})
             # Each write must include synchronized electronic diagnostics and a unit norm.
             assert len(populations) == len(dotproducts) == len(pes) == nstep // nwrite
             assert all(abs(row[-1] - 1) < 1e-9 for row in populations)
@@ -120,22 +127,40 @@ nstate={nstate}, istate_init={2 if crossing else 1}, substep=100,
                 assert max(row[2] for row in populations) > 0.15, populations[-1]
                 assert populations[-1][2] > 0.05, populations[-1]
                 assert max(row[3] for row in energies) - min(row[3] for row in energies) < 1e-7
-        return coords + velocities, temperatures, energies
+                # Comparing the complex coefficients also checks the phase from the energy shift.
+                lines = [line.strip() for line in restart]
+                first_coefficient = lines.index('Electronic state for Ehrenfest') + 2
+                outputs['checkpoint wavefunction'] = [
+                    [float(value) for value in line.strip('()').upper().replace('D', 'E').replace('Q', 'E').split(',')]
+                    for line in lines[first_coefficient:first_coefficient + nstate]
+                ]
+        return outputs
 
 
 # Compare the final nuclear state and sampled NVE diagnostics on the flat surfaces.
-classical, temperatures, energies = run_case('md')
-eh, eh_temperatures, eh_energies = run_case('ehrenfest')
-assert max(abs(x - y) for erow, crow in zip(eh, classical)
+classical = run_case('md')
+eh = run_case('ehrenfest')
+assert max(abs(x - y) for erow, crow in zip(eh['nuclear state'], classical['nuclear state'])
            for x, y in zip(erow, crow)) < 1e-12
-assert eh_temperatures == temperatures
-assert [row[:4] for row in eh_energies] == [row[:4] for row in energies]
-assert all(len(row) == 3 for row in temperatures)
+assert eh['temper.dat'] == classical['temper.dat']
+assert [row[:4] for row in eh['energies.dat']] == [row[:4] for row in classical['energies.dat']]
+assert all(len(row) == 3 for row in classical['temper.dat'])
 
 # Run the physical two-state NaI model in the supported NVE ensemble too.
 run_case('ehrenfest', pot='_nai_', nstep=20)
-run_case('ehrenfest', pot='_nai_', nstep=400, crossing=True)
+uninterrupted = run_case('ehrenfest', pot='_nai_', nstep=400, crossing=True)
+restart_at = 220
+checkpoint_population = uninterrupted['pop.dat'][restart_at - 1][2]
+assert 0.05 < checkpoint_population < 0.95, checkpoint_population
+restarted = run_case('ehrenfest', pot='_nai_', nstep=400, crossing=True, restart_at=restart_at)
+for name, expected_rows in uninterrupted.items():
+    actual_rows = restarted[name]
+    assert len(actual_rows) == len(expected_rows), name
+    for index, (actual, expected) in enumerate(zip(actual_rows, expected_rows), start=1):
+        assert len(actual) == len(expected), (name, index)
+        assert all(math.isclose(a, b, rel_tol=1e-10, abs_tol=1e-12) for a, b in zip(actual, expected)), (
+            name, index, actual, expected)
 # Exercise all three state pairs with a write interval longer than one timestep.
 run_case('ehrenfest', nstate=3, nstep=12, nwrite=3)
 
-print('Ehrenfest NVE trajectories, electronic drift velocities and NaI population transfer passed.')
+print('Ehrenfest NVE trajectories, electronic drift velocities, and NaI population transfer and restart passed.')

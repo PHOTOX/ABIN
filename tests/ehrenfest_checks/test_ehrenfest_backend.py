@@ -64,7 +64,7 @@ else:
 
 
 def run_case(nstates=3, initial_state=2, *, mode='normal', general='', system='',
-             eh_input=None, fallback=5, diagnostic=None, launches=()):
+             eh_input=None, fallback=5, diagnostic=None, launches=(), restart_at=None):
     """Run one shell-backend trajectory and check its outputs or expected failure."""
     with tempfile.TemporaryDirectory(prefix='abin-eh-backend-') as folder:
         work = Path(folder)
@@ -84,9 +84,9 @@ def run_case(nstates=3, initial_state=2, *, mode='normal', general='', system=''
 nstate={nstates}, istate_init={initial_state}, nac_accu1=7, nac_accu2={fallback},
 /
 '''
-        (work / 'input.in').write_text(f'''&general
+        input_text = f'''&general
 mdtype='ehrenfest', pot='mock-eh', irandom=123,
-nstep={nstep}, dt=0.1, nwrite=1, nwritef=1, nwritex=1, nwritev=0,
+irest={{irest}}, nstep={{nstep}}, dt=0.1, nwrite=1, nwritef=1, nwritex=1, nwritev=0,
 {general}
 /
 &thermostat
@@ -95,11 +95,19 @@ inose=0, temp=0.0, rem_comvel=.false., rem_comrot=.false., scaleveloc=0,
 {eh_input}&system
 {system}
 /
-''')
+'''
+        input_path = work / 'input.in'
+        first_steps = nstep if restart_at is None else restart_at
+        input_path.write_text(input_text.format(irest=0, nstep=first_steps))
         if mode != 'normal':
             (work / mode).touch()
         result = subprocess.run([str(BINARY), '-x', 'mini.xyz', '-v', 'velocities.in'],
                                 cwd=work, capture_output=True, text=True, timeout=30)
+        if restart_at is not None:
+            assert result.returncode == 0, result.stdout + result.stderr
+            input_path.write_text(input_text.format(irest=1, nstep=nstep))
+            result = subprocess.run([str(BINARY), '-x', 'mini.xyz'], cwd=work,
+                                    capture_output=True, text=True, timeout=30)
         calls = work / 'calls'
         actual_calls = calls.read_text().splitlines() if calls.exists() else []
         details = f'{mode}, {general}\n{result.stdout[-1500:]}{result.stderr}'
@@ -128,7 +136,8 @@ inose=0, temp=0.0, rem_comvel=.false., rem_comrot=.false., scaleveloc=0,
                 'Unexpected NAC projection', mode, products)
             final_populations = (work / 'pop.dat').read_text().splitlines()[-1].split()
             assert float(final_populations[3]) > 1e-8, final_populations
-            return {name: (work / name).read_text() for name in ('dotprod.dat', 'pop.dat', 'forces.xyz')}
+            return {name: (work / name).read_text()
+                    for name in ('dotprod.dat', 'pop.dat', 'forces.xyz', 'PES.dat', 'energies.dat', 'movie.xyz')}
         # Zero NACs keep the chosen pure state populated throughout the trajectory.
         population = [float(v) for v in (work / 'pop.dat').read_text().splitlines()[-1].split()]
         expected = [0.0] * nstates
@@ -159,7 +168,6 @@ for options, message in (
     (dict(eh_input=''), 'Missing or invalid &eh namelist'),
     (dict(eh_input='&eh\nnstate=invalid,\n/\n'), 'Missing or invalid &eh namelist'),
     (dict(general='nwalk=2,'), 'nwalk must be 1 for Ehrenfest dynamics'),
-    (dict(general='irest=1,'), 'irest must be 0 for Ehrenfest dynamics'),
     (dict(general='iqmmm=1,'), 'iqmmm must be 0 for Ehrenfest dynamics'),
     (dict(system='nshake=1,'), 'nshake must be 0 for Ehrenfest dynamics'),
     (dict(general='en_restraint=1,'), 'en_restraint must be 0.0 for Ehrenfest dynamics'),
@@ -186,6 +194,8 @@ run_case(mode='stale_nac', diagnostic=nac_error, launches=('gradients 3', 'nac 7
 
 baseline = run_case(2, 1, mode='coupled')
 reversed_nac = run_case(2, 1, mode='flip_nac')
+restarted = run_case(2, 1, mode='flip_nac', restart_at=1)
 for name in baseline:
     assert baseline[name] == reversed_nac[name], f'NAC sign reversal changed {name}'
-print('Ehrenfest shell backend, input validation, NAC retries, and sign continuity passed.')
+    assert reversed_nac[name] == restarted[name], f'Ehrenfest restart changed {name}'
+print('Ehrenfest shell backend, input validation, NAC retries, sign continuity, and restart passed.')

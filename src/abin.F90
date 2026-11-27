@@ -102,7 +102,7 @@ program abin
 
    ! Get initial forces and energies
    if (ipimd == 6) then
-      ! eh_init already evaluated the initial geometry.
+      ! The Ehrenfest endpoint comes from checkpoint data or the initial force evaluation.
       call eh_mean_force(fxc, fyc, fzc, eclas)
    else
       call force_clas(fxc, fyc, fzc, x, y, z, eclas, pot)

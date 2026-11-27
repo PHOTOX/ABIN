@@ -11,7 +11,7 @@ ${BIN} : libabin.a
 	${FC} ${LDFLAGS} abin.o ${LDLIBS} -o $@
 	cp $(BIN) ../bin/
 
-# Used for building Unit Tests. Recreate the archive to drop obsolete objects.
+# Used for building Unit Tests
 libabin.a: compile_info.o
 	$(RM) $@
 	ar rcs $@ ${C_OBJS} $(F_OBJS) compile_info.o

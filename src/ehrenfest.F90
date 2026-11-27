@@ -5,14 +5,15 @@ module mod_eh
    use mod_error, only: fatal_error
    use mod_files, only: stdout, UPOP, UPES, UDOTPROD
    use mod_eh_integ, only: nstate, phase, popsumthr, eh_set_initialwf, &
-                           eh_select_integrator, eh_integrate_wf, get_elpop, &
-                           get_coherence, check_popsum
+                           eh_set_energy_shift, eh_select_integrator, eh_integrate_wf, get_elpop, &
+                           get_coherence, check_popsum, eh_write_propagator, eh_read_propagator
    implicit none
    private
 
    public :: en_array, nacx, nacy, nacz, eh_phase_nacme, nac_accu1, nac_accu2, &
              read_eh_input, print_eh_input, eh_init, eh_advance, eh_mean_force, &
-             state_fx, state_fy, state_fz, old_en, old_nacx, old_nacy, old_nacz, eh_output
+             state_fx, state_fy, state_fz, old_en, old_nacx, old_nacy, old_nacz, eh_output, &
+             eh_restout, eh_restin
 
    real(DP), allocatable :: en_array(:)
    real(DP), allocatable :: nacx(:, :, :), nacy(:, :, :), nacz(:, :, :)
@@ -48,7 +49,7 @@ contains
    end subroutine read_eh_input
 
    subroutine check_eh_parameters()
-      use mod_general, only: nwalk, irest, iqmmm, iremd, en_restraint, pot_ref, iknow
+      use mod_general, only: nwalk, iqmmm, iremd, en_restraint, pot_ref, iknow
       use mod_nhc, only: inose
       use mod_shake, only: nshake
       use mod_system, only: conatom
@@ -64,8 +65,6 @@ contains
       ! Check that the Ehrenfest parameters are consistent with the dynamics.
       if (nwalk /= 1) &
          call fatal_error(__FILE__, __LINE__, 'nwalk must be 1 for Ehrenfest dynamics')
-      if (irest /= 0) &
-         call fatal_error(__FILE__, __LINE__, 'irest must be 0 for Ehrenfest dynamics')
       if (iqmmm /= 0) &
          call fatal_error(__FILE__, __LINE__, 'iqmmm must be 0 for Ehrenfest dynamics')
       if (iremd /= 0) &
@@ -102,7 +101,7 @@ contains
    end subroutine print_eh_input
 
    subroutine eh_init(x, y, z, vx, vy, vz)
-      use mod_general, only: natom, pot
+      use mod_general, only: irest, pot
       use mod_interfaces, only: eh_force
       use mod_kinetic, only: ekin_v
       real(DP), intent(inout) :: x(:, :), y(:, :), z(:, :)
@@ -112,24 +111,62 @@ contains
       real(DP) :: initial_fz(size(z, 1), size(z, 2)), initial_energy
 
       call check_eh_parameters()
+      call eh_select_integrator(integ)
+      write (stdout, '(A)') 'Initializing Ehrenfest dynamics (adiabatic mean field)'
 
-      !alocate variables
+      if (irest == 0) then
+         call eh_allocate_state()
+         en_array = 0.0_DP
+         nacx = 0.0_DP; nacy = 0.0_DP; nacz = 0.0_DP
+         call eh_set_initialwf(istate_init)
+         call eh_force(x, y, z, initial_fx, initial_fy, initial_fz, initial_energy, pot)
+         call eh_set_energy_shift(en_array(1))
+         entot0 = initial_energy + ekin_v(vx, vy, vz)
+      end if
+
+      ! Both fresh and restarted trajectories begin propagation at this endpoint.
+      old_en = en_array
+      old_nacx = nacx
+      old_nacy = nacy
+      old_nacz = nacz
+   end subroutine eh_init
+
+   subroutine eh_allocate_state()
+      use mod_general, only: natom
+
       allocate (nacx(natom, nstate, nstate), nacy(natom, nstate, nstate), nacz(natom, nstate, nstate))
       allocate (state_fx(natom, 1, nstate), state_fy(natom, 1, nstate), state_fz(natom, 1, nstate))
       allocate (en_array(nstate), old_en(nstate))
       allocate (dotproduct(nstate, nstate))
       dotproduct = 0.0_DP
       allocate (old_nacx(natom, nstate, nstate), old_nacy(natom, nstate, nstate), old_nacz(natom, nstate, nstate))
+   end subroutine eh_allocate_state
 
-      ! setup initial values
-      en_array = 0.0_DP
-      nacx = 0.0_DP; nacy = 0.0_DP; nacz = 0.0_DP
-      call eh_set_initialwf(istate_init)
-      call eh_select_integrator(integ)
-      write (stdout, '(A)') 'Initializing Ehrenfest dynamics (adiabatic mean field)'
-      call eh_force(x, y, z, initial_fx, initial_fy, initial_fz, initial_energy, pot)
-      entot0 = initial_energy + ekin_v(vx, vy, vz)
-   end subroutine eh_init
+   subroutine eh_restout(unit)
+      use mod_general, only: natom
+      integer, intent(in) :: unit
+
+      write (unit, '(I0,1X,I0)') natom, nstate
+      call eh_write_propagator(unit)
+      ! The saved endpoint supplies the first mean force and the NAC signs for the next step.
+      write (unit, '(3ES25.16E3)') entot0, en_array, state_fx, state_fy, state_fz, nacx, nacy, nacz
+   end subroutine eh_restout
+
+   subroutine eh_restin(unit)
+      use mod_general, only: natom
+      integer, intent(in) :: unit
+      integer :: saved_natom, saved_nstate, status
+
+      read (unit, *, iostat=status) saved_natom, saved_nstate
+      if (status /= 0) call fatal_error(__FILE__, __LINE__, 'Could not read Ehrenfest dimensions from restart.xyz')
+      if (saved_natom /= natom .or. saved_nstate /= nstate) &
+         call fatal_error(__FILE__, __LINE__, 'Ehrenfest restart requires matching atom and electronic state counts')
+
+      call eh_allocate_state()
+      call eh_read_propagator(unit)
+      read (unit, *, iostat=status) entot0, en_array, state_fx, state_fy, state_fz, nacx, nacy, nacz
+      if (status /= 0) call fatal_error(__FILE__, __LINE__, 'Could not read Ehrenfest endpoint data from restart.xyz')
+   end subroutine eh_restin
 
    ! Keep real adiabatic NAC vectors continuous between nuclear endpoints.
    subroutine eh_phase_nacme()

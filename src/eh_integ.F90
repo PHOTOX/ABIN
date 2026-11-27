@@ -13,6 +13,7 @@ module mod_eh_integ
    ! Restart functionality
    public :: eh_write_phase_bin, eh_read_phase_bin
    public :: eh_write_wf, eh_read_wf
+   public :: eh_write_propagator, eh_read_propagator
    public :: get_coherence, get_elpop
 
    ! Input parameters
@@ -252,16 +253,32 @@ contains
 
    subroutine eh_read_wf(inunit)
       integer, intent(in) :: inunit
-      integer :: ist1
-      complex(2*DP) :: coefficient
+      integer :: ist1, status
 
       if (.not. allocated(cel)) allocate (cel(nstate))
       ! One complex coefficient (real, imaginary) per state.
       do ist1 = 1, nstate
-         read (inunit, *) coefficient
-         cel(ist1) = coefficient
+         read (inunit, *, iostat=status) cel(ist1)
+         if (status /= 0) call fatal_error(__FILE__, __LINE__, 'Could not read Ehrenfest wavefunction coefficients')
       end do
    end subroutine eh_read_wf
+
+   subroutine eh_write_propagator(unit)
+      integer, intent(in) :: unit
+
+      call eh_write_wf(unit)
+      write (unit, '(3ES25.16E3)') Eshift, gama
+   end subroutine eh_write_propagator
+
+   subroutine eh_read_propagator(unit)
+      integer, intent(in) :: unit
+      integer :: status
+
+      call eh_read_wf(unit)
+      if (.not. allocated(gama)) allocate (gama(nstate, nstate))
+      read (unit, *, iostat=status) Eshift, gama
+      if (status /= 0) call fatal_error(__FILE__, __LINE__, 'Could not read Ehrenfest energy shift and phases from restart.xyz')
+   end subroutine eh_read_propagator
 
    !better to check sometimes
    real(DP) function check_popsum()
