@@ -112,11 +112,13 @@ endif
 # Collect coverage from the ABIN library linked into each test driver.
 .PHONY: ehrenfest-unit-test
 ehrenfest-unit-test: ${BIN}
-	set -e; cd bin; for check in ehrenfest_physics ehrenfest_multistate; do \
-	    $(FC) $(filter-out --coverage -fprofile-arcs -ftest-coverage -fprofile-abs-path,$(FFLAGS)) \
-	        $(DFLAGS) -I../src -c ../tests/ehrenfest_checks/$$check.F90 -o $$check.o; \
-	    $(FC) $(LDFLAGS) $$check.o $(LDLIBS) -o $$check; \
-	    OMP_NUM_THREADS=1 ./$$check; \
+	@set -e; cd bin; for check in ehrenfest_physics ehrenfest_multistate; do \
+	    { \
+	        $(FC) $(filter-out --coverage -fprofile-arcs -ftest-coverage -fprofile-abs-path,$(FFLAGS)) \
+	            $(DFLAGS) -I../src -c ../tests/ehrenfest_checks/$$check.F90 -o $$check.o; \
+	        $(FC) $(LDFLAGS) $$check.o $(LDLIBS) -o $$check; \
+	        OMP_NUM_THREADS=1 ./$$check; \
+	    } > "$$check.out" 2>&1; \
 	done
 
 # End-To-End (E2E) tests

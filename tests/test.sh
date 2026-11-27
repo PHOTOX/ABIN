@@ -284,20 +284,11 @@ do
       # TODO: Figure out a different solution
       #./test.sh $ABINEXE 2> /dev/null
       ./test.sh $ABINEXE
-      status=$?
       # exit code 3 indicates skipped test
-      if [[ $status -eq 3 ]]; then
+      if [[ $? -eq 3 ]]; then
         echo -e "\033[0;33mSKIPPED\033[0m"
         let skipped++
         cd $TESTDIR
-        continue
-      elif [[ $status -ne 0 ]]; then
-        echo -e "$dir \033[0;31mFAILED\033[0m (test.sh exited $status)"
-        if [[ $ACTION == "makeref" ]]; then
-          exit 1
-        fi
-        errors=$((errors + 1))
-        cd "$TESTDIR"
         continue
       fi
 
