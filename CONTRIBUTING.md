@@ -102,7 +102,8 @@ Here's a quick summary of our code style that we try to adhere to:
  - use `implicit none` everywhere, no exceptions!
    This is enforced by default via the `-fimplicit-none` compiler flag.
  - each function/subroutine argument should have the intent attribute.
- - use `real(DP)` for real numbers and complex(2*DP) for complex numbers, the `DP` constant indicating the kind (precision) is defined in `modules.F90`
+ - use `real(DP)` for real numbers and `complex(2*DP)` for complex numbers,
+   the `DP` constant indicating the kind (precision) is defined in `modules.F90`
  - variables and subroutines in modules should be private by default, use `private` attribute:
 ```fortran
 module mod_my_module
